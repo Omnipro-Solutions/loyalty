@@ -1,26 +1,262 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-bg: var(--destructive-bg);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-500: var(--primary-500);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-brand: var(--brand);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-brand-accent: var(--brand-accent);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-bg: var(--warning-bg);
+  --color-data-indigo: var(--data-indigo);
+  --color-data-coral: var(--data-coral);
+  --color-data-teal: var(--data-teal);
+  --color-data-amber: var(--data-amber);
+  --color-data-navy: var(--data-navy);
+  --color-avatar-coral-bg: var(--avatar-coral-bg);
+  --color-avatar-coral-fg: var(--avatar-coral-fg);
+  --color-avatar-indigo-bg: var(--avatar-indigo-bg);
+  --color-avatar-indigo-fg: var(--avatar-indigo-fg);
+  --color-neutral-50: var(--neutral-50);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-nav-active: var(--shadow-nav-active);
+  --shadow-topbar-control: var(--shadow-topbar-control);
+  --shadow-form-section: var(--shadow-form-section);
+  --shadow-action-bar: var(--shadow-action-bar);
+  --shadow-segmented-active: var(--shadow-segmented-active);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Tokens verified against the Figma UI kit "Loyalty-Desing"
+ * (fileKey KxtI6mzVfDqGisGhC9VAf5, sections 01-07 of "Patterns") via the
+ * Figma MCP `get_variable_defs` tool. Never hardcode a hex/oklch value
+ * directly in a component — add or reuse a token here instead.
+ *
+ * The Figma file defines no dark palette. `.dark` below keeps the brand,
+ * semantic and data colors intact (inverted only where contrast truly
+ * requires it) so a future dark-mode toggle needs no retheme, but it has
+ * not been visually verified — the MVP ships light-only.
+ */
+:root {
+  --background: #ffffff; /* bg/white */
+  --foreground: #151412; /* text/primary */
+  --card: #ffffff;
+  --card-foreground: #151412;
+  --popover: #ffffff;
+  --popover-foreground: #151412;
+  --primary: #4f46e5; /* brand/default */
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f2; /* bg/subtle — Button variant=Secondary */
+  --secondary-foreground: #151412;
+  --muted: #f4f4f2; /* bg/subtle */
+  --muted-foreground: #57564f; /* text/secondary, text/muted */
+  --accent: #eef0fe; /* brand/subtle — menuAccent: "subtle" (hover/selected nav) */
+  --accent-foreground: #322a9e; /* color/primary/700 */
+  --destructive: #e03e3e;
+  --destructive-foreground: #ffffff;
+  --destructive-bg: #fdecec;
+  --border: #e5e4e1; /* border/default */
+  --border-strong: #cbcac5;
+  --input: #e5e4e1;
+  --ring: #4f46e5; /* focus/ring */
+  --radius: 0.625rem;
+  /* Nav item / rail item activo (Figma 624:495, 680:193) */
+  --shadow-nav-active: 0px 6px 14px -6px rgba(48, 41, 140, 0.3);
+  /* Search/notificaciones/ayuda del topbar (Figma 624:600, 624:605, 624:609) */
+  --shadow-topbar-control: 0px 4px 12px -6px rgba(48, 41, 140, 0.06);
+  /* Form / Sección (711:295) y Form / Barra de acciones (711:386) */
+  --shadow-form-section: 0px 6px 18px -6px rgba(48, 41, 140, 0.07);
+  --shadow-action-bar: 0px -2px 14px -4px rgba(48, 41, 140, 0.1);
+  /* Filtro / Segmentado, pastilla activa (Figma 699:342) */
+  --shadow-segmented-active: 0px 1px 3px 0px rgba(48, 41, 140, 0.1);
+
+  /* Brand scale */
+  --brand: #4f46e5;
+  --brand-subtle: #eef0fe;
+  --brand-accent: #6e68e8;
+  --primary-100: #e0e1fc;
+  --primary-200: #c7c9f9;
+  --primary-300: #9a9bf0;
+  --primary-500: #4f46e5;
+  --primary-700: #322a9e;
+  --primary-800: #2b2489;
+  --primary-900: #1b1760;
+
+  /* Semantic */
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-bg: #e8f7ee;
+  --warning: #a15c07;
+  --warning-foreground: #ffffff;
+  --warning-bg: #fdf3e5;
+
+  /* Categorical data (charts, builder node types) */
+  --data-indigo: #4f46e5;
+  --data-coral: #f43f7e;
+  --data-teal: #06b6d4;
+  --data-amber: #f59e0b;
+  --data-navy: #1c2b3f;
+  --chart-1: var(--data-indigo);
+  --chart-2: var(--data-coral);
+  --chart-3: var(--data-teal);
+  --chart-4: var(--data-amber);
+  --chart-5: var(--data-navy);
+
+  /* Avatars */
+  --avatar-coral-bg: #fde7ef;
+  --avatar-coral-fg: #8e1741;
+  --avatar-indigo-bg: #eef0fe;
+  --avatar-indigo-fg: #322a9e;
+  --neutral-50: #fafaf9;
+
+  /* shadcn Sidebar primitive (our AppSidebar is hand-built per Figma, not
+     this primitive — kept in sync in case a shadcn sidebar block is ever added) */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #151412;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef0fe;
+  --sidebar-accent-foreground: #322a9e;
+  --sidebar-border: #e5e4e1;
+  --sidebar-ring: #4f46e5;
+}
+
+.dark {
+  --background: #151412;
+  --foreground: #fafaf9;
+  --card: #1f1e1b;
+  --card-foreground: #fafaf9;
+  --popover: #1f1e1b;
+  --popover-foreground: #fafaf9;
+  --primary: #6e68e8; /* brand/accent reads better than brand/default on dark */
+  --primary-foreground: #ffffff;
+  --secondary: #2a2925;
+  --secondary-foreground: #fafaf9;
+  --muted: #2a2925;
+  --muted-foreground: #a8a7a0;
+  --accent: #2b2489; /* color/primary/800 */
+  --accent-foreground: #e0e1fc;
+  --destructive: #e03e3e;
+  --destructive-foreground: #ffffff;
+  --destructive-bg: #3a1f1f;
+  --border: #35342f;
+  --border-strong: #47453e;
+  --input: #35342f;
+  --ring: #6e68e8;
+  --shadow-nav-active: 0px 6px 14px -6px rgba(0, 0, 0, 0.45);
+  --shadow-topbar-control: 0px 4px 12px -6px rgba(0, 0, 0, 0.4);
+  --shadow-form-section: 0px 6px 18px -6px rgba(0, 0, 0, 0.35);
+  --shadow-action-bar: 0px -2px 14px -4px rgba(0, 0, 0, 0.45);
+  --shadow-segmented-active: 0px 1px 3px 0px rgba(0, 0, 0, 0.4);
+
+  --brand: #6e68e8;
+  --brand-subtle: #2b2489;
+  --brand-accent: #9a9bf0;
+  --primary-100: #1b1760;
+  --primary-200: #2b2489;
+  --primary-300: #322a9e;
+  --primary-500: #4f46e5;
+  --primary-700: #9a9bf0;
+  --primary-800: #c7c9f9;
+  --primary-900: #e0e1fc;
+
+  --success: #4ade80;
+  --success-foreground: #052e13;
+  --success-bg: #113420;
+  --warning: #fbbf24;
+  --warning-foreground: #3a2404;
+  --warning-bg: #3a2c0e;
+
+  --data-indigo: #6e68e8;
+  --data-coral: #f43f7e;
+  --data-teal: #22d3ee;
+  --data-amber: #f59e0b;
+  --data-navy: #94a3b8;
+  --chart-1: var(--data-indigo);
+  --chart-2: var(--data-coral);
+  --chart-3: var(--data-teal);
+  --chart-4: var(--data-amber);
+  --chart-5: var(--data-navy);
+
+  --avatar-coral-bg: #4a1027;
+  --avatar-coral-fg: #fbc7db;
+  --avatar-indigo-bg: #2b2489;
+  --avatar-indigo-fg: #e0e1fc;
+  --neutral-50: #201f1c;
+
+  --sidebar: #1f1e1b;
+  --sidebar-foreground: #fafaf9;
+  --sidebar-primary: #6e68e8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2b2489;
+  --sidebar-accent-foreground: #e0e1fc;
+  --sidebar-border: #35342f;
+  --sidebar-ring: #6e68e8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

@@ -1,0 +1,355 @@
+"use client"
+
+import { Users } from "lucide-react"
+import * as React from "react"
+
+import {
+  createColumnHelper,
+  tableFeatures,
+  useTable,
+} from "@tanstack/react-table"
+
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import { AppTopbar } from "@/components/layout/app-topbar"
+import { BrandMark } from "@/components/layout/brand-mark"
+import { SidebarRail } from "@/components/layout/sidebar-rail"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+
+import { ActionBar } from "@/components/form/action-bar"
+import { CurrencyInput } from "@/components/form/currency-input"
+import { Field } from "@/components/form/field"
+import { FileUpload } from "@/components/form/file-upload"
+import { Message } from "@/components/form/message"
+import { Multiselect } from "@/components/form/multiselect"
+import { PasswordInput } from "@/components/form/password-input"
+import { RadioCard } from "@/components/form/radio-card"
+import { Row } from "@/components/form/row"
+import { Section } from "@/components/form/section"
+import { Stepper } from "@/components/form/stepper"
+
+import { CellAcciones, CellEntidad } from "@/components/data/cells"
+import { DataTable } from "@/components/data/data-table"
+import { Pagination } from "@/components/data/pagination"
+
+import { Chip } from "@/components/filters/chip"
+import { FilterSearch } from "@/components/filters/search"
+import { Segmented } from "@/components/filters/segmented"
+
+import { EmptyState } from "@/components/feedback/empty-state"
+import { LoadingState } from "@/components/feedback/loading-state"
+
+type Fila = { nombre: string; email: string }
+
+const FILAS: Fila[] = [
+  { nombre: "Sofía Ramírez", email: "sofia.ramirez@example.com" },
+  { nombre: "Camilo Torres", email: "camilo.torres@example.com" },
+]
+
+// @tanstack/react-table v9: features y columnas se registran fuera del
+// render (ver skills/getting-started del propio paquete instalado).
+const tableFeaturesConfig = tableFeatures({})
+const columnHelper = createColumnHelper<typeof tableFeaturesConfig, Fila>()
+const COLUMNS = columnHelper.columns([
+  columnHelper.accessor("nombre", {
+    header: "Cliente",
+    cell: (info) => (
+      <CellEntidad
+        nombre={info.row.original.nombre}
+        subtitulo={info.row.original.email}
+      />
+    ),
+  }),
+  columnHelper.display({
+    id: "acciones",
+    header: "Acciones",
+    cell: () => <CellAcciones />,
+  }),
+])
+
+/**
+ * Harness de verificación pixel-perfect. Cada sección renderiza un
+ * componente aislado al tamaño exacto de su nodo de Figma (ver mapa
+ * componente → nodeId en e2e/pixel-perfect.spec.ts) para comparar
+ * capturas 1:1 y no "a ojo" contra el diseño completo de una pantalla.
+ */
+export default function DesignSystemPage() {
+  const [tiendas, setTiendas] = React.useState<string[]>(["centro", "prado"])
+  const [unidades, setUnidades] = React.useState(12)
+  const [rango, setRango] = React.useState("30d")
+  const [pagina, setPagina] = React.useState(1)
+  const table = useTable({
+    features: tableFeaturesConfig,
+    columns: COLUMNS,
+    data: FILAS,
+  })
+
+  return (
+    <div className="min-h-screen space-y-16 bg-muted p-10">
+      <section data-ds="brand-mark" className="flex gap-4 bg-white p-6">
+        <BrandMark />
+        <BrandMark variant="inverso" className="bg-muted" />
+      </section>
+
+      <section data-ds="layout-sidebar" className="h-[1024px] w-[260px] border">
+        <AppSidebar nombre="Elena Martínez" email="elena@etteer.com" />
+      </section>
+
+      <section
+        data-ds="layout-sidebar-rail"
+        className="h-[1024px] w-[72px] border"
+      >
+        <SidebarRail nombre="Elena Martínez" />
+      </section>
+
+      <section data-ds="layout-topbar" className="w-[1180px] border bg-white">
+        <AppTopbar
+          breadcrumb="Catálogo  ›  Productos"
+          titulo="Título de la vista"
+        />
+      </section>
+
+      <section data-ds="button" className="flex items-start gap-4 bg-white p-6">
+        <Button>Etiqueta</Button>
+        <Button variant="secondary">Etiqueta</Button>
+        <Button variant="outline">Etiqueta</Button>
+        <Button variant="ghost">Etiqueta</Button>
+        <Button variant="destructive">Etiqueta</Button>
+      </section>
+
+      <section data-ds="badge" className="flex items-start gap-3 bg-white p-6">
+        <Badge variant="neutral">Neutral</Badge>
+        <Badge variant="success">Success</Badge>
+        <Badge variant="warning">Warning</Badge>
+        <Badge variant="error">Error</Badge>
+        <Badge variant="info">Info</Badge>
+      </section>
+
+      <section data-ds="switch" className="flex items-start gap-4 bg-white p-6">
+        <Switch />
+        <Switch defaultChecked />
+      </section>
+
+      <section
+        data-ds="form-basics"
+        className="flex flex-wrap items-start gap-5 bg-white p-6"
+      >
+        <Field
+          label="Nombre del producto"
+          required
+          hint="Máximo 80 caracteres"
+          htmlFor="ds-nombre"
+        >
+          <Input
+            id="ds-nombre"
+            placeholder="Escribe aquí…"
+            className="w-[320px]"
+          />
+        </Field>
+        <Field
+          label="Nombre del producto"
+          required
+          error="Este campo es obligatorio"
+        >
+          <Input aria-invalid className="w-[320px]" />
+        </Field>
+        <Field label="Descripción" hint="Se muestra en la ficha del catálogo">
+          <Textarea placeholder="Describe el producto…" className="w-[320px]" />
+        </Field>
+        <Field label="Categoría" required hint="Define en qué reglas participa">
+          <Select>
+            <SelectTrigger className="w-[320px]">
+              <SelectValue placeholder="Selecciona una categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bebidas">Bebidas</SelectItem>
+              <SelectItem value="snacks">Snacks</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Precio de lista" required hint="Sin impuestos">
+          <CurrencyInput className="w-[320px]" placeholder="0" />
+        </Field>
+        <Field label="Unidades por caja" hint="Entre 1 y 999">
+          <Stepper
+            value={unidades}
+            onValueChange={setUnidades}
+            className="w-[320px]"
+          />
+        </Field>
+        <Field label="Contraseña" required hint="Mínimo 12 caracteres">
+          <PasswordInput placeholder="Tu contraseña" className="w-[320px]" />
+        </Field>
+      </section>
+
+      <section
+        data-ds="form-choices"
+        className="flex flex-wrap items-start gap-8 bg-white p-6"
+      >
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-2.5">
+            <Checkbox defaultChecked />
+            <span className="text-[13px] leading-[18px] font-medium">
+              Aplicar a todas las tiendas
+            </span>
+          </label>
+          <label className="flex items-center gap-2.5">
+            <Checkbox />
+            <span className="text-[13px] leading-[18px] font-medium">
+              Aplicar a todas las tiendas
+            </span>
+          </label>
+        </div>
+        <RadioGroup defaultValue="porcentual" className="gap-3">
+          <label className="flex items-center gap-2.5">
+            <RadioGroupItem value="porcentual" />
+            <span className="text-[13px] leading-[18px] font-medium">
+              Descuento porcentual
+            </span>
+          </label>
+          <label className="flex items-center gap-2.5">
+            <RadioGroupItem value="monto" />
+            <span className="text-[13px] leading-[18px] font-medium">
+              Descuento por monto
+            </span>
+          </label>
+        </RadioGroup>
+        <RadioGroup defaultValue="segmento" className="flex-row gap-3">
+          <RadioCard
+            value="segmento"
+            titulo="Regla por segmento"
+            descripcion="Se dispara cuando el cliente entra a un segmento."
+          />
+          <RadioCard
+            value="carrito"
+            titulo="Regla por carrito"
+            descripcion="Se dispara al superar un monto en el carrito."
+          />
+        </RadioGroup>
+        <Field
+          label="Tiendas incluidas"
+          hint="Vacío = todas las tiendas"
+          className="w-[340px]"
+        >
+          <Multiselect
+            options={[
+              { value: "centro", label: "Etteer Centro" },
+              { value: "prado", label: "Alto Prado" },
+              { value: "buenavista", label: "Buenavista" },
+            ]}
+            value={tiendas}
+            onValueChange={setTiendas}
+          />
+        </Field>
+        <FileUpload label="Imagen del producto" />
+      </section>
+
+      <section
+        data-ds="form-messages"
+        className="flex flex-col items-start gap-3 bg-white p-6"
+      >
+        <Message
+          tipo="error"
+          titulo="No se pudo guardar"
+          descripcion="Revisa los campos marcados en rojo antes de continuar."
+        />
+        <Message
+          tipo="aviso"
+          titulo="Esta regla colisiona"
+          descripcion="“2x1 en Bebidas” aplica al mismo segmento y tiene mayor prioridad."
+        />
+        <Message
+          tipo="exito"
+          titulo="Cambios guardados"
+          descripcion="La regla quedó activa en las 42 tiendas."
+        />
+        <Message
+          tipo="info"
+          titulo="Se aplicará al guardar"
+          descripcion="Los cambios impactan promociones en curso."
+        />
+      </section>
+
+      <section data-ds="form-section" className="bg-white p-6">
+        <Section
+          titulo="Título de la sección"
+          descripcion="Explicación breve de qué se configura en este bloque."
+        >
+          <Row>
+            <Field label="Nombre del producto" required>
+              <Input placeholder="Escribe aquí…" />
+            </Field>
+            <Field label="Categoría" required>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bebidas">Bebidas</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </Row>
+        </Section>
+      </section>
+
+      <section data-ds="form-action-bar" className="bg-muted p-6">
+        <ActionBar />
+      </section>
+
+      <section data-ds="table" className="flex flex-col gap-3 bg-white p-6">
+        <DataTable table={table} />
+        <Pagination
+          total={124}
+          pageSize={8}
+          page={pagina}
+          onPageChange={setPagina}
+        />
+      </section>
+
+      <section
+        data-ds="filters"
+        className="flex flex-wrap items-center gap-4 bg-white p-6"
+      >
+        <Chip active>Todos</Chip>
+        <Chip>Activos</Chip>
+        <Chip conteo={14}>Con conteo</Chip>
+        <Segmented
+          value={rango}
+          onValueChange={setRango}
+          options={[
+            { value: "7d", label: "7D" },
+            { value: "30d", label: "30D" },
+            { value: "90d", label: "90D" },
+            { value: "12m", label: "12M" },
+          ]}
+        />
+        <FilterSearch />
+      </section>
+
+      <section data-ds="empty-state" className="bg-white p-6">
+        <EmptyState
+          icon={Users}
+          titulo="Ningún cliente coincide con estos filtros"
+          descripcion="El segmento “En riesgo” no tiene clientes con compras en los últimos 30 días. Prueba ampliando el rango o quitando un filtro."
+        />
+      </section>
+
+      <section data-ds="loading-state" className="bg-white p-6">
+        <LoadingState />
+      </section>
+    </div>
+  )
+}
