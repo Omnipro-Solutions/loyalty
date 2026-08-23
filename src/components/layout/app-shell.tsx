@@ -27,6 +27,7 @@ export function AppShell({ nombre, email, children }: AppShellProps) {
       {collapsed ? (
         <SidebarRail
           nombre={nombre}
+          email={email}
           onExpand={() => setCollapsed(false)}
           className="shrink-0"
         />

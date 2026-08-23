@@ -2,7 +2,6 @@ import {
   LayoutGrid,
   Package,
   Settings,
-  SlidersHorizontal,
   Store,
   Tag,
   TrendingUp,
@@ -11,10 +10,16 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+export type NavChild = {
+  etiqueta: string
+  href: string
+}
+
 export type NavItem = {
   etiqueta: string
   href: string
   icon: LucideIcon
+  children?: NavChild[]
 }
 
 export type NavGroup = {
@@ -45,19 +50,28 @@ export const NAVIGATION: NavGroup[] = [
     titulo: "Comercial",
     items: [
       { etiqueta: "Promociones", href: "/promociones", icon: Tag },
-      { etiqueta: "Journeys", href: "/journeys", icon: Workflow },
-      {
-        etiqueta: "Reglas de descuento",
-        href: "/reglas",
-        icon: SlidersHorizontal,
-      },
+      { etiqueta: "Loyalty Builder", href: "/journeys", icon: Workflow },
       { etiqueta: "Clientes", href: "/clientes", icon: Users },
       { etiqueta: "Audiencias", href: "/audiencias", icon: TrendingUp },
     ],
   },
   {
     titulo: "Configuración",
-    items: [{ etiqueta: "Ajustes", href: "/ajustes", icon: Settings }],
+    items: [
+      {
+        etiqueta: "Ajustes",
+        href: "/ajustes",
+        icon: Settings,
+        // Sin equivalente en Figma: "09 · Equipo y permisos" y "12 ·
+        // Integraciones" son secciones independientes del archivo. La app
+        // las agrupa bajo un mismo ítem colapsable de "Ajustes" en vez de
+        // sumarlas como ítems propios del sidebar principal.
+        children: [
+          { etiqueta: "Equipo y permisos", href: "/ajustes/equipo" },
+          { etiqueta: "Integraciones", href: "/ajustes/integraciones" },
+        ],
+      },
+    ],
   },
 ]
 

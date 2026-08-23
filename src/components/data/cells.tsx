@@ -6,19 +6,40 @@ import { Button } from "@/components/ui/button"
 type CellEntidadProps = {
   nombre: string
   subtitulo: string
+  /** Foto real (ej. producto de catálogo) — si falta, cae a iniciales. */
+  imagenUrl?: string | null
+  /** Figma usa 30px en el patrón genérico (697:224) pero 38px en 03.1. */
+  size?: number
 }
 
-/** Figma "Table / Cell · Entidad" (697:224): avatar 30px + nombre 12/17 + subtítulo 10/14. */
-export function CellEntidad({ nombre, subtitulo }: CellEntidadProps) {
+/** Figma "Table / Cell · Entidad" (697:224): avatar + nombre 12/17 + subtítulo 10/14. */
+export function CellEntidad({
+  nombre,
+  subtitulo,
+  imagenUrl,
+  size = 30,
+}: CellEntidadProps) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <AvatarInitials
-        nombre={nombre}
-        size={30}
-        bgClassName="bg-avatar-indigo-bg"
-        fgClassName="text-avatar-indigo-fg"
-        textClassName="text-[10px] leading-[13px]"
-      />
+      {imagenUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- tamaño fijo en una celda de tabla, no vale la pena next/image aquí.
+        <img
+          src={imagenUrl}
+          alt=""
+          width={size}
+          height={size}
+          style={{ width: size, height: size }}
+          className="shrink-0 rounded-[10px] object-cover"
+        />
+      ) : (
+        <AvatarInitials
+          nombre={nombre}
+          size={size}
+          bgClassName="bg-avatar-indigo-bg"
+          fgClassName="text-avatar-indigo-fg"
+          textClassName="text-[10px] leading-[13px]"
+        />
+      )}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[12px] leading-[17px] font-medium text-foreground">
           {nombre}

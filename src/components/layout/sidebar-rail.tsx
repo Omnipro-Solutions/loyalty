@@ -4,20 +4,26 @@ import { PanelLeftOpen } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { BrandMark } from "@/components/layout/brand-mark"
+import { UserMenu } from "@/components/layout/user-menu"
 import { Button } from "@/components/ui/button"
 import { isNavActive, NAVIGATION } from "@/config/navigation"
 import { cn } from "@/lib/utils"
 
 type SidebarRailProps = {
   nombre: string
+  email: string
   onExpand?: () => void
   className?: string
 }
 
 /** Figma "Layout / Sidebar · Rail" (680:230): 72px, bg-white, ítems 40×40 rounded-xl. */
-export function SidebarRail({ nombre, onExpand, className }: SidebarRailProps) {
+export function SidebarRail({
+  nombre,
+  email,
+  onExpand,
+  className,
+}: SidebarRailProps) {
   const pathname = usePathname()
 
   return (
@@ -70,7 +76,7 @@ export function SidebarRail({ nombre, onExpand, className }: SidebarRailProps) {
         >
           <PanelLeftOpen className="size-4" />
         </Button>
-        <AvatarInitials nombre={nombre} size={32} />
+        <UserMenu nombre={nombre} email={email} variant="compact" />
       </div>
     </div>
   )

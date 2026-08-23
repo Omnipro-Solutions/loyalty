@@ -1,0 +1,210 @@
+"use client"
+
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useAction } from "next-safe-action/hooks"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { useForm, useWatch } from "react-hook-form"
+import type { z } from "zod"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Field } from "@/components/form/field"
+import { Message } from "@/components/form/message"
+import { PasswordInput } from "@/components/form/password-input"
+import { AuthCard } from "@/components/layout/auth-card"
+
+import { loginAction } from "../actions/login"
+import { requestPasswordResetAction } from "../actions/password-reset"
+import { loginSchema } from "../schemas"
+import { SsoProviderButtons } from "./sso-provider-buttons"
+
+type LoginValues = z.input<typeof loginSchema>
+
+export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
+  const router = useRouter()
+  const [modo, setModo] = useState<"login" | "recuperar">("login")
+  const [errorGeneral, setErrorGeneral] = useState<string>()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "", recordarDispositivo: false },
+  })
+  const recordarDispositivo = useWatch({ control, name: "recordarDispositivo" })
+
+  const login = useAction(loginAction, {
+    onSuccess: ({ data }) => {
+      if (!data?.ok) {
+        setErrorGeneral(data?.message ?? "No se pudo iniciar sesión.")
+        return
+      }
+      router.push(data.needsVerification ? "/verificacion" : "/resumen")
+    },
+    onError: () =>
+      setErrorGeneral("No se pudo iniciar sesión. Intenta de nuevo."),
+  })
+
+  const reset = useAction(requestPasswordResetAction, {
+    onSuccess: () => setModo("login"),
+  })
+
+  if (modo === "recuperar") {
+    return (
+      <AuthCard>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-2xl leading-8 font-semibold text-foreground">
+            Recuperar contraseña
+          </p>
+          <p className="text-[13px] leading-[18px] text-muted-foreground">
+            Te enviaremos un enlace para restablecerla si el correo existe.
+          </p>
+        </div>
+        {reset.hasSucceeded && (
+          <Message
+            tipo="exito"
+            titulo="Revisa tu correo"
+            descripcion="Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+          />
+        )}
+        <Field label="Correo corporativo" htmlFor="reset-email">
+          <Input
+            id="reset-email"
+            type="email"
+            placeholder="elena@omni.pro"
+            {...register("email")}
+          />
+        </Field>
+        <Button
+          className="w-full"
+          disabled={reset.isPending}
+          onClick={handleSubmit((values) =>
+            reset.execute({ email: values.email })
+          )}
+        >
+          Enviar enlace
+        </Button>
+        <button
+          type="button"
+          onClick={() => setModo("login")}
+          className="text-center text-xs font-medium text-primary"
+        >
+          Volver a iniciar sesión
+        </button>
+      </AuthCard>
+    )
+  }
+
+  return (
+    <AuthCard className="gap-3.5">
+      <div className="flex flex-col gap-1">
+        <p className="text-xl leading-7 font-semibold text-foreground">
+          Iniciar sesión
+        </p>
+        <p className="text-[13px] leading-[18px] text-muted-foreground">
+          Accede al panel de promociones de omni.
+        </p>
+      </div>
+
+      {errorGeneral && (
+        <Message
+          tipo="error"
+          titulo="No se pudo iniciar sesión"
+          descripcion={errorGeneral}
+        />
+      )}
+
+      <form
+        className="flex flex-col gap-2.5"
+        onSubmit={handleSubmit((values) => {
+          setErrorGeneral(undefined)
+          login.execute(values)
+        })}
+      >
+        <Field
+          label="Correo corporativo"
+          htmlFor="email"
+          error={errors.email?.message}
+        >
+          <Input
+            id="email"
+            type="email"
+            placeholder="elena@omni.pro"
+            {...register("email")}
+          />
+        </Field>
+
+        <div className="flex w-full flex-col gap-1.5">
+          <div className="flex items-center gap-1">
+            <Label
+              htmlFor="password"
+              className="text-xs leading-[17px] font-medium text-muted-foreground"
+            >
+              Contraseña
+            </Label>
+            <span className="text-xs leading-[17px] font-medium text-destructive">
+              *
+            </span>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setModo("recuperar")}
+              className="text-xs leading-[18px] font-medium text-primary"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
+          <PasswordInput
+            id="password"
+            placeholder="Tu contraseña"
+            {...register("password")}
+          />
+          <p
+            className={
+              errors.password
+                ? "text-[11px] leading-[15px] text-destructive"
+                : "text-[11px] leading-[15px] text-muted-foreground"
+            }
+          >
+            {errors.password?.message ?? "Mínimo 12 caracteres"}
+          </p>
+        </div>
+
+        <label className="flex items-center gap-2.5">
+          <Checkbox
+            checked={recordarDispositivo ?? false}
+            onCheckedChange={(checked) =>
+              setValue("recordarDispositivo", checked === true)
+            }
+          />
+          <span className="text-[13px] leading-[18px] text-secondary-foreground">
+            Recordar este dispositivo por 30 días
+          </span>
+        </label>
+
+        <Button type="submit" disabled={login.isPending} className="w-full">
+          Continuar
+        </Button>
+      </form>
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <p className="text-xs text-muted-foreground">o</p>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <SsoProviderButtons samlEnabled={samlEnabled} />
+
+      <p className="text-center text-[11px] leading-4 text-muted-foreground">
+        Al continuar aceptas la política de uso interno de omni.
+      </p>
+    </AuthCard>
+  )
+}

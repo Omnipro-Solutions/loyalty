@@ -1,14 +1,19 @@
 import type { ReactNode } from "react"
+import { redirect } from "next/navigation"
 
 import { AppShell } from "@/components/layout/app-shell"
+import { getPerfilActual } from "@/features/perfil/lib/queries"
 
-// TODO(Fase 3): reemplazar por el perfil real de la sesión de Supabase
-// (organizations/profiles) — hoy es el usuario de demo del Figma.
-const DEMO_USER = { nombre: "Elena Martínez", email: "elena@etteer.com" }
+export default async function AppGroupLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const perfil = await getPerfilActual()
+  if (!perfil) redirect("/login")
 
-export default function AppGroupLayout({ children }: { children: ReactNode }) {
   return (
-    <AppShell nombre={DEMO_USER.nombre} email={DEMO_USER.email}>
+    <AppShell nombre={perfil.nombre} email={perfil.email}>
       {children}
     </AppShell>
   )

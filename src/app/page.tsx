@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 
-// TODO(Fase 3): decidir el destino según sesión — sin auth aún, siempre
-// entra a la app. `proxy.ts` se encargará de exigir sesión antes de esto.
+// `proxy.ts` ya exige sesión aal2 antes de llegar aquí — si se renderiza
+// esta página es porque el usuario está autenticado.
 export default function RootPage() {
   redirect("/resumen")
 }

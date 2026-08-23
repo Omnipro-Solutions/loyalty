@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
 import { ActionBar } from "@/components/form/action-bar"
@@ -51,7 +52,125 @@ import { Segmented } from "@/components/filters/segmented"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { LoadingState } from "@/components/feedback/loading-state"
 
+import { BitacoraProductoCard } from "@/features/catalogo/components/bitacora-producto-card"
+import type { ProductoEvento } from "@/features/catalogo/lib/queries"
+
 type Fila = { nombre: string; email: string }
+
+const BITACORA_MOCK: ProductoEvento[] = [
+  {
+    id: "1",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "precio",
+    titulo: "Precio actualizado",
+    campo: "precio",
+    valor_anterior: "6750",
+    valor_nuevo: "6900",
+    descripcion: "Lista base nacional",
+    autor_nombre: "Sincronización de catálogo",
+    es_automatico: true,
+    creado_en: "2026-08-23T09:14:00-05:00",
+  },
+  {
+    id: "2",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "promocion",
+    titulo: "Promoción vinculada",
+    campo: null,
+    valor_anterior: null,
+    valor_nuevo: null,
+    descripcion: "Semana de la Salud 2x1 aplicada a la categoría “Analgésicos”",
+    autor_nombre: "Motor de promociones",
+    es_automatico: true,
+    creado_en: "2026-08-23T08:02:00-05:00",
+  },
+  {
+    id: "3",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "datos",
+    titulo: "Campo editado",
+    campo: "proveedor",
+    valor_anterior: "Cóndor Ltda.",
+    valor_nuevo: "Droguerías Cóndor S.A.S.",
+    descripcion: null,
+    autor_nombre: "Sincronización de catálogo",
+    es_automatico: true,
+    creado_en: "2026-08-22T17:41:00-05:00",
+  },
+  {
+    id: "4",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "datos",
+    titulo: "Campo editado",
+    campo: "tipo_producto",
+    valor_anterior: null,
+    valor_nuevo: "Medicamento OTC",
+    descripcion: null,
+    autor_nombre: "Sincronización de catálogo",
+    es_automatico: true,
+    creado_en: "2026-08-22T17:38:00-05:00",
+  },
+  {
+    id: "5",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "precio",
+    titulo: "Precio actualizado",
+    campo: "precio",
+    valor_anterior: "7000",
+    valor_nuevo: "7200",
+    descripcion: "Lista e-commerce",
+    autor_nombre: "Sincronización de catálogo",
+    es_automatico: true,
+    creado_en: "2026-08-18T11:20:00-05:00",
+  },
+  {
+    id: "6",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "estado",
+    titulo: "Estado cambiado",
+    campo: "estado",
+    valor_anterior: "inactivo",
+    valor_nuevo: "activo",
+    descripcion: null,
+    autor_nombre: "Sincronización de catálogo",
+    es_automatico: true,
+    creado_en: "2026-08-15T10:05:00-05:00",
+  },
+  {
+    id: "7",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "datos",
+    titulo: "Imagen actualizada",
+    campo: "imagen_url",
+    valor_anterior: "/catalogo/analgesicos-anterior.jpg",
+    valor_nuevo: "/catalogo/acetaminofen-500.jpg",
+    descripcion: null,
+    autor_nombre: "Sincronización de catálogo",
+    es_automatico: true,
+    creado_en: "2026-08-12T09:33:00-05:00",
+  },
+  {
+    id: "8",
+    org_id: "org",
+    producto_id: "prod",
+    categoria: "datos",
+    titulo: "Completitud recalculada",
+    campo: "completitud_pct",
+    valor_anterior: "74 %",
+    valor_nuevo: "82 %",
+    descripcion: null,
+    autor_nombre: "Sistema",
+    es_automatico: true,
+    creado_en: "2026-08-05T16:12:00-05:00",
+  },
+]
 
 const FILAS: Fila[] = [
   { nombre: "Sofía Ramírez", email: "sofia.ramirez@example.com" },
@@ -104,14 +223,14 @@ export default function DesignSystemPage() {
       </section>
 
       <section data-ds="layout-sidebar" className="h-[1024px] w-[260px] border">
-        <AppSidebar nombre="Elena Martínez" email="elena@etteer.com" />
+        <AppSidebar nombre="Elena Martínez" email="elena@omni.pro" />
       </section>
 
       <section
         data-ds="layout-sidebar-rail"
         className="h-[1024px] w-[72px] border"
       >
-        <SidebarRail nombre="Elena Martínez" />
+        <SidebarRail nombre="Elena Martínez" email="elena@omni.pro" />
       </section>
 
       <section data-ds="layout-topbar" className="w-[1180px] border bg-white">
@@ -140,6 +259,18 @@ export default function DesignSystemPage() {
       <section data-ds="switch" className="flex items-start gap-4 bg-white p-6">
         <Switch />
         <Switch defaultChecked />
+      </section>
+
+      <section data-ds="tabs" className="flex items-start bg-brand-subtle p-6">
+        <Tabs defaultValue="compras">
+          <TabsList>
+            <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsTrigger value="compras">Compras</TabsTrigger>
+            <TabsTrigger value="reglas">Reglas y promociones</TabsTrigger>
+            <TabsTrigger value="audiencias">Audiencias</TabsTrigger>
+            <TabsTrigger value="actividad">Actividad</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </section>
 
       <section
@@ -245,7 +376,7 @@ export default function DesignSystemPage() {
         >
           <Multiselect
             options={[
-              { value: "centro", label: "Etteer Centro" },
+              { value: "centro", label: "Omni Centro" },
               { value: "prado", label: "Alto Prado" },
               { value: "buenavista", label: "Buenavista" },
             ]}
@@ -349,6 +480,10 @@ export default function DesignSystemPage() {
 
       <section data-ds="loading-state" className="bg-white p-6">
         <LoadingState />
+      </section>
+
+      <section data-ds="catalogo-bitacora" className="w-[1116px] bg-muted p-6">
+        <BitacoraProductoCard eventos={BITACORA_MOCK} />
       </section>
     </div>
   )

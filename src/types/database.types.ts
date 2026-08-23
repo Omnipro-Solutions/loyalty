@@ -1,241 +1,145 @@
-/**
- * Tipos de la base de datos, escritos a mano a partir de las migraciones en
- * `supabase/migrations/` porque este entorno no tiene Docker para levantar
- * el stack local ni un proyecto Supabase enlazado todavía.
- *
- * EN CUANTO se enlace un proyecto real, regenerar y reemplazar este archivo
- * por completo con:
- *
- *   pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
- *
- * La forma sigue exactamente la que produce esa CLI (Row/Insert/Update por
- * tabla + Functions), para que el reemplazo no requiera tocar ningún import.
- */
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
-
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.15"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      organizations: {
+      categorias: {
         Row: {
+          creado_en: string
           id: string
           nombre: string
-          slug: string
-          dominio_correo: string
-          tenant_idp: string | null
-          creado_en: string
-          actualizado_en: string
+          org_id: string
+          parent_id: string | null
         }
         Insert: {
+          creado_en?: string
           id?: string
           nombre: string
-          slug: string
-          dominio_correo: string
-          tenant_idp?: string | null
-          creado_en?: string
-          actualizado_en?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["organizations"]["Insert"]>
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          id: string
           org_id: string
-          nombre: string
-          email: string
-          color_avatar: string | null
-          rol: string
-          creado_en: string
-          actualizado_en: string
+          parent_id?: string | null
         }
-        Insert: {
-          id: string
-          org_id: string
-          nombre: string
-          email: string
-          color_avatar?: string | null
-          rol?: string
+        Update: {
           creado_en?: string
-          actualizado_en?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          parent_id?: string | null
         }
-        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>
         Relationships: [
           {
-            foreignKeyName: "profiles_org_id_fkey"
+            foreignKeyName: "categorias_org_id_fkey"
             columns: ["org_id"]
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      role_permissions: {
-        Row: {
-          rol: string
-          recurso: string
-          accion: string
-          permitido: boolean
-        }
-        Insert: {
-          rol: string
-          recurso: string
-          accion: string
-          permitido?: boolean
-        }
-        Update: Partial<Database["public"]["Tables"]["role_permissions"]["Insert"]>
-        Relationships: []
-      }
-      trusted_devices: {
-        Row: {
-          id: string
-          profile_id: string
-          token_hash: string
-          creado_en: string
-          expira_en: string
-        }
-        Insert: {
-          id?: string
-          profile_id: string
-          token_hash: string
-          creado_en?: string
-          expira_en: string
-        }
-        Update: Partial<Database["public"]["Tables"]["trusted_devices"]["Insert"]>
-        Relationships: [
-          {
-            foreignKeyName: "trusted_devices_profile_id_fkey"
-            columns: ["profile_id"]
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mfa_backup_codes: {
-        Row: {
-          id: string
-          profile_id: string
-          code_hash: string
-          usado_en: string | null
-          creado_en: string
-        }
-        Insert: {
-          id?: string
-          profile_id: string
-          code_hash: string
-          usado_en?: string | null
-          creado_en?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["mfa_backup_codes"]["Insert"]>
-        Relationships: [
-          {
-            foreignKeyName: "mfa_backup_codes_profile_id_fkey"
-            columns: ["profile_id"]
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tiers: {
-        Row: {
-          id: string
-          org_id: string
-          nombre: string
-          multiplicador: number
-          umbral_puntos: number
-          orden: number
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          nombre: string
-          multiplicador?: number
-          umbral_puntos?: number
-          orden: number
-        }
-        Update: Partial<Database["public"]["Tables"]["tiers"]["Insert"]>
-        Relationships: [
-          {
-            foreignKeyName: "tiers_org_id_fkey"
-            columns: ["org_id"]
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      members: {
-        Row: {
-          id: string
-          org_id: string
-          nombre: string
-          email: string
-          tier_id: string | null
-          saldo_puntos: number
-          fecha_alta: string
-          creado_en: string
-          actualizado_en: string
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          nombre: string
-          email: string
-          tier_id?: string | null
-          saldo_puntos?: number
-          fecha_alta?: string
-          creado_en?: string
-          actualizado_en?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["members"]["Insert"]>
-        Relationships: [
-          {
-            foreignKeyName: "members_org_id_fkey"
-            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "members_tier_id_fkey"
-            columns: ["tier_id"]
-            referencedRelation: "tiers"
+            foreignKeyName: "categorias_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
         ]
       }
-      points_ledger: {
+      challenges: {
         Row: {
+          actualizado_en: string
+          creado_en: string
+          definicion: Json
+          estado: string
           id: string
-          org_id: string
           member_id: string
-          tipo: string
-          puntos: number
-          origen: string | null
+          meta: number
+          nombre: string
+          org_id: string
+          premio: Json
+          progreso: number
           workflow_run_id: string | null
-          expira_en: string | null
-          creado_en: string
         }
         Insert: {
-          id?: string
-          org_id: string
-          member_id: string
-          tipo: string
-          puntos: number
-          origen?: string | null
-          workflow_run_id?: string | null
-          expira_en?: string | null
+          actualizado_en?: string
           creado_en?: string
+          definicion?: Json
+          estado?: string
+          id?: string
+          member_id: string
+          meta: number
+          nombre: string
+          org_id: string
+          premio?: Json
+          progreso?: number
+          workflow_run_id?: string | null
         }
-        Update: Partial<Database["public"]["Tables"]["points_ledger"]["Insert"]>
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          definicion?: Json
+          estado?: string
+          id?: string
+          member_id?: string
+          meta?: number
+          nombre?: string
+          org_id?: string
+          premio?: Json
+          progreso?: number
+          workflow_run_id?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "points_ledger_member_id_fkey"
+            foreignKeyName: "challenges_member_id_fkey"
             columns: ["member_id"]
+            isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "points_ledger_workflow_run_id_fkey"
+            foreignKeyName: "challenges_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenges_workflow_run_id_fkey"
             columns: ["workflow_run_id"]
+            isOneToOne: false
             referencedRelation: "workflow_runs"
             referencedColumns: ["id"]
           },
@@ -243,176 +147,1285 @@ export interface Database {
       }
       coupons: {
         Row: {
-          id: string
-          org_id: string
-          member_id: string | null
           codigo: string
+          creado_en: string
+          estado: string
+          id: string
+          member_id: string | null
+          org_id: string
           tipo: string
           valor: number | null
           vigente_desde: string
           vigente_hasta: string | null
-          estado: string
           workflow_run_id: string | null
-          creado_en: string
         }
         Insert: {
-          id?: string
-          org_id: string
-          member_id?: string | null
           codigo: string
+          creado_en?: string
+          estado?: string
+          id?: string
+          member_id?: string | null
+          org_id: string
           tipo: string
           valor?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null
-          estado?: string
           workflow_run_id?: string | null
-          creado_en?: string
         }
-        Update: Partial<Database["public"]["Tables"]["coupons"]["Insert"]>
+        Update: {
+          codigo?: string
+          creado_en?: string
+          estado?: string
+          id?: string
+          member_id?: string | null
+          org_id?: string
+          tipo?: string
+          valor?: number | null
+          vigente_desde?: string
+          vigente_hasta?: string | null
+          workflow_run_id?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "coupons_member_id_fkey"
             columns: ["member_id"]
+            isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "coupons_workflow_run_id_fkey"
             columns: ["workflow_run_id"]
+            isOneToOne: false
             referencedRelation: "workflow_runs"
             referencedColumns: ["id"]
           },
         ]
       }
-      challenges: {
+      invitaciones: {
         Row: {
-          id: string
-          org_id: string
-          member_id: string
-          nombre: string
-          definicion: Json
-          progreso: number
-          meta: number
-          premio: Json
-          estado: string
-          workflow_run_id: string | null
+          aceptada_en: string | null
           creado_en: string
-          actualizado_en: string
+          email: string
+          estado: string
+          expira_en: string
+          id: string
+          invitado_por: string
+          org_id: string
+          role_id: string
+          tienda_id: string | null
         }
         Insert: {
-          id?: string
-          org_id: string
-          member_id: string
-          nombre: string
-          definicion?: Json
-          progreso?: number
-          meta: number
-          premio?: Json
-          estado?: string
-          workflow_run_id?: string | null
+          aceptada_en?: string | null
           creado_en?: string
-          actualizado_en?: string
+          email: string
+          estado?: string
+          expira_en?: string
+          id?: string
+          invitado_por: string
+          org_id: string
+          role_id: string
+          tienda_id?: string | null
         }
-        Update: Partial<Database["public"]["Tables"]["challenges"]["Insert"]>
+        Update: {
+          aceptada_en?: string | null
+          creado_en?: string
+          email?: string
+          estado?: string
+          expira_en?: string
+          id?: string
+          invitado_por?: string
+          org_id?: string
+          role_id?: string
+          tienda_id?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "challenges_member_id_fkey"
+            foreignKeyName: "invitaciones_invitado_por_fkey"
+            columns: ["invitado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_tienda_id_fkey"
+            columns: ["tienda_id"]
+            isOneToOne: false
+            referencedRelation: "tiendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_consentimientos: {
+        Row: {
+          actualizado_en: string
+          canal: string
+          fuente: string | null
+          id: string
+          member_id: string
+          org_id: string
+          otorgado: boolean
+        }
+        Insert: {
+          actualizado_en?: string
+          canal: string
+          fuente?: string | null
+          id?: string
+          member_id: string
+          org_id: string
+          otorgado?: boolean
+        }
+        Update: {
+          actualizado_en?: string
+          canal?: string
+          fuente?: string | null
+          id?: string
+          member_id?: string
+          org_id?: string
+          otorgado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_consentimientos_member_id_fkey"
             columns: ["member_id"]
+            isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_consentimientos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      members: {
+        Row: {
+          actualizado_en: string
+          apellido: string
+          canal_adquisicion: string | null
+          codigo_socio: string
+          consentimiento_marketing: boolean
+          creado_en: string
+          email: string
+          estado_civil: string | null
+          estado_cuenta: string
+          fecha_alta: string
+          fecha_nacimiento: string | null
+          genero: string | null
+          id: string
+          idioma: string
+          nombre: string
+          numero_documento: string | null
+          org_id: string
+          preferencia_compra: string | null
+          provincia: string | null
+          saldo_puntos: number
+          telefono: string | null
+          tienda_inscripcion_id: string | null
+          tiene_hijos: boolean | null
+          tiene_mascotas: boolean | null
+          tier_id: string | null
+          tipo_documento: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          apellido?: string
+          canal_adquisicion?: string | null
+          codigo_socio?: string
+          consentimiento_marketing?: boolean
+          creado_en?: string
+          email: string
+          estado_civil?: string | null
+          estado_cuenta?: string
+          fecha_alta?: string
+          fecha_nacimiento?: string | null
+          genero?: string | null
+          id?: string
+          idioma?: string
+          nombre: string
+          numero_documento?: string | null
+          org_id: string
+          preferencia_compra?: string | null
+          provincia?: string | null
+          saldo_puntos?: number
+          telefono?: string | null
+          tienda_inscripcion_id?: string | null
+          tiene_hijos?: boolean | null
+          tiene_mascotas?: boolean | null
+          tier_id?: string | null
+          tipo_documento?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          apellido?: string
+          canal_adquisicion?: string | null
+          codigo_socio?: string
+          consentimiento_marketing?: boolean
+          creado_en?: string
+          email?: string
+          estado_civil?: string | null
+          estado_cuenta?: string
+          fecha_alta?: string
+          fecha_nacimiento?: string | null
+          genero?: string | null
+          id?: string
+          idioma?: string
+          nombre?: string
+          numero_documento?: string | null
+          org_id?: string
+          preferencia_compra?: string | null
+          provincia?: string | null
+          saldo_puntos?: number
+          telefono?: string | null
+          tienda_inscripcion_id?: string | null
+          tiene_hijos?: boolean | null
+          tiene_mascotas?: boolean | null
+          tier_id?: string | null
+          tipo_documento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "members_tienda_inscripcion_id_fkey"
+            columns: ["tienda_inscripcion_id"]
+            isOneToOne: false
+            referencedRelation: "tiendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "members_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mfa_backup_codes: {
+        Row: {
+          code_hash: string
+          creado_en: string
+          id: string
+          profile_id: string
+          usado_en: string | null
+        }
+        Insert: {
+          code_hash: string
+          creado_en?: string
+          id?: string
+          profile_id: string
+          usado_en?: string | null
+        }
+        Update: {
+          code_hash?: string
+          creado_en?: string
+          id?: string
+          profile_id?: string
+          usado_en?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mfa_backup_codes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          dominio_correo: string
+          id: string
+          nombre: string
+          slug: string
+          tenant_idp: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          dominio_correo: string
+          id?: string
+          nombre: string
+          slug: string
+          tenant_idp?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          dominio_correo?: string
+          id?: string
+          nombre?: string
+          slug?: string
+          tenant_idp?: string | null
+        }
+        Relationships: []
+      }
+      pedido_items: {
+        Row: {
+          cantidad: number
+          costo_unitario: number
+          id: string
+          pedido_id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal: number
+        }
+        Insert: {
+          cantidad: number
+          costo_unitario?: number
+          id?: string
+          pedido_id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal?: number
+        }
+        Update: {
+          cantidad?: number
+          costo_unitario?: number
+          id?: string
+          pedido_id?: string
+          precio_unitario?: number
+          producto_id?: string
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          canal: string
+          costo_total: number
+          creado_en: string
+          estado: string
+          id: string
+          member_id: string
+          numero_pedido: string
+          org_id: string
+          tienda_id: string | null
+          total: number
+        }
+        Insert: {
+          canal: string
+          costo_total?: number
+          creado_en?: string
+          estado?: string
+          id?: string
+          member_id: string
+          numero_pedido: string
+          org_id: string
+          tienda_id?: string | null
+          total?: number
+        }
+        Update: {
+          canal?: string
+          costo_total?: number
+          creado_en?: string
+          estado?: string
+          id?: string
+          member_id?: string
+          numero_pedido?: string
+          org_id?: string
+          tienda_id?: string | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_tienda_id_fkey"
+            columns: ["tienda_id"]
+            isOneToOne: false
+            referencedRelation: "tiendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      points_ledger: {
+        Row: {
+          canal: string | null
+          creado_en: string
+          expira_en: string | null
+          id: string
+          member_id: string
+          org_id: string
+          origen: string | null
+          puntos: number
+          tipo: string
+          workflow_run_id: string | null
+        }
+        Insert: {
+          canal?: string | null
+          creado_en?: string
+          expira_en?: string | null
+          id?: string
+          member_id: string
+          org_id: string
+          origen?: string | null
+          puntos: number
+          tipo: string
+          workflow_run_id?: string | null
+        }
+        Update: {
+          canal?: string | null
+          creado_en?: string
+          expira_en?: string | null
+          id?: string
+          member_id?: string
+          org_id?: string
+          origen?: string | null
+          puntos?: number
+          tipo?: string
+          workflow_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_ledger_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producto_categorias: {
+        Row: {
+          categoria_id: string
+          es_principal: boolean
+          producto_id: string
+        }
+        Insert: {
+          categoria_id: string
+          es_principal?: boolean
+          producto_id: string
+        }
+        Update: {
+          categoria_id?: string
+          es_principal?: boolean
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_categorias_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_categorias_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producto_eventos: {
+        Row: {
+          autor_nombre: string
+          campo: string | null
+          categoria: string
+          creado_en: string
+          descripcion: string | null
+          es_automatico: boolean
+          id: string
+          org_id: string
+          producto_id: string
+          titulo: string
+          valor_anterior: string | null
+          valor_nuevo: string | null
+        }
+        Insert: {
+          autor_nombre: string
+          campo?: string | null
+          categoria: string
+          creado_en?: string
+          descripcion?: string | null
+          es_automatico?: boolean
+          id?: string
+          org_id: string
+          producto_id: string
+          titulo: string
+          valor_anterior?: string | null
+          valor_nuevo?: string | null
+        }
+        Update: {
+          autor_nombre?: string
+          campo?: string | null
+          categoria?: string
+          creado_en?: string
+          descripcion?: string | null
+          es_automatico?: boolean
+          id?: string
+          org_id?: string
+          producto_id?: string
+          titulo?: string
+          valor_anterior?: string | null
+          valor_nuevo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_eventos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_eventos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producto_precios: {
+        Row: {
+          canal: string
+          creado_en: string
+          es_base: boolean
+          id: string
+          nombre_lista: string
+          precio: number
+          producto_id: string
+          vigente_desde: string
+          vigente_hasta: string | null
+        }
+        Insert: {
+          canal: string
+          creado_en?: string
+          es_base?: boolean
+          id?: string
+          nombre_lista: string
+          precio: number
+          producto_id: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Update: {
+          canal?: string
+          creado_en?: string
+          es_base?: boolean
+          id?: string
+          nombre_lista?: string
+          precio?: number
+          producto_id?: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_precios_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      productos: {
+        Row: {
+          actualizado_en: string
+          codigo_barras: string | null
+          codigo_producto: string
+          completitud_pct: number
+          costo_unitario: number | null
+          creado_en: string
+          estado: string
+          id: string
+          imagen_url: string | null
+          marca: string | null
+          nombre: string
+          org_id: string
+          precio: number
+          presentacion: string | null
+          proveedor: string | null
+          puntos: number
+          sku: string
+          tipo_producto: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          codigo_barras?: string | null
+          codigo_producto: string
+          completitud_pct?: number
+          costo_unitario?: number | null
+          creado_en?: string
+          estado?: string
+          id?: string
+          imagen_url?: string | null
+          marca?: string | null
+          nombre: string
+          org_id: string
+          precio?: number
+          presentacion?: string | null
+          proveedor?: string | null
+          puntos?: number
+          sku: string
+          tipo_producto?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          codigo_barras?: string | null
+          codigo_producto?: string
+          completitud_pct?: number
+          costo_unitario?: number | null
+          creado_en?: string
+          estado?: string
+          id?: string
+          imagen_url?: string | null
+          marca?: string | null
+          nombre?: string
+          org_id?: string
+          precio?: number
+          presentacion?: string | null
+          proveedor?: string | null
+          puntos?: number
+          sku?: string
+          tipo_producto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          actualizado_en: string
+          color_avatar: string | null
+          creado_en: string
+          email: string
+          estado: string
+          id: string
+          nombre: string
+          org_id: string
+          role_id: string
+          tienda_id: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          color_avatar?: string | null
+          creado_en?: string
+          email: string
+          estado?: string
+          id: string
+          nombre: string
+          org_id: string
+          role_id: string
+          tienda_id?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          color_avatar?: string | null
+          creado_en?: string
+          email?: string
+          estado?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          role_id?: string
+          tienda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_tienda_id_fkey"
+            columns: ["tienda_id"]
+            isOneToOne: false
+            referencedRelation: "tiendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promociones: {
+        Row: {
+          actualizado_en: string
+          acumulable: boolean
+          aplicar_sobre: string
+          canal_aplicacion: string
+          canjes: number
+          codigo: string
+          combinador_condiciones: string
+          condiciones: Json
+          creado_en: string
+          estado_publicacion: string
+          id: string
+          nombre: string
+          org_id: string
+          presupuesto_asignado: number
+          presupuesto_consumido: number
+          prioridad: number
+          roi: number | null
+          tipo: string
+          tipo_beneficio: string
+          tope_maximo: number | null
+          usos_periodo: string | null
+          usos_por_cliente: number | null
+          valor_beneficio: number | null
+          vigente_desde: string
+          vigente_hasta: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          acumulable?: boolean
+          aplicar_sobre?: string
+          canal_aplicacion?: string
+          canjes?: number
+          codigo: string
+          combinador_condiciones?: string
+          condiciones?: Json
+          creado_en?: string
+          estado_publicacion?: string
+          id?: string
+          nombre: string
+          org_id: string
+          presupuesto_asignado?: number
+          presupuesto_consumido?: number
+          prioridad?: number
+          roi?: number | null
+          tipo: string
+          tipo_beneficio: string
+          tope_maximo?: number | null
+          usos_periodo?: string | null
+          usos_por_cliente?: number | null
+          valor_beneficio?: number | null
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          acumulable?: boolean
+          aplicar_sobre?: string
+          canal_aplicacion?: string
+          canjes?: number
+          codigo?: string
+          combinador_condiciones?: string
+          condiciones?: Json
+          creado_en?: string
+          estado_publicacion?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          presupuesto_asignado?: number
+          presupuesto_consumido?: number
+          prioridad?: number
+          roi?: number | null
+          tipo?: string
+          tipo_beneficio?: string
+          tope_maximo?: number | null
+          usos_periodo?: string | null
+          usos_por_cliente?: number | null
+          valor_beneficio?: number | null
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promociones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          accion: string
+          permitido: boolean
+          recurso: string
+          role_id: string
+        }
+        Insert: {
+          accion: string
+          permitido?: boolean
+          recurso: string
+          role_id: string
+        }
+        Update: {
+          accion?: string
+          permitido?: boolean
+          recurso?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          actualizado_en: string
+          alcance_canal: string
+          alcance_tiendas: string
+          creado_en: string
+          descripcion: string | null
+          descuento_maximo_pct: number | null
+          id: string
+          nombre: string
+          org_id: string
+          rol_base: string
+          tipo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          alcance_canal?: string
+          alcance_tiendas?: string
+          creado_en?: string
+          descripcion?: string | null
+          descuento_maximo_pct?: number | null
+          id?: string
+          nombre: string
+          org_id: string
+          rol_base: string
+          tipo?: string
+        }
+        Update: {
+          actualizado_en?: string
+          alcance_canal?: string
+          alcance_tiendas?: string
+          creado_en?: string
+          descripcion?: string | null
+          descuento_maximo_pct?: number | null
+          id?: string
+          nombre?: string
+          org_id?: string
+          rol_base?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
       }
       segments: {
         Row: {
-          id: string
-          org_id: string
-          nombre: string
-          descripcion: string | null
+          actualizado_en: string
+          codigo: string
           condiciones: Json
           conteo_estimado: number | null
           creado_en: string
-          actualizado_en: string
+          descripcion: string | null
+          estado: string
+          id: string
+          nivel_dominante: string | null
+          nombre: string
+          org_id: string
+          sincronizado_con_ajo: boolean
+          ultima_sincronizacion_en: string | null
         }
         Insert: {
-          id?: string
-          org_id: string
-          nombre: string
-          descripcion?: string | null
+          actualizado_en?: string
+          codigo: string
           condiciones?: Json
           conteo_estimado?: number | null
           creado_en?: string
-          actualizado_en?: string
+          descripcion?: string | null
+          estado?: string
+          id?: string
+          nivel_dominante?: string | null
+          nombre: string
+          org_id: string
+          sincronizado_con_ajo?: boolean
+          ultima_sincronizacion_en?: string | null
         }
-        Update: Partial<Database["public"]["Tables"]["segments"]["Insert"]>
+        Update: {
+          actualizado_en?: string
+          codigo?: string
+          condiciones?: Json
+          conteo_estimado?: number | null
+          creado_en?: string
+          descripcion?: string | null
+          estado?: string
+          id?: string
+          nivel_dominante?: string | null
+          nombre?: string
+          org_id?: string
+          sincronizado_con_ajo?: boolean
+          ultima_sincronizacion_en?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "segments_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
       }
-      workflows: {
+      segment_members: {
         Row: {
+          agregado_en: string
           id: string
+          member_id: string
           org_id: string
-          nombre: string
-          descripcion: string | null
-          estado: string
-          version_actual: number
-          creado_por: string | null
-          actualizado_por: string | null
-          creado_en: string
-          actualizado_en: string
+          segment_id: string
         }
         Insert: {
+          agregado_en?: string
           id?: string
+          member_id: string
           org_id: string
-          nombre: string
-          descripcion?: string | null
-          estado?: string
-          version_actual?: number
-          creado_por?: string | null
-          actualizado_por?: string | null
-          creado_en?: string
-          actualizado_en?: string
+          segment_id: string
         }
-        Update: Partial<Database["public"]["Tables"]["workflows"]["Insert"]>
+        Update: {
+          agregado_en?: string
+          id?: string
+          member_id?: string
+          org_id?: string
+          segment_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "workflows_org_id_fkey"
+            foreignKeyName: "segment_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "segment_members_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "segment_members_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      segment_size_history: {
+        Row: {
+          fecha: string
+          id: string
+          org_id: string
+          segment_id: string
+          tamano: number
+        }
+        Insert: {
+          fecha: string
+          id?: string
+          org_id: string
+          segment_id: string
+          tamano: number
+        }
+        Update: {
+          fecha?: string
+          id?: string
+          org_id?: string
+          segment_id?: string
+          tamano?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segment_size_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "segment_size_history_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiendas: {
+        Row: {
+          actualizado_en: string
+          ciudad: string
+          codigo_postal: string
+          codigo_tienda: string
+          colonia: string
+          creado_en: string
+          direccion: string
+          email: string
+          estado: string
+          formato: string
+          id: string
+          nombre: string
+          org_id: string
+          pais: string
+          referencia: string | null
+          region: string
+          responsable: string | null
+          telefono: string
+          zona_horaria: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          ciudad: string
+          codigo_postal: string
+          codigo_tienda: string
+          colonia: string
+          creado_en?: string
+          direccion: string
+          email: string
+          estado?: string
+          formato: string
+          id?: string
+          nombre: string
+          org_id: string
+          pais: string
+          referencia?: string | null
+          region: string
+          responsable?: string | null
+          telefono: string
+          zona_horaria?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          ciudad?: string
+          codigo_postal?: string
+          codigo_tienda?: string
+          colonia?: string
+          creado_en?: string
+          direccion?: string
+          email?: string
+          estado?: string
+          formato?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          pais?: string
+          referencia?: string | null
+          region?: string
+          responsable?: string | null
+          telefono?: string
+          zona_horaria?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiendas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
       }
-      workflow_versions: {
+      tiers: {
         Row: {
           id: string
-          workflow_id: string
-          version: number
-          grafo: Json
-          autor_id: string | null
-          nota: string | null
-          creado_en: string
+          multiplicador: number
+          nombre: string
+          orden: number
+          org_id: string
+          umbral_puntos: number
         }
         Insert: {
           id?: string
-          workflow_id: string
-          version: number
-          grafo: Json
-          autor_id?: string | null
-          nota?: string | null
-          creado_en?: string
+          multiplicador?: number
+          nombre: string
+          orden: number
+          org_id: string
+          umbral_puntos?: number
         }
-        Update: Partial<Database["public"]["Tables"]["workflow_versions"]["Insert"]>
+        Update: {
+          id?: string
+          multiplicador?: number
+          nombre?: string
+          orden?: number
+          org_id?: string
+          umbral_puntos?: number
+        }
         Relationships: [
           {
-            foreignKeyName: "workflow_versions_workflow_id_fkey"
+            foreignKeyName: "tiers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trusted_devices: {
+        Row: {
+          creado_en: string
+          expira_en: string
+          id: string
+          profile_id: string
+          token_hash: string
+        }
+        Insert: {
+          creado_en?: string
+          expira_en: string
+          id?: string
+          profile_id: string
+          token_hash: string
+        }
+        Update: {
+          creado_en?: string
+          expira_en?: string
+          id?: string
+          profile_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trusted_devices_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_edges: {
+        Row: {
+          creado_en: string
+          id: string
+          source_node_id: string
+          source_port: string
+          target_node_id: string
+          workflow_id: string
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          source_node_id: string
+          source_port?: string
+          target_node_id: string
+          workflow_id: string
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          source_node_id?: string
+          source_port?: string
+          target_node_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_edges_workflow_id_fkey"
             columns: ["workflow_id"]
+            isOneToOne: false
             referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
@@ -420,96 +1433,43 @@ export interface Database {
       }
       workflow_nodes: {
         Row: {
-          id: string
-          workflow_id: string
-          tipo: string
-          etiqueta: string
-          posicion_x: number
-          posicion_y: number
+          actualizado_en: string
           config: Json
           creado_en: string
-          actualizado_en: string
+          etiqueta: string
+          id: string
+          posicion_x: number
+          posicion_y: number
+          tipo: string
+          workflow_id: string
         }
         Insert: {
-          id?: string
-          workflow_id: string
-          tipo: string
-          etiqueta: string
-          posicion_x?: number
-          posicion_y?: number
+          actualizado_en?: string
           config?: Json
           creado_en?: string
-          actualizado_en?: string
+          etiqueta: string
+          id?: string
+          posicion_x?: number
+          posicion_y?: number
+          tipo: string
+          workflow_id: string
         }
-        Update: Partial<Database["public"]["Tables"]["workflow_nodes"]["Insert"]>
+        Update: {
+          actualizado_en?: string
+          config?: Json
+          creado_en?: string
+          etiqueta?: string
+          id?: string
+          posicion_x?: number
+          posicion_y?: number
+          tipo?: string
+          workflow_id?: string
+        }
         Relationships: [
           {
             foreignKeyName: "workflow_nodes_workflow_id_fkey"
             columns: ["workflow_id"]
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workflow_edges: {
-        Row: {
-          id: string
-          workflow_id: string
-          source_node_id: string
-          source_port: string
-          target_node_id: string
-          creado_en: string
-        }
-        Insert: {
-          id?: string
-          workflow_id: string
-          source_node_id: string
-          source_port?: string
-          target_node_id: string
-          creado_en?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["workflow_edges"]["Insert"]>
-        Relationships: [
-          {
-            foreignKeyName: "workflow_edges_source_node_id_fkey"
-            columns: ["source_node_id"]
-            referencedRelation: "workflow_nodes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflow_edges_target_node_id_fkey"
-            columns: ["target_node_id"]
-            referencedRelation: "workflow_nodes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workflow_runs: {
-        Row: {
-          id: string
-          workflow_id: string
-          workflow_version: number
-          tipo: string
-          estado: string
-          resumen: Json
-          iniciado_en: string
-          finalizado_en: string | null
-        }
-        Insert: {
-          id?: string
-          workflow_id: string
-          workflow_version: number
-          tipo: string
-          estado?: string
-          resumen?: Json
-          iniciado_en?: string
-          finalizado_en?: string | null
-        }
-        Update: Partial<Database["public"]["Tables"]["workflow_runs"]["Insert"]>
-        Relationships: [
-          {
-            foreignKeyName: "workflow_runs_workflow_id_fkey"
-            columns: ["workflow_id"]
+            isOneToOne: false
             referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
@@ -517,48 +1477,358 @@ export interface Database {
       }
       workflow_run_steps: {
         Row: {
-          id: string
-          workflow_run_id: string
-          node_id: string
-          port: string | null
           conteo_entrada: number | null
           conteo_salida: number | null
           creado_en: string
+          id: string
+          node_id: string
+          port: string | null
+          workflow_run_id: string
         }
         Insert: {
-          id?: string
-          workflow_run_id: string
-          node_id: string
-          port?: string | null
           conteo_entrada?: number | null
           conteo_salida?: number | null
           creado_en?: string
+          id?: string
+          node_id: string
+          port?: string | null
+          workflow_run_id: string
         }
-        Update: Partial<Database["public"]["Tables"]["workflow_run_steps"]["Insert"]>
+        Update: {
+          conteo_entrada?: number | null
+          conteo_salida?: number | null
+          creado_en?: string
+          id?: string
+          node_id?: string
+          port?: string | null
+          workflow_run_id?: string
+        }
         Relationships: [
-          {
-            foreignKeyName: "workflow_run_steps_workflow_run_id_fkey"
-            columns: ["workflow_run_id"]
-            referencedRelation: "workflow_runs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "workflow_run_steps_node_id_fkey"
             columns: ["node_id"]
+            isOneToOne: false
             referencedRelation: "workflow_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_run_steps_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_runs: {
+        Row: {
+          estado: string
+          finalizado_en: string | null
+          id: string
+          iniciado_en: string
+          resumen: Json
+          tipo: string
+          workflow_id: string
+          workflow_version: number
+        }
+        Insert: {
+          estado?: string
+          finalizado_en?: string | null
+          id?: string
+          iniciado_en?: string
+          resumen?: Json
+          tipo: string
+          workflow_id: string
+          workflow_version: number
+        }
+        Update: {
+          estado?: string
+          finalizado_en?: string | null
+          id?: string
+          iniciado_en?: string
+          resumen?: Json
+          tipo?: string
+          workflow_id?: string
+          workflow_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_runs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_versions: {
+        Row: {
+          autor_id: string | null
+          creado_en: string
+          grafo: Json
+          id: string
+          nota: string | null
+          version: number
+          workflow_id: string
+        }
+        Insert: {
+          autor_id?: string | null
+          creado_en?: string
+          grafo: Json
+          id?: string
+          nota?: string | null
+          version: number
+          workflow_id: string
+        }
+        Update: {
+          autor_id?: string | null
+          creado_en?: string
+          grafo?: Json
+          id?: string
+          nota?: string | null
+          version?: number
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_versions_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_versions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflows: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          creado_en: string
+          creado_por: string | null
+          descripcion: string | null
+          estado: string
+          id: string
+          nombre: string
+          org_id: string
+          version_actual: number
+        }
+        Insert: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          descripcion?: string | null
+          estado?: string
+          id?: string
+          nombre: string
+          org_id: string
+          version_actual?: number
+        }
+        Update: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          descripcion?: string | null
+          estado?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          version_actual?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_actualizado_por_fkey"
+            columns: ["actualizado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflows_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflows_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
       }
     }
-    Views: Record<string, never>
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
-      current_org_id: {
-        Args: Record<string, never>
-        Returns: string
+      create_system_roles_for_org: {
+        Args: { target_org_id: string }
+        Returns: undefined
+      }
+      current_org_id: { Args: never; Returns: string }
+      lookup_org_idp_by_domain: {
+        Args: { p_dominio: string }
+        Returns: {
+          nombre: string
+          tenant_idp: string
+        }[]
+      }
+      org_scoped: { Args: { target_org_id: string }; Returns: boolean }
+      producto_owned_by_current_org: {
+        Args: { target_producto_id: string }
+        Returns: boolean
+      }
+      role_owned_by_current_org: {
+        Args: { target_role_id: string }
+        Returns: boolean
+      }
+      workflow_owned_by_current_org: {
+        Args: { target_workflow_id: string }
+        Returns: boolean
       }
     }
-    Enums: Record<string, never>
-    CompositeTypes: Record<string, never>
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {},
+  },
+} as const

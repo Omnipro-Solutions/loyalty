@@ -1,10 +1,6 @@
-import { AppPage } from "@/components/layout/app-page"
-import { RoutePlaceholder } from "@/components/layout/route-placeholder"
+import { redirect } from "next/navigation"
 
+/** "Ajustes" (09 · Equipo y permisos, Figma) hoy solo tiene esa sub-vista construida — el resto de Configuración llega en la Fase 5. */
 export default function AjustesPage() {
-  return (
-    <AppPage breadcrumb="Configuración  ›  Ajustes" titulo="Ajustes">
-      <RoutePlaceholder fase="Fase 5" />
-    </AppPage>
-  )
+  redirect("/ajustes/equipo")
 }

@@ -5,7 +5,7 @@ import { PanelLeftClose } from "lucide-react"
 import { BrandMark } from "@/components/layout/brand-mark"
 import { NavGroup } from "@/components/layout/nav-group"
 import { NavItem } from "@/components/layout/nav-item"
-import { UserCard } from "@/components/layout/user-card"
+import { UserMenu } from "@/components/layout/user-menu"
 import { Button } from "@/components/ui/button"
 import { NAVIGATION } from "@/config/navigation"
 import { cn } from "@/lib/utils"
@@ -70,7 +70,12 @@ export function AppSidebar({
         ))}
       </nav>
 
-      <UserCard nombre={nombre} email={email} className="shrink-0" />
+      <UserMenu
+        nombre={nombre}
+        email={email}
+        variant="card"
+        className="shrink-0"
+      />
     </div>
   )
 }

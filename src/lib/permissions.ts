@@ -1,26 +1,28 @@
 import type { Rol } from "@/types/domain"
 
 /**
- * Matriz rol → permiso. Debe mantenerse equivalente a la tabla
- * `role_permissions` (sembrada en supabase/seed.sql) — esa tabla es la
- * fuente de verdad para la UI de 09.2; esta es la fuente de verdad para la
- * autorización real en código, porque es pura y corre igual en cliente y
- * servidor sin ida y vuelta a la base de datos.
- *
- * A diferencia de `rol` (domain.ts, respaldado por un `check` en SQL),
- * `recurso`/`accion` son `text` libre en la tabla — el conjunto cerrado de
- * abajo es una convención de aplicación, no una restricción de base de datos.
+ * Conjunto cerrado de módulos y acciones de "09.2 · Equipo · roles y
+ * permisos". La fuente de verdad para qué puede hacer una persona es la
+ * fila real de `role_permissions` (por `role_id`, editable desde esa
+ * pantalla) — ver `features/equipo/lib/queries.ts`. Esta matriz pura solo
+ * sirve como PLANTILLA por defecto al crear un rol desde un archetype
+ * (`rol_base`, "Nuevo rol") y como respaldo síncrono cuando todavía no se
+ * cargó el rol real (ninguna decisión de escritura debe apoyarse solo en
+ * esto). Debe mantenerse razonablemente equivalente a
+ * `create_system_roles_for_org()` en
+ * `supabase/migrations/20260823100000_equipo_roles_permisos.sql`, que es
+ * quien de verdad siembra los 3 roles de sistema.
  */
 export const RECURSOS = [
+  "resumen",
   "catalogo",
   "tiendas",
   "clientes",
   "promociones",
   "reglas",
   "journeys",
-  "audiencias",
   "equipo",
-  "integraciones",
+  "facturacion",
 ] as const
 export type Recurso = (typeof RECURSOS)[number]
 
@@ -29,38 +31,62 @@ export const ACCIONES = [
   "crear",
   "editar",
   "eliminar",
-  "publicar",
+  "aprobar",
 ] as const
 export type Accion = (typeof ACCIONES)[number]
 
-const TODOS_LOS_RECURSOS = RECURSOS
-const RECURSOS_OPERATIVOS: readonly Recurso[] = [
+/**
+ * "Aprobar" ("habilita publicar cambios que afectan a clientes", copy de
+ * 09.2) solo existe sobre módulos operativos de cara al cliente — no tiene
+ * sentido "aprobar" un dashboard, la gestión del equipo o la facturación.
+ * La UI de la matriz bloquea esa celda (candado) para el resto.
+ */
+export const RECURSOS_APROBABLES: readonly Recurso[] = [
   "catalogo",
   "tiendas",
   "clientes",
   "promociones",
   "reglas",
   "journeys",
-  "audiencias",
 ]
+
+const RECURSOS_OPERATIVOS: readonly Recurso[] = [
+  "resumen",
+  "catalogo",
+  "tiendas",
+  "clientes",
+  "promociones",
+  "reglas",
+  "journeys",
+]
+
+/** Si una combinación recurso×acción no aplica, la celda de la matriz se deshabilita en vez de mostrarse desmarcada. */
+export function accionAplica(recurso: Recurso, accion: Accion): boolean {
+  return accion !== "aprobar" || RECURSOS_APROBABLES.includes(recurso)
+}
 
 type Matriz = Record<Rol, Partial<Record<Recurso, readonly Accion[]>>>
 
 const MATRIZ: Matriz = {
   admin: Object.fromEntries(
-    TODOS_LOS_RECURSOS.map((r) => [r, ACCIONES])
+    RECURSOS.map((r) => [r, ACCIONES])
   ) as Matriz["admin"],
   gestor: {
-    ...Object.fromEntries(
-      RECURSOS_OPERATIVOS.map((r) => [r, ["ver", "crear", "editar"] as const])
-    ),
-    promociones: ["ver", "crear", "editar", "publicar"],
-    journeys: ["ver", "crear", "editar", "publicar"],
+    resumen: ["ver"],
+    catalogo: ["ver", "crear", "editar"],
+    tiendas: ["ver", "editar"],
+    clientes: ["ver", "crear", "editar"],
+    promociones: ["ver", "crear", "editar", "eliminar", "aprobar"],
+    reglas: ["ver", "crear", "editar", "aprobar"],
+    journeys: ["ver", "crear", "editar", "aprobar"],
   },
   aprobador: {
-    ...Object.fromEntries(TODOS_LOS_RECURSOS.map((r) => [r, ["ver"] as const])),
-    promociones: ["ver", "publicar"],
-    journeys: ["ver", "publicar"],
+    ...Object.fromEntries(
+      RECURSOS_OPERATIVOS.map((r) => [r, ["ver"] as const])
+    ),
+    promociones: ["ver", "aprobar"],
+    reglas: ["ver", "aprobar"],
+    journeys: ["ver", "aprobar"],
   },
   lector: Object.fromEntries(
     RECURSOS_OPERATIVOS.map((r) => [r, ["ver"] as const])
@@ -68,11 +94,11 @@ const MATRIZ: Matriz = {
 }
 
 /**
- * Autorización pura: sin red, sin base de datos. Segura de llamar tanto en
- * un Server Component/Server Action como en un Client Component para
- * decisiones puramente de UI (mostrar/ocultar un botón) — la autoridad real
- * en escritura sigue siendo RLS en Postgres (aislamiento por organización).
+ * Plantilla pura por archetype: sin red, sin base de datos. Úsala para
+ * prellenar la matriz al crear un rol nuevo o como respaldo de UI antes de
+ * que cargue el rol real — nunca como autorización de escritura, que vive
+ * en `role_permissions` (real, editable por organización).
  */
-export function can(rol: Rol, accion: Accion, recurso: Recurso): boolean {
-  return MATRIZ[rol]?.[recurso]?.includes(accion) ?? false
+export function can(rolBase: Rol, accion: Accion, recurso: Recurso): boolean {
+  return MATRIZ[rolBase]?.[recurso]?.includes(accion) ?? false
 }

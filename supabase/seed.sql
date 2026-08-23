@@ -1,13 +1,19 @@
 -- Datos de demo. Se ejecuta después de las migraciones en `supabase db reset`
 -- (ver [db.seed] en supabase/config.toml). No crea usuarios de `auth.users`:
--- el staff de Etteer (Elena Martínez y compañía) se registra por el flujo
+-- el staff de Omni (Elena Martínez y compañía) se registra por el flujo
 -- real de signup — `handle_new_user()` les asigna la organización según el
 -- dominio de su correo. Lo que sí se siembra aquí son los SOCIOS del
--- programa de lealtad (`members`), que son clientes finales de Etteer, no
+-- programa de lealtad (`members`), que son clientes finales de Omni, no
 -- usuarios del portal.
+--
+-- Cada insert usa `on conflict ... do nothing`: además de `db reset` (base
+-- vacía), este archivo también se aplica con `supabase db push --include-seed`
+-- contra el proyecto remoto ya sembrado — sin el guard, reintentar falla en
+-- la primera fila por las unique constraints.
 
 insert into organizations (nombre, slug, dominio_correo, tenant_idp)
-values ('Etteer · Omni Retail Group', 'etteer', 'etteer.com', 'microsoft_entra_id');
+values ('Omni Retail Group', 'omni', 'omni.pro', 'microsoft_entra_id')
+on conflict (slug) do nothing;
 
 insert into tiers (org_id, nombre, multiplicador, umbral_puntos, orden)
 select o.id, t.nombre, t.multiplicador, t.umbral_puntos, t.orden
@@ -19,65 +25,742 @@ cross join (
     ('oro', 1.5, 6000, 3),
     ('diamante', 2.0, 15000, 4)
 ) as t (nombre, multiplicador, umbral_puntos, orden)
-where o.slug = 'etteer';
+where o.slug = 'omni'
+on conflict (org_id, nombre) do nothing;
 
--- Matriz rol → permiso (09.2 "Equipo · roles y permisos"). Cada lista de
--- recursos se declara una sola vez (antes se repetía por cada rol que la usaba).
-with recursos_todos (recurso) as (
+-- Los roles de sistema (Administrador/Gerente comercial/Analista) se crean
+-- solos: el insert de `organizations` de arriba dispara
+-- `organizations_after_insert_system_roles`
+-- (`20260823100000_equipo_roles_permisos.sql`). Aquí solo se siembran los
+-- dos roles personalizados de ejemplo de "09.2 · Equipo · roles y
+-- permisos" — dependen de que esa fila de `organizations` ya exista, así
+-- que no pueden vivir en la migración (todavía no hay ninguna organización
+-- cuando las migraciones corren).
+with org as (select id from organizations where slug = 'omni')
+insert into roles (org_id, nombre, descripcion, tipo, rol_base, alcance_tiendas, alcance_canal, descuento_maximo_pct)
+select
+  (select id from org), r.nombre, r.descripcion, 'personalizado', r.rol_base, 'propia', r.alcance_canal, r.descuento_maximo_pct
+from (
   values
-    ('catalogo'), ('tiendas'), ('clientes'), ('promociones'), ('reglas'),
-    ('journeys'), ('audiencias'), ('equipo'), ('integraciones')
-)
-insert into role_permissions (rol, recurso, accion)
-select 'admin', recurso, accion
-from recursos_todos
-cross join unnest(array['ver', 'crear', 'editar', 'eliminar', 'publicar']) as accion
-union all
-select 'aprobador', recurso, 'ver'
-from recursos_todos
-union all
-select 'aprobador', recurso, 'publicar'
-from recursos_todos
-where recurso in ('promociones', 'journeys');
+    ('Jefe de tienda', 'Gestiona la operación de su tienda: catálogo local, clientes y promociones. Sin acceso a facturación ni a la configuración del equipo.', 'gestor', 'pos_ecommerce', 15),
+    ('Operador de caja', 'Aplica promociones y cupones en el punto de venta. Sin acceso a catálogo, reportes ni configuración.', 'lector', 'pos', 10)
+) as r (nombre, descripcion, rol_base, alcance_canal, descuento_maximo_pct)
+on conflict (org_id, nombre) do nothing;
 
-with recursos_operativos (recurso) as (
+with org as (select id from organizations where slug = 'omni'),
+role_ids as (select nombre, id from roles where org_id = (select id from org))
+insert into role_permissions (role_id, recurso, accion)
+select (select id from role_ids where role_ids.nombre = rp.nombre), rp.recurso, rp.accion
+from (
   values
-    ('catalogo'), ('tiendas'), ('clientes'), ('promociones'), ('reglas'),
-    ('journeys'), ('audiencias')
-)
-insert into role_permissions (rol, recurso, accion)
-select 'gestor', recurso, accion
-from recursos_operativos
-cross join unnest(array['ver', 'crear', 'editar']) as accion
-union all
-select 'gestor', recurso, 'publicar'
-from recursos_operativos
-where recurso in ('promociones', 'journeys')
-union all
-select 'lector', recurso, 'ver'
-from recursos_operativos;
+    ('Jefe de tienda', 'catalogo', 'ver'), ('Jefe de tienda', 'catalogo', 'editar'),
+    ('Jefe de tienda', 'tiendas', 'ver'), ('Jefe de tienda', 'tiendas', 'editar'),
+    ('Jefe de tienda', 'clientes', 'ver'), ('Jefe de tienda', 'clientes', 'crear'), ('Jefe de tienda', 'clientes', 'editar'),
+    ('Jefe de tienda', 'promociones', 'ver'), ('Jefe de tienda', 'promociones', 'crear'),
+    ('Jefe de tienda', 'reglas', 'ver'),
+    ('Jefe de tienda', 'journeys', 'ver'),
+    ('Operador de caja', 'catalogo', 'ver'),
+    ('Operador de caja', 'promociones', 'ver'), ('Operador de caja', 'promociones', 'crear')
+) as rp (nombre, recurso, accion)
+on conflict (role_id, recurso, accion) do nothing;
 
--- Socios de muestra, repartidos entre niveles.
-with org as (select id from organizations where slug = 'etteer'),
+-- Socios de muestra, repartidos entre niveles. Perfil deliberadamente
+-- incompleto en varios (Mariana/Daniela/Felipe) para que "Perfil completo"
+-- (05.1 KPI) y el candado de campos vacíos en 05.3 tengan datos reales que
+-- mostrar, no solo el caso feliz.
+with org as (select id from organizations where slug = 'omni'),
 tier_ids as (
   select nombre, id from tiers where org_id = (select id from org)
 )
-insert into members (org_id, nombre, email, tier_id, saldo_puntos, fecha_alta)
+insert into members (
+  org_id, nombre, apellido, email, tier_id, saldo_puntos, fecha_alta,
+  tipo_documento, numero_documento, telefono, fecha_nacimiento, genero,
+  provincia, estado_civil, preferencia_compra, tiene_hijos, tiene_mascotas,
+  consentimiento_marketing, canal_adquisicion, estado_cuenta
+)
 select
-  (select id from org),
-  m.nombre,
-  m.email,
+  (select id from org), m.nombre, m.apellido, m.email,
   (select id from tier_ids where tier_ids.nombre = m.tier),
-  m.saldo_puntos,
-  now() - (m.dias_antiguedad || ' days')::interval
+  m.saldo_puntos, now() - (m.dias_antiguedad || ' days')::interval,
+  m.tipo_documento, m.numero_documento, m.telefono, m.fecha_nacimiento::date,
+  m.genero, m.provincia, m.estado_civil, m.preferencia_compra, m.tiene_hijos,
+  m.tiene_mascotas, m.consentimiento_marketing, m.canal_adquisicion, m.estado_cuenta
 from (
   values
-    ('Sofía Ramírez', 'sofia.ramirez@example.com', 'diamante', 18420, 620),
-    ('Camilo Torres', 'camilo.torres@example.com', 'diamante', 16210, 540),
-    ('Valentina Ríos', 'valentina.rios@example.com', 'oro', 8760, 410),
-    ('Andrés Gómez', 'andres.gomez@example.com', 'oro', 7230, 300),
-    ('Mariana Ocampo', 'mariana.ocampo@example.com', 'plata', 3450, 210),
-    ('Julián Restrepo', 'julian.restrepo@example.com', 'plata', 2680, 150),
-    ('Daniela Cárdenas', 'daniela.cardenas@example.com', 'bronce', 890, 60),
-    ('Felipe Herrera', 'felipe.herrera@example.com', 'bronce', 320, 20)
-) as m (nombre, email, tier, saldo_puntos, dias_antiguedad);
+    -- Sofía y Camilo arrancan en 0: su saldo real lo construye el trigger
+    -- `points_ledger_apply_after_insert` a partir de los movimientos que se
+    -- siembran más abajo (`Log de redenciones`, 05.3g) — no se pone un
+    -- número fijo aquí para no descuadrarlo con el ledger.
+    ('Sofía', 'Ramírez', 'sofia.ramirez@example.com', 'diamante', 0, 620, 'cc', '1015042113', '+57 301 555 0142', '1988-05-12', 'femenino', 'Atlántico', 'casado', 'Bebidas', true, false, true, 'ecommerce', 'activo'),
+    ('Camilo', 'Torres', 'camilo.torres@example.com', 'diamante', 0, 540, 'cc', '1022897456', '+57 310 555 0198', '1990-11-03', 'masculino', 'Antioquia', 'soltero', 'Snacks', false, true, true, 'pos', 'activo'),
+    ('Valentina', 'Ríos', 'valentina.rios@example.com', 'oro', 8760, 410, 'cc', '1030112287', '+57 320 555 0231', '1995-02-21', 'femenino', 'Valle del Cauca', 'union_libre', 'Cuidado personal', false, false, false, 'app', 'activo'),
+    ('Andrés', 'Gómez', 'andres.gomez@example.com', 'oro', 7230, 300, 'cc', '1041278890', '+57 300 555 0345', '1985-07-09', 'masculino', 'Cundinamarca', 'casado', 'Analgésicos', true, true, true, 'referido', 'activo'),
+    ('Mariana', 'Ocampo', 'mariana.ocampo@example.com', 'plata', 3450, 210, 'cc', '1052341567', '+57 315 555 0456', '1998-09-30', 'femenino', 'Atlántico', 'soltero', 'Vitaminas', null, null, true, 'campana', 'activo'),
+    ('Julián', 'Restrepo', 'julian.restrepo@example.com', 'plata', 2680, 150, 'cc', '1063789012', '+57 302 555 0567', '1992-12-15', 'masculino', 'Antioquia', 'divorciado', 'Gastrointestinal', true, false, false, 'pos', 'inactivo'),
+    ('Daniela', 'Cárdenas', 'daniela.cardenas@example.com', 'bronce', 890, 60, null, null, '+57 318 555 0678', null, 'femenino', 'Bolívar', null, null, null, null, false, 'ecommerce', 'activo'),
+    ('Felipe', 'Herrera', 'felipe.herrera@example.com', 'bronce', 320, 20, null, null, null, null, null, 'Santander', null, null, null, null, false, 'otro', 'suspendido')
+) as m (
+  nombre, apellido, email, tier, saldo_puntos, dias_antiguedad, tipo_documento,
+  numero_documento, telefono, fecha_nacimiento, genero, provincia, estado_civil,
+  preferencia_compra, tiene_hijos, tiene_mascotas, consentimiento_marketing,
+  canal_adquisicion, estado_cuenta
+)
+on conflict (org_id, email) do nothing;
+
+-- Extracto de puntos real (Figma 05.3g "Card · Log de redenciones") para
+-- los dos socios Diamante. El trigger `points_ledger_apply_after_insert`
+-- (20260822205659_socios_niveles_ledger.sql) va sumando cada fila a
+-- `members.saldo_puntos` — por eso arrancaron en 0 arriba. A propósito:
+-- Camilo queda por debajo del umbral de Diamante (15.000, ver `tiers`),
+-- así que el badge "Riesgo de baja de nivel" de 05.3g tiene un caso real
+-- que mostrar, no solo el feliz.
+-- Sin `on conflict` (el ledger es append-only, no tiene una clave natural
+-- para eso) — el guard es `not exists` contra `origen`, que aquí sí es
+-- único por fila, para que reintentar el seed no duplique movimientos.
+with org as (select id from organizations where slug = 'omni'),
+socio as (select id from members where org_id = (select id from org) and email = 'sofia.ramirez@example.com')
+insert into points_ledger (org_id, member_id, tipo, puntos, origen, canal, expira_en, creado_en)
+select (select id from org), (select id from socio), l.tipo, l.puntos, l.origen, l.canal, l.expira_en, l.creado_en
+from (
+  values
+    ('acumulacion', 6000, 'Compra #PED-88210', 'pos', null::timestamptz, now() - interval '210 days'),
+    ('acumulacion', 5200, 'Compra #PED-88940', 'ecommerce', null::timestamptz, now() - interval '150 days'),
+    ('canje', -2800, 'Canje cupón 10%', 'pos', null::timestamptz, now() - interval '100 days'),
+    ('acumulacion', 4100, 'Compra #PED-89600', 'ecommerce', now() + interval '35 days', now() - interval '60 days'),
+    ('acumulacion', 3450, 'Compra #PED-90042', 'pos', now() + interval '80 days', now() - interval '15 days'),
+    ('canje', -1200, 'Canje 15% VIP', 'ecommerce', null::timestamptz, now() - interval '6 days'),
+    ('ajuste', 450, 'Bono por reseña', 'app', null::timestamptz, now() - interval '3 days')
+) as l (tipo, puntos, origen, canal, expira_en, creado_en)
+where exists (select 1 from socio)
+  and not exists (
+    select 1 from points_ledger pl where pl.member_id = (select id from socio) and pl.origen = l.origen
+  );
+
+with org as (select id from organizations where slug = 'omni'),
+socio as (select id from members where org_id = (select id from org) and email = 'camilo.torres@example.com')
+insert into points_ledger (org_id, member_id, tipo, puntos, origen, canal, expira_en, creado_en)
+select (select id from org), (select id from socio), l.tipo, l.puntos, l.origen, l.canal, l.expira_en, l.creado_en
+from (
+  values
+    ('acumulacion', 5000, 'Compra #PED-77210', 'pos', null::timestamptz, now() - interval '300 days'),
+    ('acumulacion', 3200, 'Compra #PED-78455', 'pos', null::timestamptz, now() - interval '200 days'),
+    ('canje', -2000, 'Canje envío gratis', 'ecommerce', null::timestamptz, now() - interval '150 days'),
+    ('acumulacion', 4100, 'Compra #PED-79800', 'ecommerce', now() + interval '20 days', now() - interval '80 days'),
+    ('acumulacion', 2600, 'Compra #PED-80200', 'pos', now() + interval '95 days', now() - interval '25 days'),
+    ('canje', -1400, 'Canje 2x1 Bebidas', 'pos', null::timestamptz, now() - interval '10 days'),
+    ('expiracion', -1000, 'Expiración de puntos', null, null::timestamptz, now() - interval '5 days')
+) as l (tipo, puntos, origen, canal, expira_en, creado_en)
+where exists (select 1 from socio)
+  and not exists (
+    select 1 from points_ledger pl where pl.member_id = (select id from socio) and pl.origen = l.origen
+  );
+
+-- Consentimiento de marketing por canal (05.3g "Card · Consentimientos"),
+-- derivado del booleano único `consentimiento_marketing`: quien lo otorgó
+-- queda con email/push/personalización otorgados y WhatsApp/socios
+-- comerciales revocados (mismo patrón del ejemplo del Figma); quien no,
+-- revocado en los 6 canales.
+with org as (select id from organizations where slug = 'omni')
+insert into member_consentimientos (org_id, member_id, canal, otorgado, fuente, actualizado_en)
+select
+  (select id from org), m.id, c.canal,
+  m.consentimiento_marketing and c.canal in ('email', 'push', 'personalizacion'),
+  case when m.consentimiento_marketing then 'web' end,
+  m.creado_en
+from members m
+cross join (
+  values ('email'), ('sms'), ('push'), ('whatsapp'), ('personalizacion'), ('socios_comerciales')
+) as c (canal)
+where m.org_id = (select id from org)
+on conflict (member_id, canal) do nothing;
+
+-- Catálogo de demo (03 · Catálogo), dominio farmacia como en el Figma.
+-- `imagen_url` apunta a fotos reales (no íconos) en `public/catalogo/`,
+-- una por categoría — descargadas de Wikimedia Commons (CC/PD, ver
+-- atribución en `public/catalogo/ATRIBUCION.md`), no las fotos de empaque
+-- reales de Genfar/MK/Redoxon/etc. para evitar usar material de marca ajeno.
+with org as (select id from organizations where slug = 'omni')
+insert into categorias (org_id, nombre)
+select (select id from org), c.nombre
+from (
+  values
+    ('Analgésicos'), ('Vitaminas'), ('Respiratorio'), ('Dermocosmética'),
+    ('Cuidado personal'), ('Antihistamínicos'), ('Gastrointestinal'),
+    ('Cuidado bucal'), ('Primeros auxilios')
+) as c (nombre)
+on conflict (org_id, nombre) do nothing;
+
+-- Subcategorías (categoría → subcategoría, Figma 03.3 "Clasificación").
+with org as (select id from organizations where slug = 'omni'),
+raiz as (
+  select nombre, id from categorias
+  where org_id = (select id from org) and parent_id is null
+)
+insert into categorias (org_id, nombre, parent_id)
+select (select id from org), s.nombre, (select id from raiz where raiz.nombre = s.raiz)
+from (
+  values
+    ('Analgésicos', 'Antiinflamatorios (AINE)'),
+    ('Analgésicos', 'Antipiréticos'),
+    ('Vitaminas', 'Multivitamínicos'),
+    ('Vitaminas', 'Vitamina C'),
+    ('Respiratorio', 'Antitusivos'),
+    ('Respiratorio', 'Expectorantes'),
+    ('Dermocosmética', 'Cuidado facial'),
+    ('Dermocosmética', 'Protección solar'),
+    ('Cuidado personal', 'Higiene de manos'),
+    ('Cuidado personal', 'Cuidado capilar'),
+    ('Antihistamínicos', 'Antialérgicos orales'),
+    ('Gastrointestinal', 'Antiácidos'),
+    ('Gastrointestinal', 'Rehidratación oral'),
+    ('Cuidado bucal', 'Enjuagues'),
+    ('Primeros auxilios', 'Curitas y apósitos'),
+    ('Primeros auxilios', 'Instrumental')
+) as s (raiz, nombre)
+on conflict (org_id, nombre) do nothing;
+
+-- `grupo_imagen` (categoría raíz) solo decide qué foto de `public/catalogo/`
+-- usar — la clasificación real de cada producto vive en `producto_categorias`.
+with org as (select id from organizations where slug = 'omni')
+insert into productos (
+  org_id, sku, codigo_producto, codigo_barras, nombre, presentacion, marca,
+  proveedor, tipo_producto, imagen_url, precio, puntos, estado
+)
+select
+  (select id from org),
+  p.sku, p.codigo_producto, p.codigo_barras, p.nombre, p.presentacion,
+  p.marca, p.proveedor, p.tipo_producto,
+  case p.grupo_imagen
+    when 'Analgésicos' then '/catalogo/analgesicos.jpg'
+    when 'Vitaminas' then '/catalogo/vitaminas.jpg'
+    when 'Respiratorio' then '/catalogo/respiratorio.jpg'
+    when 'Dermocosmética' then '/catalogo/dermocosmetica.jpg'
+    when 'Cuidado personal' then '/catalogo/cuidado-personal.jpg'
+    when 'Antihistamínicos' then '/catalogo/antihistaminicos.jpg'
+    when 'Gastrointestinal' then '/catalogo/gastrointestinal.png'
+    when 'Cuidado bucal' then '/catalogo/cuidado-bucal.jpg'
+    when 'Primeros auxilios' then '/catalogo/primeros-auxilios.jpg'
+  end,
+  p.precio, p.puntos, p.estado
+from (
+  values
+    ('FAR-70241', 'PRD-004821', '7702057012345', 'Acetaminofén 500 mg', 'Caja x 24 tabletas', 'Genfar', 'Droguerías Cóndor S.A.S.', 'Medicamento OTC', 'Analgésicos', 6900, 12, 'activo'),
+    ('FAR-70388', 'PRD-004822', '7702057012346', 'Ibuprofeno 400 mg', 'Blíster x 30 cápsulas', 'MK', 'Tecnoquímicas S.A.', 'Medicamento OTC', 'Analgésicos', 11400, 20, 'activo'),
+    ('FAR-70422', 'PRD-004823', '7702057012347', 'Vitamina C 1000 mg', 'Tubo x 30 efervescentes', 'Redoxon', 'Bayer S.A.', 'Suplemento', 'Vitaminas', 28500, 45, 'activo'),
+    ('FAR-70517', 'PRD-004824', null, 'Jarabe expectorante 120 ml', 'Frasco 120 ml', 'Bisolvon', 'Boehringer Ingelheim', null, 'Respiratorio', 17250, 25, 'activo'),
+    ('FAR-70602', 'PRD-004825', '7702057012349', 'Crema hidratante corporal', 'Frasco 400 ml', 'Cetaphil', 'Galderma S.A.', 'Cosmético', 'Dermocosmética', 32900, 60, 'activo'),
+    ('FAR-70819', 'PRD-004826', null, 'Protector solar FPS 50+', 'Tubo 120 ml', 'La Roche-Posay', 'L''Oréal S.A.', 'Cosmético', 'Dermocosmética', 54300, 90, 'activo'),
+    ('FAR-70933', 'PRD-004827', '7702057012351', 'Alcohol antiséptico 70 %', 'Frasco 700 ml', 'Éxito', null, null, 'Cuidado personal', 8750, 10, 'inactivo'),
+    ('FAR-71042', 'PRD-004828', '7702057012352', 'Loratadina 10 mg', 'Caja x 10 tabletas', 'Genfar', 'Droguerías Cóndor S.A.S.', 'Medicamento OTC', 'Antihistamínicos', 5200, 8, 'activo'),
+    ('FAR-71105', 'PRD-004829', '7702057012353', 'Omeprazol 20 mg', 'Caja x 14 cápsulas', 'MK', 'Tecnoquímicas S.A.', null, 'Gastrointestinal', 9800, 15, 'activo'),
+    ('FAR-71230', 'PRD-004830', '7702057012354', 'Enjuague bucal', 'Frasco 500 ml', 'Listerine', 'Johnson & Johnson', 'Cosmético', 'Cuidado bucal', 14200, 22, 'activo'),
+    ('FAR-71305', 'PRD-004831', null, 'Curitas surtidas', 'Caja x 40 unidades', 'Nexcare', null, 'Dispositivo médico', 'Primeros auxilios', 6100, 9, 'activo'),
+    ('FAR-71390', 'PRD-004832', null, 'Suero oral', 'Frasco 500 ml', null, null, null, 'Gastrointestinal', 8900, 13, 'inactivo'),
+    ('FAR-71455', 'PRD-004833', '7702057012357', 'Multivitamínico', 'Caja x 30 tabletas', 'Centrum', 'Pfizer S.A.S.', 'Suplemento', 'Vitaminas', 39900, 68, 'activo'),
+    ('FAR-71520', 'PRD-004834', '7702057012358', 'Shampoo anticaspa', 'Frasco 375 ml', 'Head & Shoulders', 'Procter & Gamble', 'Cosmético', 'Cuidado personal', 21300, 34, 'activo'),
+    ('FAR-71600', 'PRD-004835', '7702057012359', 'Termómetro digital', null, 'Omron', 'Omron Healthcare', 'Dispositivo médico', 'Primeros auxilios', 24800, 40, 'activo'),
+    ('FAR-71675', 'PRD-004836', '7702057012360', 'Gel antibacterial', 'Frasco 250 ml', 'Purell', 'GOJO Industries', 'Cosmético', 'Cuidado personal', 12600, 18, 'activo')
+) as p (sku, codigo_producto, codigo_barras, nombre, presentacion, marca, proveedor, tipo_producto, grupo_imagen, precio, puntos, estado)
+on conflict (org_id, sku) do nothing;
+
+-- Clasificación: la mayoría de productos tiene una sola ruta (principal);
+-- unos pocos muestran el caso "varias categorías" (una subcategoría propia
+-- + una categoría raíz secundaria), como en el Figma.
+with org as (select id from organizations where slug = 'omni'),
+prod as (select sku, id from productos where org_id = (select id from org)),
+cat as (select nombre, id from categorias where org_id = (select id from org))
+insert into producto_categorias (producto_id, categoria_id, es_principal)
+select
+  (select id from prod where prod.sku = pc.sku),
+  (select id from cat where cat.nombre = pc.categoria),
+  pc.principal
+from (
+  values
+    ('FAR-70241', 'Antipiréticos', true),
+    ('FAR-70241', 'Analgésicos', false),
+    ('FAR-70241', 'Antiinflamatorios (AINE)', false),
+    ('FAR-70241', 'Antihistamínicos', false),
+    ('FAR-70241', 'Vitamina C', false),
+    ('FAR-70388', 'Antiinflamatorios (AINE)', true),
+    ('FAR-70422', 'Vitamina C', true),
+    ('FAR-70422', 'Respiratorio', false),
+    ('FAR-70517', 'Expectorantes', true),
+    ('FAR-70602', 'Cuidado facial', true),
+    ('FAR-70819', 'Protección solar', true),
+    ('FAR-70933', 'Higiene de manos', true),
+    ('FAR-70933', 'Primeros auxilios', false),
+    ('FAR-71042', 'Antialérgicos orales', true),
+    ('FAR-71105', 'Antiácidos', true),
+    ('FAR-71230', 'Enjuagues', true),
+    ('FAR-71305', 'Curitas y apósitos', true),
+    ('FAR-71390', 'Rehidratación oral', true),
+    ('FAR-71455', 'Multivitamínicos', true),
+    ('FAR-71520', 'Cuidado capilar', true),
+    ('FAR-71600', 'Instrumental', true),
+    ('FAR-71675', 'Higiene de manos', true),
+    ('FAR-71675', 'Primeros auxilios', false)
+) as pc (sku, categoria, principal)
+on conflict (producto_id, categoria_id) do nothing;
+
+-- Tiendas de demo (04 · Tiendas), México como en el Figma.
+with org as (select id from organizations where slug = 'omni')
+insert into tiendas (
+  org_id, nombre, codigo_tienda, formato, estado, pais, region, ciudad,
+  colonia, direccion, codigo_postal, telefono, email, responsable, zona_horaria
+)
+select
+  (select id from org),
+  t.nombre, t.codigo_tienda, t.formato, t.estado, 'México', t.region, t.ciudad,
+  t.colonia, t.direccion, t.codigo_postal, t.telefono, t.email, t.responsable,
+  t.zona_horaria
+from (
+  values
+    ('Omni Polanco', 'ST-0142', 'flagship', 'operando', 'CDMX', 'Ciudad de México', 'Polanco', 'Av. Presidente Masaryk 214', '11560', '+52 55 5280 1140', 'polanco@omni.mx', 'Elena Martínez', 'America/Mexico_City'),
+    ('Omni Santa Fe', 'ST-0143', 'mall', 'operando', 'CDMX', 'Ciudad de México', 'Santa Fe', 'Av. Vasco de Quiroga 3800', '05348', '+52 55 5292 3010', 'santafe@omni.mx', null, 'America/Mexico_City'),
+    ('Omni Providencia', 'ST-0151', 'flagship', 'bajo_meta', 'Jalisco', 'Guadalajara', 'Providencia', 'Av. Pablo Neruda 2860', '44630', '+52 33 3642 8890', 'providencia@omni.mx', null, 'America/Mexico_City'),
+    ('Omni San Pedro', 'ST-0158', 'express', 'operando', 'Nuevo León', 'San Pedro Garza García', 'Del Valle', 'Av. Vasconcelos 402', '66220', '+52 81 8335 7720', 'sanpedro@omni.mx', null, 'America/Monterrey'),
+    ('Omni Cancún Centro', 'ST-0163', 'mall', 'operando', 'Quintana Roo', 'Cancún', 'Supermanzana 4', 'Av. Tulum 260', '77500', '+52 998 884 2215', 'cancun@omni.mx', null, 'America/Cancun'),
+    ('Omni Mérida Norte', 'ST-0170', 'express', 'en_apertura', 'Yucatán', 'Mérida', 'Altabrisa', 'Calle 7 #451 x 20', '97130', '+52 999 943 6018', 'merida@omni.mx', null, 'America/Merida'),
+    ('Omni Angelópolis', 'ST-0174', 'mall', 'cerrada_temporal', 'Puebla', 'Puebla', 'Angelópolis', 'Blvd. del Niño Poblano 2510', '72197', '+52 222 225 9040', 'puebla@omni.mx', null, 'America/Mexico_City'),
+    ('Omni Juriquilla', 'ST-0181', 'express', 'operando', 'Querétaro', 'Querétaro', 'Juriquilla', 'Anillo Vial Fray J. de C. 1500', '76230', '+52 442 218 6633', 'queretaro@omni.mx', null, 'America/Mexico_City')
+) as t (nombre, codigo_tienda, formato, estado, region, ciudad, colonia, direccion, codigo_postal, telefono, email, responsable, zona_horaria)
+on conflict (org_id, codigo_tienda) do nothing;
+
+-- Precios por producto (03.3 "Card · Precios"), solo para visualizar en la
+-- ficha — sin la fila de promoción del mock, que depende de Promociones.
+-- Todo producto tiene su "Lista base nacional" (mismo precio que
+-- productos.precio); unos pocos muestran listas adicionales por canal.
+with org as (select id from organizations where slug = 'omni')
+insert into producto_precios (producto_id, nombre_lista, canal, precio, es_base, vigente_desde)
+select p.id, 'Lista base nacional', 'Todos los canales', p.precio, true, p.creado_en
+from productos p
+where p.org_id = (select id from org)
+on conflict (producto_id, nombre_lista) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+prod as (select sku, id from productos where org_id = (select id from org))
+insert into producto_precios (
+  producto_id, nombre_lista, canal, precio, es_base, vigente_desde
+)
+select
+  (select id from prod where prod.sku = pp.sku),
+  pp.nombre_lista, pp.canal, pp.precio, false, now() - interval '30 days'
+from (
+  values
+    ('FAR-70241', 'Lista e-commerce', 'Tienda online · app', 7200),
+    ('FAR-70241', 'Lista institucional', 'Convenios EPS', 5520),
+    ('FAR-70241', 'Lista mayorista', 'Distribuidores', 5180),
+    ('FAR-70388', 'Lista e-commerce', 'Tienda online · app', 11900),
+    ('FAR-70422', 'Lista e-commerce', 'Tienda online · app', 29900),
+    ('FAR-71455', 'Lista institucional', 'Convenios EPS', 33900)
+) as pp (sku, nombre_lista, canal, precio)
+on conflict (producto_id, nombre_lista) do nothing;
+
+-- Tienda de inscripción de los socios (05.3g "Tienda"). Va al final del
+-- archivo porque `tiendas` se siembra más arriba en este mismo archivo,
+-- pero después que `members` — un `update` posterior es más simple que
+-- reordenar bloques ya escritos. Cárdenas/Herrera se dejan sin tienda a
+-- propósito (perfil incompleto, ver el insert de `members`).
+with org as (select id from organizations where slug = 'omni'),
+tienda_ids as (select codigo_tienda, id from tiendas where org_id = (select id from org))
+update members m
+set tienda_inscripcion_id = (select id from tienda_ids where tienda_ids.codigo_tienda = t.codigo)
+from (
+  values
+    ('sofia.ramirez@example.com', 'ST-0142'),
+    ('camilo.torres@example.com', 'ST-0142'),
+    ('valentina.rios@example.com', 'ST-0143'),
+    ('andres.gomez@example.com', 'ST-0151'),
+    ('mariana.ocampo@example.com', 'ST-0158'),
+    ('julian.restrepo@example.com', 'ST-0163')
+) as t (email, codigo)
+where m.org_id = (select id from org) and m.email = t.email and m.tienda_inscripcion_id is null;
+
+-- Promociones (06.1) — el Figma no define pantalla de creación propia, ver
+-- nota en supabase/migrations/20260823120000_promociones.sql. Categorías
+-- reales de Catálogo (no hay "Bebidas"/"Papelería" en este catálogo de
+-- farmacia); "segmento" y "monto_carrito" quedan como condición guardada
+-- aunque el formulario de creación no deje agregarlas (no hay Clientes/
+-- Pedidos todavía) — ver CAMPOS_CONDICION_HABILITADOS en src/types/domain.ts.
+with org as (select id from organizations where slug = 'omni')
+insert into promociones (
+  org_id, nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
+  combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
+  tope_maximo, aplicar_sobre, usos_por_cliente, usos_periodo,
+  presupuesto_asignado, presupuesto_consumido, canjes, roi,
+  estado_publicacion, vigente_desde, vigente_hasta
+)
+select (select id from org), v.*
+from (
+  values
+    ('2x1 en Vitaminas', 'PROMO-2X1-VIT', 'cantidad', 6, false, 'pos_ecommerce',
+     'todas',
+     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Vitaminas' and org_id = (select id from org))))),
+     'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
+     3000000, 2040000, 1284, 1.9, 'activa', current_date - 13, current_date + 6),
+    ('15% Clientes VIP', 'PROMO-VIP-15', 'segmento', 10, false, 'pos_ecommerce',
+     'todas',
+     jsonb_build_array(jsonb_build_object('campo', 'segmento', 'valor', 'VIP')),
+     'descuento_porcentual', 15, 30000, 'subtotal_carrito', 2, 'mes',
+     5000000, 2050000, 612, 3.7, 'activa', current_date - 5, current_date + 12),
+    ('Envío gratis compras mayores a $80.000', 'PROMO-ENVIO-80', 'carrito', 5, true, 'ecommerce',
+     'todas',
+     jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 80000)),
+     'envio_gratis', 1, null::numeric, 'envio', null::smallint, null,
+     5200000, 4836000, 2108, 4.4, 'activa', current_date - 19, current_date),
+    ('Cupón bienvenida nuevos clientes', 'PROMO-CUPON-BDV', 'cupon', 5, false, 'pos_ecommerce',
+     'todas', '[]'::jsonb,
+     'descuento_porcentual', 10, 15000, 'subtotal_carrito', 1, 'sin_limite',
+     3500000, 1890000, 1902, 5.0, 'activa', current_date - 40, null),
+    ('Combo Bienestar: Vitamina C + Analgésico', 'PROMO-BUNDLE-BIENESTAR', 'bundle', 4, false, 'pos',
+     'todas', '[]'::jsonb,
+     'precio_fijo_bundle', 25000, null::numeric, 'producto', null::smallint, null,
+     1200000, 0, 0, null::numeric, 'activa', current_date + 3, current_date + 16),
+    ('Descuento en Dermocosmética', 'PROMO-DERMO-20', 'categoria', 3, true, 'pos_ecommerce',
+     'todas',
+     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Dermocosmética' and org_id = (select id from org))))),
+     'descuento_porcentual', 20, null::numeric, 'producto', null::smallint, null,
+     1000000, 0, 0, null::numeric, 'activa', current_date + 9, current_date + 24),
+    ('Descuento temporada gripal', 'PROMO-RESP-BORRADOR', 'categoria', 5, false, 'pos_ecommerce',
+     'todas',
+     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Respiratorio' and org_id = (select id from org))))),
+     'descuento_porcentual', 12, null::numeric, 'producto', null::smallint, null,
+     800000, 0, 0, null::numeric, 'borrador', current_date, current_date + 30),
+    ('2x1 en Cuidado personal', 'PROMO-2X1-CP-BORRADOR', 'cantidad', 5, false, 'pos_ecommerce',
+     'todas',
+     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Cuidado personal' and org_id = (select id from org))))),
+     'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
+     500000, 0, 0, null::numeric, 'borrador', current_date, null)
+) as v (
+  nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
+  combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
+  tope_maximo, aplicar_sobre, usos_por_cliente, usos_periodo,
+  presupuesto_asignado, presupuesto_consumido, canjes, roi,
+  estado_publicacion, vigente_desde, vigente_hasta
+)
+on conflict (org_id, codigo) do nothing;
+
+-- Audiencias (11 · Audiencias) — 24 segmentos de demo con los campos reales
+-- añadidos en 20260823150000_audiencias.sql. Las primeras 6 filas son
+-- literales del Figma (nombre/código/nivel/tamaño/estado); las 18
+-- siguientes son audiencias plausibles inventadas para que "Total
+-- audiencias: 24" (11.1 KPI) sea un conteo real, no solo las del mock.
+with org as (select id from organizations where slug = 'omni')
+insert into segments (org_id, nombre, codigo, descripcion, estado, nivel_dominante, sincronizado_con_ajo, ultima_sincronizacion_en, conteo_estimado, condiciones)
+select
+  (select id from org), s.nombre, s.codigo, s.descripcion, s.estado, s.nivel, s.sync,
+  case when s.sync then now() - interval '12 minutes' else null end,
+  s.tamano, '{}'::jsonb
+from (
+  values
+    ('Compradores frecuentes', 'seg_freq_2026', 'Clientes con 3 o más compras en los últimos 60 días. Se sincroniza a diario con Adobe Journey Optimizer para activar journeys de fidelización.', 'activa', 'oro', true, 8240),
+    ('Alto valor · VIP', 'seg_vip_gold', 'Socios en el 10% superior de valor acumulado en los últimos 12 meses.', 'activa', 'oro', true, 3482),
+    ('En riesgo de fuga', 'seg_churn_risk', 'Sin compras en los últimos 45 días tras un historial de compra recurrente.', 'activa', 'plata', true, 5910),
+    ('Nuevos registrados 30d', 'seg_new_30d', 'Socios que se inscribieron en el programa en los últimos 30 días.', 'activa', 'bronce', true, 2104),
+    ('Inactivos 90 días', 'seg_inactive_90', 'Sin ninguna transacción en los últimos 90 días.', 'pausada', 'bronce', false, 6733),
+    ('Cumpleañeros del mes', 'seg_birthday', 'Socios cuyo mes de nacimiento es el actual.', 'activa', 'plata', true, 1288),
+    ('Carrito abandonado 7d', 'seg_cart_abandon_7d', 'Dejaron un carrito de ecommerce sin completar en los últimos 7 días.', 'activa', 'bronce', true, 1560),
+    ('Compradores multicategoría', 'seg_multi_categoria', 'Compraron en 3 o más categorías del catálogo en los últimos 90 días.', 'activa', 'oro', true, 2870),
+    ('Solo canal app', 'seg_solo_app', 'Toda su actividad de compra ocurre en la app móvil.', 'activa', 'plata', false, 4120),
+    ('Solo canal POS', 'seg_solo_pos', 'Toda su actividad de compra ocurre en tienda física.', 'activa', 'bronce', false, 3390),
+    ('Diamante todos', 'seg_diamante_all', 'Todos los socios del nivel más alto del programa.', 'activa', 'diamante', true, 640),
+    ('Sin compras 6 meses', 'seg_sin_compra_6m', 'Sin ninguna transacción en los últimos 6 meses.', 'pausada', 'bronce', false, 4890),
+    ('Alta frecuencia farmacia', 'seg_alta_frecuencia_farmacia', 'Compran medicamentos OTC al menos una vez por semana.', 'activa', 'oro', true, 1975),
+    ('Cumpleaños próximos 7d', 'seg_birthday_7d', 'Cumplen años dentro de los próximos 7 días.', 'activa', 'plata', true, 410),
+    ('Referidos activos', 'seg_referidos', 'Se inscribieron por un referido y ya registran al menos una compra.', 'activa', 'oro', true, 860),
+    ('Con consentimiento de marketing', 'seg_consent_marketing', 'Otorgaron consentimiento de marketing en al menos un canal.', 'activa', 'plata', true, 6210),
+    ('Sin consentimiento', 'seg_sin_consent', 'No han otorgado consentimiento de marketing en ningún canal.', 'pausada', 'bronce', false, 3040),
+    ('Compradores dermocosmética', 'seg_dermo', 'Compraron en la categoría Dermocosmética en los últimos 90 días.', 'activa', 'plata', true, 1730),
+    ('Compradores vitaminas', 'seg_vitaminas', 'Compraron en la categoría Vitaminas en los últimos 90 días.', 'activa', 'bronce', true, 2255),
+    ('Clientes región Antioquia', 'seg_region_antioquia', 'Provincia de residencia registrada: Antioquia.', 'activa', 'plata', false, 3610),
+    ('Clientes región CDMX', 'seg_region_cdmx', 'Tienda de inscripción en Ciudad de México.', 'activa', 'oro', true, 2980),
+    ('Alto ticket promedio', 'seg_alto_ticket', 'Ticket promedio de compra en el 5% superior del programa.', 'activa', 'diamante', true, 720),
+    ('Riesgo de bajar de nivel', 'seg_riesgo_bajar_nivel', 'A menos de 500 puntos del umbral inferior de su nivel actual.', 'activa', 'oro', true, 540),
+    ('Canal referido campaña', 'seg_canal_campana', 'Se inscribieron a través de una campaña de adquisición.', 'pausada', 'bronce', false, 1190)
+) as s (nombre, codigo, descripcion, estado, nivel, sync, tamano)
+on conflict (org_id, codigo) do nothing;
+
+-- Serie de 30 días por segmento (sparkline + flecha de TENDENCIA en 11.1,
+-- "Tamaño de audiencia" con nuevos/salieron/neto en 11.2). Interpolación
+-- lineal determinista entre un punto de partida y `conteo_estimado` (hoy)
+-- — no hay motor de evaluación real que recalcule el tamaño día a día, así
+-- que esta tabla es la única fuente de la serie, no una simulación de algo
+-- que ya existe en otro lado.
+with org as (select id from organizations where slug = 'omni'),
+variacion as (
+  select * from (
+    values
+      ('seg_freq_2026', 0.15), ('seg_vip_gold', 0.10), ('seg_churn_risk', 0.08),
+      ('seg_new_30d', 0.20), ('seg_inactive_90', -0.12), ('seg_birthday', -0.05),
+      ('seg_cart_abandon_7d', -0.06), ('seg_multi_categoria', 0.09), ('seg_solo_app', 0.04),
+      ('seg_solo_pos', -0.02), ('seg_diamante_all', 0.03), ('seg_sin_compra_6m', -0.18),
+      ('seg_alta_frecuencia_farmacia', 0.11), ('seg_birthday_7d', 0.07), ('seg_referidos', 0.14),
+      ('seg_consent_marketing', 0.05), ('seg_sin_consent', -0.03), ('seg_dermo', 0.06),
+      ('seg_vitaminas', 0.02), ('seg_region_antioquia', 0.01), ('seg_region_cdmx', 0.08),
+      ('seg_alto_ticket', 0.10), ('seg_riesgo_bajar_nivel', -0.09), ('seg_canal_campana', -0.07)
+  ) as v (codigo, variacion)
+),
+dias as (select d from generate_series(0, 29) as d)
+insert into segment_size_history (org_id, segment_id, fecha, tamano)
+select
+  (select id from org), sg.id, current_date - d.d,
+  -- El día 0 (hoy) queda exacto en `conteo_estimado` — el resto suma un
+  -- oscilador determinista (fase/amplitud por hash del código) para que
+  -- "Nuevos"/"Salieron" (11.2) no sean siempre 0 solo por ser la tendencia
+  -- monótona.
+  greatest(1, round(
+    (
+      (sg.conteo_estimado::numeric / (1 + v.variacion)) +
+      (sg.conteo_estimado::numeric - sg.conteo_estimado::numeric / (1 + v.variacion))
+        * (29 - d.d) / 29.0
+    ) + (
+      case when d.d = 0 then 0::numeric else
+        (3 + abs(hashtext(sg.codigo)) % 4)::numeric
+        * (sin((d.d + abs(hashtext(sg.codigo)) % 10)::double precision * 0.8))::numeric
+      end
+    )
+  ))::integer
+from segments sg
+join variacion v on v.codigo = sg.codigo
+cross join dias d
+where sg.org_id = (select id from org)
+on conflict (segment_id, fecha) do nothing;
+
+-- Muestra de socios reales para el detalle de audiencias (11.2, tabla de
+-- miembros). Nombres nuevos, no se reciclan los 8 de 05 — son perfiles
+-- adicionales del programa, no los mismos socios bajo otra audiencia.
+with org as (select id from organizations where slug = 'omni'),
+tier_ids as (select nombre, id from tiers where org_id = (select id from org))
+insert into members (org_id, nombre, apellido, email, tier_id, saldo_puntos, fecha_alta, estado_cuenta, consentimiento_marketing, canal_adquisicion)
+select
+  (select id from org), m.nombre, m.apellido, m.email,
+  (select id from tier_ids where tier_ids.nombre = m.tier), m.saldo_puntos,
+  now() - (m.dias_antiguedad || ' days')::interval, m.estado_cuenta, true, 'app'
+from (
+  values
+    ('María', 'González', 'maria.gonzalez@mail.com', 'oro', 4820, 11, 'activo'),
+    ('Jorge', 'Ramírez', 'jorge.ramirez@mail.com', 'oro', 3910, 13, 'activo'),
+    ('Lucía', 'Pérez', 'lucia.perez@mail.com', 'plata', 2340, 14, 'activo'),
+    ('Diego', 'Salinas', 'diego.salinas@mail.com', 'plata', 2105, 16, 'activo'),
+    ('Camila', 'Flores', 'camila.flores@mail.com', 'bronce', 980, 18, 'inactivo')
+) as m (nombre, apellido, email, tier, saldo_puntos, dias_antiguedad, estado_cuenta)
+on conflict (org_id, email) do nothing;
+
+-- Reparte la muestra sobre varias audiencias: "Compradores frecuentes" usa
+-- exactamente los 5 socios del Figma 11.2; el resto reutiliza también
+-- algunos de los 8 socios de 05, para que más de un detalle de audiencia
+-- tenga tabla de miembros real.
+with org as (select id from organizations where slug = 'omni'),
+seg as (select codigo, id from segments where org_id = (select id from org)),
+mem as (select email, id from members where org_id = (select id from org))
+insert into segment_members (org_id, segment_id, member_id)
+select
+  (select id from org),
+  (select id from seg where seg.codigo = x.codigo),
+  (select id from mem where mem.email = x.email)
+from (
+  values
+    ('seg_freq_2026', 'maria.gonzalez@mail.com'),
+    ('seg_freq_2026', 'jorge.ramirez@mail.com'),
+    ('seg_freq_2026', 'lucia.perez@mail.com'),
+    ('seg_freq_2026', 'diego.salinas@mail.com'),
+    ('seg_freq_2026', 'camila.flores@mail.com'),
+    ('seg_vip_gold', 'maria.gonzalez@mail.com'),
+    ('seg_vip_gold', 'sofia.ramirez@example.com'),
+    ('seg_vip_gold', 'andres.gomez@example.com'),
+    ('seg_churn_risk', 'julian.restrepo@example.com'),
+    ('seg_churn_risk', 'felipe.herrera@example.com'),
+    ('seg_churn_risk', 'diego.salinas@mail.com'),
+    ('seg_new_30d', 'camila.flores@mail.com'),
+    ('seg_inactive_90', 'felipe.herrera@example.com'),
+    ('seg_inactive_90', 'julian.restrepo@example.com'),
+    ('seg_birthday', 'lucia.perez@mail.com'),
+    ('seg_birthday', 'mariana.ocampo@example.com'),
+    ('seg_diamante_all', 'sofia.ramirez@example.com'),
+    ('seg_diamante_all', 'camilo.torres@example.com')
+) as x (codigo, email)
+on conflict (segment_id, member_id) do nothing;
+
+-- Dos journeys reales que usan "Compradores frecuentes" como entrada
+-- (11.2 "Journeys vinculados"). El resto de audiencias no tiene journeys
+-- vinculados todavía — el Loyalty Builder (08) tampoco trae datos de
+-- ejemplo propios fuera de este seed puntual.
+with org as (select id from organizations where slug = 'omni'),
+seg as (select id from segments where org_id = (select id from org) and codigo = 'seg_freq_2026')
+insert into workflows (org_id, nombre, descripcion, estado, version_actual)
+select (select id from org), w.nombre, w.descripcion, 'publicado', 1
+from (
+  values
+    ('Recompensa por frecuencia', 'Otorga puntos extra a compradores frecuentes al entrar al segmento.'),
+    ('Recordatorio de puntos por vencer', 'Avisa por email cuando los puntos del socio están por expirar.')
+) as w (nombre, descripcion)
+where exists (select 1 from seg)
+  and not exists (
+    select 1 from workflows existing
+    where existing.org_id = (select id from org) and existing.nombre = w.nombre
+  );
+
+with org as (select id from organizations where slug = 'omni'),
+seg as (select id from segments where org_id = (select id from org) and codigo = 'seg_freq_2026'),
+wf as (
+  select id, nombre from workflows
+  where org_id = (select id from org)
+    and nombre in ('Recompensa por frecuencia', 'Recordatorio de puntos por vencer')
+)
+insert into workflow_nodes (workflow_id, tipo, etiqueta, posicion_x, posicion_y, config)
+select
+  wf.id, n.tipo, n.etiqueta, n.posicion_x, n.posicion_y,
+  case when n.tipo = 'entra_segmento'
+    then jsonb_build_object('audiencia_id', (select id::text from seg), 'modo', 'al_entrar', 'reevaluacion', 'diaria')
+    else '{}'::jsonb
+  end
+from wf
+join (
+  values
+    ('Recompensa por frecuencia', 'entra_segmento', 'Entra al segmento', 0, 0),
+    ('Recompensa por frecuencia', 'acumular_puntos', 'Acumular puntos', 260, 0),
+    ('Recompensa por frecuencia', 'fin_workflow', 'Fin', 520, 0),
+    ('Recordatorio de puntos por vencer', 'entra_segmento', 'Entra al segmento', 0, 0),
+    ('Recordatorio de puntos por vencer', 'email', 'Email', 260, 0),
+    ('Recordatorio de puntos por vencer', 'fin_workflow', 'Fin', 520, 0)
+) as n (workflow_nombre, tipo, etiqueta, posicion_x, posicion_y) on n.workflow_nombre = wf.nombre
+where exists (select 1 from seg)
+  and not exists (
+    select 1 from workflow_nodes existing
+    where existing.workflow_id = wf.id and existing.tipo = n.tipo
+  );
+
+with org as (select id from organizations where slug = 'omni'),
+wf as (
+  select id, nombre from workflows
+  where org_id = (select id from org)
+    and nombre in ('Recompensa por frecuencia', 'Recordatorio de puntos por vencer')
+),
+nodos as (
+  select wf.id as workflow_id, wn.id as node_id, wn.posicion_x
+  from wf join workflow_nodes wn on wn.workflow_id = wf.id
+)
+insert into workflow_edges (workflow_id, source_node_id, source_port, target_node_id)
+select a.workflow_id, a.node_id, 'out', b.node_id
+from nodos a
+join nodos b on b.workflow_id = a.workflow_id and b.posicion_x = a.posicion_x + 260
+on conflict (source_node_id, source_port, target_node_id) do nothing;
+
+-- Costo unitario por SKU (05.3g "Contribución de margen") — no existía
+-- ningún concepto de costo en el catálogo, solo precio de venta. Margen
+-- aproximado de farmacia (45-45% sobre precio), variado por producto.
+with org as (select id from organizations where slug = 'omni')
+update productos p
+set costo_unitario = c.costo
+from (
+  values
+    ('FAR-70241', 3800), ('FAR-70388', 6300), ('FAR-70422', 15700),
+    ('FAR-70517', 9800), ('FAR-70602', 18100), ('FAR-70819', 29900),
+    ('FAR-70933', 5250), ('FAR-71042', 2860), ('FAR-71105', 5390),
+    ('FAR-71230', 7810), ('FAR-71305', 3660), ('FAR-71390', 5340),
+    ('FAR-71455', 21945), ('FAR-71520', 11715), ('FAR-71600', 14880),
+    ('FAR-71675', 6930)
+) as c (sku, costo)
+where p.org_id = (select id from org) and p.sku = c.sku and p.costo_unitario is null;
+
+-- Pedidos de demo (05.3g "Comportamiento de compra" / "Valor comercial").
+-- Repartidos de forma desigual a propósito: Sofía/Camilo (Diamante) con
+-- historial largo, Daniela sin tienda de inscripción compra por
+-- e-commerce igual, Felipe (suspendido) se deja SIN pedidos — necesario
+-- para probar el estado vacío real de esas dos cards, no solo el feliz.
+with org as (select id from organizations where slug = 'omni'),
+miembro_ids as (select email, id from members where org_id = (select id from org)),
+tienda_ids as (select codigo_tienda, id from tiendas where org_id = (select id from org))
+insert into pedidos (org_id, member_id, tienda_id, canal, numero_pedido, estado, creado_en)
+select
+  (select id from org),
+  (select id from miembro_ids where miembro_ids.email = p.email),
+  (select id from tienda_ids where tienda_ids.codigo_tienda = p.tienda_codigo),
+  p.canal, p.numero_pedido, 'completado', now() - (p.dias_atras || ' days')::interval
+from (
+  values
+    ('sofia.ramirez@example.com', 'ST-0142', 'ecommerce', 'PED-90142', 12),
+    ('sofia.ramirez@example.com', 'ST-0142', 'pos', 'PED-90088', 25),
+    ('sofia.ramirez@example.com', 'ST-0142', 'ecommerce', 'PED-89950', 48),
+    ('sofia.ramirez@example.com', 'ST-0142', 'pos', 'PED-89800', 70),
+    ('sofia.ramirez@example.com', 'ST-0142', 'ecommerce', 'PED-89600', 95),
+    ('sofia.ramirez@example.com', 'ST-0142', 'ecommerce', 'PED-89300', 130),
+    ('sofia.ramirez@example.com', 'ST-0142', 'ecommerce', 'PED-88900', 165),
+    ('sofia.ramirez@example.com', 'ST-0142', 'pos', 'PED-88500', 195),
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-77980', 8),
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-77850', 22),
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-77700', 40),
+    ('camilo.torres@example.com', 'ST-0142', 'ecommerce', 'PED-77500', 65),
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-77300', 90),
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-77000', 130),
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-76800', 170),
+    ('valentina.rios@example.com', 'ST-0143', 'app', 'PED-60210', 10),
+    ('valentina.rios@example.com', 'ST-0143', 'app', 'PED-60150', 35),
+    ('valentina.rios@example.com', 'ST-0143', 'ecommerce', 'PED-60080', 60),
+    ('valentina.rios@example.com', 'ST-0143', 'app', 'PED-59990', 100),
+    ('valentina.rios@example.com', 'ST-0143', 'app', 'PED-59900', 150),
+    ('andres.gomez@example.com', 'ST-0151', 'pos', 'PED-51200', 18),
+    ('andres.gomez@example.com', 'ST-0151', 'pos', 'PED-51100', 50),
+    ('andres.gomez@example.com', 'ST-0151', 'ecommerce', 'PED-51000', 90),
+    ('andres.gomez@example.com', 'ST-0151', 'pos', 'PED-50900', 140),
+    ('andres.gomez@example.com', 'ST-0151', 'pos', 'PED-50800', 200),
+    ('mariana.ocampo@example.com', 'ST-0158', 'ecommerce', 'PED-40300', 20),
+    ('mariana.ocampo@example.com', 'ST-0158', 'ecommerce', 'PED-40200', 75),
+    ('mariana.ocampo@example.com', 'ST-0158', 'pos', 'PED-40100', 150),
+    ('julian.restrepo@example.com', 'ST-0163', 'pos', 'PED-30150', 60),
+    ('julian.restrepo@example.com', 'ST-0163', 'pos', 'PED-30080', 130),
+    ('daniela.cardenas@example.com', 'ST-0142', 'ecommerce', 'PED-20050', 45)
+) as p (email, tienda_codigo, canal, numero_pedido, dias_atras)
+on conflict (org_id, numero_pedido) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+pedido_ids as (select numero_pedido, id from pedidos where org_id = (select id from org)),
+producto_ids as (
+  select sku, id, precio, costo_unitario from productos where org_id = (select id from org)
+)
+insert into pedido_items (pedido_id, producto_id, cantidad, precio_unitario, costo_unitario)
+select
+  (select id from pedido_ids where pedido_ids.numero_pedido = i.numero_pedido),
+  (select id from producto_ids where producto_ids.sku = i.sku),
+  i.cantidad,
+  (select precio from producto_ids where producto_ids.sku = i.sku),
+  coalesce((select costo_unitario from producto_ids where producto_ids.sku = i.sku), 0)
+from (
+  values
+    ('PED-90142', 'FAR-70422', 1), ('PED-90142', 'FAR-71455', 1),
+    ('PED-90088', 'FAR-70602', 1), ('PED-90088', 'FAR-71520', 1),
+    ('PED-89950', 'FAR-70819', 1),
+    ('PED-89800', 'FAR-71105', 2), ('PED-89800', 'FAR-71230', 1),
+    ('PED-89600', 'FAR-70422', 1), ('PED-89600', 'FAR-71675', 2),
+    ('PED-89300', 'FAR-71455', 1),
+    ('PED-88900', 'FAR-70602', 1), ('PED-88900', 'FAR-71042', 1),
+    ('PED-88500', 'FAR-70819', 1), ('PED-88500', 'FAR-71520', 1),
+    ('PED-77980', 'FAR-71042', 1), ('PED-77980', 'FAR-71305', 2),
+    ('PED-77850', 'FAR-70241', 2), ('PED-77850', 'FAR-71675', 1),
+    ('PED-77700', 'FAR-71105', 1),
+    ('PED-77500', 'FAR-70388', 1), ('PED-77500', 'FAR-71230', 1),
+    ('PED-77300', 'FAR-71600', 1),
+    ('PED-77000', 'FAR-70241', 3),
+    ('PED-76800', 'FAR-71042', 2), ('PED-76800', 'FAR-71305', 1),
+    ('PED-60210', 'FAR-71520', 1), ('PED-60210', 'FAR-71675', 1),
+    ('PED-60150', 'FAR-70602', 1),
+    ('PED-60080', 'FAR-71230', 1), ('PED-60080', 'FAR-71042', 1),
+    ('PED-59990', 'FAR-71520', 1),
+    ('PED-59900', 'FAR-70602', 1), ('PED-59900', 'FAR-71675', 2),
+    ('PED-51200', 'FAR-70241', 1), ('PED-51200', 'FAR-71042', 1),
+    ('PED-51100', 'FAR-70388', 1), ('PED-51100', 'FAR-71105', 1),
+    ('PED-51000', 'FAR-70422', 1),
+    ('PED-50900', 'FAR-71042', 2),
+    ('PED-50800', 'FAR-70241', 2), ('PED-50800', 'FAR-71230', 1),
+    ('PED-40300', 'FAR-70422', 1),
+    ('PED-40200', 'FAR-71455', 1),
+    ('PED-40100', 'FAR-71042', 1),
+    ('PED-30150', 'FAR-71105', 1), ('PED-30150', 'FAR-70241', 1),
+    ('PED-30080', 'FAR-71230', 1),
+    ('PED-20050', 'FAR-71042', 1)
+) as i (numero_pedido, sku, cantidad)
+on conflict (pedido_id, producto_id) do nothing;

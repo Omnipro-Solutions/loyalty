@@ -12,8 +12,8 @@ Guía para trabajar en este repositorio. Léela antes de tocar código.
 Demo de un sistema de loyalty (**Loyalty System · By Omni**) construida
 pixel-perfect contra el Figma "Loyalty-Desing"
 (`KxtI6mzVfDqGisGhC9VAf5`). Ver `.claude/plans/` (o pedir al usuario) por el
-plan de fases completo. Tenant de demo: **Etteer · Omni Retail Group**
-(`dominio_correo = etteer.com`).
+plan de fases completo. Tenant de demo: **Omni Retail Group**
+(`dominio_correo = omni.pro`).
 
 ---
 
