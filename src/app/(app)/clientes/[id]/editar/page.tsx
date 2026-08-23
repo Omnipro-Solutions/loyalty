@@ -10,7 +10,7 @@ import {
 } from "@/features/members/lib/queries"
 
 /** Reutiliza el formulario de creación — el Figma no define una pantalla de edición aparte. */
-export default async function EditarClientePage({
+export default async function EditMemberPage({
   params,
 }: PageProps<"/clientes/[id]/editar">) {
   const { id } = await params

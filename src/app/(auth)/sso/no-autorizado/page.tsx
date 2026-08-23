@@ -1,6 +1,6 @@
 import { SsoDeniedCard } from "@/features/auth/components/sso-denied-card"
 
-export default async function SsoNoAutorizadoPage({
+export default async function SsoUnauthorizedPage({
   searchParams,
 }: PageProps<"/sso/no-autorizado">) {
   const { email } = await searchParams

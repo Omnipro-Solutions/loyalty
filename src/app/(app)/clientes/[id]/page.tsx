@@ -31,7 +31,7 @@ import {
  * audiencias o de elegibilidad de promociones, que este proyecto no tiene
  * todavía (audiencias activas, promociones activas).
  */
-export default async function ClientePerfilPage({
+export default async function MemberDetailPage({
   params,
 }: PageProps<"/clientes/[id]">) {
   const { id } = await params

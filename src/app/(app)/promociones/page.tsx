@@ -20,7 +20,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 /** Figma "06.1 · Promociones · listado" (630:428). */
-export default async function PromocionesPage({
+export default async function PromotionsPage({
   searchParams,
 }: PageProps<"/promociones">) {
   const params = await searchParams

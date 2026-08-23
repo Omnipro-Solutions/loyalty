@@ -20,7 +20,7 @@ function allValues(value: string | string[] | undefined): string[] {
 }
 
 /** Figma "03.1 · Catálogo · listado" (626:198). */
-export default async function CatalogoPage({
+export default async function CatalogPage({
   searchParams,
 }: PageProps<"/catalogo">) {
   const params = await searchParams

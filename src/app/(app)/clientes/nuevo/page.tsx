@@ -7,7 +7,7 @@ import {
 } from "@/features/members/lib/queries"
 
 /** Sin pantalla propia en el Figma (05 solo define listado y Perfil 360) — mismo patrón que `/tiendas/nueva`. */
-export default async function NuevoClientePage() {
+export default async function NewMemberPage() {
   const [stores, tiers] = await Promise.all([
     listStoreOptions(),
     listTiersOptions(),

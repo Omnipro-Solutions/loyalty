@@ -13,7 +13,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 /** Figma "05.1 · Clientes · listado" (704:3012). */
-export default async function ClientesPage({
+export default async function MembersPage({
   searchParams,
 }: PageProps<"/clientes">) {
   const params = await searchParams

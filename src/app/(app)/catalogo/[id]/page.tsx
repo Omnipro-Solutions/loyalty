@@ -15,7 +15,7 @@ import {
 } from "@/features/catalog/lib/queries"
 
 /** Figma "03.3 · Catálogo · detalle de producto · v2" (1210:3909). */
-export default async function ProductoDetallePage({
+export default async function ProductDetailPage({
   params,
 }: PageProps<"/catalogo/[id]">) {
   const { id } = await params

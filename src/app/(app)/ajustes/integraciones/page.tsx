@@ -34,11 +34,11 @@ export default async function IntegrationsPage({
           initialSelectionId="cjo"
           title="Integraciones"
           description="Conecta los sistemas que alimentan a Etteer y define a dónde enviar audiencias, eventos y resultados."
-          labelBuscar="Buscar integración…"
-          labelTotal="orígenes"
-          labelTodos="Todos los orígenes"
-          labelAccionSecundaria="Ver flujos de datos"
-          labelAccionPrimaria="Nueva conexión"
+          searchLabel="Buscar integración…"
+          totalLabel="orígenes"
+          allLabel="Todos los orígenes"
+          secondaryActionLabel="Ver flujos de datos"
+          primaryActionLabel="Nueva conexión"
         />
       )}
       {tab === "destinos" && (
@@ -48,11 +48,11 @@ export default async function IntegrationsPage({
           initialSelectionId="power-bi"
           title="Integraciones"
           description="Elige a dónde enviar audiencias, eventos de lealtad y resultados de campaña desde Etteer."
-          labelBuscar="Buscar destino…"
-          labelTotal="destinos"
-          labelTodos="Todos los destinos"
-          labelAccionSecundaria="Ver flujos de salida"
-          labelAccionPrimaria="Nuevo destino"
+          searchLabel="Buscar destino…"
+          totalLabel="destinos"
+          allLabel="Todos los destinos"
+          secondaryActionLabel="Ver flujos de salida"
+          primaryActionLabel="Nuevo destino"
         />
       )}
       {tab === "conexiones" && <ActiveConnectionsCard />}

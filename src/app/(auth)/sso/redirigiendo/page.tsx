@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 
 import { SsoRedirectCard } from "@/features/auth/components/sso-redirect-card"
 
-export default async function SsoRedirigiendoPage({
+export default async function SsoRedirectingPage({
   searchParams,
 }: PageProps<"/sso/redirigiendo">) {
   const { email } = await searchParams

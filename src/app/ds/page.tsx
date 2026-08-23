@@ -55,7 +55,7 @@ import { LoadingState } from "@/components/feedback/loading-state"
 import { ProductHistoryCard } from "@/features/catalog/components/product-history-card"
 import type { ProductEvent } from "@/features/catalog/lib/queries"
 
-type Fila = { nombre: string; email: string }
+type DemoRow = { nombre: string; email: string }
 
 const PRODUCT_HISTORY_MOCK: ProductEvent[] = [
   {
@@ -172,7 +172,7 @@ const PRODUCT_HISTORY_MOCK: ProductEvent[] = [
   },
 ]
 
-const FILAS: Fila[] = [
+const ROWS: DemoRow[] = [
   { nombre: "Sofía Ramírez", email: "sofia.ramirez@example.com" },
   { nombre: "Camilo Torres", email: "camilo.torres@example.com" },
 ]
@@ -180,7 +180,7 @@ const FILAS: Fila[] = [
 // @tanstack/react-table v9: features y columnas se registran fuera del
 // render (ver skills/getting-started del propio paquete instalado).
 const tableFeaturesConfig = tableFeatures({})
-const columnHelper = createColumnHelper<typeof tableFeaturesConfig, Fila>()
+const columnHelper = createColumnHelper<typeof tableFeaturesConfig, DemoRow>()
 const COLUMNS = columnHelper.columns([
   columnHelper.accessor("nombre", {
     header: "Cliente",
@@ -205,14 +205,14 @@ const COLUMNS = columnHelper.columns([
  * capturas 1:1 y no "a ojo" contra el diseño completo de una pantalla.
  */
 export default function DesignSystemPage() {
-  const [tiendas, setTiendas] = React.useState<string[]>(["centro", "prado"])
-  const [unidades, setUnidades] = React.useState(12)
-  const [rango, setRango] = React.useState("30d")
-  const [pagina, setPagina] = React.useState(1)
+  const [stores, setStores] = React.useState<string[]>(["centro", "prado"])
+  const [units, setUnits] = React.useState(12)
+  const [range, setRange] = React.useState("30d")
+  const [page, setPage] = React.useState(1)
   const table = useTable({
     features: tableFeaturesConfig,
     columns: COLUMNS,
-    data: FILAS,
+    data: ROWS,
   })
 
   return (
@@ -315,8 +315,8 @@ export default function DesignSystemPage() {
         </Field>
         <Field label="Unidades por caja" hint="Entre 1 y 999">
           <Stepper
-            value={unidades}
-            onValueChange={setUnidades}
+            value={units}
+            onValueChange={setUnits}
             className="w-[320px]"
           />
         </Field>
@@ -380,8 +380,8 @@ export default function DesignSystemPage() {
               { value: "prado", label: "Alto Prado" },
               { value: "buenavista", label: "Buenavista" },
             ]}
-            value={tiendas}
-            onValueChange={setTiendas}
+            value={stores}
+            onValueChange={setStores}
           />
         </Field>
         <FileUpload label="Imagen del producto" />
@@ -445,8 +445,8 @@ export default function DesignSystemPage() {
         <Pagination
           total={124}
           pageSize={8}
-          page={pagina}
-          onPageChange={setPagina}
+          page={page}
+          onPageChange={setPage}
         />
       </section>
 
@@ -458,8 +458,8 @@ export default function DesignSystemPage() {
         <Chip>Activos</Chip>
         <Chip count={14}>Con conteo</Chip>
         <Segmented
-          value={rango}
-          onValueChange={setRango}
+          value={range}
+          onValueChange={setRange}
           options={[
             { value: "7d", label: "7D" },
             { value: "30d", label: "30D" },
@@ -474,7 +474,7 @@ export default function DesignSystemPage() {
         <EmptyState
           icon={Users}
           title="Ningún cliente coincide con estos filtros"
-          description="El segmento “En riesgo” no tiene clientes con compras en los últimos 30 días. Prueba ampliando el rango o quitando un filtro."
+          description="El segmento “En riesgo” no tiene clientes con compras en los últimos 30 días. Prueba ampliando el range o quitando un filtro."
         />
       </section>
 

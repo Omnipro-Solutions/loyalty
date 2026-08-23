@@ -11,7 +11,7 @@ import {
 } from "@/features/promotions/lib/queries"
 
 /** Reutiliza el mismo wizard de creación (07.1 adaptado) precargado con los valores existentes. */
-export default async function EditarPromocionPage({
+export default async function EditPromotionPage({
   params,
 }: PageProps<"/promociones/[id]/editar">) {
   const { id } = await params

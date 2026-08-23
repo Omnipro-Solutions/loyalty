@@ -24,7 +24,7 @@ import {
   getWorkflowWithGraph,
 } from "@/features/builder/canvas/queries"
 
-export default async function JourneyAnaliticaPage({
+export default async function JourneyAnalyticsPage({
   params,
 }: PageProps<"/journeys/[id]/analitica">) {
   const { id } = await params

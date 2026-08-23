@@ -18,7 +18,7 @@ import {
 import type { TierName } from "@/types/domain"
 
 /** Figma "11.2 · Audiencia · detalle" (842:6209). */
-export default async function AudienciaDetallePage({
+export default async function AudienceDetailPage({
   params,
 }: PageProps<"/audiencias/[id]">) {
   const { id } = await params

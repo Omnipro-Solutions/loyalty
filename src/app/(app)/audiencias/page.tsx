@@ -18,7 +18,7 @@ function formatDeltaPercent(valor: number): string {
 }
 
 /** Figma "11.1 · Audiencias · listado" (842:5955). */
-export default async function AudienciasPage({
+export default async function AudiencesPage({
   searchParams,
 }: PageProps<"/audiencias">) {
   const params = await searchParams

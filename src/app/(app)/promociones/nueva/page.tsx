@@ -8,7 +8,7 @@ import {
 } from "@/features/promotions/lib/queries"
 
 /** Adaptado de Figma "07.1 · Regla · configuración" (633:658) — ver nota en la migración. */
-export default async function NuevaPromocionPage() {
+export default async function NewPromotionPage() {
   const [categories, cities, segments] = await Promise.all([
     listConditionCategories(),
     listConditionCities(),

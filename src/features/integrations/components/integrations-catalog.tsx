@@ -19,11 +19,11 @@ type IntegrationsCatalogProps = {
   initialSelectionId: string
   title: string
   description: string
-  labelBuscar: string
-  labelTotal: string
-  labelTodos: string
-  labelAccionSecundaria: string
-  labelAccionPrimaria: string
+  searchLabel: string
+  totalLabel: string
+  allLabel: string
+  secondaryActionLabel: string
+  primaryActionLabel: string
 }
 
 /**
@@ -38,11 +38,11 @@ export function IntegrationsCatalog({
   initialSelectionId,
   title,
   description,
-  labelBuscar,
-  labelTotal,
-  labelTodos,
-  labelAccionSecundaria,
-  labelAccionPrimaria,
+  searchLabel,
+  totalLabel,
+  allLabel,
+  secondaryActionLabel,
+  primaryActionLabel,
 }: IntegrationsCatalogProps) {
   const [mode, setMode] = useState<"todas" | "mias">("todas")
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
@@ -97,17 +97,17 @@ export function IntegrationsCatalog({
             nativeButton={false}
             render={<Link href="/ajustes/integraciones?tab=sistema" />}
           >
-            {labelAccionSecundaria}
+            {secondaryActionLabel}
           </Button>
           <Button size="sm" disabled>
-            {labelAccionPrimaria}
+            {primaryActionLabel}
           </Button>
         </div>
       </div>
 
       <div className="flex w-full items-start gap-5">
         <IntegrationsRail
-          labelTodos={labelTodos}
+          allLabel={allLabel}
           mode={mode}
           onModeChange={setMode}
           categories={categories}
@@ -129,11 +129,11 @@ export function IntegrationsCatalog({
               <FilterSearch
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={labelBuscar}
+                placeholder={searchLabel}
                 className="w-full rounded-[10px]"
               />
               <p className="shrink-0 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
-                {total} {labelTotal}
+                {total} {totalLabel}
               </p>
             </div>
 

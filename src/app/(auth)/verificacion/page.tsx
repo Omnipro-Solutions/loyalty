@@ -9,7 +9,7 @@ import { VerificationCard } from "@/features/auth/components/verification-card"
  * nuevo y muestra el QR encima de la misma tarjeta) — ver
  * VerificationCard.
  */
-export default async function VerificacionPage() {
+export default async function VerificationPage() {
   const status = await getMfaStatus()
 
   if (status.enrolled) {

@@ -31,7 +31,7 @@ function firstValue(value: string | string[] | undefined) {
  * sub-vista de Ajustes, agrupada junto a Integraciones bajo el ítem
  * colapsable "Ajustes" del sidebar (ver `config/navigation.ts`).
  */
-export default async function EquipoPage({
+export default async function TeamPage({
   searchParams,
 }: PageProps<"/ajustes/equipo">) {
   const params = await searchParams

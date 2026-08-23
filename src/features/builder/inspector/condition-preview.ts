@@ -61,7 +61,7 @@ type FieldType = "numero" | "fecha" | "texto" | "booleano"
  * Un solo lugar por campo real expuesto en `MultiConditionForm`: cómo
  * leerlo de un `MemberPreview` y qué tipo de comparación aplica. Agregar
  * un atributo nuevo a la segmentación es una entrada aquí + una en
- * `CAMPOS` (`multi-condition-form.tsx`) — no tocar `evaluateRule`.
+ * `FIELDS` (`multi-condition-form.tsx`) — no tocar `evaluateRule`.
  */
 const FIELD_CONFIG: Record<
   string,

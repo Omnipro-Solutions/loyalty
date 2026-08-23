@@ -2,7 +2,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
 
 type IntegrationsRailProps = {
-  labelTodos: string
+  allLabel: string
   mode: "todas" | "mias"
   onModeChange: (mode: "todas" | "mias") => void
   categories: { name: string; total: number }[]
@@ -18,7 +18,7 @@ type IntegrationsRailProps = {
  * resultados que no existen.
  */
 export function IntegrationsRail({
-  labelTodos,
+  allLabel,
   mode,
   onModeChange,
   categories,
@@ -35,7 +35,7 @@ export function IntegrationsRail({
         <label className="flex items-center gap-2">
           <RadioGroupItem value="todas" className="size-[14px]" />
           <span className="text-[11.5px] leading-4 font-semibold text-foreground">
-            {labelTodos}
+            {allLabel}
           </span>
         </label>
         <label className="flex items-center gap-2">
