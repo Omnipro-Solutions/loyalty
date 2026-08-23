@@ -2,48 +2,48 @@ import { notFound } from "next/navigation"
 
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
-import { BitacoraProductoCard } from "@/features/catalogo/components/bitacora-producto-card"
-import { FichaProductoCard } from "@/features/catalogo/components/ficha-producto-card"
-import { PreciosCard } from "@/features/catalogo/components/precios-card"
-import { ProductoHero } from "@/features/catalogo/components/producto-hero"
-import { PromocionesProductoCard } from "@/features/catalogo/components/promociones-producto-card"
-import { listPromocionesPorCategorias } from "@/features/catalogo/lib/promociones-relacionadas"
+import { ProductHistoryCard } from "@/features/catalog/components/product-history-card"
+import { ProductDetailCard } from "@/features/catalog/components/product-detail-card"
+import { PricesCard } from "@/features/catalog/components/prices-card"
+import { ProductHero } from "@/features/catalog/components/product-hero"
+import { ProductPromotionsCard } from "@/features/catalog/components/product-promotions-card"
+import { listPromotionsByCategories } from "@/features/catalog/lib/related-promotions"
 import {
-  getBitacoraProducto,
-  getPreciosProducto,
-  getProductoById,
-} from "@/features/catalogo/lib/queries"
+  getProductHistory,
+  getProductPrices,
+  getProductById,
+} from "@/features/catalog/lib/queries"
 
 /** Figma "03.3 · Catálogo · detalle de producto · v2" (1210:3909). */
 export default async function ProductoDetallePage({
   params,
 }: PageProps<"/catalogo/[id]">) {
   const { id } = await params
-  const producto = await getProductoById(id)
-  if (!producto) notFound()
+  const product = await getProductById(id)
+  if (!product) notFound()
 
-  const categoriaIds = producto.rutas.map((ruta) => ruta.categoriaId)
-  const categoriaNombrePorId = new Map(
-    producto.rutas.map((ruta) => [ruta.categoriaId, ruta.nombre])
+  const categoryIds = product.paths.map((path) => path.categoryId)
+  const categoryNameById = new Map(
+    product.paths.map((path) => [path.categoryId, path.name])
   )
 
-  const [precios, promocionesRelacionadas, eventos] = await Promise.all([
-    getPreciosProducto(producto.id),
-    listPromocionesPorCategorias(categoriaIds, categoriaNombrePorId),
-    getBitacoraProducto(producto.id),
+  const [prices, relatedPromotions, events] = await Promise.all([
+    getProductPrices(product.id),
+    listPromotionsByCategories(categoryIds, categoryNameById),
+    getProductHistory(product.id),
   ])
 
   return (
     <AppPage
-      breadcrumb={`Catálogo  ›  ${producto.nombre}`}
-      title={producto.nombre}
+      breadcrumb={`Catálogo  ›  ${product.nombre}`}
+      title={product.nombre}
     >
       <BackLink href="/catalogo">Volver a Catálogo</BackLink>
-      <ProductoHero producto={producto} />
-      <FichaProductoCard producto={producto} />
-      <PreciosCard precios={precios} />
-      <PromocionesProductoCard promociones={promocionesRelacionadas} />
-      <BitacoraProductoCard eventos={eventos} />
+      <ProductHero product={product} />
+      <ProductDetailCard product={product} />
+      <PricesCard prices={prices} />
+      <ProductPromotionsCard promotions={relatedPromotions} />
+      <ProductHistoryCard events={events} />
     </AppPage>
   )
 }

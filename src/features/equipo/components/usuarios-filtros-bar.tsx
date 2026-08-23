@@ -15,7 +15,7 @@ const ESTADO_OPTIONS = [
 
 type UsuariosFiltrosBarProps = { roles: RoleConConteo[] }
 
-/** Mismo patrón que `CatalogoFiltrosBar`: cada cambio actualiza los searchParams, la página server-side vuelve a consultar. */
+/** Mismo patrón que `CatalogFiltersBar`: cada cambio actualiza los searchParams, la página server-side vuelve a consultar. */
 export function UsuariosFiltrosBar({ roles }: UsuariosFiltrosBarProps) {
   const router = useRouter()
   const pathname = usePathname()

@@ -1,22 +1,22 @@
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
-import { InventoryHealthCard } from "@/features/catalogo/components/inventory-health-card"
-import { ProductosCard } from "@/features/catalogo/components/productos-card"
+import { InventoryHealthCard } from "@/features/catalog/components/inventory-health-card"
+import { ProductsCard } from "@/features/catalog/components/products-card"
 import {
-  CATALOGO_PAGE_SIZE,
-  getCatalogoKpis,
-  listCategorias,
-  listProductos,
-} from "@/features/catalogo/lib/queries"
+  CATALOG_PAGE_SIZE,
+  getCatalogKpis,
+  listCategories,
+  listProducts,
+} from "@/features/catalog/lib/queries"
 import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }
 
-function todosLosValores(valor: string | string[] | undefined): string[] {
-  if (!valor) return []
-  return Array.isArray(valor) ? valor : [valor]
+function allValues(value: string | string[] | undefined): string[] {
+  if (!value) return []
+  return Array.isArray(value) ? value : [value]
 }
 
 /** Figma "03.1 · Catálogo · listado" (626:198). */
@@ -24,15 +24,15 @@ export default async function CatalogoPage({
   searchParams,
 }: PageProps<"/catalogo">) {
   const params = await searchParams
-  const busqueda = primerValor(params.q)
-  const categoriaIds = todosLosValores(params.categoria)
-  const estado = primerValor(params.estado) as "activo" | "inactivo" | undefined
-  const page = Number(primerValor(params.page) ?? "1")
+  const search = firstValue(params.q)
+  const categoryIds = allValues(params.categoria)
+  const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
+  const page = Number(firstValue(params.page) ?? "1")
 
-  const [categorias, { productos, total }, kpis] = await Promise.all([
-    listCategorias(),
-    listProductos({ busqueda, categoriaIds, estado, page }),
-    getCatalogoKpis(),
+  const [categories, { products, total }, kpis] = await Promise.all([
+    listCategories(),
+    listProducts({ search, categoryIds, status, page }),
+    getCatalogKpis(),
   ])
 
   return (
@@ -40,32 +40,32 @@ export default async function CatalogoPage({
       <div className="flex items-start gap-4">
         <KpiCard
           label="SKU activos"
-          value={formatNumber(kpis.skuActivos)}
+          value={formatNumber(kpis.activeSku)}
           detail={`${formatPercent(
-            kpis.totalSku ? kpis.skuActivos / kpis.totalSku : 0
+            kpis.totalSku ? kpis.activeSku / kpis.totalSku : 0
           )} del catálogo total`}
         />
         <KpiCard
           label="Total de SKU"
           value={formatNumber(kpis.totalSku)}
-          detail={`en ${kpis.categoriasCount} categorías`}
+          detail={`en ${kpis.categoriesCount} categorías`}
         />
         <KpiCard
           label="Precio promedio"
-          value={formatCOP(kpis.precioPromedio)}
+          value={formatCOP(kpis.averagePrice)}
           detail="precio de lista promedio"
         />
         <InventoryHealthCard
-          promedio={kpis.completitudPromedio}
-          bandas={kpis.bandas}
+          average={kpis.averageCompleteness}
+          bands={kpis.bands}
         />
       </div>
-      <ProductosCard
-        productos={productos}
-        categorias={categorias}
+      <ProductsCard
+        products={products}
+        categories={categories}
         total={total}
-        pageSize={CATALOGO_PAGE_SIZE}
-        categoriaIds={categoriaIds}
+        pageSize={CATALOG_PAGE_SIZE}
+        categoryIds={categoryIds}
       />
     </AppPage>
   )

@@ -3,43 +3,43 @@ import { Package } from "lucide-react"
 import { formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { bandaCompletitud, calcularCompletitud } from "../lib/completitud"
-import type { Producto } from "../lib/queries"
+import { completenessBand, calculateCompleteness } from "../lib/completeness"
+import type { Product } from "../lib/queries"
 
-const BANDA_LABEL = { success: "ALTA", warning: "MEDIA", destructive: "BAJA" }
-const BANDA_TEXT = {
+const BAND_LABEL = { success: "ALTA", warning: "MEDIA", destructive: "BAJA" }
+const BAND_TEXT = {
   success: "text-success",
   warning: "text-warning",
   destructive: "text-destructive",
 }
-const BANDA_BADGE_BG = {
+const BAND_BADGE_BG = {
   success: "bg-success-bg",
   warning: "bg-warning-bg",
   destructive: "bg-destructive-bg",
 }
-const BANDA_FILL = {
+const BAND_FILL = {
   success: "bg-success",
   warning: "bg-warning",
   destructive: "bg-destructive",
 }
 
-type ProductoHeroProps = { producto: Producto }
+type ProductHeroProps = { product: Product }
 
 /** Figma "Hero" (1211:4026): imagen + identidad + completitud de datos. */
-export function ProductoHero({ producto }: ProductoHeroProps) {
-  const { llenos, total, porcentaje } = calcularCompletitud({
-    ...producto,
-    tieneClasificacion: producto.rutas.length > 0,
+export function ProductHero({ product }: ProductHeroProps) {
+  const { filled, total, percentage } = calculateCompleteness({
+    ...product,
+    hasClassification: product.paths.length > 0,
   })
-  const banda = bandaCompletitud(porcentaje)
-  const activo = producto.estado === "activo"
+  const band = completenessBand(percentage)
+  const active = product.estado === "activo"
 
   return (
     <div className="flex items-center gap-[18px] rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
-      {producto.imagen_url ? (
+      {product.imagen_url ? (
         // eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 62px, no vale next/image.
         <img
-          src={producto.imagen_url}
+          src={product.imagen_url}
           alt=""
           className="size-[62px] shrink-0 rounded-2xl object-cover"
         />
@@ -51,23 +51,23 @@ export function ProductoHero({ producto }: ProductoHeroProps) {
 
       <div className="flex flex-1 flex-col gap-2">
         <p className="text-lg font-semibold text-foreground">
-          {producto.nombre}
-          {producto.presentacion ? ` · ${producto.presentacion}` : ""}
+          {product.nombre}
+          {product.presentacion ? ` · ${product.presentacion}` : ""}
         </p>
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
               "rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-[0.2px]",
-              activo
+              active
                 ? "bg-success-bg text-success"
                 : "bg-muted text-muted-foreground"
             )}
           >
-            {activo ? "ACTIVO" : "INACTIVO"}
+            {active ? "ACTIVO" : "INACTIVO"}
           </span>
-          {producto.tipo_producto && (
+          {product.tipo_producto && (
             <span className="rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold tracking-[0.2px] text-warning">
-              {producto.tipo_producto.toUpperCase()}
+              {product.tipo_producto.toUpperCase()}
             </span>
           )}
         </div>
@@ -81,26 +81,26 @@ export function ProductoHero({ producto }: ProductoHeroProps) {
             COMPLETITUD DE DATOS
           </p>
           <p className="text-[10px]">
-            {llenos} de {total} campos
+            {filled} de {total} campos
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <p className="text-xl font-semibold text-foreground">
-            {formatPercent(porcentaje)}
+            {formatPercent(percentage)}
           </p>
           <span
             className={cn(
               "rounded-md px-[7px] py-0.5 text-[8px] font-semibold tracking-[0.4px]",
-              BANDA_BADGE_BG[banda],
-              BANDA_TEXT[banda]
+              BAND_BADGE_BG[band],
+              BAND_TEXT[band]
             )}
           >
-            {BANDA_LABEL[banda]}
+            {BAND_LABEL[band]}
           </span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
-              className={cn("h-full rounded-full", BANDA_FILL[banda])}
-              style={{ width: `${porcentaje * 100}%` }}
+              className={cn("h-full rounded-full", BAND_FILL[band])}
+              style={{ width: `${percentage * 100}%` }}
             />
           </div>
         </div>

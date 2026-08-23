@@ -17,18 +17,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { colorPorCategoriaRaiz } from "../lib/categorias-arbol"
+import { colorByRootCategory } from "../lib/categories-tree"
 import {
-  bandaCompletitud,
-  calcularCompletitud,
-  type BandaCompletitud,
-} from "../lib/completitud"
-import type { Producto } from "../lib/queries"
+  completenessBand,
+  calculateCompleteness,
+  type CompletenessBand,
+} from "../lib/completeness"
+import type { Product } from "../lib/queries"
 
 const features = tableFeatures({ columnSizingFeature, rowSelectionFeature })
-const helper = createColumnHelper<typeof features, Producto>()
+const helper = createColumnHelper<typeof features, Product>()
 
-const BANDA_FILL: Record<BandaCompletitud, string> = {
+const BAND_FILL: Record<CompletenessBand, string> = {
   success: "bg-success",
   warning: "bg-warning",
   destructive: "bg-destructive",
@@ -83,33 +83,33 @@ const columns = helper.columns([
     ),
   }),
   helper.display({
-    id: "categoria",
+    id: "category",
     size: 130,
     header: () => "CATEGORÍA",
     cell: (info) => {
-      const rutas = info.row.original.rutas
-      if (rutas.length === 0) {
+      const paths = info.row.original.paths
+      if (paths.length === 0) {
         return <span className="text-secondary-foreground">—</span>
       }
-      const principal = rutas.find((r) => r.esPrincipal) ?? rutas[0]
-      const resto = rutas.filter((r) => r !== principal)
+      const primary = paths.find((r) => r.isPrimary) ?? paths[0]
+      const rest = paths.filter((r) => r !== primary)
       return (
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
               "size-[6px] shrink-0 rounded-full",
-              colorPorCategoriaRaiz(principal.nombrePadre ?? principal.nombre)
+              colorByRootCategory(primary.parentName ?? primary.name)
             )}
           />
           <span className="truncate text-secondary-foreground">
-            {principal.nombre}
+            {primary.name}
           </span>
-          {resto.length > 0 && (
+          {rest.length > 0 && (
             <span
-              title={resto.map((r) => r.nombre).join(", ")}
+              title={rest.map((r) => r.name).join(", ")}
               className="shrink-0 rounded-full bg-muted px-1.5 py-px text-[10px] font-semibold text-muted-foreground"
             >
-              +{resto.length}
+              +{rest.length}
             </span>
           )}
         </div>
@@ -126,32 +126,32 @@ const columns = helper.columns([
     ),
   }),
   helper.display({
-    id: "completitud",
+    id: "completeness",
     size: 140,
     header: () => "COMPLETITUD",
     cell: (info) => {
-      const { porcentaje, llenos, total } = calcularCompletitud({
+      const { percentage, filled, total } = calculateCompleteness({
         ...info.row.original,
-        tieneClasificacion: info.row.original.rutas.length > 0,
+        hasClassification: info.row.original.paths.length > 0,
       })
-      const faltantes = total - llenos
-      const banda = bandaCompletitud(porcentaje)
+      const missing = total - filled
+      const band = completenessBand(percentage)
       return (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-foreground">
-              {formatPercent(porcentaje)}
+              {formatPercent(percentage)}
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {faltantes === 0
+              {missing === 0
                 ? "completa"
-                : `-${faltantes} campo${faltantes > 1 ? "s" : ""}`}
+                : `-${missing} campo${missing > 1 ? "s" : ""}`}
             </span>
           </div>
           <div className="h-[5px] w-full max-w-[100px] overflow-hidden rounded-full bg-muted">
             <div
-              className={cn("h-full rounded-full", BANDA_FILL[banda])}
-              style={{ width: `${porcentaje * 100}%` }}
+              className={cn("h-full rounded-full", BAND_FILL[band])}
+              style={{ width: `${percentage * 100}%` }}
             />
           </div>
         </div>
@@ -171,24 +171,24 @@ const columns = helper.columns([
     size: 100,
     header: () => "ESTADO",
     cell: (info) => {
-      const activo = info.getValue() === "activo"
+      const active = info.getValue() === "activo"
       return (
         <div className="flex items-center gap-[7px]">
           <span
             className={cn(
               "size-[7px] shrink-0 rounded-full",
-              activo ? "bg-success" : "bg-border-strong"
+              active ? "bg-success" : "bg-border-strong"
             )}
           />
-          <span className={cn("text-xs", !activo && "text-muted-foreground")}>
-            {activo ? "Activo" : "Inactivo"}
+          <span className={cn("text-xs", !active && "text-muted-foreground")}>
+            {active ? "Activo" : "Inactivo"}
           </span>
         </div>
       )
     },
   }),
   helper.display({
-    id: "acciones",
+    id: "actions",
     size: 56,
     header: () => null,
     cell: () => (
@@ -199,19 +199,19 @@ const columns = helper.columns([
   }),
 ])
 
-type ProductosTablaProps = { productos: Producto[] }
+type ProductsTableProps = { products: Product[] }
 
 /** Figma "Table / Tabla de datos" aplicada a 03.1: filas navegan al detalle (03.3). */
-export function ProductosTabla({ productos }: ProductosTablaProps) {
+export function ProductsTable({ products }: ProductsTableProps) {
   const router = useRouter()
-  const data = useMemo(() => productos, [productos])
+  const data = useMemo(() => products, [products])
   const table = useTable({ features, columns, data })
 
   return (
     <DataTable
       table={table}
       headerClassName="bg-accent"
-      onRowClick={(producto) => router.push(`/catalogo/${producto.id}`)}
+      onRowClick={(product) => router.push(`/catalogo/${product.id}`)}
     />
   )
 }

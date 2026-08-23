@@ -17,7 +17,7 @@ const ESTADO_OPTIONS = MEMBER_STATUSES.map((e) => ({
 
 type ClientesFiltrosBarProps = { tiers: TierOption[] }
 
-/** Mismo patrón que `CatalogoFiltrosBar`/`UsuariosFiltrosBar`: cada cambio actualiza los searchParams, la página server-side vuelve a consultar. */
+/** Mismo patrón que `CatalogFiltersBar`/`UsuariosFiltrosBar`: cada cambio actualiza los searchParams, la página server-side vuelve a consultar. */
 export function ClientesFiltrosBar({ tiers }: ClientesFiltrosBarProps) {
   const router = useRouter()
   const pathname = usePathname()

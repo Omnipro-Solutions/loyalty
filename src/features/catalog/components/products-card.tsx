@@ -1,30 +1,30 @@
 import { formatNumber } from "@/lib/format"
 
-import { CatalogoFiltrosBar } from "./catalogo-filtros-bar"
-import { CatalogoPaginacion } from "./catalogo-paginacion"
-import { ExportarProductosButton } from "./exportar-productos-button"
-import { ProductosTabla } from "./productos-tabla"
-import type { Categoria, Producto } from "../lib/queries"
+import { CatalogFiltersBar } from "./catalog-filters-bar"
+import { CatalogPagination } from "./catalog-pagination"
+import { ExportProductsButton } from "./export-products-button"
+import { ProductsTable } from "./products-table"
+import type { Category, Product } from "../lib/queries"
 
-type ProductosCardProps = {
-  productos: Producto[]
-  categorias: Categoria[]
+type ProductsCardProps = {
+  products: Product[]
+  categories: Category[]
   total: number
   pageSize: number
-  categoriaIds: string[]
+  categoryIds: string[]
 }
 
 /** Figma "Table" (705:2524): título + conteo + filtros arriba, tabla, paginación. */
-export function ProductosCard({
-  productos,
-  categorias,
+export function ProductsCard({
+  products,
+  categories,
   total,
   pageSize,
-  categoriaIds,
-}: ProductosCardProps) {
-  const nombresCategoria = categoriaIds.length
-    ? categorias
-        .filter((c) => categoriaIds.includes(c.id))
+  categoryIds,
+}: ProductsCardProps) {
+  const categoryNames = categoryIds.length
+    ? categories
+        .filter((c) => categoryIds.includes(c.id))
         .map((c) => c.nombre)
         .join(", ")
     : "todas"
@@ -42,14 +42,14 @@ export function ProductosCard({
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Categoría: {nombresCategoria}
+            Categoría: {categoryNames}
           </p>
         </div>
-        <CatalogoFiltrosBar categorias={categorias} />
-        <ExportarProductosButton productos={productos} />
+        <CatalogFiltersBar categories={categories} />
+        <ExportProductsButton products={products} />
       </div>
-      <ProductosTabla productos={productos} />
-      <CatalogoPaginacion total={total} pageSize={pageSize} />
+      <ProductsTable products={products} />
+      <CatalogPagination total={total} pageSize={pageSize} />
     </div>
   )
 }

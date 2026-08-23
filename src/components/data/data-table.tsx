@@ -41,7 +41,7 @@ export function DataTable<
     // No box of its own (rounded/border/shadow): in the Figma the table is
     // flat content inside the card that wraps it (705:2524), not a second
     // nested card — that's what looked "stuck"/competing. The containing
-    // card (see `ProductosCard`) is the one that sets `overflow-hidden`
+    // card (see `ProductsCard`) is the one that sets `overflow-hidden`
     // and the background.
     <Table>
       {/* Per-column width from `columnSizingFeature` (see ColumnDef `size`) —

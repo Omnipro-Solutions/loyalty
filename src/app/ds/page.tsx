@@ -52,12 +52,12 @@ import { Segmented } from "@/components/filters/segmented"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { LoadingState } from "@/components/feedback/loading-state"
 
-import { BitacoraProductoCard } from "@/features/catalogo/components/bitacora-producto-card"
-import type { ProductoEvento } from "@/features/catalogo/lib/queries"
+import { ProductHistoryCard } from "@/features/catalog/components/product-history-card"
+import type { ProductEvent } from "@/features/catalog/lib/queries"
 
 type Fila = { nombre: string; email: string }
 
-const BITACORA_MOCK: ProductoEvento[] = [
+const PRODUCT_HISTORY_MOCK: ProductEvent[] = [
   {
     id: "1",
     org_id: "org",
@@ -483,7 +483,7 @@ export default function DesignSystemPage() {
       </section>
 
       <section data-ds="catalogo-bitacora" className="w-[1116px] bg-muted p-6">
-        <BitacoraProductoCard eventos={BITACORA_MOCK} />
+        <ProductHistoryCard events={PRODUCT_HISTORY_MOCK} />
       </section>
     </div>
   )

@@ -12,9 +12,9 @@ import {
   type ProductEventCategory,
 } from "@/types/domain"
 
-import type { ProductoEvento } from "../lib/queries"
+import type { ProductEvent } from "../lib/queries"
 
-const CAMPO_LABEL: Record<string, string> = {
+const FIELD_LABEL: Record<string, string> = {
   proveedor: "Proveedor",
   marca: "Marca",
   presentacion: "Presentación",
@@ -23,43 +23,43 @@ const CAMPO_LABEL: Record<string, string> = {
   nombre: "Nombre",
 }
 
-const ESTADO_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<string, string> = {
   activo: "Activo",
   inactivo: "Inactivo",
 }
 
-function nombreArchivo(url: string): string {
+function fileName(url: string): string {
   return url.split("/").pop() ?? url
 }
 
 /** Reconstruye el texto "valor anterior → valor nuevo" del Figma a partir de las columnas reales del evento — cada rama es un caso genuino de `productos_registrar_eventos()`. */
-function detalleEvento(evento: ProductoEvento): string | null {
-  const { categoria, campo, valor_anterior, valor_nuevo, descripcion } = evento
+function eventDetail(event: ProductEvent): string | null {
+  const { categoria, campo, valor_anterior, valor_nuevo, descripcion } = event
 
   if (categoria === "estado") {
-    const anterior = ESTADO_LABEL[valor_anterior ?? ""] ?? valor_anterior ?? "—"
-    const nuevo = ESTADO_LABEL[valor_nuevo ?? ""] ?? valor_nuevo ?? "—"
-    return `${anterior} → ${nuevo}`
+    const previous = STATUS_LABEL[valor_anterior ?? ""] ?? valor_anterior ?? "—"
+    const next = STATUS_LABEL[valor_nuevo ?? ""] ?? valor_nuevo ?? "—"
+    return `${previous} → ${next}`
   }
 
   if (categoria === "precio" && valor_anterior && valor_nuevo) {
-    const anterior = Number(valor_anterior)
-    const nuevo = Number(valor_nuevo)
-    const cambio = anterior !== 0 ? (nuevo - anterior) / anterior : 0
-    const prefijo = descripcion ? `${descripcion}  ·  ` : ""
-    const porcentaje = formatDeltaPercent(cambio).replace("%", " %")
-    return `${prefijo}${formatCOP(anterior)} → ${formatCOP(nuevo)}  (${porcentaje})`
+    const previous = Number(valor_anterior)
+    const next = Number(valor_nuevo)
+    const change = previous !== 0 ? (next - previous) / previous : 0
+    const prefix = descripcion ? `${descripcion}  ·  ` : ""
+    const percentage = formatDeltaPercent(change).replace("%", " %")
+    return `${prefix}${formatCOP(previous)} → ${formatCOP(next)}  (${percentage})`
   }
 
   if (campo === "imagen_url" && valor_nuevo) {
-    return `Imagen actualizada: ${nombreArchivo(valor_nuevo)}`
+    return `Imagen actualizada: ${fileName(valor_nuevo)}`
   }
 
-  if (campo && campo in CAMPO_LABEL) {
-    const etiqueta = CAMPO_LABEL[campo]
+  if (campo && campo in FIELD_LABEL) {
+    const label = FIELD_LABEL[campo]
     return valor_anterior !== null
-      ? `${etiqueta}: “${valor_anterior}” → “${valor_nuevo}”`
-      : `${etiqueta} asignado: “${valor_nuevo}”`
+      ? `${label}: “${valor_anterior}” → “${valor_nuevo}”`
+      : `${label} asignado: “${valor_nuevo}”`
   }
 
   if (valor_anterior !== null || valor_nuevo !== null) {
@@ -69,14 +69,14 @@ function detalleEvento(evento: ProductoEvento): string | null {
   return descripcion
 }
 
-const CATEGORIA_LABEL: Record<ProductEventCategory, string> = {
+const CATEGORY_LABEL: Record<ProductEventCategory, string> = {
   precio: "Precios",
   datos: "Datos del producto",
   promocion: "Promociones",
   estado: "Estado",
 }
 
-const CATEGORIA_TAG_LABEL: Record<ProductEventCategory, string> = {
+const CATEGORY_TAG_LABEL: Record<ProductEventCategory, string> = {
   precio: "PRECIO",
   datos: "DATOS",
   promocion: "PROMOCIÓN",
@@ -84,7 +84,7 @@ const CATEGORIA_TAG_LABEL: Record<ProductEventCategory, string> = {
 }
 
 /** Variante del `Badge` compartido por categoría — verificada contra `get_variable_defs` del nodo 1218:4026: precio=info (primary/50-700), datos=neutral (bg/subtle+text/secondary), promoción=success, estado=warning. */
-const CATEGORIA_BADGE_VARIANT: Record<
+const CATEGORY_BADGE_VARIANT: Record<
   ProductEventCategory,
   "info" | "neutral" | "success" | "warning"
 > = {
@@ -95,94 +95,94 @@ const CATEGORIA_BADGE_VARIANT: Record<
 }
 
 /** Color del punto del riel — verificado exportando los 5 SVG "Rail" del nodo (data/indigo, data/coral, data/teal, data/amber, data/violet). No sigue 1:1 la categoría: "Imagen actualizada" es violeta aunque su tag sea DATOS. */
-const CATEGORIA_DOT_CLASS: Record<ProductEventCategory, string> = {
+const CATEGORY_DOT_CLASS: Record<ProductEventCategory, string> = {
   precio: "bg-data-indigo",
   datos: "bg-data-teal",
   promocion: "bg-data-coral",
   estado: "bg-data-amber",
 }
 
-const FILTROS = ["todos", ...PRODUCT_EVENT_CATEGORIES] as const
-type Filtro = (typeof FILTROS)[number]
+const FILTERS = ["todos", ...PRODUCT_EVENT_CATEGORIES] as const
+type Filter = (typeof FILTERS)[number]
 
-const PAGINA = 8
+const PAGE_SIZE = 8
 
-function colorDot(evento: ProductoEvento): string {
-  if (evento.campo === "imagen_url") return "bg-data-violet"
-  return CATEGORIA_DOT_CLASS[evento.categoria as ProductEventCategory]
+function dotColor(event: ProductEvent): string {
+  if (event.campo === "imagen_url") return "bg-data-violet"
+  return CATEGORY_DOT_CLASS[event.categoria as ProductEventCategory]
 }
 
-function EventoRow({
-  evento,
-  esPrimero,
-  esUltimo,
+function EventRow({
+  event,
+  isFirst,
+  isLast,
 }: {
-  evento: ProductoEvento
-  esPrimero: boolean
-  esUltimo: boolean
+  event: ProductEvent
+  isFirst: boolean
+  isLast: boolean
 }) {
-  const categoria = evento.categoria as ProductEventCategory
-  const detalle = detalleEvento(evento)
+  const category = event.categoria as ProductEventCategory
+  const detail = eventDetail(event)
 
   return (
     <div className="flex gap-3.5 py-3.5">
       <p className="w-[140px] shrink-0 font-mono text-[11px] leading-4 text-muted-foreground">
-        {formatEventDate(evento.creado_en)}
+        {formatEventDate(event.creado_en)}
       </p>
       <div className="relative flex w-3 shrink-0 flex-col items-center">
-        {!esPrimero && (
+        {!isFirst && (
           <div className="absolute top-0 h-1/2 w-[1.5px] bg-border" />
         )}
-        {!esUltimo && (
+        {!isLast && (
           <div className="absolute bottom-0 h-1/2 w-[1.5px] bg-border" />
         )}
         <div
           className={cn(
             "z-10 mt-[3px] size-3 shrink-0 rounded-full ring-[3px] ring-background",
-            colorDot(evento)
+            dotColor(event)
           )}
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[13px] leading-[18px] font-semibold text-foreground">
-            {evento.titulo}
+            {event.titulo}
           </p>
           <Badge
-            variant={CATEGORIA_BADGE_VARIANT[categoria]}
+            variant={CATEGORY_BADGE_VARIANT[category]}
             className="h-auto shrink-0 rounded-[6px] px-[7px] py-0.5 text-[9px] leading-[13px] font-semibold tracking-[0.3px]"
           >
-            {CATEGORIA_TAG_LABEL[categoria]}
+            {CATEGORY_TAG_LABEL[category]}
           </Badge>
         </div>
-        {detalle && (
+        {detail && (
           <p className="text-[12px] leading-[17px] text-muted-foreground">
-            {detalle}
+            {detail}
           </p>
         )}
         <p className="text-[11px] leading-[15px] text-muted-foreground">
-          {evento.autor_nombre}
-          {evento.es_automatico && " · automático"}
+          {event.autor_nombre}
+          {event.es_automatico && " · automático"}
         </p>
       </div>
     </div>
   )
 }
 
-type BitacoraProductoCardProps = { eventos: ProductoEvento[] }
+type ProductHistoryCardProps = { events: ProductEvent[] }
 
 /** Figma "Card · Bitácora de cambios" (1218:4026), "03.3 · Catálogo · detalle de producto · v2" — generada por triggers reales, ver 20260823160000_bitacora_producto.sql. */
-export function BitacoraProductoCard({ eventos }: BitacoraProductoCardProps) {
-  const [filtro, setFiltro] = useState<Filtro>("todos")
-  const [visibles, setVisibles] = useState(PAGINA)
+export function ProductHistoryCard({ events }: ProductHistoryCardProps) {
+  const [filter, setFilter] = useState<Filter>("todos")
+  const [visible, setVisible] = useState(PAGE_SIZE)
 
-  const filtrados =
-    filtro === "todos" ? eventos : eventos.filter((e) => e.categoria === filtro)
-  const mostrados = filtrados.slice(0, visibles)
+  const filtered =
+    filter === "todos" ? events : events.filter((e) => e.categoria === filter)
+  const shown = filtered.slice(0, visible)
 
-  function seleccionarFiltro(siguiente: Filtro) {
-    setFiltro(siguiente)
-    setVisibles(PAGINA)
+  function selectFilter(next: Filter) {
+    setFilter(next)
+    setVisible(PAGE_SIZE)
   }
 
   return (
@@ -207,27 +207,27 @@ export function BitacoraProductoCard({ eventos }: BitacoraProductoCardProps) {
           </button>
         </div>
 
-        {eventos.length > 0 && (
+        {events.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {FILTROS.map((f) => {
-              const activo = filtro === f
-              const conteo =
+            {FILTERS.map((f) => {
+              const active = filter === f
+              const count =
                 f === "todos"
-                  ? eventos.length
-                  : eventos.filter((e) => e.categoria === f).length
+                  ? events.length
+                  : events.filter((e) => e.categoria === f).length
               return (
                 <button
                   key={f}
                   type="button"
-                  onClick={() => seleccionarFiltro(f)}
+                  onClick={() => selectFilter(f)}
                   className={cn(
                     "rounded-full px-3 py-1.5 text-[11px] leading-4",
-                    activo
+                    active
                       ? "bg-accent font-semibold text-accent-foreground"
                       : "bg-muted font-medium text-muted-foreground"
                   )}
                 >
-                  {f === "todos" ? "Todos" : CATEGORIA_LABEL[f]} ({conteo})
+                  {f === "todos" ? "Todos" : CATEGORY_LABEL[f]} ({count})
                 </button>
               )
             })}
@@ -235,7 +235,7 @@ export function BitacoraProductoCard({ eventos }: BitacoraProductoCardProps) {
         )}
       </div>
 
-      {eventos.length === 0 ? (
+      {events.length === 0 ? (
         <EmptyState
           icon={History}
           title="Sin cambios registrados"
@@ -245,24 +245,24 @@ export function BitacoraProductoCard({ eventos }: BitacoraProductoCardProps) {
       ) : (
         <>
           <div className="flex flex-col divide-y divide-muted px-[22px] pt-1.5 pb-2.5">
-            {mostrados.map((evento, i) => (
-              <EventoRow
-                key={evento.id}
-                evento={evento}
-                esPrimero={i === 0}
-                esUltimo={i === mostrados.length - 1}
+            {shown.map((event, i) => (
+              <EventRow
+                key={event.id}
+                event={event}
+                isFirst={i === 0}
+                isLast={i === shown.length - 1}
               />
             ))}
           </div>
 
           <div className="flex items-center gap-2 rounded-b-[20px] bg-neutral-50 px-[22px] py-3.5 text-xs">
             <p className="flex-1 text-muted-foreground">
-              Mostrando {mostrados.length} de {filtrados.length} eventos
+              Mostrando {shown.length} de {filtered.length} eventos
             </p>
-            {visibles < filtrados.length && (
+            {visible < filtered.length && (
               <button
                 type="button"
-                onClick={() => setVisibles((v) => v + PAGINA)}
+                onClick={() => setVisible((v) => v + PAGE_SIZE)}
                 className="shrink-0 font-medium text-primary"
               >
                 Cargar más eventos

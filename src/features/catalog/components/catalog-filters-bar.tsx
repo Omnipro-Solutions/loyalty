@@ -6,16 +6,16 @@ import { useEffect, useState } from "react"
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 
-import { agruparPorRaiz } from "../lib/categorias-arbol"
-import type { Categoria } from "../lib/queries"
+import { groupByRoot } from "../lib/categories-tree"
+import type { Category } from "../lib/queries"
 
-const ESTADO_OPTIONS = [
+const STATUS_OPTIONS = [
   { value: "activo", label: "Activo" },
   { value: "inactivo", label: "Inactivo" },
 ]
 
-type CatalogoFiltrosBarProps = {
-  categorias: Categoria[]
+type CatalogFiltersBarProps = {
+  categories: Category[]
 }
 
 /**
@@ -23,57 +23,57 @@ type CatalogoFiltrosBarProps = {
  * URL — la página server-side vuelve a consultar con los filtros nuevos, en
  * vez de filtrar en cliente sobre una página ya cargada.
  */
-export function CatalogoFiltrosBar({ categorias }: CatalogoFiltrosBarProps) {
+export function CatalogFiltersBar({ categories }: CatalogFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [busqueda, setBusqueda] = useState(searchParams.get("q") ?? "")
+  const [search, setSearch] = useState(searchParams.get("q") ?? "")
 
   useEffect(() => {
-    const actual = new URLSearchParams(window.location.search)
-    if ((actual.get("q") ?? "") === busqueda) return
+    const current = new URLSearchParams(window.location.search)
+    if ((current.get("q") ?? "") === search) return
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
-      if (busqueda) params.set("q", busqueda)
+      if (search) params.set("q", search)
       else params.delete("q")
       params.delete("page")
       router.push(`${pathname}?${params.toString()}`)
     }, 300)
     return () => clearTimeout(timeout)
-  }, [busqueda, pathname, router])
+  }, [search, pathname, router])
 
-  function actualizar(mutar: (params: URLSearchParams) => void) {
+  function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
-    mutar(params)
+    mutate(params)
     params.delete("page")
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const categoriaSeleccionada = searchParams.getAll("categoria")
-  const estadoSeleccionado = searchParams.get("estado")
+  const selectedCategories = searchParams.getAll("categoria")
+  const selectedStatus = searchParams.get("estado")
 
-  const opcionesCategoria = agruparPorRaiz(categorias).flatMap((raiz) => [
-    { value: raiz.id, label: raiz.nombre },
-    ...raiz.hijos.map((hijo) => ({
-      value: hijo.id,
-      label: `— ${hijo.nombre}`,
+  const categoryOptions = groupByRoot(categories).flatMap((root) => [
+    { value: root.id, label: root.nombre },
+    ...root.children.map((child) => ({
+      value: child.id,
+      label: `— ${child.nombre}`,
     })),
   ])
 
   return (
     <div className="flex items-center gap-2.5">
       <FilterSearch
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <FilterSelect
         label="Categoría"
         multiple
         placeholder="Todas"
-        options={opcionesCategoria}
-        value={categoriaSeleccionada}
+        options={categoryOptions}
+        value={selectedCategories}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             params.delete("categoria")
             value.forEach((v) => params.append("categoria", v))
           })
@@ -81,10 +81,10 @@ export function CatalogoFiltrosBar({ categorias }: CatalogoFiltrosBarProps) {
       />
       <FilterSelect
         label="Estado"
-        options={ESTADO_OPTIONS}
-        value={estadoSeleccionado ? [estadoSeleccionado] : []}
+        options={STATUS_OPTIONS}
+        value={selectedStatus ? [selectedStatus] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("estado", value[0])
             else params.delete("estado")
           })

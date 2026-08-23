@@ -1,24 +1,24 @@
-import type { Categoria } from "./queries"
+import type { Category } from "./queries"
 
 /**
- * Módulo puro (sin `createClient`) a propósito: `catalogo-filtros-bar.tsx`
+ * Módulo puro (sin `createClient`) a propósito: `catalog-filters-bar.tsx`
  * es un Client Component y necesita esta función en tiempo de ejecución —
  * importarla desde `queries.ts` arrastraría `lib/supabase/server.ts` al
  * bundle de cliente y Next lo rechaza en build.
  */
-export type CategoriaConHijos = Categoria & { hijos: Categoria[] }
+export type CategoryWithChildren = Category & { children: Category[] }
 
 /** Agrupa subcategorías bajo su raíz — para listas de filtro con indentación. */
-export function agruparPorRaiz(categorias: Categoria[]): CategoriaConHijos[] {
-  return categorias
+export function groupByRoot(categories: Category[]): CategoryWithChildren[] {
+  return categories
     .filter((c) => !c.parent_id)
-    .map((raiz) => ({
-      ...raiz,
-      hijos: categorias.filter((c) => c.parent_id === raiz.id),
+    .map((root) => ({
+      ...root,
+      children: categories.filter((c) => c.parent_id === root.id),
     }))
 }
 
-const COLORES_RUTA = [
+const PATH_COLORS = [
   "bg-data-indigo",
   "bg-data-coral",
   "bg-data-teal",
@@ -26,10 +26,10 @@ const COLORES_RUTA = [
   "bg-data-navy",
 ]
 
-function hashCadena(texto: string): number {
+function hashString(text: string): number {
   let hash = 0
-  for (let i = 0; i < texto.length; i++) {
-    hash = (hash * 31 + texto.charCodeAt(i)) >>> 0
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0
   }
   return hash
 }
@@ -40,6 +40,6 @@ function hashCadena(texto: string): number {
  * con el mismo color en la tabla (03.1) y en el detalle (03.3), y filas de
  * categorías distintas se distinguen entre sí de un vistazo.
  */
-export function colorPorCategoriaRaiz(nombreRaiz: string): string {
-  return COLORES_RUTA[hashCadena(nombreRaiz) % COLORES_RUTA.length]
+export function colorByRootCategory(rootName: string): string {
+  return PATH_COLORS[hashString(rootName) % PATH_COLORS.length]
 }
