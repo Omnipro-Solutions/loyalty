@@ -11,7 +11,7 @@ import type {
   TierName,
 } from "@/types/domain"
 
-export const DOCUMENTO_TIPO_LABEL: Record<DocumentType, string> = {
+export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
   cc: "Cédula de ciudadanía",
   ce: "Cédula de extranjería",
   ti: "Tarjeta de identidad",
@@ -20,7 +20,7 @@ export const DOCUMENTO_TIPO_LABEL: Record<DocumentType, string> = {
 }
 
 /** "CC 1.045.882.114" (05.3g "Documento") — sigla corta, no el nombre completo. */
-export const DOCUMENTO_TIPO_CORTO: Record<DocumentType, string> = {
+export const DOCUMENT_TYPE_SHORT_LABEL: Record<DocumentType, string> = {
   cc: "CC",
   ce: "CE",
   ti: "TI",
@@ -28,14 +28,14 @@ export const DOCUMENTO_TIPO_CORTO: Record<DocumentType, string> = {
   nit: "NIT",
 }
 
-export const GENERO_LABEL: Record<Gender, string> = {
+export const GENDER_LABEL: Record<Gender, string> = {
   femenino: "Femenino",
   masculino: "Masculino",
   otro: "Otro",
   prefiere_no_decir: "Prefiere no decir",
 }
 
-export const ESTADO_CIVIL_LABEL: Record<MaritalStatus, string> = {
+export const MARITAL_STATUS_LABEL: Record<MaritalStatus, string> = {
   soltero: "Soltero(a)",
   casado: "Casado(a)",
   union_libre: "Unión libre",
@@ -43,7 +43,7 @@ export const ESTADO_CIVIL_LABEL: Record<MaritalStatus, string> = {
   viudo: "Viudo(a)",
 }
 
-export const CANAL_ADQUISICION_LABEL: Record<AcquisitionChannel, string> = {
+export const ACQUISITION_CHANNEL_LABEL: Record<AcquisitionChannel, string> = {
   pos: "Punto de venta",
   ecommerce: "E-commerce",
   app: "App móvil",
@@ -52,24 +52,24 @@ export const CANAL_ADQUISICION_LABEL: Record<AcquisitionChannel, string> = {
   otro: "Otro",
 }
 
-export const MEMBER_ESTADO_LABEL: Record<MemberStatus, string> = {
+export const MEMBER_STATUS_LABEL: Record<MemberStatus, string> = {
   activo: "Activo",
   inactivo: "Inactivo",
   suspendido: "Suspendido",
 }
 
-export const IDIOMA_LABEL: Record<Language, string> = {
+export const LANGUAGE_LABEL: Record<Language, string> = {
   es: "Español",
   en: "Inglés",
 }
 
-export const CANAL_VENTA_LABEL: Record<SalesChannel, string> = {
+export const SALES_CHANNEL_LABEL: Record<SalesChannel, string> = {
   pos: "POS",
   ecommerce: "E-commerce",
   app: "App",
 }
 
-export const CONSENTIMIENTO_CANAL_LABEL: Record<ConsentChannel, string> = {
+export const CONSENT_CHANNEL_LABEL: Record<ConsentChannel, string> = {
   email: "Email",
   sms: "SMS",
   push: "Push",
@@ -78,7 +78,7 @@ export const CONSENTIMIENTO_CANAL_LABEL: Record<ConsentChannel, string> = {
   socios_comerciales: "Socios comerciales",
 }
 
-export const CONSENTIMIENTO_FUENTE_LABEL: Record<ConsentSource, string> = {
+export const CONSENT_SOURCE_LABEL: Record<ConsentSource, string> = {
   web: "Web",
   app: "App móvil",
   tienda: "Tienda",

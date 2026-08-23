@@ -29,33 +29,30 @@ import {
   MEMBER_STATUSES,
 } from "@/types/domain"
 
+import { createMemberAction, updateMemberAction } from "../actions/members"
 import {
-  actualizarClienteAction,
-  crearClienteAction,
-} from "../actions/clientes"
-import {
-  CANAL_ADQUISICION_LABEL,
-  DOCUMENTO_TIPO_LABEL,
-  ESTADO_CIVIL_LABEL,
-  GENERO_LABEL,
-  IDIOMA_LABEL,
-  MEMBER_ESTADO_LABEL,
+  ACQUISITION_CHANNEL_LABEL,
+  DOCUMENT_TYPE_LABEL,
+  MARITAL_STATUS_LABEL,
+  GENDER_LABEL,
+  LANGUAGE_LABEL,
+  MEMBER_STATUS_LABEL,
   TIER_LABEL,
 } from "../lib/labels"
-import type { Member, TierOption, TiendaOption } from "../lib/queries"
-import { clienteSchema, type ClienteValues } from "../schemas"
+import type { Member, TierOption, StoreOption } from "../lib/queries"
+import { memberSchema, type MemberValues } from "../schemas"
 
-type ClienteFormProps = {
-  cliente?: Member
-  tiendas: TiendaOption[]
+type MemberFormProps = {
+  member?: Member
+  stores: StoreOption[]
   tiers: TierOption[]
 }
 
 /** Sin diseño propio en el Figma (05 solo define listado y Perfil 360) — sigue el patrón de `StoreForm` (04.2): Section/Row/Field, reutilizado para crear y editar. */
-export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
+export function MemberForm({ member, stores, tiers }: MemberFormProps) {
   const router = useRouter()
-  const [errorGeneral, setErrorGeneral] = useState<string>()
-  const editando = Boolean(cliente)
+  const [generalError, setGeneralError] = useState<string>()
+  const isEditing = Boolean(member)
 
   const {
     register,
@@ -63,75 +60,75 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
     control,
     setValue,
     formState: { errors },
-  } = useForm<ClienteValues>({
-    resolver: zodResolver(clienteSchema),
-    defaultValues: cliente
+  } = useForm<MemberValues>({
+    resolver: zodResolver(memberSchema),
+    defaultValues: member
       ? {
-          nombre: cliente.nombre,
-          apellido: cliente.apellido,
-          email: cliente.email,
-          telefono: cliente.telefono ?? "",
-          tipoDocumento:
-            (cliente.tipo_documento as ClienteValues["tipoDocumento"]) ??
+          name: member.nombre,
+          lastName: member.apellido,
+          email: member.email,
+          phone: member.telefono ?? "",
+          documentType:
+            (member.tipo_documento as MemberValues["documentType"]) ??
             undefined,
-          numeroDocumento: cliente.numero_documento ?? "",
-          fechaNacimiento: cliente.fecha_nacimiento ?? "",
-          genero: (cliente.genero as ClienteValues["genero"]) ?? undefined,
-          provincia: cliente.provincia ?? "",
-          estadoCivil:
-            (cliente.estado_civil as ClienteValues["estadoCivil"]) ?? undefined,
-          preferenciaCompra: cliente.preferencia_compra ?? "",
-          tieneHijos: cliente.tiene_hijos ?? undefined,
-          tieneMascotas: cliente.tiene_mascotas ?? undefined,
-          consentimientoMarketing: cliente.consentimiento_marketing,
-          canalAdquisicion:
-            (cliente.canal_adquisicion as ClienteValues["canalAdquisicion"]) ??
+          documentNumber: member.numero_documento ?? "",
+          birthDate: member.fecha_nacimiento ?? "",
+          gender: (member.genero as MemberValues["gender"]) ?? undefined,
+          province: member.provincia ?? "",
+          maritalStatus:
+            (member.estado_civil as MemberValues["maritalStatus"]) ?? undefined,
+          purchasePreference: member.preferencia_compra ?? "",
+          hasChildren: member.tiene_hijos ?? undefined,
+          hasPets: member.tiene_mascotas ?? undefined,
+          marketingConsent: member.consentimiento_marketing,
+          acquisitionChannel:
+            (member.canal_adquisicion as MemberValues["acquisitionChannel"]) ??
             undefined,
-          estadoCuenta: cliente.estado_cuenta as ClienteValues["estadoCuenta"],
-          tiendaInscripcionId: cliente.tienda_inscripcion_id ?? undefined,
-          idioma: cliente.idioma as ClienteValues["idioma"],
-          tierId: cliente.tier_id ?? undefined,
+          accountStatus: member.estado_cuenta as MemberValues["accountStatus"],
+          enrollmentStoreId: member.tienda_inscripcion_id ?? undefined,
+          language: member.idioma as MemberValues["language"],
+          tierId: member.tier_id ?? undefined,
         }
       : {
-          nombre: "",
-          apellido: "",
+          name: "",
+          lastName: "",
           email: "",
-          consentimientoMarketing: false,
-          estadoCuenta: "activo",
-          idioma: "es",
+          marketingConsent: false,
+          accountStatus: "activo",
+          language: "es",
         },
   })
 
-  const valores = useWatch({ control })
+  const values = useWatch({ control })
 
-  const crear = useAction(crearClienteAction, {
+  const create = useAction(createMemberAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo crear el cliente.")
+        setGeneralError(data?.message ?? "No se pudo crear el cliente.")
         return
       }
       router.push(`/clientes/${data.id}`)
     },
-    onError: () => setErrorGeneral("No se pudo crear el cliente."),
+    onError: () => setGeneralError("No se pudo crear el cliente."),
   })
 
-  const actualizar = useAction(actualizarClienteAction, {
+  const update = useAction(updateMemberAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo guardar el cliente.")
+        setGeneralError(data?.message ?? "No se pudo guardar el cliente.")
         return
       }
       router.push(`/clientes/${data.id}`)
     },
-    onError: () => setErrorGeneral("No se pudo guardar el cliente."),
+    onError: () => setGeneralError("No se pudo guardar el cliente."),
   })
 
-  const enviando = crear.isPending || actualizar.isPending
+  const submitting = create.isPending || update.isPending
 
-  function onSubmit(values: ClienteValues) {
-    setErrorGeneral(undefined)
-    if (cliente) actualizar.execute({ id: cliente.id, ...values })
-    else crear.execute(values)
+  function onSubmit(formValues: MemberValues) {
+    setGeneralError(undefined)
+    if (member) update.execute({ id: member.id, ...formValues })
+    else create.execute(formValues)
   }
 
   return (
@@ -142,10 +139,10 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-2xl leading-7 font-semibold text-foreground">
-            {editando ? "Editar cliente" : "Nuevo cliente"}
+            {isEditing ? "Editar cliente" : "Nuevo cliente"}
           </p>
           <p className="text-[13px] leading-[18px] text-muted-foreground">
-            {editando
+            {isEditing
               ? "Actualiza la ficha del socio."
               : "Registra un socio del programa de lealtad. El ID de socio se genera automáticamente."}
           </p>
@@ -155,22 +152,22 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             type="button"
             variant="ghost"
             onClick={() =>
-              router.push(cliente ? `/clientes/${cliente.id}` : "/clientes")
+              router.push(member ? `/clientes/${member.id}` : "/clientes")
             }
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={enviando}>
-            {editando ? "Guardar cambios" : "Guardar cliente"}
+          <Button type="submit" disabled={submitting}>
+            {isEditing ? "Guardar cambios" : "Guardar cliente"}
           </Button>
         </div>
       </div>
 
-      {errorGeneral && (
+      {generalError && (
         <Message
           variant="error"
           title="No se pudo guardar"
-          description={errorGeneral}
+          description={generalError}
         />
       )}
 
@@ -182,19 +179,19 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
           <Row>
             <Field
               label="Nombre"
-              htmlFor="nombre"
+              htmlFor="name"
               required
-              error={errors.nombre?.message}
+              error={errors.name?.message}
             >
-              <Input id="nombre" {...register("nombre")} />
+              <Input id="name" {...register("name")} />
             </Field>
             <Field
               label="Apellido"
-              htmlFor="apellido"
+              htmlFor="lastName"
               required
-              error={errors.apellido?.message}
+              error={errors.lastName?.message}
             >
-              <Input id="apellido" {...register("apellido")} />
+              <Input id="lastName" {...register("lastName")} />
             </Field>
           </Row>
           <Row>
@@ -206,56 +203,52 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             >
               <Input id="email" type="email" {...register("email")} />
             </Field>
-            <Field label="Teléfono" htmlFor="telefono">
-              <Input id="telefono" {...register("telefono")} />
+            <Field label="Teléfono" htmlFor="phone">
+              <Input id="phone" {...register("phone")} />
             </Field>
           </Row>
           <Row>
-            <Field label="Tipo de documento" htmlFor="tipoDocumento">
+            <Field label="Tipo de documento" htmlFor="documentType">
               <Select
-                value={valores.tipoDocumento}
+                value={values.documentType}
                 onValueChange={(v) =>
-                  setValue("tipoDocumento", v as ClienteValues["tipoDocumento"])
+                  setValue("documentType", v as MemberValues["documentType"])
                 }
               >
-                <SelectTrigger id="tipoDocumento">
+                <SelectTrigger id="documentType">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
                   {DOCUMENT_TYPES.map((t) => (
                     <SelectItem key={t} value={t}>
-                      {DOCUMENTO_TIPO_LABEL[t]}
+                      {DOCUMENT_TYPE_LABEL[t]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Número de documento" htmlFor="numeroDocumento">
-              <Input id="numeroDocumento" {...register("numeroDocumento")} />
+            <Field label="Número de documento" htmlFor="documentNumber">
+              <Input id="documentNumber" {...register("documentNumber")} />
             </Field>
           </Row>
           <Row>
-            <Field label="Fecha de nacimiento" htmlFor="fechaNacimiento">
-              <Input
-                id="fechaNacimiento"
-                type="date"
-                {...register("fechaNacimiento")}
-              />
+            <Field label="Fecha de nacimiento" htmlFor="birthDate">
+              <Input id="birthDate" type="date" {...register("birthDate")} />
             </Field>
-            <Field label="Género" htmlFor="genero">
+            <Field label="Género" htmlFor="gender">
               <Select
-                value={valores.genero}
+                value={values.gender}
                 onValueChange={(v) =>
-                  setValue("genero", v as ClienteValues["genero"])
+                  setValue("gender", v as MemberValues["gender"])
                 }
               >
-                <SelectTrigger id="genero">
+                <SelectTrigger id="gender">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
                   {GENDERS.map((g) => (
                     <SelectItem key={g} value={g}>
-                      {GENERO_LABEL[g]}
+                      {GENDER_LABEL[g]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -269,26 +262,26 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
           description="Cómo y dónde se vinculó el socio al programa."
         >
           <Row>
-            <Field label="Provincia" htmlFor="provincia">
-              <Input id="provincia" {...register("provincia")} />
+            <Field label="Provincia" htmlFor="province">
+              <Input id="province" {...register("province")} />
             </Field>
-            <Field label="Canal de adquisición" htmlFor="canalAdquisicion">
+            <Field label="Canal de adquisición" htmlFor="acquisitionChannel">
               <Select
-                value={valores.canalAdquisicion}
+                value={values.acquisitionChannel}
                 onValueChange={(v) =>
                   setValue(
-                    "canalAdquisicion",
-                    v as ClienteValues["canalAdquisicion"]
+                    "acquisitionChannel",
+                    v as MemberValues["acquisitionChannel"]
                   )
                 }
               >
-                <SelectTrigger id="canalAdquisicion">
+                <SelectTrigger id="acquisitionChannel">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
                   {ACQUISITION_CHANNELS.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {CANAL_ADQUISICION_LABEL[c]}
+                      {ACQUISITION_CHANNEL_LABEL[c]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -296,18 +289,18 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             </Field>
           </Row>
           <Row>
-            <Field label="Tienda de inscripción" htmlFor="tiendaInscripcionId">
+            <Field label="Tienda de inscripción" htmlFor="enrollmentStoreId">
               <Select
-                value={valores.tiendaInscripcionId}
+                value={values.enrollmentStoreId}
                 onValueChange={(v) =>
-                  setValue("tiendaInscripcionId", v ?? undefined)
+                  setValue("enrollmentStoreId", v ?? undefined)
                 }
               >
-                <SelectTrigger id="tiendaInscripcionId">
+                <SelectTrigger id="enrollmentStoreId">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tiendas.map((t) => (
+                  {stores.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.nombre}
                     </SelectItem>
@@ -317,7 +310,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             </Field>
             <Field label="Nivel de lealtad" htmlFor="tierId">
               <Select
-                value={valores.tierId}
+                value={values.tierId}
                 onValueChange={(v) => setValue("tierId", v ?? undefined)}
               >
                 <SelectTrigger id="tierId">
@@ -335,45 +328,45 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             </Field>
           </Row>
           <Row>
-            <Field label="Language" htmlFor="idioma">
+            <Field label="Language" htmlFor="language">
               <Select
-                value={valores.idioma}
+                value={values.language}
                 onValueChange={(v) =>
-                  setValue("idioma", v as ClienteValues["idioma"])
+                  setValue("language", v as MemberValues["language"])
                 }
               >
-                <SelectTrigger id="idioma">
+                <SelectTrigger id="language">
                   <SelectValue>
-                    {(v: ClienteValues["idioma"]) => IDIOMA_LABEL[v]}
+                    {(v: MemberValues["language"]) => LANGUAGE_LABEL[v]}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {LANGUAGES.map((i) => (
                     <SelectItem key={i} value={i}>
-                      {IDIOMA_LABEL[i]}
+                      {LANGUAGE_LABEL[i]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Estado de la cuenta" htmlFor="estadoCuenta">
+            <Field label="Estado de la cuenta" htmlFor="accountStatus">
               <Select
-                value={valores.estadoCuenta}
+                value={values.accountStatus}
                 onValueChange={(v) =>
-                  setValue("estadoCuenta", v as ClienteValues["estadoCuenta"])
+                  setValue("accountStatus", v as MemberValues["accountStatus"])
                 }
               >
-                <SelectTrigger id="estadoCuenta">
+                <SelectTrigger id="accountStatus">
                   <SelectValue>
-                    {(v: ClienteValues["estadoCuenta"]) =>
-                      MEMBER_ESTADO_LABEL[v]
+                    {(v: MemberValues["accountStatus"]) =>
+                      MEMBER_STATUS_LABEL[v]
                     }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {MEMBER_STATUSES.map((e) => (
                     <SelectItem key={e} value={e}>
-                      {MEMBER_ESTADO_LABEL[e]}
+                      {MEMBER_STATUS_LABEL[e]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -387,20 +380,20 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
           description="Preferencias del socio y consentimiento de marketing."
         >
           <Row>
-            <Field label="Estado civil" htmlFor="estadoCivil">
+            <Field label="Estado civil" htmlFor="maritalStatus">
               <Select
-                value={valores.estadoCivil}
+                value={values.maritalStatus}
                 onValueChange={(v) =>
-                  setValue("estadoCivil", v as ClienteValues["estadoCivil"])
+                  setValue("maritalStatus", v as MemberValues["maritalStatus"])
                 }
               >
-                <SelectTrigger id="estadoCivil">
+                <SelectTrigger id="maritalStatus">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
                   {MARITAL_STATUSES.map((e) => (
                     <SelectItem key={e} value={e}>
-                      {ESTADO_CIVIL_LABEL[e]}
+                      {MARITAL_STATUS_LABEL[e]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -408,45 +401,45 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             </Field>
             <Field
               label="Preferencia de compra"
-              htmlFor="preferenciaCompra"
+              htmlFor="purchasePreference"
               hint="Categoría o canal que el socio dice preferir."
             >
               <Input
-                id="preferenciaCompra"
-                {...register("preferenciaCompra")}
+                id="purchasePreference"
+                {...register("purchasePreference")}
               />
             </Field>
           </Row>
           <Row>
-            <Field label="Tiene hijos" htmlFor="tieneHijos">
+            <Field label="Tiene hijos" htmlFor="hasChildren">
               <div className="flex h-[42px] items-center">
                 <Switch
-                  id="tieneHijos"
-                  checked={valores.tieneHijos ?? false}
-                  onCheckedChange={(v) => setValue("tieneHijos", v)}
+                  id="hasChildren"
+                  checked={values.hasChildren ?? false}
+                  onCheckedChange={(v) => setValue("hasChildren", v)}
                 />
               </div>
             </Field>
-            <Field label="Tiene mascotas" htmlFor="tieneMascotas">
+            <Field label="Tiene mascotas" htmlFor="hasPets">
               <div className="flex h-[42px] items-center">
                 <Switch
-                  id="tieneMascotas"
-                  checked={valores.tieneMascotas ?? false}
-                  onCheckedChange={(v) => setValue("tieneMascotas", v)}
+                  id="hasPets"
+                  checked={values.hasPets ?? false}
+                  onCheckedChange={(v) => setValue("hasPets", v)}
                 />
               </div>
             </Field>
           </Row>
           <Field
             label="Consentimiento de marketing"
-            htmlFor="consentimientoMarketing"
+            htmlFor="marketingConsent"
             hint="Autoriza comunicaciones comerciales por los canales del programa."
           >
             <div className="flex h-[42px] items-center">
               <Switch
-                id="consentimientoMarketing"
-                checked={valores.consentimientoMarketing ?? false}
-                onCheckedChange={(v) => setValue("consentimientoMarketing", v)}
+                id="marketingConsent"
+                checked={values.marketingConsent ?? false}
+                onCheckedChange={(v) => setValue("marketingConsent", v)}
               />
             </div>
           </Field>

@@ -7,51 +7,51 @@ import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 import { MEMBER_STATUSES } from "@/types/domain"
 
-import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
+import { MEMBER_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
 import type { TierOption } from "../lib/queries"
 
-const ESTADO_OPTIONS = MEMBER_STATUSES.map((e) => ({
+const STATUS_OPTIONS = MEMBER_STATUSES.map((e) => ({
   value: e,
-  label: MEMBER_ESTADO_LABEL[e],
+  label: MEMBER_STATUS_LABEL[e],
 }))
 
-type ClientesFiltrosBarProps = { tiers: TierOption[] }
+type MembersFiltersBarProps = { tiers: TierOption[] }
 
 /** Mismo patrón que `CatalogFiltersBar`/`UsersFiltersBar`: cada cambio actualiza los searchParams, la página server-side vuelve a consultar. */
-export function ClientesFiltrosBar({ tiers }: ClientesFiltrosBarProps) {
+export function MembersFiltersBar({ tiers }: MembersFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [busqueda, setBusqueda] = useState(searchParams.get("q") ?? "")
+  const [search, setSearch] = useState(searchParams.get("q") ?? "")
 
   useEffect(() => {
-    const actual = new URLSearchParams(window.location.search)
-    if ((actual.get("q") ?? "") === busqueda) return
+    const current = new URLSearchParams(window.location.search)
+    if ((current.get("q") ?? "") === search) return
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
-      if (busqueda) params.set("q", busqueda)
+      if (search) params.set("q", search)
       else params.delete("q")
       params.delete("page")
       router.push(`${pathname}?${params.toString()}`)
     }, 300)
     return () => clearTimeout(timeout)
-  }, [busqueda, pathname, router])
+  }, [search, pathname, router])
 
-  function actualizar(mutar: (params: URLSearchParams) => void) {
+  function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
-    mutar(params)
+    mutate(params)
     params.delete("page")
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const tierSeleccionado = searchParams.get("tier")
-  const estadoSeleccionado = searchParams.get("estado")
+  const selectedTier = searchParams.get("tier")
+  const selectedStatus = searchParams.get("estado")
 
   return (
     <div className="flex items-center gap-2.5">
       <FilterSearch
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <FilterSelect
         label="Nivel"
@@ -59,9 +59,9 @@ export function ClientesFiltrosBar({ tiers }: ClientesFiltrosBarProps) {
           value: t.id,
           label: TIER_LABEL[t.nombre as keyof typeof TIER_LABEL] ?? t.nombre,
         }))}
-        value={tierSeleccionado ? [tierSeleccionado] : []}
+        value={selectedTier ? [selectedTier] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("tier", value[0])
             else params.delete("tier")
           })
@@ -69,10 +69,10 @@ export function ClientesFiltrosBar({ tiers }: ClientesFiltrosBarProps) {
       />
       <FilterSelect
         label="Estado"
-        options={ESTADO_OPTIONS}
-        value={estadoSeleccionado ? [estadoSeleccionado] : []}
+        options={STATUS_OPTIONS}
+        value={selectedStatus ? [selectedStatus] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("estado", value[0])
             else params.delete("estado")
           })

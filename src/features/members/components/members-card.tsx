@@ -3,28 +3,28 @@ import { Users } from "lucide-react"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { formatNumber } from "@/lib/format"
 
-import { ClientesFiltrosBar } from "./clientes-filtros-bar"
-import { ClientesPaginacion } from "./clientes-paginacion"
-import { ClientesTabla } from "./clientes-tabla"
-import { CLIENTES_PAGE_SIZE } from "../lib/queries"
+import { MembersFiltersBar } from "./members-filters-bar"
+import { MembersPagination } from "./members-pagination"
+import { MembersTable } from "./members-table"
+import { MEMBERS_PAGE_SIZE } from "../lib/queries"
 import type { Member, TierOption } from "../lib/queries"
 
-type ClientesCardProps = {
-  clientes: Member[]
+type MembersCardProps = {
+  members: Member[]
   total: number
   tiers: TierOption[]
-  hayFiltrosAplicados: boolean
+  hasFiltersApplied: boolean
 }
 
 /** Figma "05.1 · Clientes · listado" (704:3012): título + conteo + filtros arriba, tabla, paginación. */
-export function ClientesCard({
-  clientes,
+export function MembersCard({
+  members,
   total,
   tiers,
-  hayFiltrosAplicados,
-}: ClientesCardProps) {
-  const sinClientesAun = total === 0 && !hayFiltrosAplicados
-  const sinResultadosDeFiltro = total === 0 && hayFiltrosAplicados
+  hasFiltersApplied,
+}: MembersCardProps) {
+  const noMembersYet = total === 0 && !hasFiltersApplied
+  const noFilterResults = total === 0 && hasFiltersApplied
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
@@ -39,10 +39,10 @@ export function ClientesCard({
             </span>
           </div>
         </div>
-        <ClientesFiltrosBar tiers={tiers} />
+        <MembersFiltersBar tiers={tiers} />
       </div>
 
-      {sinClientesAun ? (
+      {noMembersYet ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
@@ -50,7 +50,7 @@ export function ClientesCard({
             description="Los clientes aparecerán aquí cuando se inscriban en el programa de lealtad."
           />
         </div>
-      ) : sinResultadosDeFiltro ? (
+      ) : noFilterResults ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
@@ -60,8 +60,8 @@ export function ClientesCard({
         </div>
       ) : (
         <>
-          <ClientesTabla clientes={clientes} />
-          <ClientesPaginacion total={total} pageSize={CLIENTES_PAGE_SIZE} />
+          <MembersTable members={members} />
+          <MembersPagination total={total} pageSize={MEMBERS_PAGE_SIZE} />
         </>
       )}
     </div>

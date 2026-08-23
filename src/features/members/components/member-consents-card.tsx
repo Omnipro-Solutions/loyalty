@@ -15,13 +15,10 @@ import { formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { ConsentChannel } from "@/types/domain"
 
-import {
-  CONSENTIMIENTO_CANAL_LABEL,
-  CONSENTIMIENTO_FUENTE_LABEL,
-} from "../lib/labels"
-import type { Consentimiento } from "../lib/queries"
+import { CONSENT_CHANNEL_LABEL, CONSENT_SOURCE_LABEL } from "../lib/labels"
+import type { Consent } from "../lib/queries"
 
-const CANAL_ICON: Record<ConsentChannel, LucideIcon> = {
+const CHANNEL_ICON: Record<ConsentChannel, LucideIcon> = {
   email: Mail,
   sms: MessageSquare,
   push: Bell,
@@ -30,7 +27,7 @@ const CANAL_ICON: Record<ConsentChannel, LucideIcon> = {
   socios_comerciales: Handshake,
 }
 
-const CANAL_ICON_BG: Record<ConsentChannel, string> = {
+const CHANNEL_ICON_BG: Record<ConsentChannel, string> = {
   email: "bg-avatar-indigo-bg text-avatar-indigo-fg",
   sms: "bg-avatar-indigo-bg text-avatar-indigo-fg",
   push: "bg-avatar-teal-bg text-avatar-teal-fg",
@@ -39,7 +36,7 @@ const CANAL_ICON_BG: Record<ConsentChannel, string> = {
   socios_comerciales: "bg-avatar-amber-bg text-avatar-amber-fg",
 }
 
-const ORDEN: ConsentChannel[] = [
+const ORDER: ConsentChannel[] = [
   "email",
   "sms",
   "push",
@@ -48,13 +45,11 @@ const ORDEN: ConsentChannel[] = [
   "socios_comerciales",
 ]
 
-type ClienteConsentimientosCardProps = { consentimientos: Consentimiento[] }
+type MemberConsentsCardProps = { consents: Consent[] }
 
 /** Figma "Card · Consentimientos" (1125:4871) pixel-perfect, real: `member_consentimientos` por canal. Solo lectura, como en el propio Figma. */
-export function ClienteConsentimientosCard({
-  consentimientos,
-}: ClienteConsentimientosCardProps) {
-  const porCanal = new Map(consentimientos.map((c) => [c.canal, c]))
+export function MemberConsentsCard({ consents }: MemberConsentsCardProps) {
+  const byChannel = new Map(consents.map((c) => [c.canal, c]))
 
   return (
     <div className="flex h-full w-full flex-col gap-2.5 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
@@ -68,7 +63,7 @@ export function ClienteConsentimientosCard({
               Consentimientos
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {consentimientos.length}
+              {consents.length}
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground">
@@ -78,16 +73,16 @@ export function ClienteConsentimientosCard({
       </div>
 
       <div className="flex flex-col gap-0.5">
-        {ORDEN.map((canal) => {
-          const item = porCanal.get(canal)
-          const Icon = CANAL_ICON[canal]
-          const otorgado = item?.otorgado ?? false
+        {ORDER.map((channel) => {
+          const item = byChannel.get(channel)
+          const Icon = CHANNEL_ICON[channel]
+          const granted = item?.otorgado ?? false
           return (
             <div
-              key={canal}
+              key={channel}
               className={cn(
                 "flex flex-col gap-px rounded-[10px] px-3 py-1.5",
-                !otorgado && "bg-destructive-bg"
+                !granted && "bg-destructive-bg"
               )}
             >
               <div className="flex items-center gap-2">
@@ -95,22 +90,22 @@ export function ClienteConsentimientosCard({
                   <div
                     className={cn(
                       "flex size-5 shrink-0 items-center justify-center rounded-[7px]",
-                      CANAL_ICON_BG[canal]
+                      CHANNEL_ICON_BG[channel]
                     )}
                   >
                     <Icon className="size-3" />
                   </div>
                   <p className="truncate text-[11px] text-foreground">
-                    {CONSENTIMIENTO_CANAL_LABEL[canal]}
+                    {CONSENT_CHANNEL_LABEL[channel]}
                   </p>
                 </div>
                 <div
                   className={cn(
                     "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5",
-                    otorgado ? "bg-success-bg" : "bg-destructive-bg"
+                    granted ? "bg-success-bg" : "bg-destructive-bg"
                   )}
                 >
-                  {otorgado ? (
+                  {granted ? (
                     <Check className="size-3 text-success" />
                   ) : (
                     <X className="size-3 text-destructive" />
@@ -118,16 +113,16 @@ export function ClienteConsentimientosCard({
                   <p
                     className={cn(
                       "text-[10px] font-medium",
-                      otorgado ? "text-success" : "text-destructive"
+                      granted ? "text-success" : "text-destructive"
                     )}
                   >
-                    {otorgado ? "Otorgado" : "Revocado"}
+                    {granted ? "Otorgado" : "Revocado"}
                   </p>
                 </div>
               </div>
               <p className="truncate pl-[27px] text-[9px] text-muted-foreground">
                 {item
-                  ? `${item.fuente ? CONSENTIMIENTO_FUENTE_LABEL[item.fuente as keyof typeof CONSENTIMIENTO_FUENTE_LABEL] : "Sin fuente"} · desde ${formatDate(item.actualizado_en)} · ${otorgado ? "indefinida" : "sin vigencia"}`
+                  ? `${item.fuente ? CONSENT_SOURCE_LABEL[item.fuente as keyof typeof CONSENT_SOURCE_LABEL] : "Sin fuente"} · desde ${formatDate(item.actualizado_en)} · ${granted ? "indefinida" : "sin vigencia"}`
                   : "Sin registro"}
               </p>
             </div>

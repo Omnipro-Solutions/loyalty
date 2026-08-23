@@ -14,78 +14,76 @@ import {
 import { formatDateTime, formatNumber, formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import type { LedgerEntryConSaldo } from "../lib/queries"
+import type { LedgerEntryWithBalance } from "../lib/queries"
 
-const TIPO_LABEL: Record<string, string> = {
+const TYPE_LABEL: Record<string, string> = {
   acumulacion: "Acumulación",
   canje: "Canje",
   expiracion: "Expiración",
   ajuste: "Ajuste",
 }
 
-const CANAL_LABEL: Record<string, string> = {
+const CHANNEL_LABEL: Record<string, string> = {
   pos: "POS",
   ecommerce: "E-commerce",
   app: "App",
 }
 
-const PERIODOS = [
-  { value: "hoy", etiqueta: "Hoy", dias: 1 },
-  { value: "7d", etiqueta: "7D", dias: 7 },
-  { value: "30d", etiqueta: "30D", dias: 30 },
-  { value: "12m", etiqueta: "12M", dias: 365 },
+const PERIODS = [
+  { value: "hoy", label: "Hoy", days: 1 },
+  { value: "7d", label: "7D", days: 7 },
+  { value: "30d", label: "30D", days: 30 },
+  { value: "12m", label: "12M", days: 365 },
 ] as const
 
-type Periodo = (typeof PERIODOS)[number]["value"]
+type Period = (typeof PERIODS)[number]["value"]
 
-function celdaCsv(valor: string): string {
-  return `"${valor.replaceAll('"', '""')}"`
+function csvCell(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`
 }
 
-type ClienteRedencionesCardProps = { movimientos: LedgerEntryConSaldo[] }
+type MemberRedemptionsCardProps = { entries: LedgerEntryWithBalance[] }
 
 /** Figma "Card · Log de redenciones" (1125:4623) pixel-perfect, real: extracto de `points_ledger` con saldo acumulado calculado en memoria. */
-export function ClienteRedencionesCard({
-  movimientos,
-}: ClienteRedencionesCardProps) {
-  const [periodo, setPeriodo] = useState<Periodo>("30d")
+export function MemberRedemptionsCard({ entries }: MemberRedemptionsCardProps) {
+  const [period, setPeriod] = useState<Period>("30d")
   // Capturado una vez (no en cada render): `Date.now()` es impuro y React
   // exige que el cuerpo del componente sea determinista.
-  const [ahora] = useState(() => Date.now())
+  const [now] = useState(() => Date.now())
 
-  const filtrados = useMemo(() => {
-    const dias = PERIODOS.find((p) => p.value === periodo)?.dias ?? 30
-    const desde = ahora - dias * 86_400_000
-    return movimientos.filter((m) => new Date(m.creado_en).getTime() >= desde)
-  }, [movimientos, periodo, ahora])
+  const filtered = useMemo(() => {
+    const days = PERIODS.find((p) => p.value === period)?.days ?? 30
+    const since = now - days * 86_400_000
+    return entries.filter((m) => new Date(m.creado_en).getTime() >= since)
+  }, [entries, period, now])
 
-  const neto = filtrados.reduce((acc, m) => acc + m.puntos, 0)
+  const net = filtered.reduce((acc, m) => acc + m.puntos, 0)
 
-  function exportar() {
-    const filas = [
+  function exportCsv() {
+    const rows = [
       ["Cuándo", "Movimiento", "Canal", "Puntos", "Saldo"]
-        .map(celdaCsv)
+        .map(csvCell)
         .join(","),
-      ...filtrados.map((m) =>
+      ...filtered.map((m) =>
         [
           formatDateTime(m.creado_en),
-          TIPO_LABEL[m.tipo] ?? m.tipo,
-          m.canal ? (CANAL_LABEL[m.canal] ?? m.canal) : "",
+          TYPE_LABEL[m.tipo] ?? m.tipo,
+          m.canal ? (CHANNEL_LABEL[m.canal] ?? m.canal) : "",
           String(m.puntos),
-          String(m.saldoDespues),
+          String(m.balanceAfter),
         ]
-          .map(celdaCsv)
+          .map(csvCell)
           .join(",")
       ),
     ]
-    const blob = new Blob([filas.join("\n")], {
+    const blob = new Blob([rows.join("\n")], {
       type: "text/csv;charset=utf-8;",
     })
     const url = URL.createObjectURL(blob)
-    const enlace = document.createElement("a")
-    enlace.href = url
-    enlace.download = "log-redenciones.csv"
-    enlace.click()
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "log-redenciones.csv"
+    link.click()
     URL.revokeObjectURL(url)
   }
 
@@ -101,7 +99,7 @@ export function ClienteRedencionesCard({
               Log de redenciones
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumber(movimientos.length)}
+              {formatNumber(entries.length)}
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground">
@@ -109,24 +107,24 @@ export function ClienteRedencionesCard({
           </p>
         </div>
         <div className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-[3px]">
-          {PERIODOS.map((p) => (
+          {PERIODS.map((p) => (
             <button
               key={p.value}
               type="button"
-              onClick={() => setPeriodo(p.value)}
+              onClick={() => setPeriod(p.value)}
               className={cn(
                 "rounded-md px-2.5 py-1 text-[10px] font-medium text-secondary-foreground",
-                periodo === p.value &&
+                period === p.value &&
                   "bg-background font-semibold text-foreground"
               )}
             >
-              {p.etiqueta}
+              {p.label}
             </button>
           ))}
         </div>
         <button
           type="button"
-          onClick={exportar}
+          onClick={exportCsv}
           className="flex shrink-0 items-center gap-1.5 rounded-[9px] border border-border bg-background py-[7px] pr-3 pl-2.5 text-[11px] font-medium text-secondary-foreground"
         >
           <Download className="size-3" />
@@ -134,7 +132,7 @@ export function ClienteRedencionesCard({
         </button>
       </div>
 
-      {movimientos.length === 0 ? (
+      {entries.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
           Todavía no hay movimientos de puntos.
         </p>
@@ -151,7 +149,7 @@ export function ClienteRedencionesCard({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtrados.length === 0 ? (
+              {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
@@ -161,7 +159,7 @@ export function ClienteRedencionesCard({
                   </TableCell>
                 </TableRow>
               ) : (
-                filtrados.map((m) => (
+                filtered.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell>
                       <p className="text-[11px] font-medium text-foreground">
@@ -172,10 +170,10 @@ export function ClienteRedencionesCard({
                       </p>
                     </TableCell>
                     <TableCell className="font-medium text-foreground">
-                      {m.origen ?? TIPO_LABEL[m.tipo] ?? m.tipo}
+                      {m.origen ?? TYPE_LABEL[m.tipo] ?? m.tipo}
                     </TableCell>
                     <TableCell className="text-secondary-foreground">
-                      {m.canal ? (CANAL_LABEL[m.canal] ?? m.canal) : "—"}
+                      {m.canal ? (CHANNEL_LABEL[m.canal] ?? m.canal) : "—"}
                     </TableCell>
                     <TableCell
                       className={cn(
@@ -187,14 +185,14 @@ export function ClienteRedencionesCard({
                       {formatNumber(m.puntos)}
                     </TableCell>
                     <TableCell className="text-right text-foreground">
-                      {formatNumber(m.saldoDespues)}
+                      {formatNumber(m.balanceAfter)}
                     </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
-          {filtrados.length > 0 && (
+          {filtered.length > 0 && (
             <div className="flex items-center gap-2.5 bg-muted px-3.5 py-2.5">
               <p className="w-24 text-[11px] font-medium text-secondary-foreground">
                 Neto del período
@@ -202,14 +200,14 @@ export function ClienteRedencionesCard({
               <p
                 className={cn(
                   "flex-1 text-xs font-semibold",
-                  neto >= 0 ? "text-success" : "text-destructive"
+                  net >= 0 ? "text-success" : "text-destructive"
                 )}
               >
-                {neto >= 0 ? "+" : ""}
-                {formatNumber(neto)} pts
+                {net >= 0 ? "+" : ""}
+                {formatNumber(net)} pts
               </p>
               <p className="text-right text-[11px] font-semibold text-muted-foreground">
-                saldo {formatNumber(filtrados[0]?.saldoDespues ?? 0)}
+                saldo {formatNumber(filtered[0]?.balanceAfter ?? 0)}
               </p>
             </div>
           )}

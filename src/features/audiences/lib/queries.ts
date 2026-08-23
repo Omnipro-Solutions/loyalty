@@ -155,7 +155,7 @@ export type AudiencesKpis = {
  * "Perfiles alcanzados (total)" es la suma de `conteo_estimado` de todas
  * las audiencias — no deduplica socios que pertenecen a varias audiencias
  * a la vez (eso necesita el motor de evaluación real que no existe, ver
- * `ClienteAudienciasCard`). El delta vs. hace 30 días sí es real: compara
+ * `MemberAudiencesCard`). El delta vs. hace 30 días sí es real: compara
  * contra la fila más antigua de `segment_size_history`.
  */
 export async function getAudiencesKpis(): Promise<AudiencesKpis> {

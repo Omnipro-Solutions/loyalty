@@ -3,7 +3,7 @@ import { Users } from "lucide-react"
 import { PlaceholderCard } from "@/components/feedback/placeholder-card"
 
 /** Figma "Card · Audiencias activas" (1125:4791): qué segmentos dinámicos incluyen hoy al socio — necesita un motor de audiencias que evalúe membresía en tiempo real, que no existe todavía (`segments` solo guarda la definición). */
-export function ClienteAudienciasCard() {
+export function MemberAudiencesCard() {
   return (
     <div className="flex h-full w-full flex-col gap-3 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
       <div className="flex items-center gap-2.5">

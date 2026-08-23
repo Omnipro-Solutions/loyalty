@@ -15,8 +15,8 @@ import { Badge } from "@/components/ui/badge"
 import { formatDate, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { paletaAvatar } from "../lib/avatar-palette"
-import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
+import { avatarPalette } from "../lib/avatar-palette"
+import { MEMBER_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
 import type { Member } from "../lib/queries"
 
 const features = tableFeatures({ columnSizingFeature })
@@ -24,26 +24,26 @@ const helper = createColumnHelper<typeof features, Member>()
 
 const columns = helper.columns([
   helper.display({
-    id: "cliente",
+    id: "member",
     header: () => "CLIENTE",
     cell: (info) => {
-      const cliente = info.row.original
-      const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`.trim()
-      const paleta = paletaAvatar(cliente.id)
+      const member = info.row.original
+      const fullName = `${member.nombre} ${member.apellido}`.trim()
+      const palette = avatarPalette(member.id)
       return (
         <div className="flex min-w-0 items-center gap-2.5">
           <AvatarInitials
-            name={nombreCompleto}
+            name={fullName}
             size={34}
-            bgClassName={paleta.bg}
-            fgClassName={paleta.fg}
+            bgClassName={palette.bg}
+            fgClassName={palette.fg}
           />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] leading-[18px] font-semibold text-foreground">
-              {nombreCompleto}
+              {fullName}
             </p>
             <p className="truncate text-[11px] leading-[15px] text-muted-foreground">
-              {cliente.email}
+              {member.email}
             </p>
           </div>
         </div>
@@ -51,7 +51,7 @@ const columns = helper.columns([
     },
   }),
   helper.display({
-    id: "documento",
+    id: "document",
     size: 140,
     header: () => "DOCUMENTO",
     cell: (info) => {
@@ -67,7 +67,7 @@ const columns = helper.columns([
     },
   }),
   helper.display({
-    id: "nivel",
+    id: "tier",
     size: 110,
     header: () => "NIVEL",
     cell: (info) => {
@@ -99,23 +99,23 @@ const columns = helper.columns([
     ),
   }),
   helper.display({
-    id: "estado",
+    id: "status",
     size: 100,
     header: () => "ESTADO",
     cell: (info) => {
-      const estado = info.row.original.estado_cuenta as
+      const status = info.row.original.estado_cuenta as
         "activo" | "inactivo" | "suspendido"
       const color =
-        estado === "activo"
+        status === "activo"
           ? "bg-success"
-          : estado === "suspendido"
+          : status === "suspendido"
             ? "bg-destructive"
             : "bg-border-strong"
       return (
         <div className="flex items-center gap-[7px]">
           <span className={cn("size-[7px] shrink-0 rounded-full", color)} />
           <span className="text-[11px] font-medium">
-            {MEMBER_ESTADO_LABEL[estado]}
+            {MEMBER_STATUS_LABEL[status]}
           </span>
         </div>
       )
@@ -123,18 +123,18 @@ const columns = helper.columns([
   }),
 ])
 
-type ClientesTablaProps = { clientes: Member[] }
+type MembersTableProps = { members: Member[] }
 
 /** Figma "05.1 · Clientes · listado" (704:3012), columnas reales (sin segmento/LTV/tendencia — necesitan pedidos y scoring que no existen todavía). */
-export function ClientesTabla({ clientes }: ClientesTablaProps) {
+export function MembersTable({ members }: MembersTableProps) {
   const router = useRouter()
-  const data = useMemo(() => clientes, [clientes])
+  const data = useMemo(() => members, [members])
   const table = useTable({ features, columns, data })
 
   return (
     <DataTable
       table={table}
-      onRowClick={(cliente) => router.push(`/clientes/${cliente.id}`)}
+      onRowClick={(member) => router.push(`/clientes/${member.id}`)}
     />
   )
 }

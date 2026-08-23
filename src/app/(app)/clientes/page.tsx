@@ -1,15 +1,15 @@
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
-import { ClientesCard } from "@/features/clientes/components/clientes-card"
+import { MembersCard } from "@/features/members/components/members-card"
 import {
-  getClientesKpis,
-  listClientes,
+  getMemberKpis,
+  listMembers,
   listTiersOptions,
-} from "@/features/clientes/lib/queries"
+} from "@/features/members/lib/queries"
 import { formatNumber, formatPercent } from "@/lib/format"
 
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }
 
 /** Figma "05.1 · Clientes · listado" (704:3012). */
@@ -17,14 +17,14 @@ export default async function ClientesPage({
   searchParams,
 }: PageProps<"/clientes">) {
   const params = await searchParams
-  const busqueda = primerValor(params.q)
-  const tierId = primerValor(params.tier)
-  const estadoCuenta = primerValor(params.estado)
-  const page = Number(primerValor(params.page) ?? "1")
+  const search = firstValue(params.q)
+  const tierId = firstValue(params.tier)
+  const accountStatus = firstValue(params.estado)
+  const page = Number(firstValue(params.page) ?? "1")
 
-  const [{ clientes, total }, kpis, tiers] = await Promise.all([
-    listClientes({ busqueda, tierId, estadoCuenta, page }),
-    getClientesKpis(),
+  const [{ members, total }, kpis, tiers] = await Promise.all([
+    listMembers({ search, tierId, accountStatus, page }),
+    getMemberKpis(),
     listTiersOptions(),
   ])
 
@@ -33,38 +33,38 @@ export default async function ClientesPage({
       <div className="flex items-start gap-4">
         <KpiCard
           label="Clientes activos"
-          value={formatNumber(kpis.clientesActivos)}
-          detail={`de ${formatNumber(kpis.totalClientes)} en total`}
+          value={formatNumber(kpis.activeMembers)}
+          detail={`de ${formatNumber(kpis.totalMembers)} en total`}
         />
         <KpiCard
           label="Nuevos este mes"
-          value={formatNumber(kpis.nuevosEsteMes)}
+          value={formatNumber(kpis.newThisMonth)}
           detail="altas registradas"
         />
         <KpiCard
           label="Con consentimiento de marketing"
           value={
-            kpis.totalClientes
-              ? formatPercent(kpis.conConsentimiento / kpis.totalClientes)
+            kpis.totalMembers
+              ? formatPercent(kpis.withConsent / kpis.totalMembers)
               : "—"
           }
-          detail={`${formatNumber(kpis.conConsentimiento)} clientes`}
+          detail={`${formatNumber(kpis.withConsent)} clientes`}
         />
         <KpiCard
           label="Perfil completo"
           value={
-            kpis.totalClientes
-              ? formatPercent(kpis.perfilCompleto / kpis.totalClientes)
+            kpis.totalMembers
+              ? formatPercent(kpis.profileComplete / kpis.totalMembers)
               : "—"
           }
           detail="80% o más de los campos"
         />
       </div>
-      <ClientesCard
-        clientes={clientes}
+      <MembersCard
+        members={members}
         total={total}
         tiers={tiers}
-        hayFiltrosAplicados={!!(busqueda || tierId || estadoCuenta)}
+        hasFiltersApplied={!!(search || tierId || accountStatus)}
       />
     </AppPage>
   )

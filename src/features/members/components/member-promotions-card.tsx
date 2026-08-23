@@ -3,7 +3,7 @@ import { Gift } from "lucide-react"
 import { PlaceholderCard } from "@/components/feedback/placeholder-card"
 
 /** Figma "Card · Promociones activas" (1125:4724): qué promociones puede canjear hoy — necesita evaluar reglas de elegibilidad contra el socio, un motor que todavía no existe. */
-export function ClientePromocionesCard() {
+export function MemberPromotionsCard() {
   return (
     <div className="flex h-full w-full flex-col gap-3 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
       <div className="flex items-center gap-2.5">

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 
-/** Mismo patrón que `ClientesFiltrosBar`: cada cambio actualiza `?q=`, la página server-side vuelve a consultar. */
+/** Mismo patrón que `MembersFiltersBar`: cada cambio actualiza `?q=`, la página server-side vuelve a consultar. */
 export function AudiencesSearch() {
   const router = useRouter()
   const pathname = usePathname()

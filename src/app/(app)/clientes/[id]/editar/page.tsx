@@ -2,34 +2,34 @@ import { notFound } from "next/navigation"
 
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
-import { ClienteForm } from "@/features/clientes/components/cliente-form"
+import { MemberForm } from "@/features/members/components/member-form"
 import {
-  getClienteById,
-  listTiendasOptions,
+  getMemberById,
+  listStoreOptions,
   listTiersOptions,
-} from "@/features/clientes/lib/queries"
+} from "@/features/members/lib/queries"
 
 /** Reutiliza el formulario de creación — el Figma no define una pantalla de edición aparte. */
 export default async function EditarClientePage({
   params,
 }: PageProps<"/clientes/[id]/editar">) {
   const { id } = await params
-  const [cliente, tiendas, tiers] = await Promise.all([
-    getClienteById(id),
-    listTiendasOptions(),
+  const [member, stores, tiers] = await Promise.all([
+    getMemberById(id),
+    listStoreOptions(),
     listTiersOptions(),
   ])
-  if (!cliente) notFound()
+  if (!member) notFound()
 
-  const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`.trim()
+  const fullName = `${member.nombre} ${member.apellido}`.trim()
 
   return (
     <AppPage
-      breadcrumb={`Comercial  ›  Clientes  ›  ${nombreCompleto}`}
-      title={nombreCompleto}
+      breadcrumb={`Comercial  ›  Clientes  ›  ${fullName}`}
+      title={fullName}
     >
       <BackLink href={`/clientes/${id}`}>Volver al perfil</BackLink>
-      <ClienteForm cliente={cliente} tiendas={tiendas} tiers={tiers} />
+      <MemberForm member={member} stores={stores} tiers={tiers} />
     </AppPage>
   )
 }

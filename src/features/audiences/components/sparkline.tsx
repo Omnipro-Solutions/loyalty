@@ -6,7 +6,7 @@ type SparklineProps = {
   strokeClassName?: string
 }
 
-/** Duplicado de `features/clientes/components/sparkline.tsx` por aislamiento entre features: trazo simple + punto final generado en SVG a partir de la serie real. */
+/** Duplicado de `features/members/components/sparkline.tsx` por aislamiento entre features: trazo simple + punto final generado en SVG a partir de la serie real. */
 export function Sparkline({
   values,
   className,

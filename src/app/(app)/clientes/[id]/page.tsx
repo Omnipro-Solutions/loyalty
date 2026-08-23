@@ -2,25 +2,25 @@ import { notFound } from "next/navigation"
 
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
-import { ClienteAudienciasCard } from "@/features/clientes/components/cliente-audiencias-card"
-import { ClienteComportamientoCompra } from "@/features/clientes/components/cliente-comportamiento-compra"
-import { ClienteConsentimientosCard } from "@/features/clientes/components/cliente-consentimientos-card"
-import { ClienteHero } from "@/features/clientes/components/cliente-hero"
-import { ClienteKpisComercial } from "@/features/clientes/components/cliente-kpis-comercial"
-import { ClienteKpisLealtad } from "@/features/clientes/components/cliente-kpis-lealtad"
-import { ClientePromocionesCard } from "@/features/clientes/components/cliente-promociones-card"
-import { ClienteRedencionesCard } from "@/features/clientes/components/cliente-redenciones-card"
-import { ClienteTarjetaLealtad } from "@/features/clientes/components/cliente-tarjeta-lealtad"
+import { MemberAudiencesCard } from "@/features/members/components/member-audiences-card"
+import { MemberPurchaseBehavior } from "@/features/members/components/member-purchase-behavior"
+import { MemberConsentsCard } from "@/features/members/components/member-consents-card"
+import { MemberHero } from "@/features/members/components/member-hero"
+import { MemberCommercialKpis } from "@/features/members/components/member-commercial-kpis"
+import { MemberLoyaltyKpis } from "@/features/members/components/member-loyalty-kpis"
+import { MemberPromotionsCard } from "@/features/members/components/member-promotions-card"
+import { MemberRedemptionsCard } from "@/features/members/components/member-redemptions-card"
+import { MemberLoyaltyCard } from "@/features/members/components/member-loyalty-card"
 import {
-  getClienteById,
-  getComportamientoCompra,
-  getPedidosSocio,
-  getResumenLealtad,
-  getTasaRedencionPrograma,
-  getValorComercial,
-  listConsentimientosPorMiembro,
-  listRedencionesPorMiembro,
-} from "@/features/clientes/lib/queries"
+  getMemberById,
+  getPurchaseBehavior,
+  getMemberOrders,
+  getLoyaltySummary,
+  getProgramRedemptionRate,
+  getCommercialValue,
+  listMemberConsents,
+  listMemberRedemptions,
+} from "@/features/members/lib/queries"
 
 /**
  * Figma "05.3g · Perfil 360 · resumen v2" (1124:4478), pixel-perfect en
@@ -35,61 +35,61 @@ export default async function ClientePerfilPage({
   params,
 }: PageProps<"/clientes/[id]">) {
   const { id } = await params
-  const cliente = await getClienteById(id)
-  if (!cliente) notFound()
+  const member = await getMemberById(id)
+  if (!member) notFound()
 
-  const [movimientos, resumen, tasaPrograma, consentimientos, pedidosSocio] =
+  const [redemptions, summary, programRate, consents, memberOrders] =
     await Promise.all([
-      listRedencionesPorMiembro(id),
-      getResumenLealtad(id, cliente.saldo_puntos),
-      getTasaRedencionPrograma(),
-      listConsentimientosPorMiembro(id),
-      getPedidosSocio(id),
+      listMemberRedemptions(id),
+      getLoyaltySummary(id, member.saldo_puntos),
+      getProgramRedemptionRate(),
+      listMemberConsents(id),
+      getMemberOrders(id),
     ])
 
-  // Ambas se derivan de la misma `pedidosSocio` (un solo fetch a `pedidos`).
-  const [comportamiento, valorComercial] = await Promise.all([
-    getComportamientoCompra(pedidosSocio),
-    getValorComercial(pedidosSocio),
+  // Ambas se derivan de la misma `memberOrders` (un solo fetch a `pedidos`).
+  const [behavior, commercialValue] = await Promise.all([
+    getPurchaseBehavior(memberOrders),
+    getCommercialValue(memberOrders),
   ])
 
-  const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`.trim()
+  const fullName = `${member.nombre} ${member.apellido}`.trim()
 
   return (
     <AppPage
-      breadcrumb={`Comercial  ›  Clientes  ›  ${nombreCompleto}`}
-      title={nombreCompleto}
+      breadcrumb={`Comercial  ›  Clientes  ›  ${fullName}`}
+      title={fullName}
     >
       <BackLink href="/clientes">Volver a Clientes</BackLink>
 
       <div className="flex items-start gap-3.5">
         <div className="min-w-0 flex-1">
-          <ClienteHero cliente={cliente} />
+          <MemberHero member={member} />
         </div>
         <div className="w-[340px] shrink-0">
-          <ClienteTarjetaLealtad cliente={cliente} />
+          <MemberLoyaltyCard member={member} />
         </div>
       </div>
 
       <div className="flex w-full flex-col gap-3.5 rounded-[20px] bg-muted/40 p-4">
-        <ClienteKpisComercial valorComercial={valorComercial} />
-        <ClienteKpisLealtad
-          cliente={cliente}
-          resumen={resumen}
-          tasaPrograma={tasaPrograma}
+        <MemberCommercialKpis commercialValue={commercialValue} />
+        <MemberLoyaltyKpis
+          member={member}
+          summary={summary}
+          programRate={programRate}
         />
       </div>
 
-      <ClienteComportamientoCompra comportamiento={comportamiento} />
+      <MemberPurchaseBehavior behavior={behavior} />
 
       <div className="flex items-start gap-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
-          <ClienteAudienciasCard />
-          <ClienteRedencionesCard movimientos={movimientos} />
+          <MemberAudiencesCard />
+          <MemberRedemptionsCard entries={redemptions} />
         </div>
         <div className="flex w-[380px] shrink-0 flex-col gap-3.5">
-          <ClienteConsentimientosCard consentimientos={consentimientos} />
-          <ClientePromocionesCard />
+          <MemberConsentsCard consents={consents} />
+          <MemberPromotionsCard />
         </div>
       </div>
     </AppPage>

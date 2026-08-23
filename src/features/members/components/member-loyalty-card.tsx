@@ -4,38 +4,32 @@ import type { ReactNode } from "react"
 import { Badge } from "@/components/ui/badge"
 import { formatNumber } from "@/lib/format"
 
-import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
-import { getPeriodoCalificacion, type Member } from "../lib/queries"
+import { MEMBER_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
+import { getQualificationPeriod, type Member } from "../lib/queries"
 
-const ESTADO_BADGE_VARIANT = {
+const STATUS_BADGE_VARIANT = {
   activo: "success",
   inactivo: "neutral",
   suspendido: "error",
 } as const
 
-function numeroDeTarjeta(codigoSocio: string): string {
-  const numero = codigoSocio.replace(/^CLI-0*/, "")
-  return `LT-${numero || "0"}`
+function cardNumber(memberCode: string): string {
+  const number = memberCode.replace(/^CLI-0*/, "")
+  return `LT-${number || "0"}`
 }
 
-function FilaEstado({
-  etiqueta,
-  valor,
-}: {
-  etiqueta: string
-  valor: ReactNode
-}) {
+function StatusRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex w-full items-center gap-2">
       <p className="flex-1 truncate text-[11px] text-muted-foreground">
-        {etiqueta}
+        {label}
       </p>
-      {valor}
+      {value}
     </div>
   )
 }
 
-type ClienteTarjetaLealtadProps = { cliente: Member }
+type MemberLoyaltyCardProps = { member: Member }
 
 /**
  * Figma "Card · Tarjeta de lealtad" (1171:6) pixel-perfect, salvo el QR:
@@ -43,10 +37,10 @@ type ClienteTarjetaLealtadProps = { cliente: Member }
  * existe esa infraestructura, así que el recuadro es un ícono decorativo,
  * no un código escaneable de verdad.
  */
-export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
-  const { fechaFin } = getPeriodoCalificacion()
-  const vigenciaLabel = `${String(fechaFin.getMonth() + 1).padStart(2, "0")}/${fechaFin.getFullYear()}`
-  const estado = cliente.estado_cuenta as keyof typeof ESTADO_BADGE_VARIANT
+export function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
+  const { endDate } = getQualificationPeriod()
+  const validityLabel = `${String(endDate.getMonth() + 1).padStart(2, "0")}/${endDate.getFullYear()}`
+  const status = member.estado_cuenta as keyof typeof STATUS_BADGE_VARIANT
 
   return (
     <div className="flex size-full flex-col items-center gap-3.5 rounded-[20px] bg-background p-[18px] shadow-form-section">
@@ -65,7 +59,7 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
               PUNTOS
             </p>
             <p className="text-[16px] leading-5 font-semibold text-white">
-              {formatNumber(cliente.saldo_puntos)}
+              {formatNumber(member.saldo_puntos)}
             </p>
           </div>
         </div>
@@ -73,13 +67,13 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
         <div className="flex w-full flex-col items-center gap-1 rounded-[14px] bg-gradient-to-r from-white/20 to-white/[0.06] px-4 py-[18px]">
           <Gem className="size-4 text-white" />
           <p className="text-sm leading-[19px] font-semibold whitespace-nowrap text-white">
-            {cliente.tier
-              ? `Nivel ${TIER_LABEL[cliente.tier.nombre as keyof typeof TIER_LABEL] ?? cliente.tier.nombre}`
+            {member.tier
+              ? `Nivel ${TIER_LABEL[member.tier.nombre as keyof typeof TIER_LABEL] ?? member.tier.nombre}`
               : "Sin nivel"}
           </p>
           <p className="text-[9px] leading-3 whitespace-nowrap text-white/70">
-            {cliente.tier
-              ? `Vigente hasta ${vigenciaLabel} · multiplicador ${cliente.tier.multiplicador}x`
+            {member.tier
+              ? `Vigente hasta ${validityLabel} · multiplicador ${member.tier.multiplicador}x`
               : "Sin nivel asignado"}
           </p>
         </div>
@@ -90,7 +84,7 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
               TITULAR
             </p>
             <p className="truncate text-[13px] leading-[18px] font-semibold text-white">
-              {cliente.nombre} {cliente.apellido}
+              {member.nombre} {member.apellido}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end whitespace-nowrap">
@@ -98,7 +92,7 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
               ID SOCIO
             </p>
             <p className="font-mono text-[13px] leading-[18px] font-semibold text-white">
-              {cliente.codigo_socio}
+              {member.codigo_socio}
             </p>
           </div>
         </div>
@@ -108,7 +102,7 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
             <QrCode className="size-10 text-muted-foreground" />
           </div>
           <p className="font-mono text-[11px] tracking-[0.44px] text-foreground">
-            {numeroDeTarjeta(cliente.codigo_socio)}
+            {cardNumber(member.codigo_socio)}
           </p>
         </div>
         <p className="w-full text-center text-[8px] leading-[11px] text-white">
@@ -121,35 +115,35 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
         Estado de la tarjeta
       </p>
       <div className="flex w-full flex-col gap-2.5">
-        <FilaEstado
-          etiqueta="Actualización del pase"
-          valor={
-            <Badge variant={ESTADO_BADGE_VARIANT[estado]}>
-              {MEMBER_ESTADO_LABEL[estado]}
+        <StatusRow
+          label="Actualización del pase"
+          value={
+            <Badge variant={STATUS_BADGE_VARIANT[status]}>
+              {MEMBER_STATUS_LABEL[status]}
             </Badge>
           }
         />
-        <FilaEstado
-          etiqueta="Número de tarjeta"
-          valor={
+        <StatusRow
+          label="Número de tarjeta"
+          value={
             <span className="font-mono text-[10px] text-secondary-foreground">
-              {numeroDeTarjeta(cliente.codigo_socio)}
+              {cardNumber(member.codigo_socio)}
             </span>
           }
         />
-        <FilaEstado
-          etiqueta="Último escaneo"
-          valor={
+        <StatusRow
+          label="Último escaneo"
+          value={
             <span className="text-[11px] font-medium text-muted-foreground">
               Sin registros
             </span>
           }
         />
-        <FilaEstado
-          etiqueta="Sucursal habitual"
-          valor={
+        <StatusRow
+          label="Sucursal habitual"
+          value={
             <span className="truncate text-[11px] font-medium text-foreground">
-              {cliente.tiendaInscripcion?.nombre ?? "—"}
+              {member.enrollmentStore?.nombre ?? "—"}
             </span>
           }
         />

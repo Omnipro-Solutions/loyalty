@@ -1,6 +1,6 @@
 import type { MemberStatus, SegmentStatus, TierName } from "@/types/domain"
 
-/** Duplicado de `features/clientes/lib/labels.ts` por aislamiento entre features (ver `avatarPalette`). */
+/** Duplicado de `features/members/lib/labels.ts` por aislamiento entre features (ver `avatarPalette`). */
 export const TIER_LABEL: Record<TierName, string> = {
   diamante: "Diamante",
   oro: "Oro",
