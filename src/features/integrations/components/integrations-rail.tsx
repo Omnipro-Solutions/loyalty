@@ -1,35 +1,35 @@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
 
-type IntegracionesRailProps = {
+type IntegrationsRailProps = {
   labelTodos: string
-  modo: "todas" | "mias"
-  onModoChange: (modo: "todas" | "mias") => void
-  categorias: { nombre: string; total: number }[]
-  categoriaActiva: string | null
-  onCategoriaChange: (categoria: string | null) => void
+  mode: "todas" | "mias"
+  onModeChange: (mode: "todas" | "mias") => void
+  categories: { name: string; total: number }[]
+  activeCategory: string | null
+  onCategoryChange: (category: string | null) => void
 }
 
 /**
  * Figma "Rail · categorías" (1262:4234 / 1265:4519). El archivo trae 8
  * categorías con conteos que no cuadran con los 3 grupos que sí dibuja la
  * grilla (12 tarjetas en total) — se reemplazan por las categorías reales
- * de `catalogo.ts` para que el filtro funcione de verdad en vez de prometer
+ * de `catalog.ts` para que el filtro funcione de verdad en vez de prometer
  * resultados que no existen.
  */
-export function IntegracionesRail({
+export function IntegrationsRail({
   labelTodos,
-  modo,
-  onModoChange,
-  categorias,
-  categoriaActiva,
-  onCategoriaChange,
-}: IntegracionesRailProps) {
+  mode,
+  onModeChange,
+  categories,
+  activeCategory,
+  onCategoryChange,
+}: IntegrationsRailProps) {
   return (
     <div className="flex w-[190px] shrink-0 flex-col gap-3.5 rounded-2xl bg-background p-3.5 shadow-form-section">
       <RadioGroup
-        value={modo}
-        onValueChange={(value) => onModoChange(value as "todas" | "mias")}
+        value={mode}
+        onValueChange={(value) => onModeChange(value as "todas" | "mias")}
         className="gap-2.5"
       >
         <label className="flex items-center gap-2">
@@ -52,33 +52,33 @@ export function IntegracionesRail({
         </p>
         <button
           type="button"
-          onClick={() => onCategoriaChange(null)}
+          onClick={() => onCategoryChange(null)}
           className={cn(
             "flex w-full items-center rounded-lg px-[9px] py-1.5 text-[11.5px]",
-            categoriaActiva === null
+            activeCategory === null
               ? "bg-accent font-semibold text-primary"
               : "text-secondary-foreground hover:bg-muted"
           )}
         >
           Todas
         </button>
-        {categorias.map((categoria) => (
+        {categories.map((category) => (
           <button
-            key={categoria.nombre}
+            key={category.name}
             type="button"
-            onClick={() => onCategoriaChange(categoria.nombre)}
+            onClick={() => onCategoryChange(category.name)}
             className={cn(
               "flex w-full items-center gap-1.5 rounded-lg px-[9px] py-1.5 text-[11.5px]",
-              categoriaActiva === categoria.nombre
+              activeCategory === category.name
                 ? "bg-accent font-semibold text-primary"
                 : "text-secondary-foreground hover:bg-muted"
             )}
           >
             <span className="min-w-0 flex-1 truncate text-left">
-              {categoria.nombre}
+              {category.name}
             </span>
             <span className="font-mono text-[9.5px] text-muted-foreground">
-              {categoria.total}
+              {category.total}
             </span>
           </button>
         ))}

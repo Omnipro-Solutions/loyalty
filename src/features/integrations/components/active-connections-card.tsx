@@ -12,16 +12,16 @@ import {
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { buscarIntegracion } from "../lib/catalogo"
-import { CONEXIONES_ACTIVAS, type EstadoConexion } from "../lib/conexiones"
+import { findIntegration } from "../lib/catalog"
+import { ACTIVE_CONNECTIONS, type ConnectionStatus } from "../lib/connections"
 
-const ESTADO_LABEL: Record<EstadoConexion, string> = {
+const STATUS_LABEL: Record<ConnectionStatus, string> = {
   activa: "Activa",
   con_error: "Con error",
   pausada: "Pausada",
 }
 
-const ESTADO_DOT: Record<EstadoConexion, string> = {
+const STATUS_DOT: Record<ConnectionStatus, string> = {
   activa: "bg-success",
   con_error: "bg-destructive",
   pausada: "bg-warning",
@@ -32,33 +32,35 @@ const ESTADO_DOT: Record<EstadoConexion, string> = {
  * esta pestaña. Mismo lenguaje visual que el catálogo (KpiCard, tabla de
  * `InvitacionesTabla`) para no introducir un patrón nuevo.
  */
-export function ConexionesActivasCard() {
-  const activas = CONEXIONES_ACTIVAS.filter((c) => c.estado === "activa")
-  const conError = CONEXIONES_ACTIVAS.filter((c) => c.estado === "con_error")
-  const origenes = CONEXIONES_ACTIVAS.filter((c) => c.direccion === "origen")
-  const destinos = CONEXIONES_ACTIVAS.filter((c) => c.direccion === "destino")
-  const conDetalle = CONEXIONES_ACTIVAS.filter((c) => c.detalle)
+export function ActiveConnectionsCard() {
+  const active = ACTIVE_CONNECTIONS.filter((c) => c.status === "activa")
+  const withError = ACTIVE_CONNECTIONS.filter((c) => c.status === "con_error")
+  const sources = ACTIVE_CONNECTIONS.filter((c) => c.direction === "origen")
+  const destinations = ACTIVE_CONNECTIONS.filter(
+    (c) => c.direction === "destino"
+  )
+  const withDetail = ACTIVE_CONNECTIONS.filter((c) => c.detail)
 
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex items-start gap-4">
         <KpiCard
           label="Conexiones activas"
-          value={formatNumber(activas.length)}
-          detail={`de ${formatNumber(CONEXIONES_ACTIVAS.length)} en total`}
+          value={formatNumber(active.length)}
+          detail={`de ${formatNumber(ACTIVE_CONNECTIONS.length)} en total`}
         />
         <KpiCard
           label="Con errores"
-          value={formatNumber(conError.length)}
-          detail={conError.length > 0 ? "revisar en Cuentas" : "todo en orden"}
+          value={formatNumber(withError.length)}
+          detail={withError.length > 0 ? "revisar en Cuentas" : "todo en orden"}
         />
         <KpiCard
           label="Orígenes conectados"
-          value={formatNumber(origenes.length)}
+          value={formatNumber(sources.length)}
         />
         <KpiCard
           label="Destinos conectados"
-          value={formatNumber(destinos.length)}
+          value={formatNumber(destinations.length)}
         />
       </div>
 
@@ -75,30 +77,30 @@ export function ConexionesActivasCard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {CONEXIONES_ACTIVAS.map((conexion) => {
-              const integracion = buscarIntegracion(
-                conexion.integracionId,
-                conexion.direccion
+            {ACTIVE_CONNECTIONS.map((connection) => {
+              const integration = findIntegration(
+                connection.integrationId,
+                connection.direction
               )
-              if (!integracion) return null
+              if (!integration) return null
               return (
                 <TableRow
-                  key={`${conexion.direccion}-${conexion.integracionId}`}
+                  key={`${connection.direction}-${connection.integrationId}`}
                 >
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-muted bg-background">
                         {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 16px, no vale next/image. */}
-                        <img src={integracion.logo} alt="" className="size-4" />
+                        <img src={integration.logo} alt="" className="size-4" />
                       </div>
                       <span className="font-medium text-foreground">
-                        {integracion.nombre}
+                        {integration.name}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="neutral">
-                      {conexion.direccion === "origen" ? "Origen" : "Destino"}
+                      {connection.direction === "origen" ? "Origen" : "Destino"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -106,23 +108,23 @@ export function ConexionesActivasCard() {
                       <span
                         className={cn(
                           "size-[7px] rounded-full",
-                          ESTADO_DOT[conexion.estado]
+                          STATUS_DOT[connection.status]
                         )}
                       />
                       <span className="text-[11px] font-medium">
-                        {ESTADO_LABEL[conexion.estado]}
+                        {STATUS_LABEL[connection.status]}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-secondary-foreground">
-                    {conexion.ultimaSincronizacion}
+                    {connection.lastSyncedAt}
                   </TableCell>
                   <TableCell className="text-secondary-foreground">
-                    {conexion.frecuencia}
+                    {connection.frequency}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" disabled>
-                      {conexion.estado === "pausada" ? "Reanudar" : "Pausar"}
+                      {connection.status === "pausada" ? "Reanudar" : "Pausar"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -130,23 +132,23 @@ export function ConexionesActivasCard() {
             })}
           </TableBody>
         </Table>
-        {conDetalle.length > 0 && (
+        {withDetail.length > 0 && (
           <div className="flex flex-col gap-1.5 border-t border-muted px-4 py-3">
-            {conDetalle.map((conexion) => (
+            {withDetail.map((connection) => (
               <p
-                key={conexion.integracionId}
+                key={connection.integrationId}
                 className="text-[11px] text-muted-foreground"
               >
                 <span className="font-medium text-foreground">
                   {
-                    buscarIntegracion(
-                      conexion.integracionId,
-                      conexion.direccion
-                    )?.nombre
+                    findIntegration(
+                      connection.integrationId,
+                      connection.direction
+                    )?.name
                   }
                   :
                 </span>{" "}
-                {conexion.detalle}
+                {connection.detail}
               </p>
             ))}
           </div>

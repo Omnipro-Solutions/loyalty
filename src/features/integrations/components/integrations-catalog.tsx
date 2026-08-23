@@ -8,15 +8,15 @@ import { EmptyState } from "@/components/feedback/empty-state"
 import { FilterSearch } from "@/components/filters/search"
 import { Button } from "@/components/ui/button"
 
-import type { IntegracionGrupo } from "../lib/catalogo"
-import { IntegracionCard } from "./integracion-card"
-import { IntegracionDetallePanel } from "./integracion-detalle-panel"
-import { IntegracionesRail } from "./integraciones-rail"
+import type { IntegrationGroup } from "../lib/catalog"
+import { IntegrationCard } from "./integration-card"
+import { IntegrationDetailPanel } from "./integration-detail-panel"
+import { IntegrationsRail } from "./integrations-rail"
 
-type IntegracionesCatalogoProps = {
-  direccion: "origen" | "destino"
-  grupos: IntegracionGrupo[]
-  seleccionInicialId: string
+type IntegrationsCatalogProps = {
+  direction: "origen" | "destino"
+  groups: IntegrationGroup[]
+  initialSelectionId: string
   title: string
   description: string
   labelBuscar: string
@@ -32,10 +32,10 @@ type IntegracionesCatalogoProps = {
  * catálogo de la Fase 1, por eso "Configurar" y las acciones del
  * encabezado quedan deshabilitadas, igual que en el Figma.
  */
-export function IntegracionesCatalogo({
-  direccion,
-  grupos,
-  seleccionInicialId,
+export function IntegrationsCatalog({
+  direction,
+  groups,
+  initialSelectionId,
   title,
   description,
   labelBuscar,
@@ -43,46 +43,43 @@ export function IntegracionesCatalogo({
   labelTodos,
   labelAccionSecundaria,
   labelAccionPrimaria,
-}: IntegracionesCatalogoProps) {
-  const [modo, setModo] = useState<"todas" | "mias">("todas")
-  const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null)
+}: IntegrationsCatalogProps) {
+  const [mode, setMode] = useState<"todas" | "mias">("todas")
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [query, setQuery] = useState("")
-  const [seleccionId, setSeleccionId] = useState(seleccionInicialId)
+  const [selectionId, setSelectionId] = useState(initialSelectionId)
 
-  const todasLasIntegraciones = useMemo(
-    () => grupos.flatMap((grupo) => grupo.integraciones),
-    [grupos]
+  const allIntegrations = useMemo(
+    () => groups.flatMap((group) => group.integrations),
+    [groups]
   )
-  const total = todasLasIntegraciones.length
+  const total = allIntegrations.length
 
-  const categorias = useMemo(
+  const categories = useMemo(
     () =>
-      grupos.map((grupo) => ({
-        nombre: grupo.categoria,
-        total: grupo.integraciones.length,
+      groups.map((group) => ({
+        name: group.category,
+        total: group.integrations.length,
       })),
-    [grupos]
+    [groups]
   )
 
-  const grupoFiltrados = useMemo(() => {
-    const busqueda = query.trim().toLowerCase()
-    return grupos
-      .filter(
-        (grupo) => !categoriaActiva || grupo.categoria === categoriaActiva
-      )
-      .map((grupo) => ({
-        ...grupo,
-        integraciones: grupo.integraciones.filter((integracion) =>
-          integracion.nombre.toLowerCase().includes(busqueda)
+  const filteredGroups = useMemo(() => {
+    const search = query.trim().toLowerCase()
+    return groups
+      .filter((group) => !activeCategory || group.category === activeCategory)
+      .map((group) => ({
+        ...group,
+        integrations: group.integrations.filter((integration) =>
+          integration.name.toLowerCase().includes(search)
         ),
       }))
-      .filter((grupo) => grupo.integraciones.length > 0)
-  }, [grupos, categoriaActiva, query])
+      .filter((group) => group.integrations.length > 0)
+  }, [groups, activeCategory, query])
 
-  const seleccionada =
-    todasLasIntegraciones.find(
-      (integracion) => integracion.id === seleccionId
-    ) ?? null
+  const selected =
+    allIntegrations.find((integration) => integration.id === selectionId) ??
+    null
 
   return (
     <div className="flex w-full flex-1 flex-col gap-4">
@@ -109,16 +106,16 @@ export function IntegracionesCatalogo({
       </div>
 
       <div className="flex w-full items-start gap-5">
-        <IntegracionesRail
+        <IntegrationsRail
           labelTodos={labelTodos}
-          modo={modo}
-          onModoChange={setModo}
-          categorias={categorias}
-          categoriaActiva={categoriaActiva}
-          onCategoriaChange={setCategoriaActiva}
+          mode={mode}
+          onModeChange={setMode}
+          categories={categories}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
         />
 
-        {modo === "mias" ? (
+        {mode === "mias" ? (
           <div className="flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
             <EmptyState
               icon={PlugZap}
@@ -140,36 +137,36 @@ export function IntegracionesCatalogo({
               </p>
             </div>
 
-            {grupoFiltrados.length === 0 ? (
+            {filteredGroups.length === 0 ? (
               <div className="flex flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
                 <p className="py-16 text-sm text-muted-foreground">
                   Ninguna integración coincide con la búsqueda.
                 </p>
               </div>
             ) : (
-              grupoFiltrados.map((grupo) => (
+              filteredGroups.map((group) => (
                 <div
-                  key={grupo.categoria}
+                  key={group.category}
                   className="flex w-full flex-col gap-2.5"
                 >
                   <div className="flex items-center gap-2">
                     <p className="flex-1 text-[13px] font-semibold text-foreground">
-                      {grupo.categoria}
+                      {group.category}
                     </p>
                     <p className="text-[10.5px] whitespace-nowrap text-muted-foreground">
-                      {grupo.integraciones.length}{" "}
-                      {grupo.integraciones.length === 1
+                      {group.integrations.length}{" "}
+                      {group.integrations.length === 1
                         ? "disponible"
                         : "disponibles"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {grupo.integraciones.map((integracion) => (
-                      <IntegracionCard
-                        key={integracion.id}
-                        integracion={integracion}
-                        seleccionada={integracion.id === seleccionId}
-                        onSeleccionar={() => setSeleccionId(integracion.id)}
+                    {group.integrations.map((integration) => (
+                      <IntegrationCard
+                        key={integration.id}
+                        integration={integration}
+                        selected={integration.id === selectionId}
+                        onSelect={() => setSelectionId(integration.id)}
                       />
                     ))}
                   </div>
@@ -179,16 +176,16 @@ export function IntegracionesCatalogo({
           </div>
         )}
 
-        {modo === "todas" && seleccionada && (
-          <IntegracionDetallePanel
-            integracion={seleccionada}
-            categoria={
-              grupos.find((grupo) =>
-                grupo.integraciones.some((i) => i.id === seleccionada.id)
-              )?.categoria ?? ""
+        {mode === "todas" && selected && (
+          <IntegrationDetailPanel
+            integration={selected}
+            category={
+              groups.find((group) =>
+                group.integrations.some((i) => i.id === selected.id)
+              )?.category ?? ""
             }
-            direccion={direccion}
-            onCerrar={() => setSeleccionId("")}
+            direction={direction}
+            onClose={() => setSelectionId("")}
           />
         )}
       </div>

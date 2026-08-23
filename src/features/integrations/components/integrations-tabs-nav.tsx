@@ -1,6 +1,6 @@
 import { PillTabsNav } from "@/components/layout/pill-tabs-nav"
 
-export const INTEGRACIONES_TABS = [
+export const INTEGRATIONS_TABS = [
   { value: "origenes", label: "Orígenes" },
   { value: "destinos", label: "Destinos" },
   { value: "conexiones", label: "Conexiones activas" },
@@ -8,16 +8,16 @@ export const INTEGRACIONES_TABS = [
   { value: "sistema", label: "Vista del sistema" },
 ] as const
 
-export type IntegracionesTab = (typeof INTEGRACIONES_TABS)[number]["value"]
+export type IntegrationsTab = (typeof INTEGRATIONS_TABS)[number]["value"]
 
-type IntegracionesTabsNavProps = { active: IntegracionesTab }
+type IntegrationsTabsNavProps = { active: IntegrationsTab }
 
 /** Same `PillTabsNav` as "09 · Equipo y permisos" — consistency across Ajustes sub-views instead of the Figma's own underline (1262:4214). */
-export function IntegracionesTabsNav({ active }: IntegracionesTabsNavProps) {
+export function IntegrationsTabsNav({ active }: IntegrationsTabsNavProps) {
   return (
     <PillTabsNav
       active={active}
-      tabs={INTEGRACIONES_TABS.map((tab) => ({
+      tabs={INTEGRATIONS_TABS.map((tab) => ({
         value: tab.value,
         label: tab.label,
         href:

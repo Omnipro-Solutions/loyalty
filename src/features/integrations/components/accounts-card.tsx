@@ -10,16 +10,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-import { CUENTAS, type EstadoCuenta } from "../lib/cuentas"
+import { ACCOUNTS, type AccountStatus } from "../lib/accounts"
 
-const PROVEEDOR_ICON: Record<string, LucideIcon> = {
+const PROVIDER_ICON: Record<string, LucideIcon> = {
   "Microsoft Entra ID": ShieldCheck,
   "Google Cloud": Cloud,
   Twilio: MessageSquare,
   "Meta Business": Megaphone,
 }
 
-const ESTADO_LABEL: Record<EstadoCuenta, string> = {
+const STATUS_LABEL: Record<AccountStatus, string> = {
   activa: "Activa",
   requiere_atencion: "Requiere atención",
 }
@@ -28,14 +28,14 @@ const ESTADO_LABEL: Record<EstadoCuenta, string> = {
  * Sin equivalente en Figma — agrupa las credenciales que las notas del
  * catálogo referencian ("conectada en Cuentas", "vinculada en Cuentas").
  */
-export function CuentasCard() {
+export function AccountsCard() {
   return (
     <div className="flex w-full flex-col gap-3">
-      {CUENTAS.map((cuenta) => {
-        const Icon = PROVEEDOR_ICON[cuenta.proveedor] ?? KeyRound
+      {ACCOUNTS.map((account) => {
+        const Icon = PROVIDER_ICON[account.provider] ?? KeyRound
         return (
           <div
-            key={cuenta.id}
+            key={account.id}
             className="flex items-center gap-3.5 rounded-2xl bg-background p-4 shadow-form-section"
           >
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
@@ -44,28 +44,28 @@ export function CuentasCard() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-[13px] font-semibold text-foreground">
-                  {cuenta.proveedor}
+                  {account.provider}
                 </p>
                 <Badge
-                  variant={cuenta.estado === "activa" ? "success" : "warning"}
+                  variant={account.status === "activa" ? "success" : "warning"}
                 >
-                  {ESTADO_LABEL[cuenta.estado]}
+                  {STATUS_LABEL[account.status]}
                 </Badge>
               </div>
               <p className="truncate text-[11.5px] text-muted-foreground">
-                {cuenta.identificador} · conectada el {cuenta.conectadaEl}
+                {account.identifier} · conectada el {account.connectedOn}
               </p>
               <p className="truncate text-[11px] text-muted-foreground">
-                Usada por {cuenta.usadaPor.join(", ")}
+                Usada por {account.usedBy.join(", ")}
               </p>
-              {cuenta.nota && (
+              {account.note && (
                 <p className="mt-1.5 rounded-lg bg-warning-bg px-2.5 py-1.5 text-[10.5px] text-foreground">
-                  {cuenta.nota}
+                  {account.note}
                 </p>
               )}
             </div>
             <Button variant="outline" size="sm" disabled className="shrink-0">
-              {cuenta.estado === "requiere_atencion"
+              {account.status === "requiere_atencion"
                 ? "Renovar acceso"
                 : "Gestionar"}
             </Button>

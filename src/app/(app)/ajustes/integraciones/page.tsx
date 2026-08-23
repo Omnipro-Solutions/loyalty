@@ -1,16 +1,16 @@
 import { AppPage } from "@/components/layout/app-page"
-import { ConexionesActivasCard } from "@/features/integraciones/components/conexiones-activas-card"
-import { CuentasCard } from "@/features/integraciones/components/cuentas-card"
-import { IntegracionesCatalogo } from "@/features/integraciones/components/integraciones-catalogo"
+import { AccountsCard } from "@/features/integrations/components/accounts-card"
+import { ActiveConnectionsCard } from "@/features/integrations/components/active-connections-card"
+import { IntegrationsCatalog } from "@/features/integrations/components/integrations-catalog"
 import {
-  IntegracionesTabsNav,
-  type IntegracionesTab,
-} from "@/features/integraciones/components/integraciones-tabs-nav"
-import { VistaSistemaCard } from "@/features/integraciones/components/vista-sistema-card"
-import { DESTINOS, ORIGENES } from "@/features/integraciones/lib/catalogo"
+  IntegrationsTabsNav,
+  type IntegrationsTab,
+} from "@/features/integrations/components/integrations-tabs-nav"
+import { SystemViewCard } from "@/features/integrations/components/system-view-card"
+import { DESTINATIONS, SOURCES } from "@/features/integrations/lib/catalog"
 
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }
 
 /**
@@ -18,20 +18,20 @@ function primerValor(valor: string | string[] | undefined) {
  * junto a Equipo bajo el ítem colapsable "Ajustes" del sidebar (ver
  * `config/navigation.ts`).
  */
-export default async function IntegracionesPage({
+export default async function IntegrationsPage({
   searchParams,
 }: PageProps<"/ajustes/integraciones">) {
   const params = await searchParams
-  const tab = (primerValor(params.tab) ?? "origenes") as IntegracionesTab
+  const tab = (firstValue(params.tab) ?? "origenes") as IntegrationsTab
 
   return (
     <AppPage breadcrumb="Configuración  ›  Integraciones" title="Integraciones">
-      <IntegracionesTabsNav active={tab} />
+      <IntegrationsTabsNav active={tab} />
       {tab === "origenes" && (
-        <IntegracionesCatalogo
-          direccion="origen"
-          grupos={ORIGENES}
-          seleccionInicialId="cjo"
+        <IntegrationsCatalog
+          direction="origen"
+          groups={SOURCES}
+          initialSelectionId="cjo"
           title="Integraciones"
           description="Conecta los sistemas que alimentan a Etteer y define a dónde enviar audiencias, eventos y resultados."
           labelBuscar="Buscar integración…"
@@ -42,10 +42,10 @@ export default async function IntegracionesPage({
         />
       )}
       {tab === "destinos" && (
-        <IntegracionesCatalogo
-          direccion="destino"
-          grupos={DESTINOS}
-          seleccionInicialId="power-bi"
+        <IntegrationsCatalog
+          direction="destino"
+          groups={DESTINATIONS}
+          initialSelectionId="power-bi"
           title="Integraciones"
           description="Elige a dónde enviar audiencias, eventos de lealtad y resultados de campaña desde Etteer."
           labelBuscar="Buscar destino…"
@@ -55,9 +55,9 @@ export default async function IntegracionesPage({
           labelAccionPrimaria="Nuevo destino"
         />
       )}
-      {tab === "conexiones" && <ConexionesActivasCard />}
-      {tab === "cuentas" && <CuentasCard />}
-      {tab === "sistema" && <VistaSistemaCard />}
+      {tab === "conexiones" && <ActiveConnectionsCard />}
+      {tab === "cuentas" && <AccountsCard />}
+      {tab === "sistema" && <SystemViewCard />}
     </AppPage>
   )
 }

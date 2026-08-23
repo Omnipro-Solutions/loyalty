@@ -11,7 +11,7 @@ export type EquipoTab = (typeof EQUIPO_TABS)[number]["value"]
 
 type EquipoTabsNavProps = { active: EquipoTab }
 
-/** Figma "Tabs" (720:3001 / 718:2883) via `PillTabsNav`, shared with `features/integraciones`. */
+/** Figma "Tabs" (720:3001 / 718:2883) via `PillTabsNav`, shared with `features/integrations`. */
 export function EquipoTabsNav({ active }: EquipoTabsNavProps) {
   return (
     <PillTabsNav

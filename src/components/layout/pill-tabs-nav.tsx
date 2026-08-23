@@ -11,7 +11,7 @@ type PillTabsNavProps = { tabs: PillTab[]; active: string }
  * bg-background + shadow-form-section, active = bg-primary. These are PAGE
  * tabs (each brings its own query/filters/pagination), so they're real
  * links instead of Base UI's `Tabs.Root`. Shared between `features/equipo`
- * and `features/integraciones` — same visual pattern across all of
+ * and `features/integrations` — same visual pattern across all of
  * "Configuración", not one tab per section.
  */
 export function PillTabsNav({ tabs, active }: PillTabsNavProps) {
