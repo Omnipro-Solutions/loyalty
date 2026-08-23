@@ -20,7 +20,7 @@ export type BuilderNodeData = {
 /**
  * Puertos de salida dinámicos: `ramificacion_valor`/`split_ab` leen las
  * ramas que el usuario definió en la pestaña "Ramas" del inspector
- * (`config.ramas: {id, etiqueta}[]`) — si todavía no configuró ninguna,
+ * (`config.branches: {id, label}[]`) — si todavía no configuró ninguna,
  * caen a un placeholder de 2 salidas para que el nodo siga siendo
  * conectable mientras tanto. `condicion_multiple` NO es dinámico: su
  * salida es intrínsecamente binaria (cumple/no cumple el árbol de
@@ -29,17 +29,17 @@ export type BuilderNodeData = {
 function branchesFromConfig(
   config: Record<string, unknown>
 ): { id: string; label: string }[] | null {
-  const branches = config.ramas
+  const branches = config.branches
   if (!Array.isArray(branches) || branches.length === 0) return null
   return branches
     .filter(
-      (r): r is { id: string; etiqueta: string } =>
+      (r): r is { id: string; label: string } =>
         !!r &&
         typeof r === "object" &&
         typeof (r as Record<string, unknown>).id === "string" &&
-        typeof (r as Record<string, unknown>).etiqueta === "string"
+        typeof (r as Record<string, unknown>).label === "string"
     )
-    .map((r) => ({ id: r.id, label: r.etiqueta }))
+    .map((r) => ({ id: r.id, label: r.label }))
 }
 
 /**

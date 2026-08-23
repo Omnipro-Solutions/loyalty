@@ -17,18 +17,18 @@ import type { TierName } from "@/types/domain"
 import type { TierSummary } from "../canvas/queries"
 
 type AccumulatePointsConfig = {
-  multiplicador_override?: number
-  tope_por_transaccion?: number
-  tope_acumulado?: number
-  unidad_monto: number
-  monto_ejemplo: number
-  tier_ejemplo: TierName
+  multiplierOverride?: number
+  capPerTransaction?: number
+  accumulatedCap?: number
+  amountUnit: number
+  exampleAmount: number
+  exampleTierName: TierName
 }
 
 const DEFAULT_CONFIG: AccumulatePointsConfig = {
-  unidad_monto: 1000,
-  monto_ejemplo: 50000,
-  tier_ejemplo: "oro",
+  amountUnit: 1000,
+  exampleAmount: 50000,
+  exampleTierName: "oro",
 }
 
 const TIER_LABEL: Record<TierName, string> = {
@@ -41,7 +41,7 @@ const TIER_LABEL: Record<TierName, string> = {
 /**
  * Caso difícil #1 del plan: multiplicador por nivel + topes + vista previa
  * en vivo. El multiplicador real por nivel viene de `tiers` (sembrado por
- * organización); `multiplicador_override` permite que ESTE bloque use uno
+ * organización); `multiplierOverride` permite que ESTE bloque use uno
  * distinto al de la tabla si el producto lo pide (ej. una campaña con
  * multiplicador especial), pero por defecto usa el real.
  */
@@ -65,18 +65,18 @@ export function AccumulatePointsForm({
     onChange(next)
   }
 
-  const exampleTier = tiers.find((t) => t.nombre === values.tier_ejemplo)
+  const exampleTier = tiers.find((t) => t.nombre === values.exampleTierName)
   const multiplier =
-    values.multiplicador_override ?? exampleTier?.multiplicador ?? 1
+    values.multiplierOverride ?? exampleTier?.multiplicador ?? 1
 
   const preview = useMemo(() => {
-    const basePoints = Math.floor(values.monto_ejemplo / values.unidad_monto)
+    const basePoints = Math.floor(values.exampleAmount / values.amountUnit)
     const pointsWithMultiplier = Math.round(basePoints * multiplier)
     const capApplied =
-      typeof values.tope_por_transaccion === "number" &&
-      pointsWithMultiplier > values.tope_por_transaccion
+      typeof values.capPerTransaction === "number" &&
+      pointsWithMultiplier > values.capPerTransaction
     const finalPoints = capApplied
-      ? values.tope_por_transaccion!
+      ? values.capPerTransaction!
       : pointsWithMultiplier
 
     return { basePoints, pointsWithMultiplier, capApplied, finalPoints }
@@ -90,9 +90,9 @@ export function AccumulatePointsForm({
             id="ap-unidad"
             type="number"
             min={1}
-            value={values.unidad_monto}
+            value={values.amountUnit}
             onChange={(e) =>
-              update({ unidad_monto: Number(e.target.value) || 1 })
+              update({ amountUnit: Number(e.target.value) || 1 })
             }
           />
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
@@ -112,10 +112,10 @@ export function AccumulatePointsForm({
           step="0.1"
           min={0}
           placeholder={String(exampleTier?.multiplicador ?? 1)}
-          value={values.multiplicador_override ?? ""}
+          value={values.multiplierOverride ?? ""}
           onChange={(e) =>
             update({
-              multiplicador_override: e.target.value
+              multiplierOverride: e.target.value
                 ? Number(e.target.value)
                 : undefined,
             })
@@ -129,10 +129,10 @@ export function AccumulatePointsForm({
           type="number"
           min={0}
           placeholder="Sin tope"
-          value={values.tope_por_transaccion ?? ""}
+          value={values.capPerTransaction ?? ""}
           onChange={(e) =>
             update({
-              tope_por_transaccion: e.target.value
+              capPerTransaction: e.target.value
                 ? Number(e.target.value)
                 : undefined,
             })
@@ -146,10 +146,10 @@ export function AccumulatePointsForm({
           type="number"
           min={0}
           placeholder="Sin tope"
-          value={values.tope_acumulado ?? ""}
+          value={values.accumulatedCap ?? ""}
           onChange={(e) =>
             update({
-              tope_acumulado: e.target.value
+              accumulatedCap: e.target.value
                 ? Number(e.target.value)
                 : undefined,
             })
@@ -166,18 +166,18 @@ export function AccumulatePointsForm({
             <Input
               type="number"
               min={0}
-              value={values.monto_ejemplo}
+              value={values.exampleAmount}
               onChange={(e) =>
-                update({ monto_ejemplo: Number(e.target.value) || 0 })
+                update({ exampleAmount: Number(e.target.value) || 0 })
               }
             />
           </div>
           <Select
-            value={values.tier_ejemplo}
-            onValueChange={(v) => update({ tier_ejemplo: v as TierName })}
+            value={values.exampleTierName}
+            onValueChange={(v) => update({ exampleTierName: v as TierName })}
           >
             <SelectTrigger className="w-[120px]">
-              <SelectValue />
+              <SelectValue>{(v: TierName) => TIER_LABEL[v]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(["bronce", "plata", "oro", "diamante"] as const).map((t) => (
@@ -189,8 +189,8 @@ export function AccumulatePointsForm({
           </Select>
         </div>
         <p className="mt-2.5 text-[13px] text-foreground">
-          Compra de {formatCOP(values.monto_ejemplo)} × {multiplier}x nivel{" "}
-          {TIER_LABEL[values.tier_ejemplo]} ={" "}
+          Compra de {formatCOP(values.exampleAmount)} × {multiplier}x nivel{" "}
+          {TIER_LABEL[values.exampleTierName]} ={" "}
           <span className="font-semibold">{preview.finalPoints} puntos</span>
         </p>
         <p className="text-[11px] text-muted-foreground">

@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-type Branch = { id: string; etiqueta: string; peso?: number }
+type Branch = { id: string; label: string; weight?: number }
 
 /**
  * Pestaña "Ramas" para `ramificacion_valor`/`split_ab` — agregar/quitar/
@@ -32,17 +32,17 @@ export function BranchesTab({
   config: Record<string, unknown>
   onChange: (config: Record<string, unknown>) => void
 }) {
-  const initialBranches = Array.isArray(config.ramas)
-    ? (config.ramas as Branch[])
+  const initialBranches = Array.isArray(config.branches)
+    ? (config.branches as Branch[])
     : [
-        { id: "rama_1", etiqueta: "Rama 1", peso: 50 },
-        { id: "por_defecto", etiqueta: "Por defecto", peso: 50 },
+        { id: "rama_1", label: "Rama 1", weight: 50 },
+        { id: "por_defecto", label: "Por defecto", weight: 50 },
       ]
   const [branches, setBranches] = useState<Branch[]>(initialBranches)
 
   function update(next: Branch[]) {
     setBranches(next)
-    onChange({ ...config, ramas: next })
+    onChange({ ...config, branches: next })
   }
 
   return (
@@ -63,8 +63,8 @@ export function BranchesTab({
               ...branches,
               {
                 id: crypto.randomUUID(),
-                etiqueta: `Rama ${String(branches.length + 1)}`,
-                peso: 0,
+                label: `Rama ${String(branches.length + 1)}`,
+                weight: 0,
               },
             ])
           }
@@ -83,10 +83,10 @@ export function BranchesTab({
           >
             <div className="flex items-center gap-2">
               <Input
-                value={branch.etiqueta}
+                value={branch.label}
                 onChange={(e) => {
                   const next = [...branches]
-                  next[i] = { ...branch, etiqueta: e.target.value }
+                  next[i] = { ...branch, label: e.target.value }
                   update(next)
                 }}
                 className="h-8 flex-1 bg-background text-[13px]"
@@ -96,12 +96,14 @@ export function BranchesTab({
                   type="number"
                   min={0}
                   max={100}
-                  value={branch.peso ?? ""}
+                  value={branch.weight ?? ""}
                   onChange={(e) => {
                     const next = [...branches]
                     next[i] = {
                       ...branch,
-                      peso: e.target.value ? Number(e.target.value) : undefined,
+                      weight: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     }
                     update(next)
                   }}

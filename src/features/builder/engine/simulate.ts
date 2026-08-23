@@ -55,11 +55,11 @@ function distribute(
   }
 
   if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
-    const branches = Array.isArray(node.config.ramas)
-      ? (node.config.ramas as { id: string; peso?: number }[])
+    const branches = Array.isArray(node.config.branches)
+      ? (node.config.branches as { id: string; weight?: number }[])
       : [{ id: "rama_1" }, { id: "por_defecto" }]
     const weights = branches.map((r) =>
-      typeof r.peso === "number" && r.peso > 0 ? r.peso : 1
+      typeof r.weight === "number" && r.weight > 0 ? r.weight : 1
     )
     const totalWeight = weights.reduce((a, b) => a + b, 0)
     let remaining = entrada

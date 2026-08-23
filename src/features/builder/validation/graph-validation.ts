@@ -23,7 +23,7 @@ const LOGIC_TYPES = new Set<string>(BUILDER_LOGIC_NODE_TYPES)
 /**
  * Puertos de salida esperados por tipo — coincide con `OUTPUT_HANDLES` de
  * `canvas/builder-node.tsx` para los fijos; los de rama dinámica
- * (`ramificacion_valor`/`split_ab`) se resuelven desde `config.ramas` de
+ * (`ramificacion_valor`/`split_ab`) se resuelven desde `config.branches` de
  * cada nodo, así que esta función recibe el grafo ya con esa info.
  */
 function expectedPorts(node: GraphNode, config: Record<string, unknown>) {
@@ -31,7 +31,7 @@ function expectedPorts(node: GraphNode, config: Record<string, unknown>) {
   if (node.tipo === "acumular_puntos") return ["out", "tope_alcanzado"]
   if (node.tipo === "fin_workflow") return []
   if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
-    const branches = config.ramas
+    const branches = config.branches
     if (Array.isArray(branches) && branches.length > 0) {
       return branches
         .map((r) =>

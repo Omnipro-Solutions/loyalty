@@ -60,9 +60,9 @@ describe("simulateWorkflow", () => {
         id: "ram",
         tipo: "ramificacion_valor",
         config: {
-          ramas: [
-            { id: "oro", peso: 3 },
-            { id: "plata", peso: 1 },
+          branches: [
+            { id: "oro", weight: 3 },
+            { id: "plata", weight: 1 },
           ],
         },
       },

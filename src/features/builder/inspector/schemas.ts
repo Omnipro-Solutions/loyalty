@@ -45,21 +45,23 @@ function specsSchema(specs: FieldSpec[]) {
 
 export const branchSchema = z.object({
   id: z.string().min(1),
-  etiqueta: z.string().min(1),
-  peso: z.number().min(0).optional(),
+  label: z.string().min(1),
+  weight: z.number().min(0).optional(),
 })
 
 export const branchesConfigSchema = z.object({
-  ramas: z.array(branchSchema).min(1, "Agrega al menos una rama"),
+  branches: z.array(branchSchema).min(1, "Agrega al menos una rama"),
 })
 
 export const accumulatePointsConfigSchema = z.object({
-  multiplicador_override: z.number().min(0).optional(),
-  tope_por_transaccion: z.number().min(0).optional(),
-  tope_acumulado: z.number().min(0).optional(),
-  unidad_monto: z.number().min(1).default(1000),
-  monto_ejemplo: z.number().min(0).default(50000),
-  tier_ejemplo: z.enum(["bronce", "plata", "oro", "diamante"]).default("oro"),
+  multiplierOverride: z.number().min(0).optional(),
+  capPerTransaction: z.number().min(0).optional(),
+  accumulatedCap: z.number().min(0).optional(),
+  amountUnit: z.number().min(1).default(1000),
+  exampleAmount: z.number().min(0).default(50000),
+  exampleTierName: z
+    .enum(["bronce", "plata", "oro", "diamante"])
+    .default("oro"),
 })
 
 // Misma forma que `segments.condiciones` (ver comentario de esa columna en
