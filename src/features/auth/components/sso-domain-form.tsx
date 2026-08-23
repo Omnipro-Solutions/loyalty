@@ -24,7 +24,7 @@ export function SsoDomainForm() {
     onSuccess: ({ data }) => setNotFound(!data?.found),
   })
 
-  const detectado = lookup.result.data?.found ? lookup.result.data : undefined
+  const detected = lookup.result.data?.found ? lookup.result.data : undefined
 
   return (
     <AuthCard>
@@ -55,7 +55,7 @@ export function SsoDomainForm() {
             setEmail(e.target.value)
             setNotFound(false)
           }}
-          className={detectado ? "border-2 border-primary" : undefined}
+          className={detected ? "border-2 border-primary" : undefined}
         />
       </Field>
 
@@ -67,7 +67,7 @@ export function SsoDomainForm() {
         />
       )}
 
-      {detectado && (
+      {detected && (
         <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-neutral-50 p-3.5">
           <span className="flex shrink-0 items-center justify-center rounded-[10px] border border-border bg-background p-2">
             <MicrosoftLogo className="size-5" />
@@ -77,7 +77,7 @@ export function SsoDomainForm() {
               Microsoft Entra ID
             </p>
             <p className="text-xs text-muted-foreground">
-              {detectado.domain} · Omni Retail Group
+              {detected.domain} · Omni Retail Group
             </p>
           </div>
           <Badge variant="success" className="shrink-0 rounded-full">
@@ -86,7 +86,7 @@ export function SsoDomainForm() {
         </div>
       )}
 
-      {detectado ? (
+      {detected ? (
         <Button
           className="flex w-full items-center gap-2"
           onClick={() =>
@@ -107,7 +107,7 @@ export function SsoDomainForm() {
       )}
 
       <div className="flex flex-col items-center gap-2 text-center text-[13px]">
-        {detectado && (
+        {detected && (
           <button
             type="button"
             onClick={() => {

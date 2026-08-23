@@ -25,8 +25,8 @@ type LoginValues = z.input<typeof loginSchema>
 
 export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
   const router = useRouter()
-  const [modo, setModo] = useState<"login" | "recuperar">("login")
-  const [errorGeneral, setErrorGeneral] = useState<string>()
+  const [mode, setMode] = useState<"login" | "recuperar">("login")
+  const [generalError, setGeneralError] = useState<string>()
 
   const {
     register,
@@ -36,27 +36,27 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
     formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "", recordarDispositivo: false },
+    defaultValues: { email: "", password: "", rememberDevice: false },
   })
-  const recordarDispositivo = useWatch({ control, name: "recordarDispositivo" })
+  const rememberDevice = useWatch({ control, name: "rememberDevice" })
 
   const login = useAction(loginAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo iniciar sesión.")
+        setGeneralError(data?.message ?? "No se pudo iniciar sesión.")
         return
       }
       router.push(data.needsVerification ? "/verificacion" : "/resumen")
     },
     onError: () =>
-      setErrorGeneral("No se pudo iniciar sesión. Intenta de nuevo."),
+      setGeneralError("No se pudo iniciar sesión. Intenta de nuevo."),
   })
 
   const reset = useAction(requestPasswordResetAction, {
-    onSuccess: () => setModo("login"),
+    onSuccess: () => setMode("login"),
   })
 
-  if (modo === "recuperar") {
+  if (mode === "recuperar") {
     return (
       <AuthCard>
         <div className="flex flex-col gap-1.5">
@@ -93,7 +93,7 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
         </Button>
         <button
           type="button"
-          onClick={() => setModo("login")}
+          onClick={() => setMode("login")}
           className="text-center text-xs font-medium text-primary"
         >
           Volver a iniciar sesión
@@ -113,18 +113,18 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
         </p>
       </div>
 
-      {errorGeneral && (
+      {generalError && (
         <Message
           variant="error"
           title="No se pudo iniciar sesión"
-          description={errorGeneral}
+          description={generalError}
         />
       )}
 
       <form
         className="flex flex-col gap-2.5"
         onSubmit={handleSubmit((values) => {
-          setErrorGeneral(undefined)
+          setGeneralError(undefined)
           login.execute(values)
         })}
       >
@@ -155,7 +155,7 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
             <div className="flex-1" />
             <button
               type="button"
-              onClick={() => setModo("recuperar")}
+              onClick={() => setMode("recuperar")}
               className="text-xs leading-[18px] font-medium text-primary"
             >
               ¿Olvidaste tu contraseña?
@@ -179,9 +179,9 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
 
         <label className="flex items-center gap-2.5">
           <Checkbox
-            checked={recordarDispositivo ?? false}
+            checked={rememberDevice ?? false}
             onCheckedChange={(checked) =>
-              setValue("recordarDispositivo", checked === true)
+              setValue("rememberDevice", checked === true)
             }
           />
           <span className="text-[13px] leading-[18px] text-secondary-foreground">

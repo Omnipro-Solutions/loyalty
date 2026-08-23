@@ -9,18 +9,18 @@ import { MicrosoftLogo } from "@/components/icons/microsoft-logo"
 
 import { startAzureOAuthRedirect } from "../lib/oauth"
 
-const PASOS = [
+const STEPS = [
   {
-    titulo: "Correo corporativo verificado",
-    detalle: (email: string) => email,
+    title: "Correo corporativo verificado",
+    detail: (email: string) => email,
   },
   {
-    titulo: "Redirección al proveedor de identidad",
-    detalle: () => "login.microsoftonline.com",
+    title: "Redirección al proveedor de identidad",
+    detail: () => "login.microsoftonline.com",
   },
   {
-    titulo: "Validación de sesión, rol y permisos",
-    detalle: () => "Omni Retail Group",
+    title: "Validación de sesión, rol y permisos",
+    detail: () => "Omni Retail Group",
   },
 ] as const
 
@@ -30,10 +30,10 @@ export function SsoRedirectCard({ email }: { email: string }) {
   const router = useRouter()
   // Arranca en el paso 2: el correo ya se verificó antes de llegar a esta
   // pantalla (01.3), así que el paso 1 nace "hecho" (Figma 1145:5111).
-  const [pasoActivo, setPasoActivo] = useState(2)
+  const [activeStep, setActiveStep] = useState(2)
 
   useEffect(() => {
-    const stepTimer = setTimeout(() => setPasoActivo(3), REDIRECT_DELAY_MS / 2)
+    const stepTimer = setTimeout(() => setActiveStep(3), REDIRECT_DELAY_MS / 2)
     const redirectTimer = setTimeout(() => {
       void startAzureOAuthRedirect()
     }, REDIRECT_DELAY_MS)
@@ -62,26 +62,26 @@ export function SsoRedirectCard({ email }: { email: string }) {
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
           className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-out"
-          style={{ width: pasoActivo >= 3 ? "90%" : "55%" }}
+          style={{ width: activeStep >= 3 ? "90%" : "55%" }}
         />
       </div>
 
       <div className="flex w-full flex-col gap-2.5 rounded-xl border border-border bg-neutral-50 p-3">
-        {PASOS.map((paso, i) => {
+        {STEPS.map((step, i) => {
           const index = i + 1
-          const estado =
-            index < pasoActivo
+          const status =
+            index < activeStep
               ? "hecho"
-              : index === pasoActivo
+              : index === activeStep
                 ? "activo"
                 : "pendiente"
           return (
-            <div key={paso.titulo} className="flex items-center gap-2.5">
+            <div key={step.title} className="flex items-center gap-2.5">
               <span
                 className={
-                  estado === "hecho"
+                  status === "hecho"
                     ? "size-[18px] shrink-0 rounded-full bg-success"
-                    : estado === "activo"
+                    : status === "activo"
                       ? "size-[18px] shrink-0 rounded-full bg-primary"
                       : "size-[18px] shrink-0 rounded-full border-2 border-border"
                 }
@@ -89,15 +89,15 @@ export function SsoRedirectCard({ email }: { email: string }) {
               <div className="flex min-w-0 flex-1 flex-col">
                 <p
                   className={
-                    estado === "pendiente"
+                    status === "pendiente"
                       ? "text-[13px] text-muted-foreground"
                       : "text-[13px] font-medium text-foreground"
                   }
                 >
-                  {paso.titulo}
+                  {step.title}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {paso.detalle(email)}
+                  {step.detail(email)}
                 </p>
               </div>
             </div>

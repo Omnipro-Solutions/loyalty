@@ -6,18 +6,18 @@ import { z } from "zod"
 export const loginSchema = z.object({
   email: z.string().email("Correo inválido"),
   password: z.string().min(12, "Mínimo 12 caracteres"),
-  recordarDispositivo: z.boolean().default(false),
+  rememberDevice: z.boolean().default(false),
 })
 
 export const verifyTotpSchema = z.object({
   factorId: z.string(),
   code: z.string().length(6, "El código debe tener 6 dígitos"),
-  noVolverAPedirCodigo: z.boolean().default(false),
+  doNotAskAgain: z.boolean().default(false),
 })
 
 export const verifyBackupCodeSchema = z.object({
   code: z.string().min(6),
-  noVolverAPedirCodigo: z.boolean().default(false),
+  doNotAskAgain: z.boolean().default(false),
 })
 
 export const ssoLookupSchema = z.object({

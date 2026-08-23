@@ -29,25 +29,25 @@ export function hashToken(token: string) {
 export async function persistTrustedDeviceIfRequested({
   cookieStore,
   profileId,
-  noVolverAPedirCodigo,
+  doNotAskAgain,
 }: {
   cookieStore: Awaited<ReturnType<typeof cookies>>
   profileId: string
-  noVolverAPedirCodigo: boolean
+  doNotAskAgain: boolean
 }) {
   const rememberIntent = cookieStore.get(REMEMBER_INTENT_COOKIE)?.value === "1"
   cookieStore.delete(REMEMBER_INTENT_COOKIE)
 
-  if (!rememberIntent && !noVolverAPedirCodigo) return
+  if (!rememberIntent && !doNotAskAgain) return
 
   const supabase = await createClient()
   const token = generateDeviceToken()
-  const expiraEn = new Date(Date.now() + TRUSTED_DEVICE_MAX_AGE_SECONDS * 1000)
+  const expiresAt = new Date(Date.now() + TRUSTED_DEVICE_MAX_AGE_SECONDS * 1000)
 
   await supabase.from("trusted_devices").insert({
     profile_id: profileId,
     token_hash: hashToken(token),
-    expira_en: expiraEn.toISOString(),
+    expira_en: expiresAt.toISOString(),
   })
 
   cookieStore.set(TRUSTED_DEVICE_COOKIE, token, {

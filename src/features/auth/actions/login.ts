@@ -32,7 +32,7 @@ export const loginAction = actionClient
     // el dispositivo (solo tras completar 2FA).
     cookieStore.set(
       REMEMBER_INTENT_COOKIE,
-      parsedInput.recordarDispositivo ? "1" : "0",
+      parsedInput.rememberDevice ? "1" : "0",
       {
         httpOnly: true,
         secure: true,

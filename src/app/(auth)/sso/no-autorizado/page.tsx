@@ -9,7 +9,7 @@ export default async function SsoNoAutorizadoPage({
   return (
     <SsoDeniedCard
       email={emailStr ?? "tu cuenta corporativa"}
-      motivo="Sin rol asignado en el tenant"
+      reason="Sin rol asignado en el tenant"
     />
   )
 }

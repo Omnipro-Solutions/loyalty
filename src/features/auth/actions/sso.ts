@@ -33,7 +33,7 @@ export const lookupSsoProviderAction = actionClient
 
     return {
       found: true as const,
-      nombre: org.nombre,
+      name: org.nombre,
       tenantIdp: org.tenant_idp as TenantIdp,
       domain,
     }

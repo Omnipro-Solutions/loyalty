@@ -109,7 +109,7 @@ export const verifyTotpAction = actionClient
     await persistTrustedDeviceIfRequested({
       cookieStore,
       profileId: user.id,
-      noVolverAPedirCodigo: parsedInput.noVolverAPedirCodigo,
+      doNotAskAgain: parsedInput.doNotAskAgain,
     })
 
     return { ok: true as const, backupCodes }
@@ -167,7 +167,7 @@ export const verifyBackupCodeAction = actionClient
     // "no volver a pedir código", el dispositivo igual queda confiado por
     // 1 día (suficiente para la sesión actual) en vez de los 30 días del
     // opt-in explícito.
-    const maxAge = parsedInput.noVolverAPedirCodigo
+    const maxAge = parsedInput.doNotAskAgain
       ? TRUSTED_DEVICE_MAX_AGE_SECONDS
       : BACKUP_CODE_SESSION_TRUST_SECONDS
     const token = generateDeviceToken()

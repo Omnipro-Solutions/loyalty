@@ -23,12 +23,12 @@ type VerificationCardProps =
 export function VerificationCard(props: VerificationCardProps) {
   const router = useRouter()
   const [code, setCode] = useState("")
-  const [noVolverAPedirCodigo, setNoVolverAPedirCodigo] = useState(false)
-  const [metodoAlterno, setMetodoAlterno] = useState(false)
+  const [doNotAskAgain, setDoNotAskAgain] = useState(false)
+  const [alternateMethod, setAlternateMethod] = useState(false)
   const [backupCode, setBackupCode] = useState("")
   const [secondsLeft, setSecondsLeft] = useState(CODE_WINDOW_SECONDS)
   const [backupCodesToReveal, setBackupCodesToReveal] = useState<string[]>()
-  const [errorGeneral, setErrorGeneral] = useState<string>()
+  const [generalError, setGeneralError] = useState<string>()
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -40,7 +40,7 @@ export function VerificationCard(props: VerificationCardProps) {
   const verify = useAction(verifyTotpAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "Código incorrecto.")
+        setGeneralError(data?.message ?? "Código incorrecto.")
         return
       }
       if (data.backupCodes?.length) {
@@ -49,19 +49,19 @@ export function VerificationCard(props: VerificationCardProps) {
         router.push("/resumen")
       }
     },
-    onError: () => setErrorGeneral("No se pudo verificar el código."),
+    onError: () => setGeneralError("No se pudo verificar el código."),
   })
 
   const verifyBackup = useAction(verifyBackupCodeAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "Código de respaldo inválido.")
+        setGeneralError(data?.message ?? "Código de respaldo inválido.")
         return
       }
       router.push("/resumen")
     },
     onError: () =>
-      setErrorGeneral("No se pudo verificar el código de respaldo."),
+      setGeneralError("No se pudo verificar el código de respaldo."),
   })
 
   if (props.mode === "error") {
@@ -148,15 +148,15 @@ export function VerificationCard(props: VerificationCardProps) {
         </div>
       )}
 
-      {errorGeneral && (
+      {generalError && (
         <Message
           variant="error"
           title="Verificación fallida"
-          description={errorGeneral}
+          description={generalError}
         />
       )}
 
-      {metodoAlterno ? (
+      {alternateMethod ? (
         <>
           <input
             value={backupCode}
@@ -168,8 +168,8 @@ export function VerificationCard(props: VerificationCardProps) {
             className="w-full"
             disabled={verifyBackup.isPending || backupCode.length < 6}
             onClick={() => {
-              setErrorGeneral(undefined)
-              verifyBackup.execute({ code: backupCode, noVolverAPedirCodigo })
+              setGeneralError(undefined)
+              verifyBackup.execute({ code: backupCode, doNotAskAgain })
             }}
           >
             Verificar con código de respaldo
@@ -198,10 +198,8 @@ export function VerificationCard(props: VerificationCardProps) {
 
           <label className="flex items-center gap-2.5 rounded-[10px] bg-muted px-3.5 py-2">
             <Checkbox
-              checked={noVolverAPedirCodigo}
-              onCheckedChange={(checked) =>
-                setNoVolverAPedirCodigo(checked === true)
-              }
+              checked={doNotAskAgain}
+              onCheckedChange={(checked) => setDoNotAskAgain(checked === true)}
             />
             <span className="text-[13px] leading-[18px] text-secondary-foreground">
               No volver a pedir código en este dispositivo
@@ -212,8 +210,8 @@ export function VerificationCard(props: VerificationCardProps) {
             className="w-full"
             disabled={verify.isPending || code.length < 6}
             onClick={() => {
-              setErrorGeneral(undefined)
-              verify.execute({ factorId, code, noVolverAPedirCodigo })
+              setGeneralError(undefined)
+              verify.execute({ factorId, code, doNotAskAgain })
             }}
           >
             {props.mode === "enroll"
@@ -237,10 +235,10 @@ export function VerificationCard(props: VerificationCardProps) {
         <div className="flex flex-col items-center gap-1.5 text-center">
           <button
             type="button"
-            onClick={() => setMetodoAlterno((v) => !v)}
+            onClick={() => setAlternateMethod((v) => !v)}
             className="text-xs font-medium text-primary"
           >
-            {metodoAlterno
+            {alternateMethod
               ? "Volver al código de mi app"
               : "¿Problemas con tu app? Usa un método alternativo"}
           </button>
