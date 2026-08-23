@@ -4,7 +4,7 @@ import { useAction } from "next-safe-action/hooks"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 
 import { simularPromocionAction } from "../actions/promociones"
 import type { Colision } from "../lib/colision"
@@ -87,14 +87,14 @@ export function ResumenPromocionCard({
           valor={
             segmento
               ? segmento.conteoEstimado !== null
-                ? `~${formatNumero(segmento.conteoEstimado)}`
+                ? `~${formatNumber(segmento.conteoEstimado)}`
                 : segmento.nombre
               : "—"
           }
         />
         <Fila
           etiqueta="Tiendas impactadas"
-          valor={resultado ? formatNumero(resultado.tiendasImpactadas) : "…"}
+          valor={resultado ? formatNumber(resultado.tiendasImpactadas) : "…"}
         />
         <Fila etiqueta="Impacto estimado" valor="Próximamente" />
         <Fila

@@ -8,7 +8,7 @@ import {
   listCategorias,
   listProductos,
 } from "@/features/catalogo/lib/queries"
-import { formatCOP, formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 
 function primerValor(valor: string | string[] | undefined) {
   return Array.isArray(valor) ? valor[0] : valor
@@ -40,14 +40,14 @@ export default async function CatalogoPage({
       <div className="flex items-start gap-4">
         <KpiCard
           etiqueta="SKU activos"
-          valor={formatNumero(kpis.skuActivos)}
-          detalle={`${formatPorcentaje(
+          valor={formatNumber(kpis.skuActivos)}
+          detalle={`${formatPercent(
             kpis.totalSku ? kpis.skuActivos / kpis.totalSku : 0
           )} del catálogo total`}
         />
         <KpiCard
           etiqueta="Total de SKU"
-          valor={formatNumero(kpis.totalSku)}
+          valor={formatNumber(kpis.totalSku)}
           detalle={`en ${kpis.categoriasCount} categorías`}
         />
         <KpiCard

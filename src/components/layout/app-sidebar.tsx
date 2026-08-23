@@ -11,7 +11,7 @@ import { NAVIGATION } from "@/config/navigation"
 import { cn } from "@/lib/utils"
 
 type AppSidebarProps = {
-  nombre: string
+  name: string
   email: string
   onCollapse?: () => void
   className?: string
@@ -24,7 +24,7 @@ type AppSidebarProps = {
  * rail, para que el colapso sea reversible.
  */
 export function AppSidebar({
-  nombre,
+  name,
   email,
   onCollapse,
   className,
@@ -60,22 +60,17 @@ export function AppSidebar({
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
-        {NAVIGATION.map((grupo) => (
-          <div key={grupo.titulo} className="w-full">
-            <NavGroup titulo={grupo.titulo} />
-            {grupo.items.map((item) => (
+        {NAVIGATION.map((group) => (
+          <div key={group.title} className="w-full">
+            <NavGroup title={group.title} />
+            {group.items.map((item) => (
               <NavItem key={item.href} {...item} />
             ))}
           </div>
         ))}
       </nav>
 
-      <UserMenu
-        nombre={nombre}
-        email={email}
-        variant="card"
-        className="shrink-0"
-      />
+      <UserMenu name={name} email={email} variant="card" className="shrink-0" />
     </div>
   )
 }

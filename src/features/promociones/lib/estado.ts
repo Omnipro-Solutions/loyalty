@@ -1,4 +1,4 @@
-import type { EstadoPublicacionPromocion } from "@/types/domain"
+import type { PromotionPublicationStatus } from "@/types/domain"
 
 export type EstadoVigenciaPromocion = "activa" | "programada" | "finalizada"
 
@@ -16,7 +16,7 @@ export function estadoPromocion(
     vigente_hasta: string | null
   },
   ahora: Date = new Date()
-): EstadoPublicacionPromocion | EstadoVigenciaPromocion {
+): PromotionPublicationStatus | EstadoVigenciaPromocion {
   if (promocion.estado_publicacion === "borrador") return "borrador"
   const hoy = soloFecha(ahora)
   const desde = soloFecha(promocion.vigente_desde)

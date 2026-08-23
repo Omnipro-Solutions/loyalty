@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge"
-import type { WorkflowEstado } from "@/types/domain"
+import type { WorkflowStatus } from "@/types/domain"
 
 const ESTADO_META: Record<
-  WorkflowEstado,
+  WorkflowStatus,
   { etiqueta: string; variant: "neutral" | "success" | "warning" }
 > = {
   borrador: { etiqueta: "Borrador", variant: "neutral" },
@@ -11,7 +11,7 @@ const ESTADO_META: Record<
   archivado: { etiqueta: "Archivado", variant: "neutral" },
 }
 
-export function JourneyEstadoBadge({ estado }: { estado: WorkflowEstado }) {
+export function JourneyEstadoBadge({ estado }: { estado: WorkflowStatus }) {
   const meta = ESTADO_META[estado]
   return <Badge variant={meta.variant}>{meta.etiqueta}</Badge>
 }

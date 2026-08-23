@@ -11,64 +11,64 @@ import {
 } from "lucide-react"
 
 export type NavChild = {
-  etiqueta: string
+  label: string
   href: string
 }
 
 export type NavItem = {
-  etiqueta: string
+  label: string
   href: string
   icon: LucideIcon
   children?: NavChild[]
 }
 
 export type NavGroup = {
-  titulo: string
+  title: string
   items: NavItem[]
 }
 
 /**
- * Espejo exacto del sidebar en Figma (624:561), con una excepción: el
- * archivo no le da un ítem propio a Journeys/Loyalty Builder en el nav
- * principal (el ícono "trending-up" ahí lo usa "Audiencias"). Como Journeys
- * es uno de los dos módulos prioritarios del MVP, se añadió como entrada
- * nueva en COMERCIAL — todo lo demás (orden, etiquetas, íconos) es literal.
+ * Exact mirror of the Figma sidebar (624:561), with one exception: the file
+ * doesn't give Journeys/Loyalty Builder its own item in the main nav (the
+ * "trending-up" icon there is used by "Audiencias"). Since Journeys is one of
+ * the MVP's two priority modules, it was added as a new entry under
+ * COMERCIAL — everything else (order, labels, icons) is literal.
  */
 export const NAVIGATION: NavGroup[] = [
   {
-    titulo: "Principal",
-    items: [{ etiqueta: "Resumen", href: "/resumen", icon: LayoutGrid }],
+    title: "Principal",
+    items: [{ label: "Resumen", href: "/resumen", icon: LayoutGrid }],
   },
   {
-    titulo: "Catálogo",
+    title: "Catálogo",
     items: [
-      { etiqueta: "Catálogo", href: "/catalogo", icon: Package },
-      { etiqueta: "Tiendas", href: "/tiendas", icon: Store },
+      { label: "Catálogo", href: "/catalogo", icon: Package },
+      { label: "Tiendas", href: "/tiendas", icon: Store },
     ],
   },
   {
-    titulo: "Comercial",
+    title: "Comercial",
     items: [
-      { etiqueta: "Promociones", href: "/promociones", icon: Tag },
-      { etiqueta: "Loyalty Builder", href: "/journeys", icon: Workflow },
-      { etiqueta: "Clientes", href: "/clientes", icon: Users },
-      { etiqueta: "Audiencias", href: "/audiencias", icon: TrendingUp },
+      { label: "Promociones", href: "/promociones", icon: Tag },
+      { label: "Loyalty Builder", href: "/journeys", icon: Workflow },
+      { label: "Clientes", href: "/clientes", icon: Users },
+      { label: "Audiencias", href: "/audiencias", icon: TrendingUp },
     ],
   },
   {
-    titulo: "Configuración",
+    title: "Configuración",
     items: [
       {
-        etiqueta: "Ajustes",
+        label: "Ajustes",
         href: "/ajustes",
         icon: Settings,
-        // Sin equivalente en Figma: "09 · Equipo y permisos" y "12 ·
-        // Integraciones" son secciones independientes del archivo. La app
-        // las agrupa bajo un mismo ítem colapsable de "Ajustes" en vez de
-        // sumarlas como ítems propios del sidebar principal.
+        // No Figma equivalent: "09 · Equipo y permisos" and "12 ·
+        // Integraciones" are independent sections of the file. The app
+        // groups them under a single collapsible "Ajustes" item instead of
+        // adding them as their own items in the main sidebar.
         children: [
-          { etiqueta: "Equipo y permisos", href: "/ajustes/equipo" },
-          { etiqueta: "Integraciones", href: "/ajustes/integraciones" },
+          { label: "Equipo y permisos", href: "/ajustes/equipo" },
+          { label: "Integraciones", href: "/ajustes/integraciones" },
         ],
       },
     ],
@@ -76,16 +76,16 @@ export const NAVIGATION: NavGroup[] = [
 ]
 
 /**
- * El rail colapsado (680:230) trae en el Figma un ítem "Pedidos" que no
- * existe en ningún otro lado del archivo y le falta "Audiencias" — una
- * inconsistencia entre mocks. En vez de reproducirla (dejaría destinos
- * inalcanzables al colapsar el sidebar), el rail es el mismo NAVIGATION
- * aplanado sin encabezados de grupo — misma spec visual del ítem de rail,
- * mismo conjunto real de destinos que el sidebar completo.
+ * The collapsed rail (680:230) has a "Pedidos" item in the Figma that
+ * doesn't exist anywhere else in the file and is missing "Audiencias" — an
+ * inconsistency between mocks. Instead of reproducing it (which would leave
+ * unreachable destinations when the sidebar collapses), the rail is the same
+ * NAVIGATION flattened without group headers — same visual spec for the rail
+ * item, same real set of destinations as the full sidebar.
  */
-export const RAIL_ITEMS: NavItem[] = NAVIGATION.flatMap((grupo) => grupo.items)
+export const RAIL_ITEMS: NavItem[] = NAVIGATION.flatMap((group) => group.items)
 
-/** Un ítem de nav está activo en su propia ruta o en cualquier sub-ruta suya. */
+/** A nav item is active on its own route or on any of its sub-routes. */
 export function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }

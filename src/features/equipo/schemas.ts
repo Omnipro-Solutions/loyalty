@@ -1,19 +1,19 @@
 import { z } from "zod"
 
-import { ACCIONES, RECURSOS } from "@/lib/permissions"
-import { ALCANCE_CANALES, ALCANCE_TIENDAS, ROLES } from "@/types/domain"
+import { ACTIONS, RESOURCES } from "@/lib/permissions"
+import { CHANNEL_SCOPES, STORE_SCOPES, ROLES } from "@/types/domain"
 
 const permisoSchema = z.object({
-  recurso: z.enum(RECURSOS),
-  accion: z.enum(ACCIONES),
+  recurso: z.enum(RESOURCES),
+  accion: z.enum(ACTIONS),
 })
 
 export const crearRolSchema = z.object({
   nombre: z.string().min(2, "Ingresa el nombre del rol"),
   descripcion: z.string().optional(),
   rolBase: z.enum(ROLES),
-  alcanceTiendas: z.enum(ALCANCE_TIENDAS),
-  alcanceCanal: z.enum(ALCANCE_CANALES),
+  alcanceTiendas: z.enum(STORE_SCOPES),
+  alcanceCanal: z.enum(CHANNEL_SCOPES),
   descuentoMaximoPct: z.coerce.number().int().min(0).max(100).optional(),
 })
 
@@ -23,8 +23,8 @@ export const actualizarRolSchema = z.object({
   roleId: z.string().uuid(),
   nombre: z.string().min(2, "Ingresa el nombre del rol"),
   descripcion: z.string().optional(),
-  alcanceTiendas: z.enum(ALCANCE_TIENDAS),
-  alcanceCanal: z.enum(ALCANCE_CANALES),
+  alcanceTiendas: z.enum(STORE_SCOPES),
+  alcanceCanal: z.enum(CHANNEL_SCOPES),
   descuentoMaximoPct: z.coerce.number().int().min(0).max(100).optional(),
   permisos: z.array(permisoSchema),
 })

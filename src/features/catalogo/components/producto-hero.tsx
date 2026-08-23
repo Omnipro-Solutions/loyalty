@@ -1,6 +1,6 @@
 import { Package } from "lucide-react"
 
-import { formatPorcentaje } from "@/lib/format"
+import { formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { bandaCompletitud, calcularCompletitud } from "../lib/completitud"
@@ -86,7 +86,7 @@ export function ProductoHero({ producto }: ProductoHeroProps) {
         </div>
         <div className="flex items-center gap-2.5">
           <p className="text-xl font-semibold text-foreground">
-            {formatPorcentaje(porcentaje)}
+            {formatPercent(porcentaje)}
           </p>
           <span
             className={cn(

@@ -10,13 +10,13 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
-import { CellAcciones } from "@/components/data/cells"
+import { CellActions } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
-import { formatFecha, formatNumero } from "@/lib/format"
+import { formatDate, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { TierNombre } from "@/types/domain"
+import type { TierName } from "@/types/domain"
 
 import { numeroDeTarjeta, paletaAvatar } from "../lib/avatar-palette"
 import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
@@ -114,7 +114,7 @@ export function AudienciaMiembrosTabla({
             return (
               <div className="flex min-w-0 items-center gap-2.5">
                 <AvatarInitials
-                  nombre={nombreCompleto}
+                  name={nombreCompleto}
                   size={34}
                   bgClassName={paleta.bg}
                   fgClassName={paleta.fg}
@@ -142,7 +142,7 @@ export function AudienciaMiembrosTabla({
               return <span className="text-xs text-muted-foreground">—</span>
             return (
               <Badge variant="info">
-                {TIER_LABEL[tier.nombre as TierNombre]}
+                {TIER_LABEL[tier.nombre as TierName]}
               </Badge>
             )
           },
@@ -162,7 +162,7 @@ export function AudienciaMiembrosTabla({
           ),
           cell: (info) => (
             <span className="block text-right text-[13px] font-medium text-foreground">
-              {formatNumero(info.row.original.saldo_puntos)}
+              {formatNumber(info.row.original.saldo_puntos)}
             </span>
           ),
         }),
@@ -191,7 +191,7 @@ export function AudienciaMiembrosTabla({
           header: () => <div className="text-center">INGRESO</div>,
           cell: (info) => (
             <span className="block text-center text-[13px] text-foreground">
-              {formatFecha(info.row.original.fecha_alta)}
+              {formatDate(info.row.original.fecha_alta)}
             </span>
           ),
         }),
@@ -234,7 +234,7 @@ export function AudienciaMiembrosTabla({
           header: () => null,
           cell: () => (
             <div onClick={(e) => e.stopPropagation()}>
-              <CellAcciones />
+              <CellActions />
             </div>
           ),
         }),

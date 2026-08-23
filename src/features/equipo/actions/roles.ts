@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { accionAplica } from "@/lib/permissions"
+import { actionApplies } from "@/lib/permissions"
 
 import { equipoActionClient } from "./action-client"
 import {
@@ -123,7 +123,7 @@ export const actualizarRolAction = equipoActionClient
     // Reemplaza la matriz completa: más simple que diffear fila a fila, y
     // el conjunto siempre es pequeño (como mucho 9 recursos × 5 acciones).
     const permisosValidos = parsedInput.permisos.filter((p) =>
-      accionAplica(p.recurso, p.accion)
+      actionApplies(p.recurso, p.accion)
     )
 
     const { error: errorDelete } = await ctx.supabase

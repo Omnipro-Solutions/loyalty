@@ -13,11 +13,11 @@ import type { ReactNode } from "react"
 import { PlaceholderCard } from "@/components/feedback/placeholder-card"
 import {
   formatCOP,
-  formatDeltaPorcentaje,
-  formatFecha,
-  formatNumero,
-  formatPorcentaje,
-  formatTiempoRelativo,
+  formatDeltaPercent,
+  formatDate,
+  formatNumber,
+  formatPercent,
+  formatRelativeTime,
 } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -77,7 +77,7 @@ export function ClienteComportamientoCompra({
         valor={comportamiento.tiendaHabitual?.nombre ?? "—"}
         detalle={
           comportamiento.tiendaHabitual
-            ? `${formatPorcentaje(comportamiento.tiendaHabitual.porcentaje)} de compras`
+            ? `${formatPercent(comportamiento.tiendaHabitual.porcentaje)} de compras`
             : "—"
         }
       />
@@ -95,7 +95,7 @@ export function ClienteComportamientoCompra({
         }
         detalle={
           comportamiento.canalPreferido
-            ? `${formatPorcentaje(comportamiento.canalPreferido.porcentaje)} de pedidos`
+            ? `${formatPercent(comportamiento.canalPreferido.porcentaje)} de pedidos`
             : "—"
         }
       />
@@ -128,8 +128,8 @@ export function ClienteComportamientoCompra({
                   : "text-destructive"
               )}
             >
-              {formatDeltaPorcentaje(comportamiento.tendenciaTicket)} vs.
-              semestre anterior
+              {formatDeltaPercent(comportamiento.tendenciaTicket)} vs. semestre
+              anterior
             </span>
           ) : (
             "—"
@@ -143,7 +143,7 @@ export function ClienteComportamientoCompra({
         valor={comportamiento.categoriaDominante?.nombre ?? "—"}
         detalle={
           comportamiento.categoriaDominante
-            ? `${formatPorcentaje(comportamiento.categoriaDominante.porcentaje)} del gasto`
+            ? `${formatPercent(comportamiento.categoriaDominante.porcentaje)} del gasto`
             : "—"
         }
       />
@@ -153,12 +153,12 @@ export function ClienteComportamientoCompra({
         etiqueta="Última compra"
         valor={
           comportamiento.ultimaCompra
-            ? formatTiempoRelativo(comportamiento.ultimaCompra)
+            ? formatRelativeTime(comportamiento.ultimaCompra)
             : "—"
         }
         detalle={
           comportamiento.ultimaCompra
-            ? formatFecha(comportamiento.ultimaCompra)
+            ? formatDate(comportamiento.ultimaCompra)
             : "—"
         }
       />
@@ -168,10 +168,10 @@ export function ClienteComportamientoCompra({
         etiqueta="Próxima estimada"
         valor={
           comportamiento.proximaEstimada
-            ? formatFecha(comportamiento.proximaEstimada)
+            ? formatDate(comportamiento.proximaEstimada)
             : "—"
         }
-        detalle={`${formatNumero(comportamiento.totalPedidos)} pedidos en total`}
+        detalle={`${formatNumber(comportamiento.totalPedidos)} pedidos en total`}
       />
     </div>
   )

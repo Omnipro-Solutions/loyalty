@@ -11,9 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatNumero } from "@/lib/format"
-import { CAMPOS_CONDICION, CAMPOS_CONDICION_HABILITADOS } from "@/types/domain"
-import type { CampoCondicion } from "@/types/domain"
+import { formatNumber } from "@/lib/format"
+import { CONDITION_FIELDS, ENABLED_CONDITION_FIELDS } from "@/types/domain"
+import type { ConditionField } from "@/types/domain"
 
 import { CAMPO_CONDICION_LABEL, CAMPO_CONDICION_OPERADOR } from "../lib/labels"
 import type {
@@ -23,7 +23,7 @@ import type {
 } from "../lib/queries"
 import type { CondicionValues } from "../schemas"
 
-function valorPorDefecto(campo: CampoCondicion): CondicionValues {
+function valorPorDefecto(campo: ConditionField): CondicionValues {
   switch (campo) {
     case "categoria":
       return { campo, valor: [] }
@@ -56,7 +56,7 @@ export function CondicionRow({
   onChange,
   onRemove,
 }: CondicionRowProps) {
-  const habilitado = CAMPOS_CONDICION_HABILITADOS.includes(condicion.campo)
+  const habilitado = ENABLED_CONDITION_FIELDS.includes(condicion.campo)
 
   return (
     <div className="flex w-full items-center gap-2.5 rounded-[10px] border border-border bg-neutral-50 px-3 py-2.5">
@@ -68,23 +68,22 @@ export function CondicionRow({
 
       <Select
         value={condicion.campo}
-        onValueChange={(v) => onChange(valorPorDefecto(v as CampoCondicion))}
+        onValueChange={(v) => onChange(valorPorDefecto(v as ConditionField))}
       >
         <SelectTrigger className="flex-1">
           <SelectValue>
-            {(v: CampoCondicion) => CAMPO_CONDICION_LABEL[v]}
+            {(v: ConditionField) => CAMPO_CONDICION_LABEL[v]}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {CAMPOS_CONDICION.map((campo) => (
+          {CONDITION_FIELDS.map((campo) => (
             <SelectItem
               key={campo}
               value={campo}
-              disabled={!CAMPOS_CONDICION_HABILITADOS.includes(campo)}
+              disabled={!ENABLED_CONDITION_FIELDS.includes(campo)}
             >
               {CAMPO_CONDICION_LABEL[campo]}
-              {!CAMPOS_CONDICION_HABILITADOS.includes(campo) &&
-                " · Próximamente"}
+              {!ENABLED_CONDITION_FIELDS.includes(campo) && " · Próximamente"}
             </SelectItem>
           ))}
         </SelectContent>
@@ -139,7 +138,7 @@ export function CondicionRow({
                 <SelectItem key={s.id} value={s.id}>
                   {s.nombre}
                   {s.conteoEstimado !== null &&
-                    ` (${formatNumero(s.conteoEstimado)})`}
+                    ` (${formatNumber(s.conteoEstimado)})`}
                 </SelectItem>
               ))}
             </SelectContent>

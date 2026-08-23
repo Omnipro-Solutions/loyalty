@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { TIENDA_ESTADOS, TIENDA_FORMATOS } from "@/types/domain"
+import { STORE_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 import { actualizarTiendaAction, crearTiendaAction } from "../actions/tiendas"
 import { ChecklistAntesDeGuardar } from "./checklist-antes-guardar"
@@ -195,7 +195,7 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {TIENDA_FORMATOS.map((f) => (
+                    {STORE_FORMATS.map((f) => (
                       <SelectItem key={f} value={f}>
                         {TIENDA_FORMATO_LABEL[f]}
                       </SelectItem>
@@ -216,7 +216,7 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {TIENDA_ESTADOS.map((e) => (
+                    {STORE_STATUSES.map((e) => (
                       <SelectItem key={e} value={e}>
                         {TIENDA_ESTADO_LABEL[e]}
                       </SelectItem>

@@ -19,7 +19,7 @@ import {
   listUsuarios,
   tienePermiso,
 } from "@/features/equipo/lib/queries"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 
 function primerValor(valor: string | string[] | undefined) {
   return Array.isArray(valor) ? valor[0] : valor
@@ -92,21 +92,21 @@ async function UsuariosTabContent({
       <div className="flex items-start gap-4">
         <KpiCard
           etiqueta="Usuarios activos"
-          valor={formatNumero(kpis.usuariosActivos)}
-          detalle={`+${formatNumero(kpis.nuevosEsteMes)} este mes`}
+          valor={formatNumber(kpis.usuariosActivos)}
+          detalle={`+${formatNumber(kpis.nuevosEsteMes)} este mes`}
         />
         <KpiCard
           etiqueta="Invitaciones pendientes"
-          valor={formatNumero(kpis.invitacionesPendientes)}
+          valor={formatNumber(kpis.invitacionesPendientes)}
           detalle={
             kpis.invitacionesPorVencer > 0
-              ? `${formatNumero(kpis.invitacionesPorVencer)} vencen en 3 días`
+              ? `${formatNumber(kpis.invitacionesPorVencer)} vencen en 3 días`
               : "ninguna vence pronto"
           }
         />
         <KpiCard
           etiqueta="Con 2FA activo"
-          valor={`${formatNumero(kpis.con2fa)} de ${formatNumero(kpis.totalUsuarios)}`}
+          valor={`${formatNumber(kpis.con2fa)} de ${formatNumber(kpis.totalUsuarios)}`}
           detalle={
             kpis.totalUsuarios
               ? `${Math.round((kpis.con2fa / kpis.totalUsuarios) * 100)}% de cobertura`
@@ -115,7 +115,7 @@ async function UsuariosTabContent({
         />
         <KpiCard
           etiqueta="Sin acceso hace 60 días"
-          valor={formatNumero(kpis.sinAccesoHace60Dias)}
+          valor={formatNumber(kpis.sinAccesoHace60Dias)}
           detalle="revisar y desactivar"
         />
       </div>
@@ -195,7 +195,7 @@ async function InvitacionesTabContent({
             Invitaciones
           </p>
           <p className="text-[11px] text-muted-foreground">
-            {formatNumero(invitaciones.length)} en total
+            {formatNumber(invitaciones.length)} en total
           </p>
         </div>
       </div>

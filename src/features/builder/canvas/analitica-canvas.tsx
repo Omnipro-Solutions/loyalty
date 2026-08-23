@@ -12,7 +12,7 @@ import {
 } from "@xyflow/react"
 import { useMemo } from "react"
 
-import { BUILDER_ENTRY_NODE_TIPOS } from "@/types/domain"
+import { BUILDER_ENTRY_NODE_TYPES } from "@/types/domain"
 
 import { calcularLayoutVertical } from "./analitica-layout"
 import { encontrarMayorCaida } from "./analitica-metrics"
@@ -55,7 +55,7 @@ export function AnaliticaCanvas({
       }
     }
 
-    const tiposEntrada = new Set<string>(BUILDER_ENTRY_NODE_TIPOS)
+    const tiposEntrada = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
     const nodoEntradaId = workflow.nodes.find((n) =>
       tiposEntrada.has(n.tipo)
     )?.id

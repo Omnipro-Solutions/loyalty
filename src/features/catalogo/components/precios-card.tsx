@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatCOP, formatFecha, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatDate, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import {
@@ -29,9 +29,9 @@ const ESTADO_BADGE: Record<EstadoVigencia, string> = {
 }
 
 function formatVigencia(precio: PrecioProducto): string {
-  const desde = formatFecha(precio.vigente_desde)
+  const desde = formatDate(precio.vigente_desde)
   return precio.vigente_hasta
-    ? `${desde} – ${formatFecha(precio.vigente_hasta)}`
+    ? `${desde} – ${formatDate(precio.vigente_hasta)}`
     : `Desde ${desde}`
 }
 
@@ -102,7 +102,7 @@ export function PreciosCard({ precios }: PreciosCardProps) {
                         )}
                       >
                         {delta > 0 ? "+" : ""}
-                        {formatPorcentaje(delta)}
+                        {formatPercent(delta)}
                       </span>
                     )}
                   </TableCell>

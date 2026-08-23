@@ -12,7 +12,7 @@ import { useMemo } from "react"
 import { DataTable } from "@/components/data/data-table"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
-import { formatFecha, formatNumero } from "@/lib/format"
+import { formatDate, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { paletaAvatar } from "../lib/avatar-palette"
@@ -33,7 +33,7 @@ const columns = helper.columns([
       return (
         <div className="flex min-w-0 items-center gap-2.5">
           <AvatarInitials
-            nombre={nombreCompleto}
+            name={nombreCompleto}
             size={34}
             bgClassName={paleta.bg}
             fgClassName={paleta.fg}
@@ -85,7 +85,7 @@ const columns = helper.columns([
     header: () => "PUNTOS",
     cell: (info) => (
       <span className="font-semibold text-foreground">
-        {formatNumero(info.getValue())}
+        {formatNumber(info.getValue())}
       </span>
     ),
   }),
@@ -94,7 +94,7 @@ const columns = helper.columns([
     header: () => "REGISTRO",
     cell: (info) => (
       <span className="text-xs text-secondary-foreground">
-        {formatFecha(info.getValue())}
+        {formatDate(info.getValue())}
       </span>
     ),
   }),

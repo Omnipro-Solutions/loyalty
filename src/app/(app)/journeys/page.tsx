@@ -11,7 +11,7 @@ import {
   getJourneysKpis,
   listWorkflows,
 } from "@/features/builder/canvas/queries"
-import type { WorkflowEstado } from "@/types/domain"
+import type { WorkflowStatus } from "@/types/domain"
 
 const PAGE_SIZE = 25
 
@@ -27,7 +27,7 @@ export default async function JourneysPage({
     listWorkflows({
       page,
       pageSize: PAGE_SIZE,
-      estado: estado as WorkflowEstado | undefined,
+      estado: estado as WorkflowStatus | undefined,
       q,
     }),
     getJourneysKpis(),

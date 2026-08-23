@@ -1,7 +1,7 @@
 import { ArrowRight, Workflow } from "lucide-react"
 
 import { KpiCard } from "@/components/data/kpi-card"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { buscarIntegracion } from "../lib/catalogo"
@@ -27,19 +27,19 @@ export function VistaSistemaCard() {
       <div className="flex items-start gap-4">
         <KpiCard
           etiqueta="Orígenes conectados"
-          valor={formatNumero(origenes.length)}
+          valor={formatNumber(origenes.length)}
         />
         <KpiCard
           etiqueta="Destinos conectados"
-          valor={formatNumero(destinos.length)}
+          valor={formatNumber(destinos.length)}
         />
         <KpiCard
           etiqueta="Eventos procesados hoy"
-          valor={formatNumero(EVENTOS_PROCESADOS_HOY)}
+          valor={formatNumber(EVENTOS_PROCESADOS_HOY)}
         />
         <KpiCard
           etiqueta="Requieren atención"
-          valor={formatNumero(conAtencion)}
+          valor={formatNumber(conAtencion)}
           detalle={conAtencion > 0 ? "ver Conexiones activas" : "todo en orden"}
         />
       </div>

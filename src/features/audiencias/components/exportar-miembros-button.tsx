@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { numeroDeTarjeta } from "../lib/avatar-palette"
 import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
 import type { MiembroAudiencia } from "../lib/queries"
-import type { TierNombre } from "@/types/domain"
+import type { TierName } from "@/types/domain"
 
 const COLUMNAS: {
   encabezado: string
@@ -15,7 +15,7 @@ const COLUMNAS: {
   { encabezado: "Email", valor: (m) => m.email },
   {
     encabezado: "Nivel",
-    valor: (m) => (m.tier ? TIER_LABEL[m.tier.nombre as TierNombre] : ""),
+    valor: (m) => (m.tier ? TIER_LABEL[m.tier.nombre as TierName] : ""),
   },
   { encabezado: "Puntos", valor: (m) => String(m.saldo_puntos) },
   {

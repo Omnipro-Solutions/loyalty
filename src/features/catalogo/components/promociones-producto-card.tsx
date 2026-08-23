@@ -3,14 +3,14 @@ import Link from "next/link"
 
 import { EmptyState } from "@/components/feedback/empty-state"
 import { Button } from "@/components/ui/button"
-import { formatFecha } from "@/lib/format"
+import { formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { TipoPromocion } from "@/types/domain"
+import type { PromotionType } from "@/types/domain"
 
 import type { PromocionRelacionada } from "../lib/promociones-relacionadas"
 
 /** Duplicado a propósito de `features/promociones/lib/labels.ts` — features aisladas (CLAUDE.md §2). */
-const TIPO_LABEL: Record<TipoPromocion, string> = {
+const TIPO_LABEL: Record<PromotionType, string> = {
   cantidad: "Cantidad",
   categoria: "Categoría",
   segmento: "Segmento",
@@ -19,7 +19,7 @@ const TIPO_LABEL: Record<TipoPromocion, string> = {
   bundle: "Bundle",
 }
 
-const TIPO_DOT: Record<TipoPromocion, string> = {
+const TIPO_DOT: Record<PromotionType, string> = {
   cantidad: "bg-data-teal",
   categoria: "bg-data-indigo",
   segmento: "bg-data-navy",
@@ -44,7 +44,7 @@ const ESTADO_DOT: Record<PromocionRelacionada["estado"], string> = {
 
 function vigenciaResumen(promocion: PromocionRelacionada) {
   if (!promocion.vigenteHasta) return "Permanente"
-  return `${formatFecha(promocion.vigenteDesde)} – ${formatFecha(promocion.vigenteHasta)}`
+  return `${formatDate(promocion.vigenteDesde)} – ${formatDate(promocion.vigenteHasta)}`
 }
 
 type PromocionesProductoCardProps = {

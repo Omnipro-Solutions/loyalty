@@ -1,11 +1,11 @@
 import { z } from "zod"
 
-import { BUILDER_NODE_TIPOS, type BuilderNodeTipo } from "@/types/domain"
+import { BUILDER_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
 const builderNodeTipoSchema = z
   .string()
-  .refine((v): v is BuilderNodeTipo =>
-    (BUILDER_NODE_TIPOS as readonly string[]).includes(v)
+  .refine((v): v is BuilderNodeType =>
+    (BUILDER_NODE_TYPES as readonly string[]).includes(v)
   )
 
 export const createWorkflowSchema = z.object({

@@ -3,12 +3,12 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { BUILDER_ENTRY_NODE_TIPOS, type BuilderNodeTipo } from "@/types/domain"
+import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
 export type AnaliticaStepData = {
-  tipo: BuilderNodeTipo
+  tipo: BuilderNodeType
   etiqueta: string
   /** % = conteoEntrada de este nodo / entradas del nodo de entrada — el mismo criterio en cada tarjeta, por eso el nodo de entrada y cualquier bloque sin fuga muestran 100%. */
   conteoEntrada: number | undefined
@@ -22,9 +22,9 @@ export function AnaliticaStepNode({
   data,
 }: NodeProps & { data: AnaliticaStepData }) {
   const meta = BUILDER_BLOCKS[data.tipo]
-  const grupoMeta = BUILDER_GROUP_META[meta.grupo]
-  const Icon = meta.icono
-  const esEntrada = (BUILDER_ENTRY_NODE_TIPOS as readonly string[]).includes(
+  const groupMeta = BUILDER_GROUP_META[meta.group]
+  const Icon = meta.icon
+  const esEntrada = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
     data.tipo
   )
 
@@ -33,7 +33,7 @@ export function AnaliticaStepNode({
       {data.ramaEntrante && (
         <div className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
           {data.ramaEntrante.etiqueta} ·{" "}
-          {formatNumero(data.ramaEntrante.conteo)}
+          {formatNumber(data.ramaEntrante.conteo)}
         </div>
       )}
 
@@ -55,14 +55,14 @@ export function AnaliticaStepNode({
           <span
             className={cn(
               "flex size-8 shrink-0 items-center justify-center rounded-lg",
-              grupoMeta.bgClassName
+              groupMeta.bgClassName
             )}
           >
-            <Icon className={cn("size-4", grupoMeta.fgClassName)} />
+            <Icon className={cn("size-4", groupMeta.fgClassName)} />
           </span>
           <div className="min-w-0">
             <p className="truncate text-[10px] leading-[14px] font-semibold tracking-[0.4px] text-muted-foreground uppercase">
-              {grupoMeta.etiqueta}
+              {groupMeta.label}
             </p>
             <p className="truncate text-[13px] leading-[18px] font-semibold text-foreground">
               {data.etiqueta}
@@ -73,7 +73,7 @@ export function AnaliticaStepNode({
         <div className="flex items-end justify-between gap-2">
           <p className="text-2xl leading-7 font-bold text-foreground">
             {typeof data.conteoEntrada === "number"
-              ? formatNumero(data.conteoEntrada)
+              ? formatNumber(data.conteoEntrada)
               : "—"}
           </p>
           {typeof data.pct === "number" && (

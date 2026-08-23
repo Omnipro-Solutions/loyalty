@@ -8,11 +8,11 @@ import { KpiWidget } from "@/components/data/kpi-widget"
 import { EmptyState } from "@/components/feedback/empty-state"
 import {
   formatCOP,
-  formatFechaHora,
-  formatNumero,
-  formatPorcentaje,
+  formatDateTime,
+  formatNumber,
+  formatPercent,
 } from "@/lib/format"
-import { BUILDER_ENTRY_NODE_TIPOS } from "@/types/domain"
+import { BUILDER_ENTRY_NODE_TYPES } from "@/types/domain"
 import { getUltimaCorrida } from "@/features/builder/canvas/analytics-queries"
 import { AnaliticaCanvas } from "@/features/builder/canvas/analitica-canvas"
 import { AnaliticaExportButton } from "@/features/builder/canvas/analitica-export-button"
@@ -37,7 +37,7 @@ export default async function JourneyAnaliticaPage({
   ])
   const ingresoReal = atribucion.get(id)?.ingreso ?? null
 
-  const entradaTipos = new Set<string>(BUILDER_ENTRY_NODE_TIPOS)
+  const entradaTipos = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
   const nodoEntradaId = workflow.nodes.find((n) => entradaTipos.has(n.tipo))?.id
   const nodoFinIds = new Set(
     workflow.nodes.filter((n) => n.tipo === "fin_workflow").map((n) => n.id)
@@ -72,10 +72,9 @@ export default async function JourneyAnaliticaPage({
             {corrida ? (
               <p className="text-[12px] text-muted-foreground">
                 {corrida.tipo === "publicacion" ? "Publicado" : "Simulado"} el{" "}
-                {corrida.finalizado_en &&
-                  formatFechaHora(corrida.finalizado_en)}
+                {corrida.finalizado_en && formatDateTime(corrida.finalizado_en)}
                 {typeof entradas === "number" &&
-                  ` · ${formatNumero(entradas)} clientes en recorrido`}
+                  ` · ${formatNumber(entradas)} clientes en recorrido`}
               </p>
             ) : (
               <p className="text-[12px] text-muted-foreground">
@@ -120,7 +119,7 @@ export default async function JourneyAnaliticaPage({
                     etiqueta="Entradas"
                     valor={
                       typeof entradas === "number"
-                        ? formatNumero(entradas)
+                        ? formatNumber(entradas)
                         : "—"
                     }
                   />
@@ -128,7 +127,7 @@ export default async function JourneyAnaliticaPage({
                     etiqueta="Conversión"
                     valor={
                       typeof conversion === "number"
-                        ? formatPorcentaje(conversion)
+                        ? formatPercent(conversion)
                         : "—"
                     }
                   />

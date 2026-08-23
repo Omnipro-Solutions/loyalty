@@ -11,9 +11,9 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
-import { formatFecha } from "@/lib/format"
+import { formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { ConsentimientoCanal } from "@/types/domain"
+import type { ConsentChannel } from "@/types/domain"
 
 import {
   CONSENTIMIENTO_CANAL_LABEL,
@@ -21,7 +21,7 @@ import {
 } from "../lib/labels"
 import type { Consentimiento } from "../lib/queries"
 
-const CANAL_ICON: Record<ConsentimientoCanal, LucideIcon> = {
+const CANAL_ICON: Record<ConsentChannel, LucideIcon> = {
   email: Mail,
   sms: MessageSquare,
   push: Bell,
@@ -30,7 +30,7 @@ const CANAL_ICON: Record<ConsentimientoCanal, LucideIcon> = {
   socios_comerciales: Handshake,
 }
 
-const CANAL_ICON_BG: Record<ConsentimientoCanal, string> = {
+const CANAL_ICON_BG: Record<ConsentChannel, string> = {
   email: "bg-avatar-indigo-bg text-avatar-indigo-fg",
   sms: "bg-avatar-indigo-bg text-avatar-indigo-fg",
   push: "bg-avatar-teal-bg text-avatar-teal-fg",
@@ -39,7 +39,7 @@ const CANAL_ICON_BG: Record<ConsentimientoCanal, string> = {
   socios_comerciales: "bg-avatar-amber-bg text-avatar-amber-fg",
 }
 
-const ORDEN: ConsentimientoCanal[] = [
+const ORDEN: ConsentChannel[] = [
   "email",
   "sms",
   "push",
@@ -127,7 +127,7 @@ export function ClienteConsentimientosCard({
               </div>
               <p className="truncate pl-[27px] text-[9px] text-muted-foreground">
                 {item
-                  ? `${item.fuente ? CONSENTIMIENTO_FUENTE_LABEL[item.fuente as keyof typeof CONSENTIMIENTO_FUENTE_LABEL] : "Sin fuente"} · desde ${formatFecha(item.actualizado_en)} · ${otorgado ? "indefinida" : "sin vigencia"}`
+                  ? `${item.fuente ? CONSENTIMIENTO_FUENTE_LABEL[item.fuente as keyof typeof CONSENTIMIENTO_FUENTE_LABEL] : "Sin fuente"} · desde ${formatDate(item.actualizado_en)} · ${otorgado ? "indefinida" : "sin vigencia"}`
                   : "Sin registro"}
               </p>
             </div>

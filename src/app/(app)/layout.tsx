@@ -13,7 +13,7 @@ export default async function AppGroupLayout({
   if (!perfil) redirect("/login")
 
   return (
-    <AppShell nombre={perfil.nombre} email={perfil.email}>
+    <AppShell name={perfil.nombre} email={perfil.email}>
       {children}
     </AppShell>
   )

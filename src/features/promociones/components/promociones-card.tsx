@@ -1,4 +1,4 @@
-import { formatCOP, formatNumero } from "@/lib/format"
+import { formatCOP, formatNumber } from "@/lib/format"
 
 import { ExportarPromocionesButton } from "./exportar-promociones-button"
 import { PromocionesFiltrosBar } from "./promociones-filtros-bar"
@@ -35,12 +35,12 @@ export function PromocionesCard({
               Promociones
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumero(resumen.total)}
+              {formatNumber(resumen.total)}
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {formatNumero(resumen.activas)} activas ·{" "}
-            {formatNumero(resumen.programadas)} programadas · presupuesto
+            {formatNumber(resumen.activas)} activas ·{" "}
+            {formatNumber(resumen.programadas)} programadas · presupuesto
             asignado {formatCOP(resumen.presupuestoAsignado)}
           </p>
         </div>

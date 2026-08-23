@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { ALCANCE_CANALES, ALCANCE_TIENDAS, ROLES } from "@/types/domain"
+import { CHANNEL_SCOPES, STORE_SCOPES, ROLES } from "@/types/domain"
 
 import { crearRolAction } from "../actions/roles"
 import { ROL_BASE_LABELS } from "../lib/labels"
@@ -173,7 +173,7 @@ export function NuevoRolDialog() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALCANCE_TIENDAS.map((a) => (
+                  {STORE_SCOPES.map((a) => (
                     <SelectItem key={a} value={a}>
                       {ALCANCE_TIENDAS_LABEL[a]}
                     </SelectItem>
@@ -195,7 +195,7 @@ export function NuevoRolDialog() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALCANCE_CANALES.map((c) => (
+                  {CHANNEL_SCOPES.map((c) => (
                     <SelectItem key={c} value={c}>
                       {ALCANCE_CANAL_LABEL[c]}
                     </SelectItem>

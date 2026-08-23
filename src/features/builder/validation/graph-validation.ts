@@ -1,10 +1,10 @@
 import {
-  BUILDER_ENTRY_NODE_TIPOS,
-  BUILDER_LOGIC_NODE_TIPOS,
-  type BuilderNodeTipo,
+  BUILDER_ENTRY_NODE_TYPES,
+  BUILDER_LOGIC_NODE_TYPES,
+  type BuilderNodeType,
 } from "@/types/domain"
 
-export type GraphNode = { id: string; tipo: BuilderNodeTipo }
+export type GraphNode = { id: string; tipo: BuilderNodeType }
 export type GraphEdge = {
   source_node_id: string
   source_port: string
@@ -17,8 +17,8 @@ export type ValidationIssue = {
   nodeId?: string
 }
 
-const ENTRY_TIPOS = new Set<string>(BUILDER_ENTRY_NODE_TIPOS)
-const LOGIC_TIPOS = new Set<string>(BUILDER_LOGIC_NODE_TIPOS)
+const ENTRY_TIPOS = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
+const LOGIC_TIPOS = new Set<string>(BUILDER_LOGIC_NODE_TYPES)
 
 /**
  * Puertos de salida esperados por tipo — coincide con `OUTPUT_HANDLES` de
@@ -137,6 +137,6 @@ function detectarCiclo(nodes: GraphNode[], edges: GraphEdge[]): boolean {
   return false
 }
 
-export function esNodoDeLogica(tipo: BuilderNodeTipo) {
+export function esNodoDeLogica(tipo: BuilderNodeType) {
   return LOGIC_TIPOS.has(tipo)
 }

@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatFechaHora } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { cancelarInvitacionAction } from "../actions/invitaciones"
@@ -67,7 +67,7 @@ export function InvitacionesTabla({
               {inv.invitadoPor?.nombre ?? "—"}
             </TableCell>
             <TableCell className="text-secondary-foreground">
-              {formatFechaHora(inv.expira_en)}
+              {formatDateTime(inv.expira_en)}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-[7px]">

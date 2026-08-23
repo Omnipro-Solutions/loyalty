@@ -26,7 +26,7 @@ export function ResumenTiendaCard({ valores }: ResumenTiendaCardProps) {
       <p className="text-sm font-semibold text-foreground">Resumen</p>
       <div className="flex items-center gap-3 rounded-2xl bg-muted p-3.5">
         <AvatarInitials
-          nombre={nombre}
+          name={nombre}
           size={36}
           bgClassName="bg-avatar-indigo-bg"
           fgClassName="text-avatar-indigo-fg"

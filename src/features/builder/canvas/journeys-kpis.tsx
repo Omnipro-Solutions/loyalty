@@ -1,5 +1,5 @@
 import { KpiWidget } from "@/components/data/kpi-widget"
-import { formatCOP, formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 
 import { getJourneysKpis } from "./queries"
 
@@ -11,10 +11,10 @@ export async function JourneysKpiRow() {
     <div className="flex w-full items-start gap-4">
       <KpiWidget
         etiqueta="Workflows activos"
-        valor={formatNumero(kpis.activos)}
+        valor={formatNumber(kpis.activos)}
         delta={
           kpis.publicadosEstaSemana > 0
-            ? formatNumero(kpis.publicadosEstaSemana)
+            ? formatNumber(kpis.publicadosEstaSemana)
             : undefined
         }
         caption={
@@ -27,7 +27,7 @@ export async function JourneysKpiRow() {
         etiqueta="Clientes en recorrido"
         valor={
           kpis.clientesEnRecorrido !== null
-            ? formatNumero(kpis.clientesEnRecorrido)
+            ? formatNumber(kpis.clientesEnRecorrido)
             : "—"
         }
         caption={
@@ -40,7 +40,7 @@ export async function JourneysKpiRow() {
         etiqueta="Conversión media"
         valor={
           kpis.conversionMedia !== null
-            ? formatPorcentaje(kpis.conversionMedia)
+            ? formatPercent(kpis.conversionMedia)
             : "—"
         }
         caption={

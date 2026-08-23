@@ -13,7 +13,7 @@ export function PerfilHero({ nombre, email, rol }: PerfilHeroProps) {
   return (
     <div className="flex items-center gap-[18px] rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
       <AvatarInitials
-        nombre={nombre}
+        name={nombre}
         size={56}
         textClassName="text-lg leading-6"
       />

@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { formatCOP, formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { deleteWorkflowsAction } from "./actions"
@@ -115,7 +115,7 @@ function useColumns(
       // para journeys sin datos, no un placeholder inventado.
       cell: (info) => (
         <span className="block text-right text-[13px]">
-          {info.getValue() !== null ? formatNumero(info.getValue()!) : "—"}
+          {info.getValue() !== null ? formatNumber(info.getValue()!) : "—"}
         </span>
       ),
     }),
@@ -128,7 +128,7 @@ function useColumns(
         return (
           <div className="flex flex-col gap-1">
             <span className="text-xs text-foreground">
-              {valor !== null ? formatPorcentaje(valor) : "—"}
+              {valor !== null ? formatPercent(valor) : "—"}
             </span>
             <div className="h-[5px] w-full overflow-hidden rounded-full bg-muted">
               {valor !== null && (

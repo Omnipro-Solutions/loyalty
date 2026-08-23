@@ -11,7 +11,7 @@ import { isNavActive, NAVIGATION } from "@/config/navigation"
 import { cn } from "@/lib/utils"
 
 type SidebarRailProps = {
-  nombre: string
+  name: string
   email: string
   onExpand?: () => void
   className?: string
@@ -19,7 +19,7 @@ type SidebarRailProps = {
 
 /** Figma "Layout / Sidebar · Rail" (680:230): 72px, bg-white, ítems 40×40 rounded-xl. */
 export function SidebarRail({
-  nombre,
+  name,
   email,
   onExpand,
   className,
@@ -36,20 +36,17 @@ export function SidebarRail({
       <BrandMark className="size-[34px] shrink-0" />
 
       <nav className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto">
-        {NAVIGATION.map((grupo, i) => (
-          <div
-            key={grupo.titulo}
-            className="flex flex-col items-center gap-1.5"
-          >
+        {NAVIGATION.map((group, i) => (
+          <div key={group.title} className="flex flex-col items-center gap-1.5">
             {i > 0 && <div className="my-1 h-px w-7 bg-border" />}
-            {grupo.items.map((item) => {
+            {group.items.map((item) => {
               const active = isNavActive(pathname, item.href)
               const Icon = item.icon
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={item.etiqueta}
+                  title={item.label}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex size-10 shrink-0 items-center justify-center rounded-xl",
@@ -76,7 +73,7 @@ export function SidebarRail({
         >
           <PanelLeftOpen className="size-4" />
         </Button>
-        <UserMenu nombre={nombre} email={email} variant="compact" />
+        <UserMenu name={name} email={email} variant="compact" />
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import type { BuilderNodeTipo } from "@/types/domain"
+import type { BuilderNodeType } from "@/types/domain"
 
 import { SIMPLE_FIELD_SPECS, type FieldSpec } from "./field-specs"
 
@@ -80,7 +80,7 @@ export const condicionMultipleConfigSchema = z.object({
  * exactamente lo mismo que una unión discriminada (un schema específico
  * por variante) sin forzar un `tipo` duplicado dentro de `config`.
  */
-export function nodeConfigSchemaFor(tipo: BuilderNodeTipo): z.ZodTypeAny {
+export function nodeConfigSchemaFor(tipo: BuilderNodeType): z.ZodTypeAny {
   if (tipo === "acumular_puntos") return acumularPuntosConfigSchema
   if (tipo === "condicion_multiple") return condicionMultipleConfigSchema
   if (tipo === "ramificacion_valor" || tipo === "split_ab") {

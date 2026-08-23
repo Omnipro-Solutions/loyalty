@@ -10,11 +10,11 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useMemo } from "react"
 
-import { CellAcciones } from "@/components/data/cells"
+import { CellActions } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { paletaAvatar } from "../lib/avatar-palette"
@@ -108,7 +108,7 @@ export function AudienciasTabla({
             return (
               <div className="flex min-w-0 items-center gap-2.5">
                 <AvatarInitials
-                  nombre={a.nombre}
+                  name={a.nombre}
                   size={34}
                   bgClassName={paleta.bg}
                   fgClassName={paleta.fg}
@@ -152,7 +152,7 @@ export function AudienciasTabla({
           ),
           cell: (info) => (
             <span className="block text-right text-[13px] font-medium text-foreground">
-              {formatNumero(info.row.original.tamano)}
+              {formatNumber(info.row.original.tamano)}
             </span>
           ),
         }),
@@ -171,7 +171,7 @@ export function AudienciasTabla({
           ),
           cell: (info) => (
             <span className="block text-right text-[13px] font-semibold text-foreground">
-              {formatNumero(info.row.original.journeysVinculados)}
+              {formatNumber(info.row.original.journeysVinculados)}
             </span>
           ),
         }),
@@ -227,7 +227,7 @@ export function AudienciasTabla({
           header: () => null,
           cell: () => (
             <div onClick={(e) => e.stopPropagation()}>
-              <CellAcciones />
+              <CellActions />
             </div>
           ),
         }),

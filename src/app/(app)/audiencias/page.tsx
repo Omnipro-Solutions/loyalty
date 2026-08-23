@@ -6,15 +6,15 @@ import {
   listAudiencias,
   type AudienciasSort,
 } from "@/features/audiencias/lib/queries"
-import { formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatNumber, formatPercent } from "@/lib/format"
 
 function primerValor(valor: string | string[] | undefined) {
   return Array.isArray(valor) ? valor[0] : valor
 }
 
-/** `formatPorcentaje` ya antepone "-" a los negativos (Intl) pero no "+" a los positivos — esta sí, para que el signo sea explícito en el pill de variación. */
-function formatDeltaPorcentaje(valor: number): string {
-  return `${valor >= 0 ? "+" : ""}${formatPorcentaje(valor)}`
+/** `formatPercent` ya antepone "-" a los negativos (Intl) pero no "+" a los positivos — esta sí, para que el signo sea explícito en el pill de variación. */
+function formatDeltaPercent(valor: number): string {
+  return `${valor >= 0 ? "+" : ""}${formatPercent(valor)}`
 }
 
 /** Figma "11.1 · Audiencias · listado" (842:5955). */
@@ -42,18 +42,18 @@ export default async function AudienciasPage({
         />
         <KpiWidget
           etiqueta="Perfiles alcanzados (total)"
-          valor={formatNumero(kpis.perfilesAlcanzados)}
+          valor={formatNumber(kpis.perfilesAlcanzados)}
           delta={
             kpis.perfilesAlcanzadosDeltaPct !== null
-              ? formatDeltaPorcentaje(kpis.perfilesAlcanzadosDeltaPct)
+              ? formatDeltaPercent(kpis.perfilesAlcanzadosDeltaPct)
               : undefined
           }
           caption="vs mes anterior"
         />
         <KpiWidget
           etiqueta="Sincronizadas con AJO"
-          valor={`${formatNumero(kpis.sincronizadas)} de ${formatNumero(kpis.totalAudiencias)}`}
-          delta={formatPorcentaje(kpis.coberturaPct)}
+          valor={`${formatNumber(kpis.sincronizadas)} de ${formatNumber(kpis.totalAudiencias)}`}
+          delta={formatPercent(kpis.coberturaPct)}
           caption="de cobertura"
         />
         <KpiWidget

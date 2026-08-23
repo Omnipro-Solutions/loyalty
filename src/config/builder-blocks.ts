@@ -22,131 +22,130 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import type { BuilderNodeGroup, BuilderNodeTipo } from "@/types/domain"
+import type { BuilderNodeGroup, BuilderNodeType } from "@/types/domain"
 
 type BuilderGroupMeta = {
-  etiqueta: string
+  label: string
   bgClassName: string
   fgClassName: string
 }
 
 /**
- * Metadatos de presentación por grupo (Figma "08.4 · catálogo de bloques").
- * Cada grupo se pinta con un par de tokens avatar-* (bg claro + fg oscuro,
- * ver globals.css) — los 5 grupos calzan 1:1 con los 5 pares avatar-*
- * disponibles en el proyecto (coral/indigo ya existían de Fase 0-1; teal,
- * amber y violet se agregaron para este catálogo, verificados contra
- * `get_variable_defs` del nodo 1109:4478).
+ * Presentation metadata per group (Figma "08.4 · catálogo de bloques"). Each
+ * group is painted with a pair of avatar-* tokens (light bg + dark fg, see
+ * globals.css) — the 5 groups map 1:1 to the 5 avatar-* pairs available in
+ * the project (coral/indigo already existed from Fase 0-1; teal, amber and
+ * violet were added for this catalog, verified against `get_variable_defs`
+ * on node 1109:4478).
  */
 export const BUILDER_GROUP_META: Record<BuilderNodeGroup, BuilderGroupMeta> = {
-  entradas: {
-    etiqueta: "Entradas",
+  entry: {
+    label: "Entradas",
     bgClassName: "bg-avatar-teal-bg",
     fgClassName: "text-avatar-teal-fg",
   },
-  lealtad: {
-    etiqueta: "Lealtad",
+  loyalty: {
+    label: "Lealtad",
     bgClassName: "bg-avatar-amber-bg",
     fgClassName: "text-avatar-amber-fg",
   },
-  acciones: {
-    etiqueta: "Acciones",
+  actions: {
+    label: "Acciones",
     bgClassName: "bg-avatar-indigo-bg",
     fgClassName: "text-avatar-indigo-fg",
   },
-  logica: {
-    etiqueta: "Lógica",
+  logic: {
+    label: "Lógica",
     bgClassName: "bg-avatar-violet-bg",
     fgClassName: "text-avatar-violet-fg",
   },
-  fin: {
-    etiqueta: "Fin",
+  end: {
+    label: "Fin",
     bgClassName: "bg-avatar-coral-bg",
     fgClassName: "text-avatar-coral-fg",
   },
 }
 
 type BuilderBlockMeta = {
-  grupo: BuilderNodeGroup
-  etiqueta: string
-  icono: LucideIcon
+  group: BuilderNodeGroup
+  label: string
+  icon: LucideIcon
 }
 
 /**
- * Un ícono de `lucide-react` por tipo de bloque — el Figma exporta cada
- * ícono del catálogo como asset propio (no como glifo de una librería
- * pública), así que esto es una sustitución temática razonable, no un
- * calco pixel a pixel. Etiqueta = nombre visible en la paleta y en el
- * nodo del canvas.
+ * One `lucide-react` icon per block type — the Figma exports each catalog
+ * icon as its own asset (not as a glyph from a public library), so this is a
+ * reasonable thematic substitution, not a pixel-perfect trace. Label = name
+ * shown in the palette and in the canvas node.
  */
-export const BUILDER_BLOCKS: Record<BuilderNodeTipo, BuilderBlockMeta> = {
-  // Entradas
+export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
+  // Entry
   evento_compra: {
-    grupo: "entradas",
-    etiqueta: "Evento de compra",
-    icono: CreditCard,
+    group: "entry",
+    label: "Evento de compra",
+    icon: CreditCard,
   },
   entra_segmento: {
-    grupo: "entradas",
-    etiqueta: "Entra al segmento",
-    icono: Users,
+    group: "entry",
+    label: "Entra al segmento",
+    icon: Users,
   },
-  canje_cupon: { grupo: "entradas", etiqueta: "Canje de cupón", icono: Ticket },
+  canje_cupon: { group: "entry", label: "Canje de cupón", icon: Ticket },
   fecha_recurrente: {
-    grupo: "entradas",
-    etiqueta: "Fecha / recurrente",
-    icono: Calendar,
+    group: "entry",
+    label: "Fecha / recurrente",
+    icon: Calendar,
   },
-  alta_socio: { grupo: "entradas", etiqueta: "Alta de socio", icono: UserPlus },
+  alta_socio: { group: "entry", label: "Alta de socio", icon: UserPlus },
 
-  // Lealtad
+  // Loyalty
   acumular_puntos: {
-    grupo: "lealtad",
-    etiqueta: "Acumular puntos",
-    icono: Coins,
+    group: "loyalty",
+    label: "Acumular puntos",
+    icon: Coins,
   },
-  canjear_puntos: { grupo: "lealtad", etiqueta: "Canjear puntos", icono: Gift },
+  canjear_puntos: { group: "loyalty", label: "Canjear puntos", icon: Gift },
   cambio_nivel: {
-    grupo: "lealtad",
-    etiqueta: "Cambio de nivel",
-    icono: TrendingUp,
+    group: "loyalty",
+    label: "Cambio de nivel",
+    icon: TrendingUp,
   },
   emitir_cupon: {
-    grupo: "lealtad",
-    etiqueta: "Emitir cupón",
-    icono: TicketPercent,
+    group: "loyalty",
+    label: "Emitir cupón",
+    icon: TicketPercent,
   },
-  reto: { grupo: "lealtad", etiqueta: "Reto / challenge", icono: Target },
-  referido: { grupo: "lealtad", etiqueta: "Referido", icono: Share2 },
+  reto: { group: "loyalty", label: "Reto / challenge", icon: Target },
+  referido: { group: "loyalty", label: "Referido", icon: Share2 },
 
-  // Acciones
-  email: { grupo: "acciones", etiqueta: "Email", icono: Mail },
-  push: { grupo: "acciones", etiqueta: "Push", icono: Bell },
+  // Actions
+  email: { group: "actions", label: "Email", icon: Mail },
+  push: { group: "actions", label: "Push", icon: Bell },
   sms_whatsapp: {
-    grupo: "acciones",
-    etiqueta: "SMS / WhatsApp",
-    icono: MessageCircle,
+    group: "actions",
+    label: "SMS / WhatsApp",
+    icon: MessageCircle,
   },
   aplicar_promocion: {
-    grupo: "acciones",
-    etiqueta: "Aplicar promoción",
-    icono: Tag,
+    group: "actions",
+    label: "Aplicar promoción",
+    icon: Tag,
   },
 
-  // Lógica
+  // Logic
   condicion_multiple: {
-    grupo: "logica",
-    etiqueta: "Condición múltiple",
-    icono: GitBranch,
+    group: "logic",
+    label: "Condición múltiple",
+    icon: GitBranch,
   },
   ramificacion_valor: {
-    grupo: "logica",
-    etiqueta: "Ramificación por valor",
-    icono: Split,
+    group: "logic",
+    label: "Ramificación por valor",
+    icon: Split,
   },
-  split_ab: { grupo: "logica", etiqueta: "Split A/B", icono: Shuffle },
-  esperar: { grupo: "logica", etiqueta: "Esperar", icono: Clock },
+  split_ab: { group: "logic", label: "Split A/B", icon: Shuffle },
+  esperar: { group: "logic", label: "Esperar", icon: Clock },
 
-  // Fin
-  fin_workflow: { grupo: "fin", etiqueta: "Fin del workflow", icono: Flag },
+  // End
+  fin_workflow: { group: "end", label: "Fin del workflow", icon: Flag },
 }

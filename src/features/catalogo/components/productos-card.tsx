@@ -1,4 +1,4 @@
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 
 import { CatalogoFiltrosBar } from "./catalogo-filtros-bar"
 import { CatalogoPaginacion } from "./catalogo-paginacion"
@@ -38,7 +38,7 @@ export function ProductosCard({
               Productos
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumero(total)}
+              {formatNumber(total)}
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground">

@@ -6,7 +6,7 @@ import {
   listClientes,
   listTiersOptions,
 } from "@/features/clientes/lib/queries"
-import { formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatNumber, formatPercent } from "@/lib/format"
 
 function primerValor(valor: string | string[] | undefined) {
   return Array.isArray(valor) ? valor[0] : valor
@@ -33,28 +33,28 @@ export default async function ClientesPage({
       <div className="flex items-start gap-4">
         <KpiCard
           etiqueta="Clientes activos"
-          valor={formatNumero(kpis.clientesActivos)}
-          detalle={`de ${formatNumero(kpis.totalClientes)} en total`}
+          valor={formatNumber(kpis.clientesActivos)}
+          detalle={`de ${formatNumber(kpis.totalClientes)} en total`}
         />
         <KpiCard
           etiqueta="Nuevos este mes"
-          valor={formatNumero(kpis.nuevosEsteMes)}
+          valor={formatNumber(kpis.nuevosEsteMes)}
           detalle="altas registradas"
         />
         <KpiCard
           etiqueta="Con consentimiento de marketing"
           valor={
             kpis.totalClientes
-              ? formatPorcentaje(kpis.conConsentimiento / kpis.totalClientes)
+              ? formatPercent(kpis.conConsentimiento / kpis.totalClientes)
               : "—"
           }
-          detalle={`${formatNumero(kpis.conConsentimiento)} clientes`}
+          detalle={`${formatNumber(kpis.conConsentimiento)} clientes`}
         />
         <KpiCard
           etiqueta="Perfil completo"
           valor={
             kpis.totalClientes
-              ? formatPorcentaje(kpis.perfilCompleto / kpis.totalClientes)
+              ? formatPercent(kpis.perfilCompleto / kpis.totalClientes)
               : "—"
           }
           detalle="80% o más de los campos"

@@ -1,4 +1,4 @@
-import { formatPorcentaje } from "@/lib/format"
+import { formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 type Bandas = { success: number; warning: number; destructive: number }
@@ -28,7 +28,7 @@ export function InventoryHealthCard({
       </p>
       <div className="flex items-center gap-2">
         <p className="text-[26px] leading-8 font-semibold text-foreground">
-          {formatPorcentaje(promedio)}
+          {formatPercent(promedio)}
         </p>
         <p className="text-[11px] text-muted-foreground">
           completitud de datos

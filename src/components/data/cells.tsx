@@ -3,28 +3,28 @@ import { MoreHorizontal, Pencil } from "lucide-react"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Button } from "@/components/ui/button"
 
-type CellEntidadProps = {
-  nombre: string
-  subtitulo: string
-  /** Foto real (ej. producto de catálogo) — si falta, cae a iniciales. */
-  imagenUrl?: string | null
-  /** Figma usa 30px en el patrón genérico (697:224) pero 38px en 03.1. */
+type CellEntityProps = {
+  name: string
+  subtitle: string
+  /** Real photo (e.g. catalog product) — falls back to initials if missing. */
+  imageUrl?: string | null
+  /** Figma uses 30px in the generic pattern (697:224) but 38px in 03.1. */
   size?: number
 }
 
-/** Figma "Table / Cell · Entidad" (697:224): avatar + nombre 12/17 + subtítulo 10/14. */
-export function CellEntidad({
-  nombre,
-  subtitulo,
-  imagenUrl,
+/** Figma "Table / Cell · Entidad" (697:224): avatar + name 12/17 + subtitle 10/14. */
+export function CellEntity({
+  name,
+  subtitle,
+  imageUrl,
   size = 30,
-}: CellEntidadProps) {
+}: CellEntityProps) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      {imagenUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- tamaño fijo en una celda de tabla, no vale la pena next/image aquí.
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- fixed size in a table cell, not worth next/image here.
         <img
-          src={imagenUrl}
+          src={imageUrl}
           alt=""
           width={size}
           height={size}
@@ -33,7 +33,7 @@ export function CellEntidad({
         />
       ) : (
         <AvatarInitials
-          nombre={nombre}
+          name={name}
           size={size}
           bgClassName="bg-avatar-indigo-bg"
           fgClassName="text-avatar-indigo-fg"
@@ -42,23 +42,23 @@ export function CellEntidad({
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[12px] leading-[17px] font-medium text-foreground">
-          {nombre}
+          {name}
         </p>
         <p className="truncate text-[10px] leading-[14px] text-muted-foreground">
-          {subtitulo}
+          {subtitle}
         </p>
       </div>
     </div>
   )
 }
 
-type CellAccionesProps = {
+type CellActionsProps = {
   onEdit?: () => void
   onMore?: () => void
 }
 
-/** Figma "Table / Cell · Acciones" (697:235): botones circulares 28px sobre bg-subtle. */
-export function CellAcciones({ onEdit, onMore }: CellAccionesProps) {
+/** Figma "Table / Cell · Acciones" (697:235): 28px circular buttons over bg-subtle. */
+export function CellActions({ onEdit, onMore }: CellActionsProps) {
   return (
     <div className="flex items-center justify-end gap-1.5">
       <Button

@@ -1,38 +1,38 @@
 /**
- * Conjuntos cerrados del dominio, como union types derivados de tuplas
- * `as const` — nunca `enum` (convención heredada de polar-portal). Cada
- * tupla debe reflejar exactamente el `check` de la columna equivalente en
- * `supabase/migrations/`; si cambias una, cambia la otra.
+ * Closed domain sets, as union types derived from `as const` tuples — never
+ * `enum` (convention inherited from polar-portal). Each tuple must exactly
+ * mirror the `check` on the matching column in `supabase/migrations/`; if you
+ * change one, change the other.
  */
 
-// Archetype de partida para un rol de organización (`roles.rol_base` en
-// supabase/migrations) — no es el rol asignado a una persona: eso es
-// `profiles.role_id`, una fila real de `roles` (09.2 "Equipo · roles y
-// permisos"), con nombre y matriz de permisos propios por organización.
+// Starting archetype for an organization role (`roles.rol_base` in
+// supabase/migrations) — not the role assigned to a person: that's
+// `profiles.role_id`, a real row of `roles` (09.2 "Equipo · roles y
+// permisos"), with its own name and permission matrix per organization.
 export const ROLES = ["admin", "gestor", "aprobador", "lector"] as const
-export type Rol = (typeof ROLES)[number]
+export type Role = (typeof ROLES)[number]
 
-export const ROLE_TIPOS = ["sistema", "personalizado"] as const
-export type RoleTipo = (typeof ROLE_TIPOS)[number]
+export const ROLE_TYPES = ["sistema", "personalizado"] as const
+export type RoleType = (typeof ROLE_TYPES)[number]
 
-// 'propia' = solo la tienda de `profiles.tienda_id` de cada persona con
-// ese rol (09.2 "Su tienda"). No hay una lista de tiendas a mano todavía.
-export const ALCANCE_TIENDAS = ["todas", "propia"] as const
-export type AlcanceTiendas = (typeof ALCANCE_TIENDAS)[number]
+// 'propia' = only the store from that person's `profiles.tienda_id` (09.2
+// "Su tienda"). There's no manual store list yet.
+export const STORE_SCOPES = ["todas", "propia"] as const
+export type StoreScope = (typeof STORE_SCOPES)[number]
 
-export const ALCANCE_CANALES = ["pos", "ecommerce", "pos_ecommerce"] as const
-export type AlcanceCanal = (typeof ALCANCE_CANALES)[number]
+export const CHANNEL_SCOPES = ["pos", "ecommerce", "pos_ecommerce"] as const
+export type ChannelScope = (typeof CHANNEL_SCOPES)[number]
 
-export const PROFILE_ESTADOS = ["activo", "inactivo"] as const
-export type ProfileEstado = (typeof PROFILE_ESTADOS)[number]
+export const PROFILE_STATUSES = ["activo", "inactivo"] as const
+export type ProfileStatus = (typeof PROFILE_STATUSES)[number]
 
-export const INVITACION_ESTADOS = [
+export const INVITATION_STATUSES = [
   "pendiente",
   "aceptada",
   "cancelada",
   "expirada",
 ] as const
-export type InvitacionEstado = (typeof INVITACION_ESTADOS)[number]
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number]
 
 export const TENANT_IDPS = [
   "microsoft_entra_id",
@@ -42,32 +42,32 @@ export const TENANT_IDPS = [
 ] as const
 export type TenantIdp = (typeof TENANT_IDPS)[number]
 
-// Niveles del programa de lealtad (08.5 "Multiplicador por nivel").
-export const TIER_NOMBRES = ["diamante", "oro", "plata", "bronce"] as const
-export type TierNombre = (typeof TIER_NOMBRES)[number]
+// Loyalty program tiers (08.5 "Multiplicador por nivel").
+export const TIER_NAMES = ["diamante", "oro", "plata", "bronce"] as const
+export type TierName = (typeof TIER_NAMES)[number]
 
-// Atributos de perfil del socio (05 · Clientes y audiencias, `members`).
-export const DOCUMENTO_TIPOS = ["cc", "ce", "ti", "pasaporte", "nit"] as const
-export type DocumentoTipo = (typeof DOCUMENTO_TIPOS)[number]
+// Member profile attributes (05 · Clientes y audiencias, `members`).
+export const DOCUMENT_TYPES = ["cc", "ce", "ti", "pasaporte", "nit"] as const
+export type DocumentType = (typeof DOCUMENT_TYPES)[number]
 
-export const GENEROS = [
+export const GENDERS = [
   "femenino",
   "masculino",
   "otro",
   "prefiere_no_decir",
 ] as const
-export type Genero = (typeof GENEROS)[number]
+export type Gender = (typeof GENDERS)[number]
 
-export const ESTADOS_CIVILES = [
+export const MARITAL_STATUSES = [
   "soltero",
   "casado",
   "union_libre",
   "divorciado",
   "viudo",
 ] as const
-export type EstadoCivil = (typeof ESTADOS_CIVILES)[number]
+export type MaritalStatus = (typeof MARITAL_STATUSES)[number]
 
-export const CANALES_ADQUISICION = [
+export const ACQUISITION_CHANNELS = [
   "pos",
   "ecommerce",
   "app",
@@ -75,16 +75,16 @@ export const CANALES_ADQUISICION = [
   "campana",
   "otro",
 ] as const
-export type CanalAdquisicion = (typeof CANALES_ADQUISICION)[number]
+export type AcquisitionChannel = (typeof ACQUISITION_CHANNELS)[number]
 
-export const MEMBER_ESTADOS = ["activo", "inactivo", "suspendido"] as const
-export type MemberEstado = (typeof MEMBER_ESTADOS)[number]
+export const MEMBER_STATUSES = ["activo", "inactivo", "suspendido"] as const
+export type MemberStatus = (typeof MEMBER_STATUSES)[number]
 
-export const IDIOMAS = ["es", "en"] as const
-export type Idioma = (typeof IDIOMAS)[number]
+export const LANGUAGES = ["es", "en"] as const
+export type Language = (typeof LANGUAGES)[number]
 
-// Consentimiento de marketing por canal (05.3g "Card · Consentimientos").
-export const CONSENTIMIENTO_CANALES = [
+// Marketing consent per channel (05.3g "Card · Consentimientos").
+export const CONSENT_CHANNELS = [
   "email",
   "sms",
   "push",
@@ -92,80 +92,75 @@ export const CONSENTIMIENTO_CANALES = [
   "personalizacion",
   "socios_comerciales",
 ] as const
-export type ConsentimientoCanal = (typeof CONSENTIMIENTO_CANALES)[number]
+export type ConsentChannel = (typeof CONSENT_CHANNELS)[number]
 
-// Pedidos (05.3g "Comportamiento de compra" / "Valor comercial").
-export const CANALES_VENTA = ["pos", "ecommerce", "app"] as const
-export type CanalVenta = (typeof CANALES_VENTA)[number]
+// Orders (05.3g "Comportamiento de compra" / "Valor comercial").
+export const SALES_CHANNELS = ["pos", "ecommerce", "app"] as const
+export type SalesChannel = (typeof SALES_CHANNELS)[number]
 
-export const PEDIDO_ESTADOS = ["completado", "cancelado", "devuelto"] as const
-export type PedidoEstado = (typeof PEDIDO_ESTADOS)[number]
+export const ORDER_STATUSES = ["completado", "cancelado", "devuelto"] as const
+export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
-export const CONSENTIMIENTO_FUENTES = [
-  "web",
-  "app",
-  "tienda",
-  "formulario",
-] as const
-export type ConsentimientoFuente = (typeof CONSENTIMIENTO_FUENTES)[number]
+export const CONSENT_SOURCES = ["web", "app", "tienda", "formulario"] as const
+export type ConsentSource = (typeof CONSENT_SOURCES)[number]
 
-export const POINTS_LEDGER_TIPOS = [
+export const POINTS_LEDGER_TYPES = [
   "acumulacion",
   "canje",
   "expiracion",
   "ajuste",
 ] as const
-export type PointsLedgerTipo = (typeof POINTS_LEDGER_TIPOS)[number]
+export type PointsLedgerType = (typeof POINTS_LEDGER_TYPES)[number]
 
-export const COUPON_TIPOS = [
+export const COUPON_TYPES = [
   "descuento_porcentaje",
   "descuento_monto",
   "envio_gratis",
   "2x1",
 ] as const
-export type CouponTipo = (typeof COUPON_TIPOS)[number]
+export type CouponType = (typeof COUPON_TYPES)[number]
 
-export const COUPON_ESTADOS = [
+export const COUPON_STATUSES = [
   "activo",
   "canjeado",
   "expirado",
   "anulado",
 ] as const
-export type CouponEstado = (typeof COUPON_ESTADOS)[number]
+export type CouponStatus = (typeof COUPON_STATUSES)[number]
 
-// Estado del producto en el catálogo (03.1 "ESTADO" / 03.3 "Badge · ACTIVO").
-export const PRODUCTO_ESTADOS = ["activo", "inactivo"] as const
-export type ProductoEstado = (typeof PRODUCTO_ESTADOS)[number]
+// Product status in the catalog (03.1 "ESTADO" / 03.3 "Badge · ACTIVO").
+export const PRODUCT_STATUSES = ["activo", "inactivo"] as const
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number]
 
-// Categoría de un evento de la bitácora de producto (03.3 "Card · Bitácora
-// de cambios", chips de filtro Precios/Datos/Promociones/Estado).
-export const PRODUCTO_EVENTO_CATEGORIAS = [
+// Category of a product history event (03.3 "Card · Bitácora de cambios",
+// Precios/Datos/Promociones/Estado filter chips).
+export const PRODUCT_EVENT_CATEGORIES = [
   "precio",
   "datos",
   "promocion",
   "estado",
 ] as const
-export type ProductoEventoCategoria =
-  (typeof PRODUCTO_EVENTO_CATEGORIAS)[number]
+export type ProductEventCategory = (typeof PRODUCT_EVENT_CATEGORIES)[number]
 
-// Formato de tienda (04.1 "FORMATO" / 04.2 "Formato").
-export const TIENDA_FORMATOS = ["flagship", "express", "mall"] as const
-export type TiendaFormato = (typeof TIENDA_FORMATOS)[number]
+// Store format (04.1 "FORMATO" / 04.2 "Formato").
+export const STORE_FORMATS = ["flagship", "express", "mall"] as const
+export type StoreFormat = (typeof STORE_FORMATS)[number]
 
-// Estado operativo de la tienda (04.1 "ESTADO"). 'en_apertura' es el estado
-// inicial hasta la primera transacción del POS (nota de 04.2).
-export const TIENDA_ESTADOS = [
+// Store operating status (04.1 "ESTADO"). 'en_apertura' is the initial
+// status until the POS's first transaction (04.2 note).
+export const STORE_STATUSES = [
   "operando",
   "bajo_meta",
   "en_apertura",
   "cerrada_temporal",
 ] as const
-export type TiendaEstado = (typeof TIENDA_ESTADOS)[number]
+export type StoreStatus = (typeof STORE_STATUSES)[number]
 
-// Mecánica de la promoción (06.1 "PROMOCIÓN": "Cantidad · todas las tiendas",
-// "Segmento · regla RULE-VIP-15"…) — clasifica la promoción para el ícono y
-// subtítulo del listado, independiente de qué campos de `condiciones` traiga.
-export const TIPOS_PROMOCION = [
+// Promotion mechanic (06.1 "PROMOCIÓN": "Cantidad · todas las tiendas",
+// "Segmento · regla RULE-VIP-15"…) — classifies the promotion for the
+// listing's icon and subtitle, independent of which `condiciones` fields it
+// carries.
+export const PROMOTION_TYPES = [
   "cantidad",
   "categoria",
   "segmento",
@@ -173,102 +168,101 @@ export const TIPOS_PROMOCION = [
   "cupon",
   "bundle",
 ] as const
-export type TipoPromocion = (typeof TIPOS_PROMOCION)[number]
+export type PromotionType = (typeof PROMOTION_TYPES)[number]
 
-// Campo de una condición SI (07.1 "Condiciones (SI)"). Los 4 tienen tabla
-// real ahora: 'categoria'/'tienda' desde el inicio, 'segmento' desde 11 ·
-// Audiencias (`segments`) y 'monto_carrito' desde que existe `pedidos` —
-// el formulario de creación deja agregar los 4.
-export const CAMPOS_CONDICION = [
+// Field of an IF condition (07.1 "Condiciones (SI)"). All 4 now have a real
+// table — 'categoria'/'tienda' from the start, 'segmento' since 11 ·
+// Audiencias (`segments`), and 'monto_carrito' since `pedidos` exists — the
+// creation form lets you add all 4.
+export const CONDITION_FIELDS = [
   "categoria",
   "tienda",
   "segmento",
   "monto_carrito",
 ] as const
-export type CampoCondicion = (typeof CAMPOS_CONDICION)[number]
+export type ConditionField = (typeof CONDITION_FIELDS)[number]
 
-/** Mecanismo de rollout gradual (no todo campo tenía tabla real desde el día 1) — hoy los 4 están habilitados, se mantiene por si se agrega un campo nuevo antes de tener su fuente de datos. */
-export const CAMPOS_CONDICION_HABILITADOS: readonly CampoCondicion[] =
-  CAMPOS_CONDICION
+/** Gradual rollout mechanism (not every field had a real table from day 1) — today all 4 are enabled, kept in case a new field is added before it has a data source. */
+export const ENABLED_CONDITION_FIELDS: readonly ConditionField[] =
+  CONDITION_FIELDS
 
-export const COMBINADORES_CONDICION = ["todas", "alguna"] as const
-export type CombinadorCondicion = (typeof COMBINADORES_CONDICION)[number]
+export const CONDITION_COMBINATORS = ["todas", "alguna"] as const
+export type ConditionCombinator = (typeof CONDITION_COMBINATORS)[number]
 
-// Tipo de beneficio de la recompensa (07.1 "Recompensa (ENTONCES)" →
-// "Tipo de beneficio").
-export const TIPOS_BENEFICIO = [
+// Reward benefit type (07.1 "Recompensa (ENTONCES)" → "Tipo de beneficio").
+export const BENEFIT_TYPES = [
   "descuento_porcentual",
   "descuento_monto_fijo",
   "envio_gratis",
   "producto_gratis",
   "precio_fijo_bundle",
 ] as const
-export type TipoBeneficio = (typeof TIPOS_BENEFICIO)[number]
+export type BenefitType = (typeof BENEFIT_TYPES)[number]
 
-export const APLICAR_SOBRE_OPCIONES = [
+export const APPLY_TO_OPTIONS = [
   "subtotal_carrito",
   "producto",
   "envio",
 ] as const
-export type AplicarSobre = (typeof APLICAR_SOBRE_OPCIONES)[number]
+export type ApplyTo = (typeof APPLY_TO_OPTIONS)[number]
 
-export const USOS_PERIODOS = ["sin_limite", "dia", "semana", "mes"] as const
-export type UsosPeriodo = (typeof USOS_PERIODOS)[number]
+export const USAGE_PERIODS = ["sin_limite", "dia", "semana", "mes"] as const
+export type UsagePeriod = (typeof USAGE_PERIODS)[number]
 
-// Bandera de publicación (07.1 "Guardar y activar" / "Guardar como
-// borrador"). El estado mostrado en el listado (Activa/Programada/
-// Finalizada) se computa cruzando esto con vigente_desde/vigente_hasta —
-// ver `features/promociones/lib/estado.ts` — en vez de guardarse aparte.
-export const ESTADOS_PUBLICACION_PROMOCION = ["borrador", "activa"] as const
-export type EstadoPublicacionPromocion =
-  (typeof ESTADOS_PUBLICACION_PROMOCION)[number]
+// Publication flag (07.1 "Guardar y activar" / "Guardar como borrador"). The
+// status shown in the listing (Activa/Programada/Finalizada) is computed by
+// crossing this with vigente_desde/vigente_hasta — see
+// `features/promotions/lib/status.ts` — instead of being stored separately.
+export const PROMOTION_PUBLICATION_STATUSES = ["borrador", "activa"] as const
+export type PromotionPublicationStatus =
+  (typeof PROMOTION_PUBLICATION_STATUSES)[number]
 
-export const CHALLENGE_ESTADOS = [
+export const CHALLENGE_STATUSES = [
   "en_progreso",
   "cumplido",
   "expirado",
 ] as const
-export type ChallengeEstado = (typeof CHALLENGE_ESTADOS)[number]
+export type ChallengeStatus = (typeof CHALLENGE_STATUSES)[number]
 
-// Estado de publicación de una audiencia (11 · Audiencias, columna ESTADO).
-// `nivel_dominante` reutiliza `TierNombre` — es el nivel con más socios
-// dentro del segmento, no un atributo propio de la audiencia.
-export const SEGMENT_ESTADOS = ["activa", "pausada"] as const
-export type SegmentEstado = (typeof SEGMENT_ESTADOS)[number]
+// Audience publication status (11 · Audiencias, ESTADO column).
+// `nivel_dominante` reuses `TierName` — it's the tier with the most members
+// within the segment, not an attribute of the audience itself.
+export const SEGMENT_STATUSES = ["activa", "pausada"] as const
+export type SegmentStatus = (typeof SEGMENT_STATUSES)[number]
 
-export const WORKFLOW_ESTADOS = [
+export const WORKFLOW_STATUSES = [
   "borrador",
   "publicado",
   "pausado",
   "archivado",
 ] as const
-export type WorkflowEstado = (typeof WORKFLOW_ESTADOS)[number]
+export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number]
 
-export const WORKFLOW_RUN_TIPOS = ["simulacion", "publicacion"] as const
-export type WorkflowRunTipo = (typeof WORKFLOW_RUN_TIPOS)[number]
+export const WORKFLOW_RUN_TYPES = ["simulacion", "publicacion"] as const
+export type WorkflowRunType = (typeof WORKFLOW_RUN_TYPES)[number]
 
-export const WORKFLOW_RUN_ESTADOS = [
+export const WORKFLOW_RUN_STATUSES = [
   "en_progreso",
   "completado",
   "con_errores",
 ] as const
-export type WorkflowRunEstado = (typeof WORKFLOW_RUN_ESTADOS)[number]
+export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 
 /**
- * Catálogo de 19 tipos de bloque del Loyalty Builder, en 5 grupos (Figma
- * "08.4 · Loyalty builder · catálogo de bloques"). Los metadatos de
- * presentación (etiqueta, ícono, color) viven en src/config/builder-blocks.ts;
- * aquí solo el conjunto cerrado de valores válidos para `workflow_nodes.tipo`.
+ * Catalog of 19 Loyalty Builder block types, in 5 groups (Figma
+ * "08.4 · Loyalty builder · catálogo de bloques"). Presentation metadata
+ * (label, icon, color) lives in src/config/builder-blocks.ts; here only the
+ * closed set of valid values for `workflow_nodes.tipo`.
  */
 export const BUILDER_NODE_GROUPS = {
-  entradas: [
+  entry: [
     "evento_compra",
     "entra_segmento",
     "canje_cupon",
     "fecha_recurrente",
     "alta_socio",
   ],
-  lealtad: [
+  loyalty: [
     "acumular_puntos",
     "canjear_puntos",
     "cambio_nivel",
@@ -276,18 +270,18 @@ export const BUILDER_NODE_GROUPS = {
     "reto",
     "referido",
   ],
-  acciones: ["email", "push", "sms_whatsapp", "aplicar_promocion"],
-  logica: ["condicion_multiple", "ramificacion_valor", "split_ab", "esperar"],
-  fin: ["fin_workflow"],
+  actions: ["email", "push", "sms_whatsapp", "aplicar_promocion"],
+  logic: ["condicion_multiple", "ramificacion_valor", "split_ab", "esperar"],
+  end: ["fin_workflow"],
 } as const
 
 export type BuilderNodeGroup = keyof typeof BUILDER_NODE_GROUPS
 
-export const BUILDER_NODE_TIPOS = Object.values(BUILDER_NODE_GROUPS).flat()
-export type BuilderNodeTipo = (typeof BUILDER_NODE_TIPOS)[number]
+export const BUILDER_NODE_TYPES = Object.values(BUILDER_NODE_GROUPS).flat()
+export type BuilderNodeType = (typeof BUILDER_NODE_TYPES)[number]
 
-// Solo puede haber una entrada activa por workflow (regla explícita del Figma).
-export const BUILDER_ENTRY_NODE_TIPOS = BUILDER_NODE_GROUPS.entradas
+// Only one entry node can be active per workflow (explicit Figma rule).
+export const BUILDER_ENTRY_NODE_TYPES = BUILDER_NODE_GROUPS.entry
 
-// Puertos de salida por tipo de nodo — los de lógica ramifican, el resto no.
-export const BUILDER_LOGIC_NODE_TIPOS = BUILDER_NODE_GROUPS.logica
+// Output ports per node type — logic nodes branch, the rest don't.
+export const BUILDER_LOGIC_NODE_TYPES = BUILDER_NODE_GROUPS.logic

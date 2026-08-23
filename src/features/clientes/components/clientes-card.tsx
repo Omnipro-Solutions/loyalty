@@ -1,7 +1,7 @@
 import { Users } from "lucide-react"
 
 import { EmptyState } from "@/components/feedback/empty-state"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 
 import { ClientesFiltrosBar } from "./clientes-filtros-bar"
 import { ClientesPaginacion } from "./clientes-paginacion"
@@ -35,7 +35,7 @@ export function ClientesCard({
               Clientes
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumero(total)}
+              {formatNumber(total)}
             </span>
           </div>
         </div>

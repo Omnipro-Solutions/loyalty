@@ -1,8 +1,8 @@
-import { BUILDER_ENTRY_NODE_TIPOS, type BuilderNodeTipo } from "@/types/domain"
+import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
 export type SimNode = {
   id: string
-  tipo: BuilderNodeTipo
+  tipo: BuilderNodeType
   config: Record<string, unknown>
 }
 export type SimEdge = {
@@ -13,12 +13,12 @@ export type SimEdge = {
 
 export type SimStep = {
   nodeId: string
-  tipo: BuilderNodeTipo
+  tipo: BuilderNodeType
   conteoEntrada: number
   salidas: { port: string; conteo: number }[]
 }
 
-const ENTRY_TIPOS = new Set<string>(BUILDER_ENTRY_NODE_TIPOS)
+const ENTRY_TIPOS = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
 
 function numeroConfig(
   config: Record<string, unknown>,

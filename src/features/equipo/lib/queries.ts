@@ -1,4 +1,4 @@
-import type { Accion, Recurso } from "@/lib/permissions"
+import type { Action, Resource } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
@@ -156,7 +156,7 @@ export async function listRoles(): Promise<RoleConConteo[]> {
 }
 
 export type RoleDetalle = RoleRow & {
-  permisos: Partial<Record<Recurso, Accion[]>>
+  permisos: Partial<Record<Resource, Action[]>>
   miembrosPreview: Pick<Usuario, "id" | "nombre">[]
   miembrosTotal: number
 }
@@ -187,11 +187,11 @@ export async function getRoleDetalle(
   if (errorPermisos) throw errorPermisos
   if (errorMiembros) throw errorMiembros
 
-  const permisosPorRecurso: Partial<Record<Recurso, Accion[]>> = {}
+  const permisosPorRecurso: Partial<Record<Resource, Action[]>> = {}
   for (const p of permisos ?? []) {
-    const recurso = p.recurso as Recurso
+    const recurso = p.recurso as Resource
     const lista = permisosPorRecurso[recurso] ?? []
-    lista.push(p.accion as Accion)
+    lista.push(p.accion as Action)
     permisosPorRecurso[recurso] = lista
   }
 
@@ -267,8 +267,8 @@ export async function getPerfilConPermisos(): Promise<PerfilConPermisos | null> 
 
 export function tienePermiso(
   permisos: Set<string>,
-  recurso: Recurso,
-  accion: Accion
+  recurso: Resource,
+  accion: Action
 ): boolean {
   return permisos.has(`${recurso}:${accion}`)
 }

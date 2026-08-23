@@ -1,8 +1,8 @@
 import { ArrowDown, ArrowUp } from "lucide-react"
 
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { TierNombre } from "@/types/domain"
+import type { TierName } from "@/types/domain"
 
 import { Sparkline } from "./sparkline"
 import { TIER_LABEL } from "../lib/labels"
@@ -13,7 +13,7 @@ import type {
   TamanoAudiencia,
 } from "../lib/queries"
 
-const TIER_BAR_COLOR: Record<TierNombre, string> = {
+const TIER_BAR_COLOR: Record<TierName, string> = {
   diamante: "bg-data-navy",
   oro: "bg-data-amber",
   plata: "bg-border-strong",
@@ -28,7 +28,7 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
       </p>
       <div className="flex items-center gap-2">
         <p className="flex-1 text-[24px] font-bold tracking-[-0.6px] text-foreground">
-          {formatNumero(tamano.tamanoActual)} perfiles
+          {formatNumber(tamano.tamanoActual)} perfiles
         </p>
         <Sparkline valores={tamano.serie} className="w-[62px]" />
       </div>
@@ -48,7 +48,7 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
               <ArrowDown className="size-2.5" />
             )}
             {tamano.neto >= 0 ? "+" : ""}
-            {formatNumero(tamano.neto)}
+            {formatNumber(tamano.neto)}
           </span>
         )}
         <p className="text-[10px] text-muted-foreground">últimos 30 días</p>
@@ -57,13 +57,13 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
         <p className="text-muted-foreground">
           Nuevos:{" "}
           <span className="font-semibold text-success">
-            +{formatNumero(tamano.nuevos)}
+            +{formatNumber(tamano.nuevos)}
           </span>
         </p>
         <p className="text-muted-foreground">
           Salieron:{" "}
           <span className="font-semibold text-destructive">
-            {formatNumero(tamano.salieron)}
+            {formatNumber(tamano.salieron)}
           </span>
         </p>
         <p className="text-muted-foreground">
@@ -75,7 +75,7 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
             )}
           >
             {tamano.neto >= 0 ? "+" : ""}
-            {formatNumero(tamano.neto)}
+            {formatNumber(tamano.neto)}
           </span>
         </p>
       </div>
@@ -116,7 +116,7 @@ function NivelWidget({
               )}
             />
             <p className="text-xs text-muted-foreground">
-              {TIER_LABEL[d.nivel]} {formatNumero(d.cantidad)}
+              {TIER_LABEL[d.nivel]} {formatNumber(d.cantidad)}
             </p>
           </div>
         ))}
@@ -188,7 +188,7 @@ function JourneysWidget({
                 {journey.nombre}
               </p>
               <p className="text-xs font-semibold text-foreground">
-                {formatNumero(tamanoAudiencia)}
+                {formatNumber(tamanoAudiencia)}
               </p>
             </div>
           ))}

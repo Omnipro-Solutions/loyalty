@@ -21,12 +21,12 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
-  CANALES_ADQUISICION,
-  DOCUMENTO_TIPOS,
-  ESTADOS_CIVILES,
-  GENEROS,
-  IDIOMAS,
-  MEMBER_ESTADOS,
+  ACQUISITION_CHANNELS,
+  DOCUMENT_TYPES,
+  MARITAL_STATUSES,
+  GENDERS,
+  LANGUAGES,
+  MEMBER_STATUSES,
 } from "@/types/domain"
 
 import {
@@ -222,7 +222,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {DOCUMENTO_TIPOS.map((t) => (
+                  {DOCUMENT_TYPES.map((t) => (
                     <SelectItem key={t} value={t}>
                       {DOCUMENTO_TIPO_LABEL[t]}
                     </SelectItem>
@@ -253,7 +253,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {GENEROS.map((g) => (
+                  {GENDERS.map((g) => (
                     <SelectItem key={g} value={g}>
                       {GENERO_LABEL[g]}
                     </SelectItem>
@@ -286,7 +286,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CANALES_ADQUISICION.map((c) => (
+                  {ACQUISITION_CHANNELS.map((c) => (
                     <SelectItem key={c} value={c}>
                       {CANAL_ADQUISICION_LABEL[c]}
                     </SelectItem>
@@ -335,7 +335,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
             </Field>
           </Row>
           <Row>
-            <Field label="Idioma" htmlFor="idioma">
+            <Field label="Language" htmlFor="idioma">
               <Select
                 value={valores.idioma}
                 onValueChange={(v) =>
@@ -348,7 +348,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {IDIOMAS.map((i) => (
+                  {LANGUAGES.map((i) => (
                     <SelectItem key={i} value={i}>
                       {IDIOMA_LABEL[i]}
                     </SelectItem>
@@ -371,7 +371,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {MEMBER_ESTADOS.map((e) => (
+                  {MEMBER_STATUSES.map((e) => (
                     <SelectItem key={e} value={e}>
                       {MEMBER_ESTADO_LABEL[e]}
                     </SelectItem>
@@ -398,7 +398,7 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ESTADOS_CIVILES.map((e) => (
+                  {MARITAL_STATUSES.map((e) => (
                     <SelectItem key={e} value={e}>
                       {ESTADO_CIVIL_LABEL[e]}
                     </SelectItem>

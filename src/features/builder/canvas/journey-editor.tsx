@@ -24,7 +24,7 @@ import {
   validarGrafo,
   type ValidationIssue,
 } from "@/features/builder/validation/graph-validation"
-import type { BuilderNodeTipo } from "@/types/domain"
+import type { BuilderNodeType } from "@/types/domain"
 
 import { renameWorkflowAction, saveGraphAction } from "./actions"
 import { BLOCK_DRAG_MIME, BlockPalette } from "./block-palette"
@@ -228,7 +228,7 @@ function CanvasArea({
       event.preventDefault()
       const tipo = event.dataTransfer.getData(
         BLOCK_DRAG_MIME
-      ) as BuilderNodeTipo
+      ) as BuilderNodeType
       if (!tipo || !BUILDER_BLOCKS[tipo]) return
 
       const position = screenToFlowPosition({
@@ -239,7 +239,7 @@ function CanvasArea({
         id: crypto.randomUUID(),
         type: "builderNode",
         position,
-        data: { tipo, etiqueta: BUILDER_BLOCKS[tipo].etiqueta, config: {} },
+        data: { tipo, etiqueta: BUILDER_BLOCKS[tipo].label, config: {} },
       }
       setNodes((nds) => [...nds, nuevo])
       marcarCambio()

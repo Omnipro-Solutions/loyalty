@@ -5,15 +5,11 @@ import { useState } from "react"
 
 import { EmptyState } from "@/components/feedback/empty-state"
 import { Badge } from "@/components/ui/badge"
-import {
-  formatCOP,
-  formatDeltaPorcentaje,
-  formatFechaEvento,
-} from "@/lib/format"
+import { formatCOP, formatDeltaPercent, formatEventDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
-  PRODUCTO_EVENTO_CATEGORIAS,
-  type ProductoEventoCategoria,
+  PRODUCT_EVENT_CATEGORIES,
+  type ProductEventCategory,
 } from "@/types/domain"
 
 import type { ProductoEvento } from "../lib/queries"
@@ -51,7 +47,7 @@ function detalleEvento(evento: ProductoEvento): string | null {
     const nuevo = Number(valor_nuevo)
     const cambio = anterior !== 0 ? (nuevo - anterior) / anterior : 0
     const prefijo = descripcion ? `${descripcion}  ·  ` : ""
-    const porcentaje = formatDeltaPorcentaje(cambio).replace("%", " %")
+    const porcentaje = formatDeltaPercent(cambio).replace("%", " %")
     return `${prefijo}${formatCOP(anterior)} → ${formatCOP(nuevo)}  (${porcentaje})`
   }
 
@@ -73,14 +69,14 @@ function detalleEvento(evento: ProductoEvento): string | null {
   return descripcion
 }
 
-const CATEGORIA_LABEL: Record<ProductoEventoCategoria, string> = {
+const CATEGORIA_LABEL: Record<ProductEventCategory, string> = {
   precio: "Precios",
   datos: "Datos del producto",
   promocion: "Promociones",
   estado: "Estado",
 }
 
-const CATEGORIA_TAG_LABEL: Record<ProductoEventoCategoria, string> = {
+const CATEGORIA_TAG_LABEL: Record<ProductEventCategory, string> = {
   precio: "PRECIO",
   datos: "DATOS",
   promocion: "PROMOCIÓN",
@@ -89,7 +85,7 @@ const CATEGORIA_TAG_LABEL: Record<ProductoEventoCategoria, string> = {
 
 /** Variante del `Badge` compartido por categoría — verificada contra `get_variable_defs` del nodo 1218:4026: precio=info (primary/50-700), datos=neutral (bg/subtle+text/secondary), promoción=success, estado=warning. */
 const CATEGORIA_BADGE_VARIANT: Record<
-  ProductoEventoCategoria,
+  ProductEventCategory,
   "info" | "neutral" | "success" | "warning"
 > = {
   precio: "info",
@@ -99,21 +95,21 @@ const CATEGORIA_BADGE_VARIANT: Record<
 }
 
 /** Color del punto del riel — verificado exportando los 5 SVG "Rail" del nodo (data/indigo, data/coral, data/teal, data/amber, data/violet). No sigue 1:1 la categoría: "Imagen actualizada" es violeta aunque su tag sea DATOS. */
-const CATEGORIA_DOT_CLASS: Record<ProductoEventoCategoria, string> = {
+const CATEGORIA_DOT_CLASS: Record<ProductEventCategory, string> = {
   precio: "bg-data-indigo",
   datos: "bg-data-teal",
   promocion: "bg-data-coral",
   estado: "bg-data-amber",
 }
 
-const FILTROS = ["todos", ...PRODUCTO_EVENTO_CATEGORIAS] as const
+const FILTROS = ["todos", ...PRODUCT_EVENT_CATEGORIES] as const
 type Filtro = (typeof FILTROS)[number]
 
 const PAGINA = 8
 
 function colorDot(evento: ProductoEvento): string {
   if (evento.campo === "imagen_url") return "bg-data-violet"
-  return CATEGORIA_DOT_CLASS[evento.categoria as ProductoEventoCategoria]
+  return CATEGORIA_DOT_CLASS[evento.categoria as ProductEventCategory]
 }
 
 function EventoRow({
@@ -125,13 +121,13 @@ function EventoRow({
   esPrimero: boolean
   esUltimo: boolean
 }) {
-  const categoria = evento.categoria as ProductoEventoCategoria
+  const categoria = evento.categoria as ProductEventCategory
   const detalle = detalleEvento(evento)
 
   return (
     <div className="flex gap-3.5 py-3.5">
       <p className="w-[140px] shrink-0 font-mono text-[11px] leading-4 text-muted-foreground">
-        {formatFechaEvento(evento.creado_en)}
+        {formatEventDate(evento.creado_en)}
       </p>
       <div className="relative flex w-3 shrink-0 flex-col items-center">
         {!esPrimero && (

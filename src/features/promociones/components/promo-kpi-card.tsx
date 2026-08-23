@@ -1,4 +1,4 @@
-import { formatCOP, formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { vigenciaResumen } from "../lib/estado"
@@ -45,7 +45,7 @@ export function PromoKpiCard({ promocion }: PromoKpiCardProps) {
             Presupuesto consumido
           </span>
           <span className="font-medium text-foreground">
-            {formatPorcentaje(porcentaje)}
+            {formatPercent(porcentaje)}
           </span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -60,7 +60,7 @@ export function PromoKpiCard({ promocion }: PromoKpiCardProps) {
           {formatCOP(promocion.presupuesto_consumido)}
         </p>
         <p className="text-xs text-muted-foreground">
-          {formatNumero(promocion.canjes)} canjes
+          {formatNumber(promocion.canjes)} canjes
         </p>
       </div>
     </div>

@@ -1,19 +1,18 @@
-import type { Rol } from "@/types/domain"
+import type { Role } from "@/types/domain"
 
 /**
- * Conjunto cerrado de módulos y acciones de "09.2 · Equipo · roles y
- * permisos". La fuente de verdad para qué puede hacer una persona es la
- * fila real de `role_permissions` (por `role_id`, editable desde esa
- * pantalla) — ver `features/equipo/lib/queries.ts`. Esta matriz pura solo
- * sirve como PLANTILLA por defecto al crear un rol desde un archetype
- * (`rol_base`, "Nuevo rol") y como respaldo síncrono cuando todavía no se
- * cargó el rol real (ninguna decisión de escritura debe apoyarse solo en
- * esto). Debe mantenerse razonablemente equivalente a
- * `create_system_roles_for_org()` en
- * `supabase/migrations/20260823100000_equipo_roles_permisos.sql`, que es
- * quien de verdad siembra los 3 roles de sistema.
+ * Closed set of modules and actions from "09.2 · Equipo · roles y permisos".
+ * The source of truth for what a person can do is the real
+ * `role_permissions` row (by `role_id`, editable from that screen) — see
+ * `features/team/lib/queries.ts`. This pure matrix only serves as a default
+ * TEMPLATE when creating a role from an archetype (`rol_base`, "Nuevo rol")
+ * and as a synchronous fallback before the real role has loaded (no write
+ * decision should ever rely on this alone). It must stay reasonably
+ * equivalent to `create_system_roles_for_org()` in
+ * `supabase/migrations/20260823100000_equipo_roles_permisos.sql`, which is
+ * what actually seeds the 3 system roles.
  */
-export const RECURSOS = [
+export const RESOURCES = [
   "resumen",
   "catalogo",
   "tiendas",
@@ -24,24 +23,24 @@ export const RECURSOS = [
   "equipo",
   "facturacion",
 ] as const
-export type Recurso = (typeof RECURSOS)[number]
+export type Resource = (typeof RESOURCES)[number]
 
-export const ACCIONES = [
+export const ACTIONS = [
   "ver",
   "crear",
   "editar",
   "eliminar",
   "aprobar",
 ] as const
-export type Accion = (typeof ACCIONES)[number]
+export type Action = (typeof ACTIONS)[number]
 
 /**
- * "Aprobar" ("habilita publicar cambios que afectan a clientes", copy de
- * 09.2) solo existe sobre módulos operativos de cara al cliente — no tiene
- * sentido "aprobar" un dashboard, la gestión del equipo o la facturación.
- * La UI de la matriz bloquea esa celda (candado) para el resto.
+ * "Aprobar" ("enables publishing changes that affect customers", 09.2 copy)
+ * only exists on customer-facing operational modules — approving a
+ * dashboard, team management, or billing makes no sense. The matrix UI locks
+ * that cell (padlock) for the rest.
  */
-export const RECURSOS_APROBABLES: readonly Recurso[] = [
+export const APPROVABLE_RESOURCES: readonly Resource[] = [
   "catalogo",
   "tiendas",
   "clientes",
@@ -50,7 +49,7 @@ export const RECURSOS_APROBABLES: readonly Recurso[] = [
   "journeys",
 ]
 
-const RECURSOS_OPERATIVOS: readonly Recurso[] = [
+const OPERATIONAL_RESOURCES: readonly Resource[] = [
   "resumen",
   "catalogo",
   "tiendas",
@@ -60,17 +59,17 @@ const RECURSOS_OPERATIVOS: readonly Recurso[] = [
   "journeys",
 ]
 
-/** Si una combinación recurso×acción no aplica, la celda de la matriz se deshabilita en vez de mostrarse desmarcada. */
-export function accionAplica(recurso: Recurso, accion: Accion): boolean {
-  return accion !== "aprobar" || RECURSOS_APROBABLES.includes(recurso)
+/** If a resource×action combination doesn't apply, the matrix cell is disabled instead of shown unchecked. */
+export function actionApplies(resource: Resource, action: Action): boolean {
+  return action !== "aprobar" || APPROVABLE_RESOURCES.includes(resource)
 }
 
-type Matriz = Record<Rol, Partial<Record<Recurso, readonly Accion[]>>>
+type Matrix = Record<Role, Partial<Record<Resource, readonly Action[]>>>
 
-const MATRIZ: Matriz = {
+const MATRIX: Matrix = {
   admin: Object.fromEntries(
-    RECURSOS.map((r) => [r, ACCIONES])
-  ) as Matriz["admin"],
+    RESOURCES.map((r) => [r, ACTIONS])
+  ) as Matrix["admin"],
   gestor: {
     resumen: ["ver"],
     catalogo: ["ver", "crear", "editar"],
@@ -82,23 +81,27 @@ const MATRIZ: Matriz = {
   },
   aprobador: {
     ...Object.fromEntries(
-      RECURSOS_OPERATIVOS.map((r) => [r, ["ver"] as const])
+      OPERATIONAL_RESOURCES.map((r) => [r, ["ver"] as const])
     ),
     promociones: ["ver", "aprobar"],
     reglas: ["ver", "aprobar"],
     journeys: ["ver", "aprobar"],
   },
   lector: Object.fromEntries(
-    RECURSOS_OPERATIVOS.map((r) => [r, ["ver"] as const])
-  ) as Matriz["lector"],
+    OPERATIONAL_RESOURCES.map((r) => [r, ["ver"] as const])
+  ) as Matrix["lector"],
 }
 
 /**
- * Plantilla pura por archetype: sin red, sin base de datos. Úsala para
- * prellenar la matriz al crear un rol nuevo o como respaldo de UI antes de
- * que cargue el rol real — nunca como autorización de escritura, que vive
- * en `role_permissions` (real, editable por organización).
+ * Pure archetype template: no network, no database. Use it to prefill the
+ * matrix when creating a new role or as a UI fallback before the real role
+ * loads — never as write authorization, which lives in `role_permissions`
+ * (real, editable per organization).
  */
-export function can(rolBase: Rol, accion: Accion, recurso: Recurso): boolean {
-  return MATRIZ[rolBase]?.[recurso]?.includes(accion) ?? false
+export function can(
+  baseRole: Role,
+  action: Action,
+  resource: Resource
+): boolean {
+  return MATRIX[baseRole]?.[resource]?.includes(action) ?? false
 }

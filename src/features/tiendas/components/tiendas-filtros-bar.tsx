@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
-import { TIENDA_FORMATOS } from "@/types/domain"
+import { STORE_FORMATS } from "@/types/domain"
 
 import { TIENDA_FORMATO_LABEL } from "../lib/labels"
 
@@ -62,7 +62,7 @@ export function TiendasFiltrosBar({ ciudades }: TiendasFiltrosBarProps) {
       />
       <FilterSelect
         label="Formato"
-        options={TIENDA_FORMATOS.map((f) => ({
+        options={STORE_FORMATS.map((f) => ({
           value: f,
           label: TIENDA_FORMATO_LABEL[f],
         }))}

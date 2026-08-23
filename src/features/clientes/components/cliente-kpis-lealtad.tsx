@@ -1,8 +1,8 @@
 import {
   formatCOP,
-  formatFecha,
-  formatNumero,
-  formatPorcentaje,
+  formatDate,
+  formatNumber,
+  formatPercent,
 } from "@/lib/format"
 
 import { KpiCard } from "./kpi-card"
@@ -36,13 +36,13 @@ export function ClienteKpisLealtad({
       <div className="flex w-full items-start gap-3">
         <KpiCard
           etiqueta="Saldo de puntos"
-          valor={formatNumero(cliente.saldo_puntos)}
+          valor={formatNumber(cliente.saldo_puntos)}
           serie={resumen.serieSaldo}
           detalle={`equivalen a ${formatCOP(cliente.saldo_puntos * PUNTO_VALOR_COP)}`}
         />
         <KpiCard
           etiqueta="Por vencer"
-          valor={formatNumero(resumen.puntosPorVencer)}
+          valor={formatNumber(resumen.puntosPorVencer)}
           valorClassName={
             resumen.puntosPorVencer > 0 ? "text-warning" : undefined
           }
@@ -52,7 +52,7 @@ export function ClienteKpisLealtad({
           }
           detalle={
             resumen.proximaExpiracion
-              ? `${formatFecha(resumen.proximaExpiracion)} · en ${diasHasta(resumen.proximaExpiracion)} días`
+              ? `${formatDate(resumen.proximaExpiracion)} · en ${diasHasta(resumen.proximaExpiracion)} días`
               : "sin vencimientos próximos"
           }
           detalleClassName={
@@ -63,13 +63,13 @@ export function ClienteKpisLealtad({
           etiqueta="Tasa de redención"
           valor={
             resumen.tasaRedencion !== null
-              ? formatPorcentaje(resumen.tasaRedencion)
+              ? formatPercent(resumen.tasaRedencion)
               : "—"
           }
           serie={resumen.serieSaldo}
           detalle={
             tasaPrograma !== null
-              ? `promedio del programa ${formatPorcentaje(tasaPrograma)}`
+              ? `promedio del programa ${formatPercent(tasaPrograma)}`
               : "sin datos del programa todavía"
           }
           detalleClassName="text-success"

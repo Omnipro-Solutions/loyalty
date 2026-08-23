@@ -56,8 +56,8 @@ export function InspectorPanel({
   }
 
   const meta = BUILDER_BLOCKS[node.data.tipo as keyof typeof BUILDER_BLOCKS]
-  const grupoMeta = BUILDER_GROUP_META[meta.grupo]
-  const Icon = meta.icono
+  const groupMeta = BUILDER_GROUP_META[meta.group]
+  const Icon = meta.icon
   const tipo = node.data.tipo
 
   function actualizar(config: Record<string, unknown>) {
@@ -70,14 +70,14 @@ export function InspectorPanel({
         <span
           className={cn(
             "flex size-8 shrink-0 items-center justify-center rounded-lg",
-            grupoMeta.bgClassName
+            groupMeta.bgClassName
           )}
         >
-          <Icon className={cn("size-4", grupoMeta.fgClassName)} />
+          <Icon className={cn("size-4", groupMeta.fgClassName)} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[10px] leading-[14px] font-semibold tracking-[0.4px] text-muted-foreground uppercase">
-            {grupoMeta.etiqueta}
+            {groupMeta.label}
           </p>
           <p className="truncate text-[14px] leading-5 font-semibold text-foreground">
             {node.data.etiqueta}

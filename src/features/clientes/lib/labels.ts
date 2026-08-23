@@ -1,17 +1,17 @@
 import type {
-  CanalAdquisicion,
-  CanalVenta,
-  ConsentimientoCanal,
-  ConsentimientoFuente,
-  DocumentoTipo,
-  EstadoCivil,
-  Genero,
-  Idioma,
-  MemberEstado,
-  TierNombre,
+  AcquisitionChannel,
+  SalesChannel,
+  ConsentChannel,
+  ConsentSource,
+  DocumentType,
+  MaritalStatus,
+  Gender,
+  Language,
+  MemberStatus,
+  TierName,
 } from "@/types/domain"
 
-export const DOCUMENTO_TIPO_LABEL: Record<DocumentoTipo, string> = {
+export const DOCUMENTO_TIPO_LABEL: Record<DocumentType, string> = {
   cc: "Cédula de ciudadanía",
   ce: "Cédula de extranjería",
   ti: "Tarjeta de identidad",
@@ -20,7 +20,7 @@ export const DOCUMENTO_TIPO_LABEL: Record<DocumentoTipo, string> = {
 }
 
 /** "CC 1.045.882.114" (05.3g "Documento") — sigla corta, no el nombre completo. */
-export const DOCUMENTO_TIPO_CORTO: Record<DocumentoTipo, string> = {
+export const DOCUMENTO_TIPO_CORTO: Record<DocumentType, string> = {
   cc: "CC",
   ce: "CE",
   ti: "TI",
@@ -28,14 +28,14 @@ export const DOCUMENTO_TIPO_CORTO: Record<DocumentoTipo, string> = {
   nit: "NIT",
 }
 
-export const GENERO_LABEL: Record<Genero, string> = {
+export const GENERO_LABEL: Record<Gender, string> = {
   femenino: "Femenino",
   masculino: "Masculino",
   otro: "Otro",
   prefiere_no_decir: "Prefiere no decir",
 }
 
-export const ESTADO_CIVIL_LABEL: Record<EstadoCivil, string> = {
+export const ESTADO_CIVIL_LABEL: Record<MaritalStatus, string> = {
   soltero: "Soltero(a)",
   casado: "Casado(a)",
   union_libre: "Unión libre",
@@ -43,7 +43,7 @@ export const ESTADO_CIVIL_LABEL: Record<EstadoCivil, string> = {
   viudo: "Viudo(a)",
 }
 
-export const CANAL_ADQUISICION_LABEL: Record<CanalAdquisicion, string> = {
+export const CANAL_ADQUISICION_LABEL: Record<AcquisitionChannel, string> = {
   pos: "Punto de venta",
   ecommerce: "E-commerce",
   app: "App móvil",
@@ -52,24 +52,24 @@ export const CANAL_ADQUISICION_LABEL: Record<CanalAdquisicion, string> = {
   otro: "Otro",
 }
 
-export const MEMBER_ESTADO_LABEL: Record<MemberEstado, string> = {
+export const MEMBER_ESTADO_LABEL: Record<MemberStatus, string> = {
   activo: "Activo",
   inactivo: "Inactivo",
   suspendido: "Suspendido",
 }
 
-export const IDIOMA_LABEL: Record<Idioma, string> = {
+export const IDIOMA_LABEL: Record<Language, string> = {
   es: "Español",
   en: "Inglés",
 }
 
-export const CANAL_VENTA_LABEL: Record<CanalVenta, string> = {
+export const CANAL_VENTA_LABEL: Record<SalesChannel, string> = {
   pos: "POS",
   ecommerce: "E-commerce",
   app: "App",
 }
 
-export const CONSENTIMIENTO_CANAL_LABEL: Record<ConsentimientoCanal, string> = {
+export const CONSENTIMIENTO_CANAL_LABEL: Record<ConsentChannel, string> = {
   email: "Email",
   sms: "SMS",
   push: "Push",
@@ -78,15 +78,14 @@ export const CONSENTIMIENTO_CANAL_LABEL: Record<ConsentimientoCanal, string> = {
   socios_comerciales: "Socios comerciales",
 }
 
-export const CONSENTIMIENTO_FUENTE_LABEL: Record<ConsentimientoFuente, string> =
-  {
-    web: "Web",
-    app: "App móvil",
-    tienda: "Tienda",
-    formulario: "Formulario",
-  }
+export const CONSENTIMIENTO_FUENTE_LABEL: Record<ConsentSource, string> = {
+  web: "Web",
+  app: "App móvil",
+  tienda: "Tienda",
+  formulario: "Formulario",
+}
 
-export const TIER_LABEL: Record<TierNombre, string> = {
+export const TIER_LABEL: Record<TierName, string> = {
   diamante: "Diamante",
   oro: "Oro",
   plata: "Plata",

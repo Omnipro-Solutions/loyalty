@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { formatCOP } from "@/lib/format"
-import type { TipoPromocion } from "@/types/domain"
+import type { PromotionType } from "@/types/domain"
 
 export type EstadoVigenciaPromocion =
   "borrador" | "programada" | "activa" | "finalizada"
@@ -8,7 +8,7 @@ export type EstadoVigenciaPromocion =
 export type PromocionRelacionada = {
   id: string
   nombre: string
-  tipo: TipoPromocion
+  tipo: PromotionType
   mecanica: string
   vigenteDesde: string
   vigenteHasta: string | null
@@ -114,7 +114,7 @@ export async function listPromocionesPorCategorias(
       return {
         id: fila.id,
         nombre: fila.nombre,
-        tipo: fila.tipo as TipoPromocion,
+        tipo: fila.tipo as PromotionType,
         mecanica: mecanicaResumen(fila.tipo_beneficio, fila.valor_beneficio),
         vigenteDesde: fila.vigente_desde,
         vigenteHasta: fila.vigente_hasta,

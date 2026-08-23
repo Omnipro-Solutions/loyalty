@@ -1,13 +1,13 @@
 import { z } from "zod"
 
 import {
-  ALCANCE_CANALES,
-  APLICAR_SOBRE_OPCIONES,
-  COMBINADORES_CONDICION,
-  ESTADOS_PUBLICACION_PROMOCION,
-  TIPOS_BENEFICIO,
-  TIPOS_PROMOCION,
-  USOS_PERIODOS,
+  CHANNEL_SCOPES,
+  APPLY_TO_OPTIONS,
+  CONDITION_COMBINATORS,
+  PROMOTION_PUBLICATION_STATUSES,
+  BENEFIT_TYPES,
+  PROMOTION_TYPES,
+  USAGE_PERIODS,
 } from "@/types/domain"
 
 const condicionSchema = z.discriminatedUnion("campo", [
@@ -35,22 +35,22 @@ export const promocionSchema = z.object({
     .string()
     .min(3, "Ingresa un código")
     .regex(/^[A-Z0-9-]+$/, "Solo mayúsculas, números y guiones"),
-  tipo: z.enum(TIPOS_PROMOCION),
+  tipo: z.enum(PROMOTION_TYPES),
   prioridad: z.number().int().min(1).max(10),
   acumulable: z.boolean(),
-  canalAplicacion: z.enum(ALCANCE_CANALES),
-  combinadorCondiciones: z.enum(COMBINADORES_CONDICION),
+  canalAplicacion: z.enum(CHANNEL_SCOPES),
+  combinadorCondiciones: z.enum(CONDITION_COMBINATORS),
   condiciones: z.array(condicionSchema).max(8),
-  tipoBeneficio: z.enum(TIPOS_BENEFICIO),
+  tipoBeneficio: z.enum(BENEFIT_TYPES),
   valorBeneficio: z.number().positive("Ingresa un valor mayor a 0"),
   topeMaximo: z.number().positive().optional(),
-  aplicarSobre: z.enum(APLICAR_SOBRE_OPCIONES),
+  aplicarSobre: z.enum(APPLY_TO_OPTIONS),
   usosPorCliente: z.number().int().positive().optional(),
-  usosPeriodo: z.enum(USOS_PERIODOS).optional(),
+  usosPeriodo: z.enum(USAGE_PERIODS).optional(),
   presupuestoAsignado: z.number().nonnegative(),
   vigenteDesde: z.string().min(1, "Elige la fecha de inicio"),
   vigenteHasta: z.string().optional(),
-  estadoPublicacion: z.enum(ESTADOS_PUBLICACION_PROMOCION),
+  estadoPublicacion: z.enum(PROMOTION_PUBLICATION_STATUSES),
 })
 
 export type PromocionValues = z.infer<typeof promocionSchema>
@@ -63,6 +63,6 @@ export const actualizarPromocionSchema = promocionSchema.extend({
 export const simularPromocionSchema = z.object({
   idExcluir: z.string().uuid().optional(),
   condiciones: z.array(condicionSchema),
-  canalAplicacion: z.enum(ALCANCE_CANALES),
+  canalAplicacion: z.enum(CHANNEL_SCOPES),
   prioridad: z.number().int().min(1).max(10),
 })

@@ -4,7 +4,7 @@ import { useAction } from "next-safe-action/hooks"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { formatTiempoRelativo } from "@/lib/format"
+import { formatRelativeTime } from "@/lib/format"
 
 import { sincronizarAudienciaAction } from "../actions/sincronizar"
 import { ExportarMiembrosButton } from "./exportar-miembros-button"
@@ -50,7 +50,7 @@ export function AudienciaHero({ audiencia, miembros }: AudienciaHeroProps) {
           {audiencia.ultima_sincronizacion_en && (
             <p className="text-xs text-muted-foreground">
               Última sincronización:{" "}
-              {formatTiempoRelativo(audiencia.ultima_sincronizacion_en)}
+              {formatRelativeTime(audiencia.ultima_sincronizacion_en)}
             </p>
           )}
         </div>

@@ -8,9 +8,9 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import type { TipoPromocion } from "@/types/domain"
+import type { PromotionType } from "@/types/domain"
 
-export const TIPO_PROMOCION_ICONO: Record<TipoPromocion, LucideIcon> = {
+export const TIPO_PROMOCION_ICONO: Record<PromotionType, LucideIcon> = {
   cantidad: Layers,
   categoria: Tag,
   segmento: Users,
@@ -20,7 +20,7 @@ export const TIPO_PROMOCION_ICONO: Record<TipoPromocion, LucideIcon> = {
 }
 
 export const TIPO_PROMOCION_COLOR: Record<
-  TipoPromocion,
+  PromotionType,
   { bg: string; fg: string }
 > = {
   cantidad: { bg: "bg-avatar-teal-bg", fg: "text-avatar-teal-fg" },

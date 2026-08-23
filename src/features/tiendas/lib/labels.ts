@@ -1,12 +1,12 @@
-import type { TiendaEstado, TiendaFormato } from "@/types/domain"
+import type { StoreStatus, StoreFormat } from "@/types/domain"
 
-export const TIENDA_FORMATO_LABEL: Record<TiendaFormato, string> = {
+export const TIENDA_FORMATO_LABEL: Record<StoreFormat, string> = {
   flagship: "Flagship",
   express: "Express",
   mall: "Mall",
 }
 
-export const TIENDA_ESTADO_LABEL: Record<TiendaEstado, string> = {
+export const TIENDA_ESTADO_LABEL: Record<StoreStatus, string> = {
   operando: "Operando",
   bajo_meta: "Bajo meta",
   en_apertura: "En apertura",
@@ -14,7 +14,7 @@ export const TIENDA_ESTADO_LABEL: Record<TiendaEstado, string> = {
 }
 
 /** Punto de estado en 04.1 — 'en_apertura' usa el color de marca, no info/success/warning/destructive. */
-export const TIENDA_ESTADO_COLOR: Record<TiendaEstado, string> = {
+export const TIENDA_ESTADO_COLOR: Record<StoreStatus, string> = {
   operando: "bg-success",
   bajo_meta: "bg-warning",
   en_apertura: "bg-primary",

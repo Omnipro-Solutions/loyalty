@@ -1,4 +1,4 @@
-import type { BuilderNodeTipo } from "@/types/domain"
+import type { BuilderNodeType } from "@/types/domain"
 
 export type FieldSpec =
   | {
@@ -64,7 +64,7 @@ const TIER_OPTIONS = [
  * en el catálogo de Figma (no fue diseñado) — se dejan con la
  * configuración mínima razonable que ya existía, documentado abajo.
  */
-export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeTipo, FieldSpec[]>> =
+export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
   {
     // === Entradas ===
     evento_compra: [

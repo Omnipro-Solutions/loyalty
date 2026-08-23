@@ -24,7 +24,7 @@ import type { ReactNode } from "react"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { formatFechaLarga, formatMesAnio, formatPorcentaje } from "@/lib/format"
+import { formatLongDate, formatMonthYear, formatPercent } from "@/lib/format"
 
 import { CopyButton } from "./copy-button"
 import { paletaAvatar } from "../lib/avatar-palette"
@@ -113,7 +113,7 @@ export function ClienteHero({ cliente }: ClienteHeroProps) {
       <div className="flex w-full flex-col items-center gap-3.5">
         <div className="flex w-full items-center gap-3.5">
           <AvatarInitials
-            nombre={nombreCompleto}
+            name={nombreCompleto}
             size={56}
             bgClassName={paleta.bg}
             fgClassName={paleta.fg}
@@ -161,7 +161,7 @@ export function ClienteHero({ cliente }: ClienteHeroProps) {
             etiqueta="Nacimiento"
             valor={
               cliente.fecha_nacimiento
-                ? formatFechaLarga(cliente.fecha_nacimiento)
+                ? formatLongDate(cliente.fecha_nacimiento)
                 : "—"
             }
           />
@@ -200,7 +200,7 @@ export function ClienteHero({ cliente }: ClienteHeroProps) {
             etiqueta="Tienda"
             valor={
               cliente.tiendaInscripcion
-                ? `${cliente.tiendaInscripcion.nombre} · ${formatMesAnio(cliente.fecha_alta)}`
+                ? `${cliente.tiendaInscripcion.nombre} · ${formatMonthYear(cliente.fecha_alta)}`
                 : "—"
             }
           />
@@ -222,13 +222,13 @@ export function ClienteHero({ cliente }: ClienteHeroProps) {
           />
           <CampoHero
             icon={Languages}
-            etiqueta="Idioma"
+            etiqueta="Language"
             valor={IDIOMA_LABEL[cliente.idioma as keyof typeof IDIOMA_LABEL]}
           />
           <CampoHero
             icon={ShieldCheck}
             etiqueta="Perfil unificado"
-            valor={`${completitud.llenos} de ${completitud.total} atributos · ${formatPorcentaje(completitud.porcentaje)}`}
+            valor={`${completitud.llenos} de ${completitud.total} atributos · ${formatPercent(completitud.porcentaje)}`}
           />
         </div>
       </div>

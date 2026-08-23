@@ -1,4 +1,4 @@
-import type { BuilderNodeTipo } from "@/types/domain"
+import type { BuilderNodeType } from "@/types/domain"
 
 /**
  * Variables que cada tipo de bloque deja disponibles para los bloques
@@ -14,7 +14,7 @@ import type { BuilderNodeTipo } from "@/types/domain"
  * puede calcular todavía. `canje_cupon` y `alta_socio` no tienen tarjeta
  * en el catálogo de Figma; se les dejó una lista mínima razonable.
  */
-const VARIABLES_POR_TIPO: Partial<Record<BuilderNodeTipo, string[]>> = {
+const VARIABLES_POR_TIPO: Partial<Record<BuilderNodeType, string[]>> = {
   evento_compra: [
     "compra.monto",
     "compra.tienda",
@@ -64,7 +64,7 @@ function inferirTipo(variable: string): string {
   return "texto"
 }
 
-export function DatosTab({ tipo }: { tipo: BuilderNodeTipo }) {
+export function DatosTab({ tipo }: { tipo: BuilderNodeType }) {
   const variables = VARIABLES_POR_TIPO[tipo]
 
   if (!variables?.length) {

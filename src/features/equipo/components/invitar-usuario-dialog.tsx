@@ -119,7 +119,7 @@ export function InvitarUsuarioDialog({
               {...register("email")}
             />
           </Field>
-          <Field label="Rol" required error={errors.roleId?.message}>
+          <Field label="Role" required error={errors.roleId?.message}>
             <Select
               value={valores.roleId}
               onValueChange={(v) => setValue("roleId", v ?? "")}

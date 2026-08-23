@@ -1,4 +1,4 @@
-import { formatCOP, formatFecha } from "@/lib/format"
+import { formatCOP, formatDate } from "@/lib/format"
 
 import {
   APLICAR_SOBRE_LABEL,
@@ -147,13 +147,13 @@ export function PromocionResumenRevision({
       <Grupo titulo="Vigencia">
         <Fila
           etiqueta="Desde"
-          valor={valores.vigenteDesde ? formatFecha(valores.vigenteDesde) : "—"}
+          valor={valores.vigenteDesde ? formatDate(valores.vigenteDesde) : "—"}
         />
         <Fila
           etiqueta="Hasta"
           valor={
             valores.vigenteHasta
-              ? formatFecha(valores.vigenteHasta)
+              ? formatDate(valores.vigenteHasta)
               : "Permanente"
           }
         />

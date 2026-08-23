@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { formatCOP } from "@/lib/format"
-import type { TierNombre } from "@/types/domain"
+import type { TierName } from "@/types/domain"
 
 import type { TierResumen } from "../canvas/queries"
 
@@ -22,7 +22,7 @@ type Config = {
   tope_acumulado?: number
   unidad_monto: number
   monto_ejemplo: number
-  tier_ejemplo: TierNombre
+  tier_ejemplo: TierName
 }
 
 const DEFAULT_CONFIG: Config = {
@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: Config = {
   tier_ejemplo: "oro",
 }
 
-const TIER_LABEL: Record<TierNombre, string> = {
+const TIER_LABEL: Record<TierName, string> = {
   bronce: "Bronce",
   plata: "Plata",
   oro: "Oro",
@@ -174,7 +174,7 @@ export function AcumularPuntosForm({
           </div>
           <Select
             value={valores.tier_ejemplo}
-            onValueChange={(v) => actualizar({ tier_ejemplo: v as TierNombre })}
+            onValueChange={(v) => actualizar({ tier_ejemplo: v as TierName })}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue />

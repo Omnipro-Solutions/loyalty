@@ -18,18 +18,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  ACCIONES,
-  RECURSOS,
-  accionAplica,
-  type Accion,
-  type Recurso,
+  ACTIONS,
+  RESOURCES,
+  actionApplies,
+  type Action,
+  type Resource,
 } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 import {
-  ALCANCE_CANALES,
-  ALCANCE_TIENDAS,
-  type AlcanceCanal,
-  type AlcanceTiendas,
+  CHANNEL_SCOPES,
+  STORE_SCOPES,
+  type ChannelScope,
+  type StoreScope,
 } from "@/types/domain"
 
 import { actualizarRolAction, duplicarRolAction } from "../actions/roles"
@@ -52,9 +52,9 @@ function permisosInicialesFrom(
   permisos: RoleDetalle["permisos"]
 ): Record<string, boolean> {
   const mapa: Record<string, boolean> = {}
-  for (const recurso of RECURSOS) {
-    for (const accion of ACCIONES) {
-      if (!accionAplica(recurso, accion)) continue
+  for (const recurso of RESOURCES) {
+    for (const accion of ACTIONS) {
+      if (!actionApplies(recurso, accion)) continue
       mapa[`${recurso}:${accion}`] =
         permisos[recurso]?.includes(accion) ?? false
     }
@@ -77,10 +77,10 @@ export function RolDetallePanel({
     permisosInicialesFrom(roleDetalle.permisos)
   )
   const [alcanceTiendas, setAlcanceTiendas] = useState(
-    roleDetalle.alcance_tiendas as AlcanceTiendas
+    roleDetalle.alcance_tiendas as StoreScope
   )
   const [alcanceCanal, setAlcanceCanal] = useState(
-    roleDetalle.alcance_canal as AlcanceCanal
+    roleDetalle.alcance_canal as ChannelScope
   )
   const [descuentoMaximoPct, setDescuentoMaximoPct] = useState(
     roleDetalle.descuento_maximo_pct?.toString() ?? ""
@@ -92,17 +92,17 @@ export function RolDetallePanel({
 
   const soloLectura = !puedeGestionar
 
-  function set(recurso: Recurso, accion: Accion, valor: boolean) {
-    if (soloLectura || !accionAplica(recurso, accion)) return
+  function set(recurso: Resource, accion: Action, valor: boolean) {
+    if (soloLectura || !actionApplies(recurso, accion)) return
     setPermisos((prev) => ({ ...prev, [`${recurso}:${accion}`]: valor }))
   }
 
-  function aplicarMasivo(criterio: (accion: Accion) => boolean) {
+  function aplicarMasivo(criterio: (accion: Action) => boolean) {
     if (soloLectura) return
     const siguiente: Record<string, boolean> = {}
-    for (const recurso of RECURSOS) {
-      for (const accion of ACCIONES) {
-        if (!accionAplica(recurso, accion)) continue
+    for (const recurso of RESOURCES) {
+      for (const accion of ACTIONS) {
+        if (!actionApplies(recurso, accion)) continue
         siguiente[`${recurso}:${accion}`] = criterio(accion)
       }
     }
@@ -129,7 +129,7 @@ export function RolDetallePanel({
     const permisosGranted = Object.entries(permisos)
       .filter(([, valor]) => valor)
       .map(([clave]) => {
-        const [recurso, accion] = clave.split(":") as [Recurso, Accion]
+        const [recurso, accion] = clave.split(":") as [Resource, Action]
         return { recurso, accion }
       })
 
@@ -172,7 +172,7 @@ export function RolDetallePanel({
               return (
                 <AvatarInitials
                   key={m.id}
-                  nombre={m.nombre}
+                  name={m.nombre}
                   size={30}
                   bgClassName={paleta.bg}
                   fgClassName={paleta.fg}
@@ -225,7 +225,7 @@ export function RolDetallePanel({
       {resultado?.ok === true && (
         <Message
           tipo="exito"
-          titulo="Rol actualizado"
+          titulo="Role actualizado"
           descripcion="Los cambios se guardaron correctamente."
         />
       )}
@@ -272,7 +272,7 @@ export function RolDetallePanel({
           <span className="flex-1 text-[10px] font-semibold tracking-[0.4px] text-muted-foreground">
             MÓDULO
           </span>
-          {ACCIONES.map((accion) => (
+          {ACTIONS.map((accion) => (
             <span
               key={accion}
               className="w-24 shrink-0 text-center text-[10px] font-semibold tracking-[0.4px] text-muted-foreground"
@@ -283,7 +283,7 @@ export function RolDetallePanel({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {RECURSOS.map((recurso) => (
+          {RESOURCES.map((recurso) => (
             <div
               key={recurso}
               className="flex items-center gap-2.5 border-t border-muted px-5 py-2.5"
@@ -296,8 +296,8 @@ export function RolDetallePanel({
                   {RECURSO_INFO[recurso].descripcion}
                 </p>
               </div>
-              {ACCIONES.map((accion) => {
-                const aplica = accionAplica(recurso, accion)
+              {ACTIONS.map((accion) => {
+                const aplica = actionApplies(recurso, accion)
                 return (
                   <div
                     key={accion}
@@ -351,7 +351,7 @@ export function RolDetallePanel({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {ALCANCE_TIENDAS.map((a) => (
+              {STORE_SCOPES.map((a) => (
                 <SelectItem key={a} value={a}>
                   {ALCANCE_TIENDAS_LABEL[a]}
                 </SelectItem>
@@ -371,7 +371,7 @@ export function RolDetallePanel({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {ALCANCE_CANALES.map((c) => (
+              {CHANNEL_SCOPES.map((c) => (
                 <SelectItem key={c} value={c}>
                   {ALCANCE_CANAL_LABEL[c]}
                 </SelectItem>

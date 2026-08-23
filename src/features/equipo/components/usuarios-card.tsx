@@ -1,7 +1,7 @@
 import { Users } from "lucide-react"
 
 import { EmptyState } from "@/components/feedback/empty-state"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 
 import { EquipoPaginacion } from "./equipo-paginacion"
 import { InvitarUsuarioDialog } from "./invitar-usuario-dialog"
@@ -44,12 +44,12 @@ export function UsuariosCard({
               Usuarios
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumero(total)}
+              {formatNumber(total)}
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {formatNumero(totalActivos)} activos ·{" "}
-            {formatNumero(invitacionesPendientes)} invitaciones pendientes
+            {formatNumber(totalActivos)} activos ·{" "}
+            {formatNumber(invitacionesPendientes)} invitaciones pendientes
           </p>
         </div>
         <UsuariosFiltrosBar roles={roles} />

@@ -1,11 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
-import type {
-  BuilderNodeTipo,
-  TierNombre,
-  WorkflowEstado,
-} from "@/types/domain"
+import type { BuilderNodeType, TierName, WorkflowStatus } from "@/types/domain"
 
-export type TierResumen = { nombre: TierNombre; multiplicador: number }
+export type TierResumen = { nombre: TierName; multiplicador: number }
 
 /** Multiplicadores reales por nivel — alimenta la vista previa en vivo de `acumular_puntos`. */
 export async function listTiers(): Promise<TierResumen[]> {
@@ -15,7 +11,7 @@ export async function listTiers(): Promise<TierResumen[]> {
     .select("nombre, multiplicador")
     .order("orden")
   return (data ?? []).map((t) => ({
-    nombre: t.nombre as TierNombre,
+    nombre: t.nombre as TierName,
     multiplicador: t.multiplicador,
   }))
 }
@@ -24,7 +20,7 @@ export type WorkflowListItem = {
   id: string
   nombre: string
   descripcion: string | null
-  estado: WorkflowEstado
+  estado: WorkflowStatus
   actualizado_en: string
   autorNombre: string | null
   totalNodos: number
@@ -144,7 +140,7 @@ export async function getAtribucionPorWorkflow(): Promise<{
 export type ListWorkflowsParams = {
   page?: number
   pageSize?: number
-  estado?: WorkflowEstado
+  estado?: WorkflowStatus
   q?: string
 }
 
@@ -188,7 +184,7 @@ export async function listWorkflows(
         id: w.id,
         nombre: w.nombre,
         descripcion: w.descripcion,
-        estado: w.estado as WorkflowEstado,
+        estado: w.estado as WorkflowStatus,
         actualizado_en: w.actualizado_en,
         autorNombre: w.autor?.nombre ?? null,
         totalNodos: w.nodos?.[0]?.count ?? 0,
@@ -242,7 +238,7 @@ export async function getJourneysKpis(): Promise<JourneysKpis> {
 
 export type WorkflowGraphNode = {
   id: string
-  tipo: BuilderNodeTipo
+  tipo: BuilderNodeType
   etiqueta: string
   posicion_x: number
   posicion_y: number
@@ -259,7 +255,7 @@ export type WorkflowGraphEdge = {
 export type WorkflowWithGraph = {
   id: string
   nombre: string
-  estado: WorkflowEstado
+  estado: WorkflowStatus
   actualizado_en: string
   autorNombre: string | null
   nodes: WorkflowGraphNode[]
@@ -337,12 +333,12 @@ export async function getWorkflowWithGraph(
   return {
     id: workflow.id,
     nombre: workflow.nombre,
-    estado: workflow.estado as WorkflowEstado,
+    estado: workflow.estado as WorkflowStatus,
     actualizado_en: workflow.actualizado_en,
     autorNombre: workflow.autor?.nombre ?? null,
     nodes: (nodes ?? []).map((n) => ({
       id: n.id,
-      tipo: n.tipo as BuilderNodeTipo,
+      tipo: n.tipo as BuilderNodeType,
       etiqueta: n.etiqueta,
       posicion_x: n.posicion_x,
       posicion_y: n.posicion_y,

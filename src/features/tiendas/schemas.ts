@@ -1,12 +1,12 @@
 import { z } from "zod"
 
-import { TIENDA_ESTADOS, TIENDA_FORMATOS } from "@/types/domain"
+import { STORE_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 export const tiendaSchema = z.object({
   nombre: z.string().min(2, "Ingresa el nombre de la tienda"),
   codigoTienda: z.string().min(2, "Ingresa el código de tienda"),
-  formato: z.enum(TIENDA_FORMATOS),
-  estado: z.enum(TIENDA_ESTADOS),
+  formato: z.enum(STORE_FORMATS),
+  estado: z.enum(STORE_STATUSES),
   pais: z.string().min(2, "Ingresa el país"),
   region: z.string().min(2, "Ingresa el departamento o estado"),
   ciudad: z.string().min(2, "Ingresa la ciudad"),

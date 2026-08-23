@@ -7,12 +7,12 @@ import { useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
-import { WORKFLOW_ESTADOS } from "@/types/domain"
+import { WORKFLOW_STATUSES } from "@/types/domain"
 
 import type { WorkflowListItem } from "./queries"
 import { NuevoJourneyButton } from "./nuevo-journey-button"
 
-const ESTADO_OPCIONES = WORKFLOW_ESTADOS.map((e) => ({
+const ESTADO_OPCIONES = WORKFLOW_STATUSES.map((e) => ({
   value: e,
   label: e[0]!.toUpperCase() + e.slice(1),
 }))

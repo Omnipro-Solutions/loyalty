@@ -15,7 +15,7 @@ import {
   listJourneysVinculados,
   listMiembrosAudiencia,
 } from "@/features/audiencias/lib/queries"
-import type { TierNombre } from "@/types/domain"
+import type { TierName } from "@/types/domain"
 
 /** Figma "11.2 · Audiencia · detalle" (842:6209). */
 export default async function AudienciaDetallePage({
@@ -25,7 +25,7 @@ export default async function AudienciaDetallePage({
   const audiencia = await getAudienciaById(id)
   if (!audiencia) notFound()
 
-  const nivelDominante = audiencia.nivel_dominante as TierNombre | null
+  const nivelDominante = audiencia.nivel_dominante as TierName | null
 
   const [tamano, miembros, journeys, comparacion] = await Promise.all([
     getTamanoAudiencia(id, audiencia.conteo_estimado ?? 0),

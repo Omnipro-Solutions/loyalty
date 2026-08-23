@@ -1,7 +1,7 @@
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 type PaginationProps = {
@@ -53,8 +53,8 @@ export function Pagination({
       )}
     >
       <p className="min-w-0 flex-1 text-[12px] leading-4 text-muted-foreground">
-        Mostrando {formatNumero(desde)}–{formatNumero(hasta)} de{" "}
-        {formatNumero(total)}
+        Mostrando {formatNumber(desde)}–{formatNumber(hasta)} de{" "}
+        {formatNumber(total)}
       </p>
       <Button
         variant="ghost"

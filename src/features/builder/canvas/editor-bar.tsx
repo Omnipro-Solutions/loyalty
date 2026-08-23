@@ -6,10 +6,10 @@ import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { formatTiempoRelativo } from "@/lib/format"
-import type { WorkflowEstado } from "@/types/domain"
+import { formatRelativeTime } from "@/lib/format"
+import type { WorkflowStatus } from "@/types/domain"
 
-const ESTADO_LABEL: Record<WorkflowEstado, string> = {
+const ESTADO_LABEL: Record<WorkflowStatus, string> = {
   borrador: "Borrador",
   publicado: "Publicado",
   pausado: "Pausado",
@@ -33,7 +33,7 @@ export function EditorBar({
 }: {
   workflowId: string
   nombre: string
-  estado: WorkflowEstado
+  estado: WorkflowStatus
   autorNombre: string | null
   actualizadoEn: string
   guardando: boolean
@@ -65,7 +65,7 @@ export function EditorBar({
         <p className="px-1.5 text-[11px] text-muted-foreground">
           {guardando
             ? "Guardando…"
-            : `Guardado ${formatTiempoRelativo(actualizadoEn)}`}
+            : `Guardado ${formatRelativeTime(actualizadoEn)}`}
           {autorNombre && ` · editado por ${autorNombre}`}
         </p>
       </div>

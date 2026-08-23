@@ -10,19 +10,19 @@ import { cn } from "@/lib/utils"
 
 /**
  * Figma "Nav / Item" (624:171 Default, 624:175 Hover, 624:179 Active).
- * 244×36, rounded-xl, p-10 gap-10, ícono 16px, texto 13/18 medium.
+ * 244×36, rounded-xl, p-10 gap-10, 16px icon, 13/18 medium text.
  *
- * `children` no tiene equivalente en Figma: es el mecanismo que agrupa
- * "Equipo y permisos" e "Integraciones" bajo un único ítem colapsable de
- * "Ajustes", en vez de sumarles ítems propios al sidebar principal (ver
- * `config/navigation.ts`).
+ * `children` has no Figma equivalent: it's the mechanism that groups
+ * "Equipo y permisos" and "Integraciones" under a single collapsible
+ * "Ajustes" item, instead of adding them as their own items in the main
+ * sidebar (see `config/navigation.ts`).
  */
-export function NavItem({ etiqueta, href, icon: Icon, children }: NavItemData) {
+export function NavItem({ label, href, icon: Icon, children }: NavItemData) {
   const pathname = usePathname()
-  const seccionActiva =
+  const sectionActive =
     children?.some((child) => isNavActive(pathname, child.href)) ?? false
   const [manualOpen, setManualOpen] = useState<boolean | null>(null)
-  const open = manualOpen ?? seccionActiva
+  const open = manualOpen ?? sectionActive
 
   if (!children) {
     const active = isNavActive(pathname, href)
@@ -38,7 +38,7 @@ export function NavItem({ etiqueta, href, icon: Icon, children }: NavItemData) {
         )}
       >
         <Icon className="size-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">{etiqueta}</span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
       </Link>
     )
   }
@@ -51,15 +51,15 @@ export function NavItem({ etiqueta, href, icon: Icon, children }: NavItemData) {
         aria-expanded={open}
         className={cn(
           "flex h-9 w-full items-center gap-2.5 rounded-xl p-2.5 text-[13px] leading-[18px] font-medium",
-          seccionActiva && !open
+          sectionActive && !open
             ? "bg-primary font-semibold text-primary-foreground shadow-nav-active"
-            : seccionActiva
+            : sectionActive
               ? "font-semibold text-foreground"
               : "text-muted-foreground hover:bg-muted"
         )}
       >
         <Icon className="size-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-left">{etiqueta}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
         <ChevronDown
           className={cn(
             "size-3.5 shrink-0 transition-transform",
@@ -83,7 +83,7 @@ export function NavItem({ etiqueta, href, icon: Icon, children }: NavItemData) {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                {child.etiqueta}
+                {child.label}
               </Link>
             )
           })}

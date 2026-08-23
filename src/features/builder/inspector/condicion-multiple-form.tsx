@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { previsualizarCondicionAction } from "./actions"
@@ -457,10 +457,10 @@ function RuleGroupControl(props: RuleGroupProps) {
             <span className="shrink-0">
               Alcance{" "}
               <b className="font-semibold text-foreground">
-                {formatNumero(alcance)}
+                {formatNumber(alcance)}
               </b>
               {typeof pct === "number" &&
-                ` de ${formatNumero(preview!.totalMiembros)} (${pct}%)`}
+                ` de ${formatNumber(preview!.totalMiembros)} (${pct}%)`}
             </span>
           )}
         </div>
@@ -513,7 +513,7 @@ function RuleControl(props: RuleProps) {
         <p className="text-[11px] text-muted-foreground">
           Cumplen{" "}
           <span className="font-semibold text-foreground">
-            {formatNumero(cumplen)}
+            {formatNumber(cumplen)}
           </span>
         </p>
       )}

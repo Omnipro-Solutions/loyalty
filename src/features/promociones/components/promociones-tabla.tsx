@@ -11,9 +11,9 @@ import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 
 import { DataTable } from "@/components/data/data-table"
-import { formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { TipoPromocion } from "@/types/domain"
+import type { PromotionType } from "@/types/domain"
 
 import { alcanceCorto, alcanceResumen } from "../lib/alcance"
 import { estadoPromocion } from "../lib/estado"
@@ -67,7 +67,7 @@ export function PromocionesTabla({
           header: () => "PROMOCIÓN",
           cell: (info) => {
             const promocion = info.row.original
-            const tipo = promocion.tipo as TipoPromocion
+            const tipo = promocion.tipo as PromotionType
             const Icon = TIPO_PROMOCION_ICONO[tipo]
             const color = TIPO_PROMOCION_COLOR[tipo]
             return (
@@ -108,7 +108,7 @@ export function PromocionesTabla({
           header: () => "CANJES",
           cell: (info) => (
             <span className="font-semibold text-foreground">
-              {formatNumero(info.getValue())}
+              {formatNumber(info.getValue())}
             </span>
           ),
         }),
@@ -125,7 +125,7 @@ export function PromocionesTabla({
             return (
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-foreground">
-                  {formatPorcentaje(porcentaje)}
+                  {formatPercent(porcentaje)}
                 </span>
                 <div className="h-[5px] w-full max-w-[110px] overflow-hidden rounded-full bg-muted">
                   <div
@@ -151,7 +151,7 @@ export function PromocionesTabla({
             const roi = info.getValue()
             return (
               <span className="rounded-full bg-accent px-2 py-[3px] text-[11px] font-semibold text-accent-foreground">
-                {roi === null ? "—" : `${formatNumero(roi)} ×`}
+                {roi === null ? "—" : `${formatNumber(roi)} ×`}
               </span>
             )
           },

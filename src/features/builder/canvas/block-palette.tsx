@@ -3,7 +3,7 @@
 import { GripVertical } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { BUILDER_NODE_GROUPS, type BuilderNodeTipo } from "@/types/domain"
+import { BUILDER_NODE_GROUPS, type BuilderNodeType } from "@/types/domain"
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
 
 export const BLOCK_DRAG_MIME = "application/loyalty-builder-block"
@@ -18,16 +18,16 @@ export function BlockPalette() {
       {(
         Object.keys(BUILDER_NODE_GROUPS) as (keyof typeof BUILDER_NODE_GROUPS)[]
       ).map((grupo) => {
-        const grupoMeta = BUILDER_GROUP_META[grupo]
-        const tipos = BUILDER_NODE_GROUPS[grupo] as readonly BuilderNodeTipo[]
+        const groupMeta = BUILDER_GROUP_META[grupo]
+        const tipos = BUILDER_NODE_GROUPS[grupo] as readonly BuilderNodeType[]
         return (
           <div key={grupo} className="flex flex-col gap-1.5">
             <p className="text-[10px] leading-[14px] font-semibold tracking-[0.4px] text-muted-foreground uppercase">
-              {grupoMeta.etiqueta}
+              {groupMeta.label}
             </p>
             {tipos.map((tipo) => {
               const meta = BUILDER_BLOCKS[tipo]
-              const Icon = meta.icono
+              const Icon = meta.icon
               return (
                 <div
                   key={tipo}
@@ -43,14 +43,12 @@ export function BlockPalette() {
                   <span
                     className={cn(
                       "flex size-6 shrink-0 items-center justify-center rounded-md",
-                      grupoMeta.bgClassName
+                      groupMeta.bgClassName
                     )}
                   >
-                    <Icon className={cn("size-3", grupoMeta.fgClassName)} />
+                    <Icon className={cn("size-3", groupMeta.fgClassName)} />
                   </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {meta.etiqueta}
-                  </span>
+                  <span className="min-w-0 flex-1 truncate">{meta.label}</span>
                   <GripVertical className="size-3.5 shrink-0 text-muted-foreground" />
                 </div>
               )

@@ -1,9 +1,9 @@
-import type { Recurso } from "@/lib/permissions"
-import type { Rol } from "@/types/domain"
+import type { Resource } from "@/lib/permissions"
+import type { Role } from "@/types/domain"
 
 /** Copy de "09.2 · Equipo · roles y permisos" — cabecera de cada fila de la matriz. */
 export const RECURSO_INFO: Record<
-  Recurso,
+  Resource,
   { etiqueta: string; descripcion: string }
 > = {
   resumen: {
@@ -35,7 +35,7 @@ export const RECURSO_INFO: Record<
   },
 }
 
-export const ROL_BASE_LABELS: Record<Rol, string> = {
+export const ROL_BASE_LABELS: Record<Role, string> = {
   admin: "Administrador",
   gestor: "Gestor",
   aprobador: "Aprobador",

@@ -22,18 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  ALCANCE_CANALES,
-  APLICAR_SOBRE_OPCIONES,
-  TIPOS_BENEFICIO,
-  TIPOS_PROMOCION,
-  USOS_PERIODOS,
-  type AlcanceCanal,
-  type AplicarSobre,
-  type CombinadorCondicion,
-  type EstadoPublicacionPromocion,
-  type TipoBeneficio,
-  type TipoPromocion,
-  type UsosPeriodo,
+  CHANNEL_SCOPES,
+  APPLY_TO_OPTIONS,
+  BENEFIT_TYPES,
+  PROMOTION_TYPES,
+  USAGE_PERIODS,
+  type ChannelScope,
+  type ApplyTo,
+  type ConditionCombinator,
+  type PromotionPublicationStatus,
+  type BenefitType,
+  type PromotionType,
+  type UsagePeriod,
 } from "@/types/domain"
 
 import {
@@ -126,24 +126,24 @@ export function PromocionForm({
       ? {
           nombre: promocion.nombre,
           codigo: promocion.codigo,
-          tipo: promocion.tipo as TipoPromocion,
+          tipo: promocion.tipo as PromotionType,
           prioridad: promocion.prioridad,
           acumulable: promocion.acumulable,
-          canalAplicacion: promocion.canal_aplicacion as AlcanceCanal,
+          canalAplicacion: promocion.canal_aplicacion as ChannelScope,
           combinadorCondiciones:
-            promocion.combinador_condiciones as CombinadorCondicion,
+            promocion.combinador_condiciones as ConditionCombinator,
           condiciones: promocion.condiciones as PromocionValues["condiciones"],
-          tipoBeneficio: promocion.tipo_beneficio as TipoBeneficio,
+          tipoBeneficio: promocion.tipo_beneficio as BenefitType,
           valorBeneficio: promocion.valor_beneficio ?? 0,
           topeMaximo: promocion.tope_maximo ?? undefined,
-          aplicarSobre: promocion.aplicar_sobre as AplicarSobre,
+          aplicarSobre: promocion.aplicar_sobre as ApplyTo,
           usosPorCliente: promocion.usos_por_cliente ?? undefined,
-          usosPeriodo: (promocion.usos_periodo as UsosPeriodo) ?? undefined,
+          usosPeriodo: (promocion.usos_periodo as UsagePeriod) ?? undefined,
           presupuestoAsignado: promocion.presupuesto_asignado,
           vigenteDesde: promocion.vigente_desde,
           vigenteHasta: promocion.vigente_hasta ?? undefined,
           estadoPublicacion:
-            promocion.estado_publicacion as EstadoPublicacionPromocion,
+            promocion.estado_publicacion as PromotionPublicationStatus,
         }
       : {
           nombre: "",
@@ -277,15 +277,15 @@ export function PromocionForm({
                 <Field label="Tipo de promoción" htmlFor="tipo">
                   <Select
                     value={valores.tipo}
-                    onValueChange={(v) => setValue("tipo", v as TipoPromocion)}
+                    onValueChange={(v) => setValue("tipo", v as PromotionType)}
                   >
                     <SelectTrigger id="tipo">
                       <SelectValue>
-                        {(v: TipoPromocion) => TIPO_PROMOCION_LABEL[v]}
+                        {(v: PromotionType) => TIPO_PROMOCION_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {TIPOS_PROMOCION.map((t) => (
+                      {PROMOTION_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>
                           {TIPO_PROMOCION_LABEL[t]}
                         </SelectItem>
@@ -323,16 +323,16 @@ export function PromocionForm({
                   <Select
                     value={valores.canalAplicacion}
                     onValueChange={(v) =>
-                      setValue("canalAplicacion", v as AlcanceCanal)
+                      setValue("canalAplicacion", v as ChannelScope)
                     }
                   >
                     <SelectTrigger id="canal">
                       <SelectValue>
-                        {(v: AlcanceCanal) => CANAL_APLICACION_LABEL[v]}
+                        {(v: ChannelScope) => CANAL_APLICACION_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {ALCANCE_CANALES.map((c) => (
+                      {CHANNEL_SCOPES.map((c) => (
                         <SelectItem key={c} value={c}>
                           {CANAL_APLICACION_LABEL[c]}
                         </SelectItem>
@@ -369,16 +369,16 @@ export function PromocionForm({
                   <Select
                     value={valores.tipoBeneficio}
                     onValueChange={(v) =>
-                      setValue("tipoBeneficio", v as TipoBeneficio)
+                      setValue("tipoBeneficio", v as BenefitType)
                     }
                   >
                     <SelectTrigger id="tipoBeneficio">
                       <SelectValue>
-                        {(v: TipoBeneficio) => TIPO_BENEFICIO_LABEL[v]}
+                        {(v: BenefitType) => TIPO_BENEFICIO_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {TIPOS_BENEFICIO.map((t) => (
+                      {BENEFIT_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>
                           {TIPO_BENEFICIO_LABEL[t]}
                         </SelectItem>
@@ -429,16 +429,16 @@ export function PromocionForm({
                   <Select
                     value={valores.aplicarSobre}
                     onValueChange={(v) =>
-                      setValue("aplicarSobre", v as AplicarSobre)
+                      setValue("aplicarSobre", v as ApplyTo)
                     }
                   >
                     <SelectTrigger id="aplicarSobre">
                       <SelectValue>
-                        {(v: AplicarSobre) => APLICAR_SOBRE_LABEL[v]}
+                        {(v: ApplyTo) => APLICAR_SOBRE_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {APLICAR_SOBRE_OPCIONES.map((o) => (
+                      {APPLY_TO_OPTIONS.map((o) => (
                         <SelectItem key={o} value={o}>
                           {APLICAR_SOBRE_LABEL[o]}
                         </SelectItem>
@@ -463,16 +463,16 @@ export function PromocionForm({
                   <Select
                     value={valores.usosPeriodo}
                     onValueChange={(v) =>
-                      setValue("usosPeriodo", v as UsosPeriodo)
+                      setValue("usosPeriodo", v as UsagePeriod)
                     }
                   >
                     <SelectTrigger id="usosPeriodo">
                       <SelectValue>
-                        {(v: UsosPeriodo) => USOS_PERIODO_LABEL[v]}
+                        {(v: UsagePeriod) => USOS_PERIODO_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {USOS_PERIODOS.map((u) => (
+                      {USAGE_PERIODS.map((u) => (
                         <SelectItem key={u} value={u}>
                           {USOS_PERIODO_LABEL[u]}
                         </SelectItem>

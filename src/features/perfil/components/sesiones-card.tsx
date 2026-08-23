@@ -2,7 +2,7 @@ import { ShieldCheck } from "lucide-react"
 
 import { EmptyState } from "@/components/feedback/empty-state"
 import { Badge } from "@/components/ui/badge"
-import { formatFechaHora } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 
 import type { DispositivoConfiado } from "../lib/queries"
 import { RevokeDeviceButton } from "./revoke-device-button"
@@ -51,8 +51,8 @@ export function SesionesCard({ dispositivos }: SesionesCardProps) {
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Recordado el {formatFechaHora(dispositivo.creado_en)} · expira
-                  el {formatFechaHora(dispositivo.expira_en)}
+                  Recordado el {formatDateTime(dispositivo.creado_en)} · expira
+                  el {formatDateTime(dispositivo.expira_en)}
                 </p>
               </div>
               <RevokeDeviceButton id={dispositivo.id} />

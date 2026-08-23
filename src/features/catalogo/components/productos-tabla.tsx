@@ -11,10 +11,10 @@ import { ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 
-import { CellEntidad } from "@/components/data/cells"
+import { CellEntity } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { formatCOP, formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { colorPorCategoriaRaiz } from "../lib/categorias-arbol"
@@ -63,12 +63,12 @@ const columns = helper.columns([
     size: 260,
     header: () => "PRODUCTO",
     cell: (info) => (
-      <CellEntidad
-        nombre={info.getValue()}
-        subtitulo={[info.row.original.marca, info.row.original.presentacion]
+      <CellEntity
+        name={info.getValue()}
+        subtitle={[info.row.original.marca, info.row.original.presentacion]
           .filter(Boolean)
           .join(" · ")}
-        imagenUrl={info.row.original.imagen_url}
+        imageUrl={info.row.original.imagen_url}
         size={38}
       />
     ),
@@ -140,7 +140,7 @@ const columns = helper.columns([
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-foreground">
-              {formatPorcentaje(porcentaje)}
+              {formatPercent(porcentaje)}
             </span>
             <span className="text-[10px] text-muted-foreground">
               {faltantes === 0
@@ -163,7 +163,7 @@ const columns = helper.columns([
     header: () => "PUNTOS",
     cell: (info) => (
       <span className="rounded-full bg-accent px-2 py-[3px] text-[11px] font-semibold text-accent-foreground">
-        {formatNumero(info.getValue())} pts
+        {formatNumber(info.getValue())} pts
       </span>
     ),
   }),

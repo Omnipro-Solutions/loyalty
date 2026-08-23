@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils"
-import type { WorkflowEstado } from "@/types/domain"
+import type { WorkflowStatus } from "@/types/domain"
 
 const ESTADO_META: Record<
-  WorkflowEstado,
+  WorkflowStatus,
   { etiqueta: string; dotClassName: string; textClassName: string }
 > = {
   publicado: {
@@ -28,7 +28,7 @@ const ESTADO_META: Record<
 }
 
 /** Figma "08.2": punto + texto en la columna ESTADO de la tabla — más discreto que el `Badge` en píldora de la editor bar. */
-export function JourneyEstadoDot({ estado }: { estado: WorkflowEstado }) {
+export function JourneyEstadoDot({ estado }: { estado: WorkflowStatus }) {
   const meta = ESTADO_META[estado]
   return (
     <div className="flex items-center gap-1.5">

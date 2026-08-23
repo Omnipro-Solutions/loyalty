@@ -7,7 +7,7 @@ import {
   UserCog,
 } from "lucide-react"
 
-import { formatFecha, formatFechaHora } from "@/lib/format"
+import { formatDate, formatDateTime } from "@/lib/format"
 
 import type { Perfil } from "../lib/queries"
 import { Campo } from "./campo"
@@ -36,13 +36,13 @@ export function PerfilInfoCard({ perfil }: PerfilInfoCardProps) {
         <Campo
           icon={CalendarDays}
           etiqueta="MIEMBRO DESDE"
-          valor={formatFecha(perfil.creado_en)}
+          valor={formatDate(perfil.creado_en)}
         />
         <Campo
           icon={Clock}
           etiqueta="ÚLTIMO ACCESO"
           valor={
-            perfil.ultimoAccesoEn ? formatFechaHora(perfil.ultimoAccesoEn) : "—"
+            perfil.ultimoAccesoEn ? formatDateTime(perfil.ultimoAccesoEn) : "—"
           }
         />
       </div>

@@ -16,7 +16,7 @@ import { useLogout } from "@/hooks/use-logout"
 import { cn } from "@/lib/utils"
 
 type UserMenuProps = {
-  nombre: string
+  name: string
   email: string
   /** "card": envuelve `UserCard` (sidebar expandido). "compact": solo el avatar (rail colapsado). */
   variant?: "card" | "compact"
@@ -29,7 +29,7 @@ type UserMenuProps = {
  * patrón de `dropdown-menu.tsx` ya usado en el resto de la app.
  */
 export function UserMenu({
-  nombre,
+  name,
   email,
   variant = "card",
   className,
@@ -48,9 +48,9 @@ export function UserMenu({
         )}
       >
         {variant === "card" ? (
-          <UserCard nombre={nombre} email={email} />
+          <UserCard name={name} email={email} />
         ) : (
-          <AvatarInitials nombre={nombre} size={32} />
+          <AvatarInitials name={name} size={32} />
         )}
       </DropdownMenuTrigger>
 
@@ -61,7 +61,7 @@ export function UserMenu({
       >
         <div className="flex flex-col gap-0.5 px-2 py-1.5">
           <p className="truncate text-[13px] font-semibold text-foreground">
-            {nombre}
+            {name}
           </p>
           <p className="truncate text-xs text-muted-foreground">{email}</p>
         </div>

@@ -34,7 +34,7 @@ export function DataTable<
   // el genérico `TFeatures` de este componente no lo garantiza, así que se
   // accede de forma defensiva y una tabla sin esa feature simplemente no
   // fija anchos por columna (el navegador decide, como antes).
-  const anchoColumna = (column: unknown) =>
+  const columnWidth = (column: unknown) =>
     (column as { getSize?: () => number }).getSize?.()
 
   return (
@@ -48,7 +48,7 @@ export function DataTable<
           fuente única de verdad para el ancho, en vez de un `div` por celda. */}
       <colgroup>
         {headerGroups[0]?.headers.map((header) => (
-          <col key={header.id} style={{ width: anchoColumna(header.column) }} />
+          <col key={header.id} style={{ width: columnWidth(header.column) }} />
         ))}
       </colgroup>
       <TableHeader>

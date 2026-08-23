@@ -1,6 +1,6 @@
 import { TrendingDown } from "lucide-react"
 
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { encontrarMayorCaida } from "./analitica-metrics"
@@ -64,7 +64,7 @@ export function AnaliticaFunnel({
                   )}
                 </p>
                 <p className="shrink-0 text-foreground">
-                  {formatNumero(f.conteo)}{" "}
+                  {formatNumber(f.conteo)}{" "}
                   <span className="text-muted-foreground">({f.pct}%)</span>
                 </p>
               </div>

@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { buscarIntegracion } from "../lib/catalogo"
@@ -44,21 +44,21 @@ export function ConexionesActivasCard() {
       <div className="flex items-start gap-4">
         <KpiCard
           etiqueta="Conexiones activas"
-          valor={formatNumero(activas.length)}
-          detalle={`de ${formatNumero(CONEXIONES_ACTIVAS.length)} en total`}
+          valor={formatNumber(activas.length)}
+          detalle={`de ${formatNumber(CONEXIONES_ACTIVAS.length)} en total`}
         />
         <KpiCard
           etiqueta="Con errores"
-          valor={formatNumero(conError.length)}
+          valor={formatNumber(conError.length)}
           detalle={conError.length > 0 ? "revisar en Cuentas" : "todo en orden"}
         />
         <KpiCard
           etiqueta="Orígenes conectados"
-          valor={formatNumero(origenes.length)}
+          valor={formatNumber(origenes.length)}
         />
         <KpiCard
           etiqueta="Destinos conectados"
-          valor={formatNumero(destinos.length)}
+          valor={formatNumber(destinos.length)}
         />
       </div>
 

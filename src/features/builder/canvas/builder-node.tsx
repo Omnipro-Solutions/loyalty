@@ -4,10 +4,10 @@ import { Handle, Position, type NodeProps } from "@xyflow/react"
 
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
 import { cn } from "@/lib/utils"
-import { BUILDER_ENTRY_NODE_TIPOS, type BuilderNodeTipo } from "@/types/domain"
+import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
 export type BuilderNodeData = {
-  tipo: BuilderNodeTipo
+  tipo: BuilderNodeType
   etiqueta: string
   config: Record<string, unknown>
   /** Conteos de la última corrida de Simular — solo presentational, no se persiste con el grafo. */
@@ -53,7 +53,7 @@ function ramasDeConfig(
  * mientras tanto.
  */
 export const OUTPUT_HANDLES: Partial<
-  Record<BuilderNodeTipo, { id: string; label: string }[]>
+  Record<BuilderNodeType, { id: string; label: string }[]>
 > = {
   condicion_multiple: [
     { id: "cumple", label: "Cumple" },
@@ -75,14 +75,14 @@ export const OUTPUT_HANDLES: Partial<
 }
 
 const DEFAULT_OUTPUT = [{ id: "out", label: "" }]
-const RAMAS_DINAMICAS: readonly BuilderNodeTipo[] = [
+const RAMAS_DINAMICAS: readonly BuilderNodeType[] = [
   "ramificacion_valor",
   "split_ab",
 ]
 
 /** Etiquetas humanas de los puertos de salida de un nodo — misma fuente que usa el canvas del editor, reutilizada por la analítica (08.3) para las píldoras "vino de…". */
 export function outputsDeNodo(
-  tipo: BuilderNodeTipo,
+  tipo: BuilderNodeType,
   config: Record<string, unknown>
 ): { id: string; label: string }[] {
   const ramasConfig = RAMAS_DINAMICAS.includes(tipo)
@@ -96,9 +96,9 @@ export function BuilderNode({
   selected,
 }: NodeProps & { data: BuilderNodeData }) {
   const meta = BUILDER_BLOCKS[data.tipo]
-  const grupoMeta = BUILDER_GROUP_META[meta.grupo]
-  const Icon = meta.icono
-  const esEntrada = (BUILDER_ENTRY_NODE_TIPOS as readonly string[]).includes(
+  const groupMeta = BUILDER_GROUP_META[meta.group]
+  const Icon = meta.icon
+  const esEntrada = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
     data.tipo
   )
   const outputs = outputsDeNodo(data.tipo, data.config ?? {})
@@ -122,14 +122,14 @@ export function BuilderNode({
         <span
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-lg",
-            grupoMeta.bgClassName
+            groupMeta.bgClassName
           )}
         >
-          <Icon className={cn("size-3.5", grupoMeta.fgClassName)} />
+          <Icon className={cn("size-3.5", groupMeta.fgClassName)} />
         </span>
         <div className="min-w-0">
           <p className="truncate text-[10px] leading-[14px] font-semibold tracking-[0.4px] text-muted-foreground uppercase">
-            {grupoMeta.etiqueta}
+            {groupMeta.label}
           </p>
           <p className="truncate text-[13px] leading-[18px] font-semibold text-foreground">
             {data.etiqueta}

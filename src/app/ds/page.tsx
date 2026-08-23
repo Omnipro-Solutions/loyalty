@@ -41,7 +41,7 @@ import { Row } from "@/components/form/row"
 import { Section } from "@/components/form/section"
 import { Stepper } from "@/components/form/stepper"
 
-import { CellAcciones, CellEntidad } from "@/components/data/cells"
+import { CellActions, CellEntity } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
 import { Pagination } from "@/components/data/pagination"
 
@@ -185,16 +185,16 @@ const COLUMNS = columnHelper.columns([
   columnHelper.accessor("nombre", {
     header: "Cliente",
     cell: (info) => (
-      <CellEntidad
-        nombre={info.row.original.nombre}
-        subtitulo={info.row.original.email}
+      <CellEntity
+        name={info.row.original.nombre}
+        subtitle={info.row.original.email}
       />
     ),
   }),
   columnHelper.display({
     id: "acciones",
     header: "Acciones",
-    cell: () => <CellAcciones />,
+    cell: () => <CellActions />,
   }),
 ])
 
@@ -223,14 +223,14 @@ export default function DesignSystemPage() {
       </section>
 
       <section data-ds="layout-sidebar" className="h-[1024px] w-[260px] border">
-        <AppSidebar nombre="Elena Martínez" email="elena@omni.pro" />
+        <AppSidebar name="Elena Martínez" email="elena@omni.pro" />
       </section>
 
       <section
         data-ds="layout-sidebar-rail"
         className="h-[1024px] w-[72px] border"
       >
-        <SidebarRail nombre="Elena Martínez" email="elena@omni.pro" />
+        <SidebarRail name="Elena Martínez" email="elena@omni.pro" />
       </section>
 
       <section data-ds="layout-topbar" className="w-[1180px] border bg-white">

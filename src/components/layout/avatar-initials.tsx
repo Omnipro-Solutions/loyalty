@@ -1,8 +1,8 @@
-import { formatIniciales } from "@/lib/format"
+import { formatInitials } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 type AvatarInitialsProps = {
-  nombre: string
+  name: string
   size?: number
   bgClassName?: string
   fgClassName?: string
@@ -11,13 +11,13 @@ type AvatarInitialsProps = {
 }
 
 /**
- * Círculo + iniciales reusado por UserCard, SidebarRail y CellEntidad
+ * Círculo + iniciales reusado por UserCard, SidebarRail y CellEntity
  * (Figma 624:556, 680:228, 697:219 — mismo patrón, distinto color de marca
  * y tamaño de texto). No es el `Avatar` de shadcn: ese trae un anillo
  * (`after:border`) que no está en ninguno de esos nodos del Figma.
  */
 export function AvatarInitials({
-  nombre,
+  name,
   size = 32,
   bgClassName = "bg-avatar-coral-bg",
   fgClassName = "text-avatar-coral-fg",
@@ -34,7 +34,7 @@ export function AvatarInitials({
       )}
     >
       <span className={cn("font-semibold", textClassName, fgClassName)}>
-        {formatIniciales(nombre)}
+        {formatInitials(name)}
       </span>
     </div>
   )

@@ -2,7 +2,7 @@ import { Gem, QrCode } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 
 import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
 import { getPeriodoCalificacion, type Member } from "../lib/queries"
@@ -65,7 +65,7 @@ export function ClienteTarjetaLealtad({ cliente }: ClienteTarjetaLealtadProps) {
               PUNTOS
             </p>
             <p className="text-[16px] leading-5 font-semibold text-white">
-              {formatNumero(cliente.saldo_puntos)}
+              {formatNumber(cliente.saldo_puntos)}
             </p>
           </div>
         </div>

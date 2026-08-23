@@ -5,8 +5,8 @@ import { useFieldArray, useWatch, type Control } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { COMBINADORES_CONDICION } from "@/types/domain"
-import type { CombinadorCondicion } from "@/types/domain"
+import { CONDITION_COMBINATORS } from "@/types/domain"
+import type { ConditionCombinator } from "@/types/domain"
 
 import { CondicionRow } from "./condicion-row"
 import { COMBINADOR_CONDICION_LABEL } from "../lib/labels"
@@ -19,7 +19,7 @@ import type { PromocionValues } from "../schemas"
 
 type CondicionesBuilderProps = {
   control: Control<PromocionValues>
-  onCombinadorChange: (valor: CombinadorCondicion) => void
+  onCombinadorChange: (valor: ConditionCombinator) => void
   categorias: CategoriaCondicion[]
   ciudades: CiudadCondicion[]
   segmentos: SegmentoCondicion[]
@@ -42,7 +42,7 @@ export function CondicionesBuilder({
   return (
     <div className="flex w-full flex-col gap-3.5">
       <div className="flex items-center gap-2">
-        {COMBINADORES_CONDICION.map((valor) => (
+        {CONDITION_COMBINATORS.map((valor) => (
           <button
             key={valor}
             type="button"

@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { formatFechaHora } from "@/lib/format"
+import { formatDateTime } from "@/lib/format"
 
 import { getVersionGraphAction, listVersionsAction } from "./history-actions"
 import type { WorkflowVersionSummary } from "./queries"
@@ -69,7 +69,7 @@ export function VersionHistoryDialog({
                   Versión {v.version}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {formatFechaHora(v.creado_en)}
+                  {formatDateTime(v.creado_en)}
                   {v.autorNombre && ` · ${v.autorNombre}`}
                 </p>
               </div>

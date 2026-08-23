@@ -1,7 +1,7 @@
 import { Receipt } from "lucide-react"
 
 import { PlaceholderCard } from "@/components/feedback/placeholder-card"
-import { formatCOP, formatNumero, formatPorcentaje } from "@/lib/format"
+import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
 
 import { KpiCard } from "./kpi-card"
 import type { ValorComercial } from "../lib/queries"
@@ -44,7 +44,7 @@ export function ClienteKpisComercial({
           etiqueta="Ingresos de por vida"
           valor={formatCOP(valorComercial.ltv)}
           serie={valorComercial.serieMensual}
-          detalle={`${formatNumero(valorComercial.totalPedidos)} pedidos · ticket ${formatCOP(
+          detalle={`${formatNumber(valorComercial.totalPedidos)} pedidos · ticket ${formatCOP(
             valorComercial.ltv / valorComercial.totalPedidos
           )}`}
         />
@@ -54,7 +54,7 @@ export function ClienteKpisComercial({
           serie={valorComercial.serieMensual}
           detalle={
             valorComercial.margenPct !== null
-              ? `${formatPorcentaje(valorComercial.margenPct)} · devoluciones ${formatCOP(valorComercial.devoluciones)}`
+              ? `${formatPercent(valorComercial.margenPct)} · devoluciones ${formatCOP(valorComercial.devoluciones)}`
               : "—"
           }
         />

@@ -12,7 +12,7 @@ import { useMemo } from "react"
 import { DataTable } from "@/components/data/data-table"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
-import { formatTiempoRelativo } from "@/lib/format"
+import { formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { paletaAvatar } from "../lib/avatar-palette"
@@ -31,7 +31,7 @@ const columns = helper.columns([
       return (
         <div className="flex min-w-0 items-center gap-[11px]">
           <AvatarInitials
-            nombre={usuario.nombre}
+            name={usuario.nombre}
             size={34}
             bgClassName={paleta.bg}
             fgClassName={paleta.fg}
@@ -103,7 +103,7 @@ const columns = helper.columns([
       const valor = info.row.original.ultimoAccesoEn
       return (
         <span className="text-xs text-secondary-foreground">
-          {valor ? formatTiempoRelativo(valor) : "Sin acceso"}
+          {valor ? formatRelativeTime(valor) : "Sin acceso"}
         </span>
       )
     },

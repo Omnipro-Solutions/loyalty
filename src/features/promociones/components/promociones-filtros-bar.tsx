@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
-import { ALCANCE_CANALES } from "@/types/domain"
+import { CHANNEL_SCOPES } from "@/types/domain"
 
 import { CANAL_APLICACION_LABEL } from "../lib/labels"
 
@@ -63,7 +63,7 @@ export function PromocionesFiltrosBar() {
       />
       <FilterSelect
         label="Canal"
-        options={ALCANCE_CANALES.map((c) => ({
+        options={CHANNEL_SCOPES.map((c) => ({
           value: c,
           label: CANAL_APLICACION_LABEL[c],
         }))}

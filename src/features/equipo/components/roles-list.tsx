@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
-import { formatNumero } from "@/lib/format"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { NuevoRolDialog } from "./nuevo-rol-dialog"
@@ -48,7 +48,7 @@ export function RolesList({
             </div>
             <p className="truncate text-[11px] text-muted-foreground">
               {rol.descripcion ?? "Sin descripción"} ·{" "}
-              {formatNumero(rol.miembros)} persona
+              {formatNumber(rol.miembros)} persona
               {rol.miembros === 1 ? "" : "s"}
             </p>
           </Link>

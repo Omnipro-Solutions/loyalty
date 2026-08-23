@@ -11,11 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  formatFechaHora,
-  formatNumero,
-  formatTiempoRelativo,
-} from "@/lib/format"
+import { formatDateTime, formatNumber, formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import type { LedgerEntryConSaldo } from "../lib/queries"
@@ -72,7 +68,7 @@ export function ClienteRedencionesCard({
         .join(","),
       ...filtrados.map((m) =>
         [
-          formatFechaHora(m.creado_en),
+          formatDateTime(m.creado_en),
           TIPO_LABEL[m.tipo] ?? m.tipo,
           m.canal ? (CANAL_LABEL[m.canal] ?? m.canal) : "",
           String(m.puntos),
@@ -105,7 +101,7 @@ export function ClienteRedencionesCard({
               Log de redenciones
             </p>
             <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumero(movimientos.length)}
+              {formatNumber(movimientos.length)}
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground">
@@ -169,10 +165,10 @@ export function ClienteRedencionesCard({
                   <TableRow key={m.id}>
                     <TableCell>
                       <p className="text-[11px] font-medium text-foreground">
-                        {formatTiempoRelativo(m.creado_en)}
+                        {formatRelativeTime(m.creado_en)}
                       </p>
                       <p className="text-[9px] text-muted-foreground">
-                        {formatFechaHora(m.creado_en)}
+                        {formatDateTime(m.creado_en)}
                       </p>
                     </TableCell>
                     <TableCell className="font-medium text-foreground">
@@ -188,10 +184,10 @@ export function ClienteRedencionesCard({
                       )}
                     >
                       {m.puntos >= 0 ? "+" : ""}
-                      {formatNumero(m.puntos)}
+                      {formatNumber(m.puntos)}
                     </TableCell>
                     <TableCell className="text-right text-foreground">
-                      {formatNumero(m.saldoDespues)}
+                      {formatNumber(m.saldoDespues)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -210,10 +206,10 @@ export function ClienteRedencionesCard({
                 )}
               >
                 {neto >= 0 ? "+" : ""}
-                {formatNumero(neto)} pts
+                {formatNumber(neto)} pts
               </p>
               <p className="text-right text-[11px] font-semibold text-muted-foreground">
-                saldo {formatNumero(filtrados[0]?.saldoDespues ?? 0)}
+                saldo {formatNumber(filtrados[0]?.saldoDespues ?? 0)}
               </p>
             </div>
           )}

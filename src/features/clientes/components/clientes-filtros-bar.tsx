@@ -5,12 +5,12 @@ import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
-import { MEMBER_ESTADOS } from "@/types/domain"
+import { MEMBER_STATUSES } from "@/types/domain"
 
 import { MEMBER_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
 import type { TierOption } from "../lib/queries"
 
-const ESTADO_OPTIONS = MEMBER_ESTADOS.map((e) => ({
+const ESTADO_OPTIONS = MEMBER_STATUSES.map((e) => ({
   value: e,
   label: MEMBER_ESTADO_LABEL[e],
 }))

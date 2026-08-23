@@ -9,7 +9,7 @@ import { useLocalStorageBoolean } from "@/hooks/use-local-storage-boolean"
 const STORAGE_KEY = "loyalty-portal:sidebar-collapsed"
 
 type AppShellProps = {
-  nombre: string
+  name: string
   email: string
   children: ReactNode
 }
@@ -19,21 +19,21 @@ type AppShellProps = {
  * (mismo #eef0fe que `color/primary/50`), sidebar/rail a la izquierda,
  * columna Topbar+Content a la derecha. El colapso persiste en localStorage.
  */
-export function AppShell({ nombre, email, children }: AppShellProps) {
+export function AppShell({ name, email, children }: AppShellProps) {
   const [collapsed, setCollapsed] = useLocalStorageBoolean(STORAGE_KEY, false)
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-brand-subtle">
       {collapsed ? (
         <SidebarRail
-          nombre={nombre}
+          name={name}
           email={email}
           onExpand={() => setCollapsed(false)}
           className="shrink-0"
         />
       ) : (
         <AppSidebar
-          nombre={nombre}
+          name={name}
           email={email}
           onCollapse={() => setCollapsed(true)}
           className="shrink-0"

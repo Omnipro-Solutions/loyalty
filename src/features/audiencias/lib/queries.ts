@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
-import type { SegmentEstado, TierNombre } from "@/types/domain"
+import type { SegmentStatus, TierName } from "@/types/domain"
 
 export const AUDIENCIAS_PAGE_SIZE = 10
 
@@ -8,9 +8,9 @@ export type AudienciaListItem = {
   id: string
   nombre: string
   codigo: string
-  nivelDominante: TierNombre | null
+  nivelDominante: TierName | null
   tamano: number
-  estado: SegmentEstado
+  estado: SegmentStatus
   sincronizadoConAjo: boolean
   journeysVinculados: number
   serie: number[]
@@ -107,9 +107,9 @@ export async function listAudiencias(
       id: s.id,
       nombre: s.nombre,
       codigo: s.codigo,
-      nivelDominante: s.nivel_dominante as TierNombre | null,
+      nivelDominante: s.nivel_dominante as TierName | null,
       tamano,
-      estado: s.estado as SegmentEstado,
+      estado: s.estado as SegmentStatus,
       sincronizadoConAjo: s.sincronizado_con_ajo,
       journeysVinculados: journeysPorSegmento.get(s.id)?.size ?? 0,
       serie,
@@ -264,12 +264,12 @@ export async function getTamanoAudiencia(
 }
 
 export type DistribucionNivel = {
-  nivel: TierNombre
+  nivel: TierName
   cantidad: number
   porcentaje: number
 }[]
 
-const PESOS_DISTRIBUCION_NIVEL: Record<TierNombre, [TierNombre, number][]> = {
+const PESOS_DISTRIBUCION_NIVEL: Record<TierName, [TierName, number][]> = {
   diamante: [
     ["diamante", 0.5],
     ["oro", 0.3],
@@ -300,7 +300,7 @@ const PESOS_DISTRIBUCION_NIVEL: Record<TierNombre, [TierNombre, number][]> = {
  */
 export function distribucionPorNivel(
   tamano: number,
-  nivelDominante: TierNombre | null
+  nivelDominante: TierName | null
 ): DistribucionNivel {
   if (!nivelDominante) return []
   const pesos = PESOS_DISTRIBUCION_NIVEL[nivelDominante]
@@ -319,7 +319,7 @@ export function distribucionPorNivel(
 }
 
 export type ComparacionPrograma = {
-  nivel: TierNombre
+  nivel: TierName
   shareAudiencia: number
   shareGeneral: number
   deltaPuntos: number
@@ -327,7 +327,7 @@ export type ComparacionPrograma = {
 
 /** "vs. base general del programa" (11.2): comparación real contra la distribución de `members` por nivel en toda la organización. */
 export async function getComparacionPrograma(
-  nivelDominante: TierNombre | null
+  nivelDominante: TierName | null
 ): Promise<ComparacionPrograma | null> {
   if (!nivelDominante) return null
   const supabase = await createClient()
@@ -352,7 +352,7 @@ export async function getComparacionPrograma(
 
 export type MiembroAudiencia =
   Database["public"]["Tables"]["members"]["Row"] & {
-    tier: { nombre: TierNombre } | null
+    tier: { nombre: TierName } | null
   }
 
 /** Muestra real de socios (`segment_members`) que hoy cumplen la condición del segmento — no el universo completo, ver migración de la tabla. */

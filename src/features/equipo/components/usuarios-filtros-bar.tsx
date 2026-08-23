@@ -55,7 +55,7 @@ export function UsuariosFiltrosBar({ roles }: UsuariosFiltrosBarProps) {
         onChange={(e) => setBusqueda(e.target.value)}
       />
       <FilterSelect
-        label="Rol"
+        label="Role"
         options={roles.map((r) => ({ value: r.id, label: r.nombre }))}
         value={rolSeleccionado ? [rolSeleccionado] : []}
         onChange={(value) =>
