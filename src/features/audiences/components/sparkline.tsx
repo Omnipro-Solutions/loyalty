@@ -1,35 +1,35 @@
 import { cn } from "@/lib/utils"
 
 type SparklineProps = {
-  valores: number[]
+  values: number[]
   className?: string
   strokeClassName?: string
 }
 
 /** Duplicado de `features/clientes/components/sparkline.tsx` por aislamiento entre features: trazo simple + punto final generado en SVG a partir de la serie real. */
 export function Sparkline({
-  valores,
+  values,
   className,
   strokeClassName = "stroke-primary",
 }: SparklineProps) {
-  if (valores.length < 2) {
+  if (values.length < 2) {
     return <div className={cn("h-[26px] w-full", className)} />
   }
 
-  const min = Math.min(...valores)
-  const max = Math.max(...valores)
-  const rango = max - min || 1
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
   const width = 100
   const height = 26
-  const margen = height * 0.1
+  const margin = height * 0.1
 
-  const puntos = valores.map((valor, i) => {
-    const x = (i / (valores.length - 1)) * width
-    const y = height - margen - ((valor - min) / rango) * (height - margen * 2)
+  const points = values.map((value, i) => {
+    const x = (i / (values.length - 1)) * width
+    const y = height - margin - ((value - min) / range) * (height - margin * 2)
     return [x, y] as const
   })
 
-  const [ultimoX, ultimoY] = puntos[puntos.length - 1] ?? [0, 0]
+  const [lastX, lastY] = points[points.length - 1] ?? [0, 0]
 
   return (
     <svg
@@ -38,15 +38,15 @@ export function Sparkline({
       className={cn("h-[26px] w-full overflow-visible", className)}
     >
       <polyline
-        points={puntos.map(([x, y]) => `${x},${y}`).join(" ")}
+        points={points.map(([x, y]) => `${x},${y}`).join(" ")}
         fill="none"
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
         className={strokeClassName}
       />
       <circle
-        cx={ultimoX}
-        cy={ultimoY}
+        cx={lastX}
+        cy={lastY}
         r={2}
         className={strokeClassName.replace("stroke-", "fill-")}
       />

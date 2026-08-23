@@ -3,31 +3,31 @@ import { Users } from "lucide-react"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { formatNumber } from "@/lib/format"
 
-import { AudienciasBuscador } from "./audiencias-buscador"
-import { AudienciasPaginacion } from "./audiencias-paginacion"
-import { AudienciasTabla } from "./audiencias-tabla"
-import { ExportarAudienciasButton } from "./exportar-audiencias-button"
-import { AUDIENCIAS_PAGE_SIZE } from "../lib/queries"
-import type { AudienciaListItem, AudienciasSort } from "../lib/queries"
+import { AudiencesSearch } from "./audiences-search"
+import { AudiencesPagination } from "./audiences-pagination"
+import { AudiencesTable } from "./audiences-table"
+import { ExportAudiencesButton } from "./export-audiences-button"
+import { AUDIENCES_PAGE_SIZE } from "../lib/queries"
+import type { AudienceListItem, AudiencesSort } from "../lib/queries"
 
-type AudienciasCardProps = {
-  audiencias: AudienciaListItem[]
+type AudiencesCardProps = {
+  audiences: AudienceListItem[]
   total: number
-  hayFiltrosAplicados: boolean
-  sort: AudienciasSort
+  hasAppliedFilters: boolean
+  sort: AudiencesSort
   dir: "asc" | "desc"
 }
 
 /** Figma "11.1 · Audiencias · listado" (842:5955): título + conteo + buscador/exportar arriba, tabla, paginación. */
-export function AudienciasCard({
-  audiencias,
+export function AudiencesCard({
+  audiences,
   total,
-  hayFiltrosAplicados,
+  hasAppliedFilters,
   sort,
   dir,
-}: AudienciasCardProps) {
-  const sinAudienciasAun = total === 0 && !hayFiltrosAplicados
-  const sinResultadosDeFiltro = total === 0 && hayFiltrosAplicados
+}: AudiencesCardProps) {
+  const noAudiencesYet = total === 0 && !hasAppliedFilters
+  const noFilterResults = total === 0 && hasAppliedFilters
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
@@ -40,11 +40,11 @@ export function AudienciasCard({
             {formatNumber(total)}
           </span>
         </div>
-        <AudienciasBuscador />
-        <ExportarAudienciasButton audiencias={audiencias} />
+        <AudiencesSearch />
+        <ExportAudiencesButton audiences={audiences} />
       </div>
 
-      {sinAudienciasAun ? (
+      {noAudiencesYet ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
@@ -52,7 +52,7 @@ export function AudienciasCard({
             description="Las audiencias se definen desde el Loyalty Builder — en cuanto exista un segmento, aparece aquí."
           />
         </div>
-      ) : sinResultadosDeFiltro ? (
+      ) : noFilterResults ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
@@ -62,8 +62,8 @@ export function AudienciasCard({
         </div>
       ) : (
         <>
-          <AudienciasTabla audiencias={audiencias} sort={sort} dir={dir} />
-          <AudienciasPaginacion total={total} pageSize={AUDIENCIAS_PAGE_SIZE} />
+          <AudiencesTable audiences={audiences} sort={sort} dir={dir} />
+          <AudiencesPagination total={total} pageSize={AUDIENCES_PAGE_SIZE} />
         </>
       )}
     </div>

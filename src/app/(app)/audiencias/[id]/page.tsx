@@ -4,17 +4,17 @@ import { notFound } from "next/navigation"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
-import { AudienciaHero } from "@/features/audiencias/components/audiencia-hero"
-import { AudienciaMetricasRow } from "@/features/audiencias/components/audiencia-metricas-row"
-import { AudienciaMiembrosTabla } from "@/features/audiencias/components/audiencia-miembros-tabla"
+import { AudienceHero } from "@/features/audiences/components/audience-hero"
+import { AudienceMetricsRow } from "@/features/audiences/components/audience-metrics-row"
+import { AudienceMembersTable } from "@/features/audiences/components/audience-members-table"
 import {
-  distribucionPorNivel,
-  getAudienciaById,
-  getComparacionPrograma,
-  getTamanoAudiencia,
-  listJourneysVinculados,
-  listMiembrosAudiencia,
-} from "@/features/audiencias/lib/queries"
+  tierDistribution,
+  getAudienceById,
+  getProgramComparison,
+  getAudienceSize,
+  listLinkedJourneys,
+  listAudienceMembers,
+} from "@/features/audiences/lib/queries"
 import type { TierName } from "@/types/domain"
 
 /** Figma "11.2 · Audiencia · detalle" (842:6209). */
@@ -22,21 +22,21 @@ export default async function AudienciaDetallePage({
   params,
 }: PageProps<"/audiencias/[id]">) {
   const { id } = await params
-  const audiencia = await getAudienciaById(id)
-  if (!audiencia) notFound()
+  const audience = await getAudienceById(id)
+  if (!audience) notFound()
 
-  const nivelDominante = audiencia.nivel_dominante as TierName | null
+  const dominantTier = audience.nivel_dominante as TierName | null
 
-  const [tamano, miembros, journeys, comparacion] = await Promise.all([
-    getTamanoAudiencia(id, audiencia.conteo_estimado ?? 0),
-    listMiembrosAudiencia(id),
-    listJourneysVinculados(id),
-    getComparacionPrograma(nivelDominante),
+  const [size, members, journeys, comparison] = await Promise.all([
+    getAudienceSize(id, audience.conteo_estimado ?? 0),
+    listAudienceMembers(id),
+    listLinkedJourneys(id),
+    getProgramComparison(dominantTier),
   ])
 
-  const distribucion = distribucionPorNivel(
-    audiencia.conteo_estimado ?? 0,
-    nivelDominante
+  const distribution = tierDistribution(
+    audience.conteo_estimado ?? 0,
+    dominantTier
   )
 
   return (
@@ -46,24 +46,24 @@ export default async function AudienciaDetallePage({
     >
       <BackLink href="/audiencias">Volver</BackLink>
 
-      <AudienciaHero audiencia={audiencia} miembros={miembros} />
+      <AudienceHero audience={audience} members={members} />
 
-      <AudienciaMetricasRow
-        tamano={tamano}
-        distribucion={distribucion}
-        comparacion={comparacion}
+      <AudienceMetricsRow
+        size={size}
+        distribution={distribution}
+        comparison={comparison}
         journeys={journeys}
       />
 
       <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
-        {miembros.length === 0 ? (
+        {members.length === 0 ? (
           <EmptyState
             icon={Users}
             title="Sin muestra de socios todavía"
             description="Esta audiencia no tiene socios de ejemplo asignados en `segment_members`."
           />
         ) : (
-          <AudienciaMiembrosTabla miembros={miembros} />
+          <AudienceMembersTable members={members} />
         )}
       </div>
     </AppPage>

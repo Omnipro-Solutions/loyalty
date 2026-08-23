@@ -192,7 +192,7 @@ export type SegmentoCondicion = {
   conteoEstimado: number | null
 }
 
-/** Audiencias reales de 11 · Audiencias (`segments`), para el selector de la condición "Segmento del cliente" — duplicado de `features/audiencias` por aislamiento entre features (ver CLAUDE.md §2). */
+/** Audiencias reales de 11 · Audiencias (`segments`), para el selector de la condición "Segmento del cliente" — duplicado de `features/audiences` por aislamiento entre features (ver CLAUDE.md §2). */
 export async function listSegmentosCondicion(): Promise<SegmentoCondicion[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

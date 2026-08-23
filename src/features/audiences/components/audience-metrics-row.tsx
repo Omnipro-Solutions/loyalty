@@ -7,10 +7,10 @@ import type { TierName } from "@/types/domain"
 import { Sparkline } from "./sparkline"
 import { TIER_LABEL } from "../lib/labels"
 import type {
-  ComparacionPrograma,
-  DistribucionNivel,
-  JourneyVinculado,
-  TamanoAudiencia,
+  AudienceSize,
+  LinkedJourney,
+  ProgramComparison,
+  TierDistribution,
 } from "../lib/queries"
 
 const TIER_BAR_COLOR: Record<TierName, string> = {
@@ -20,7 +20,7 @@ const TIER_BAR_COLOR: Record<TierName, string> = {
   bronce: "bg-data-coral",
 }
 
-function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
+function SizeWidget({ size }: { size: AudienceSize }) {
   return (
     <div className="flex flex-1 flex-col gap-3.5 rounded-[20px] bg-background px-[18px] py-[22px] shadow-form-section">
       <p className="text-[11px] font-medium text-muted-foreground">
@@ -28,27 +28,27 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
       </p>
       <div className="flex items-center gap-2">
         <p className="flex-1 text-[24px] font-bold tracking-[-0.6px] text-foreground">
-          {formatNumber(tamano.tamanoActual)} perfiles
+          {formatNumber(size.currentSize)} perfiles
         </p>
-        <Sparkline valores={tamano.serie} className="w-[62px]" />
+        <Sparkline values={size.series} className="w-[62px]" />
       </div>
       <div className="flex items-center gap-1.5">
-        {tamano.neto !== 0 && (
+        {size.net !== 0 && (
           <span
             className={cn(
               "flex items-center gap-0.5 rounded-full py-0.5 pr-2 pl-1.5 text-[10px] font-semibold",
-              tamano.neto >= 0
+              size.net >= 0
                 ? "bg-success-bg text-success"
                 : "bg-destructive-bg text-destructive"
             )}
           >
-            {tamano.neto >= 0 ? (
+            {size.net >= 0 ? (
               <ArrowUp className="size-2.5" />
             ) : (
               <ArrowDown className="size-2.5" />
             )}
-            {tamano.neto >= 0 ? "+" : ""}
-            {formatNumber(tamano.neto)}
+            {size.net >= 0 ? "+" : ""}
+            {formatNumber(size.net)}
           </span>
         )}
         <p className="text-[10px] text-muted-foreground">últimos 30 días</p>
@@ -57,13 +57,13 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
         <p className="text-muted-foreground">
           Nuevos:{" "}
           <span className="font-semibold text-success">
-            +{formatNumber(tamano.nuevos)}
+            +{formatNumber(size.joined)}
           </span>
         </p>
         <p className="text-muted-foreground">
           Salieron:{" "}
           <span className="font-semibold text-destructive">
-            {formatNumber(tamano.salieron)}
+            {formatNumber(size.left)}
           </span>
         </p>
         <p className="text-muted-foreground">
@@ -71,11 +71,11 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
           <span
             className={cn(
               "font-semibold",
-              tamano.neto >= 0 ? "text-success" : "text-destructive"
+              size.net >= 0 ? "text-success" : "text-destructive"
             )}
           >
-            {tamano.neto >= 0 ? "+" : ""}
-            {formatNumber(tamano.neto)}
+            {size.net >= 0 ? "+" : ""}
+            {formatNumber(size.net)}
           </span>
         </p>
       </div>
@@ -83,14 +83,14 @@ function TamanoWidget({ tamano }: { tamano: TamanoAudiencia }) {
   )
 }
 
-function NivelWidget({
-  distribucion,
-  comparacion,
+function TierWidget({
+  distribution,
+  comparison,
 }: {
-  distribucion: DistribucionNivel
-  comparacion: ComparacionPrograma | null
+  distribution: TierDistribution
+  comparison: ProgramComparison | null
 }) {
-  const total = distribucion.reduce((acc, d) => acc + d.cantidad, 0) || 1
+  const total = distribution.reduce((acc, d) => acc + d.count, 0) || 1
 
   return (
     <div className="flex flex-1 flex-col gap-3.5 rounded-[20px] bg-background px-[18px] py-[22px] shadow-form-section">
@@ -98,39 +98,39 @@ function NivelWidget({
         Distribución por nivel
       </p>
       <div className="flex h-2.5 w-full items-stretch overflow-hidden rounded-full bg-muted">
-        {distribucion.map((d) => (
+        {distribution.map((d) => (
           <div
-            key={d.nivel}
-            className={TIER_BAR_COLOR[d.nivel]}
-            style={{ width: `${(d.cantidad / total) * 100}%` }}
+            key={d.tier}
+            className={TIER_BAR_COLOR[d.tier]}
+            style={{ width: `${(d.count / total) * 100}%` }}
           />
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-4">
-        {distribucion.map((d) => (
-          <div key={d.nivel} className="flex items-center gap-1.5">
+        {distribution.map((d) => (
+          <div key={d.tier} className="flex items-center gap-1.5">
             <span
               className={cn(
                 "size-2 shrink-0 rounded-full",
-                TIER_BAR_COLOR[d.nivel]
+                TIER_BAR_COLOR[d.tier]
               )}
             />
             <p className="text-xs text-muted-foreground">
-              {TIER_LABEL[d.nivel]} {formatNumber(d.cantidad)}
+              {TIER_LABEL[d.tier]} {formatNumber(d.count)}
             </p>
           </div>
         ))}
       </div>
-      {comparacion && (
+      {comparison && (
         <div className="flex flex-col gap-0.5 border-t border-border pt-3.5">
           <p className="text-[10.5px] text-muted-foreground">
             vs. base general del programa
           </p>
           <p className="text-[11.5px] font-semibold text-foreground">
-            {comparacion.deltaPuntos >= 0 ? "Sobreindexada" : "Subindexada"} en{" "}
-            {TIER_LABEL[comparacion.nivel]} ·{" "}
-            {comparacion.deltaPuntos >= 0 ? "+" : ""}
-            {comparacion.deltaPuntos} pts
+            {comparison.deltaPoints >= 0 ? "Sobreindexada" : "Subindexada"} en{" "}
+            {TIER_LABEL[comparison.tier]} ·{" "}
+            {comparison.deltaPoints >= 0 ? "+" : ""}
+            {comparison.deltaPoints} pts
           </p>
         </div>
       )}
@@ -140,10 +140,10 @@ function NivelWidget({
 
 function JourneysWidget({
   journeys,
-  tamanoAudiencia,
+  audienceSize,
 }: {
-  journeys: JourneyVinculado[]
-  tamanoAudiencia: number
+  journeys: LinkedJourney[]
+  audienceSize: number
 }) {
   return (
     <div className="flex flex-1 flex-col gap-3.5 rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
@@ -188,7 +188,7 @@ function JourneysWidget({
                 {journey.nombre}
               </p>
               <p className="text-xs font-semibold text-foreground">
-                {formatNumber(tamanoAudiencia)}
+                {formatNumber(audienceSize)}
               </p>
             </div>
           ))}
@@ -198,28 +198,25 @@ function JourneysWidget({
   )
 }
 
-type AudienciaMetricasRowProps = {
-  tamano: TamanoAudiencia
-  distribucion: DistribucionNivel
-  comparacion: ComparacionPrograma | null
-  journeys: JourneyVinculado[]
+type AudienceMetricsRowProps = {
+  size: AudienceSize
+  distribution: TierDistribution
+  comparison: ProgramComparison | null
+  journeys: LinkedJourney[]
 }
 
 /** Figma "11.2 · Audiencia · detalle" (842:6233) — Metrics Row. */
-export function AudienciaMetricasRow({
-  tamano,
-  distribucion,
-  comparacion,
+export function AudienceMetricsRow({
+  size,
+  distribution,
+  comparison,
   journeys,
-}: AudienciaMetricasRowProps) {
+}: AudienceMetricsRowProps) {
   return (
     <div className="flex w-full items-stretch gap-5">
-      <TamanoWidget tamano={tamano} />
-      <NivelWidget distribucion={distribucion} comparacion={comparacion} />
-      <JourneysWidget
-        journeys={journeys}
-        tamanoAudiencia={tamano.tamanoActual}
-      />
+      <SizeWidget size={size} />
+      <TierWidget distribution={distribution} comparison={comparison} />
+      <JourneysWidget journeys={journeys} audienceSize={size.currentSize} />
     </div>
   )
 }

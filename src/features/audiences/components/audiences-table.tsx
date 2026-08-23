@@ -17,40 +17,40 @@ import { Badge } from "@/components/ui/badge"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { paletaAvatar } from "../lib/avatar-palette"
-import { SEGMENT_ESTADO_LABEL, TIER_LABEL } from "../lib/labels"
-import type { AudienciaListItem, AudienciasSort } from "../lib/queries"
+import { avatarPalette } from "../lib/avatar-palette"
+import { SEGMENT_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
+import type { AudienceListItem, AudiencesSort } from "../lib/queries"
 import { Sparkline } from "./sparkline"
 
 const features = tableFeatures({ columnSizingFeature })
-const helper = createColumnHelper<typeof features, AudienciaListItem>()
+const helper = createColumnHelper<typeof features, AudienceListItem>()
 
 /** Encabezado de columna ordenable: actualiza `?sort=&dir=` y deja que la página vuelva a consultar (mismo patrón que los filtros de búsqueda). */
 function SortableHeader({
-  columna,
-  etiqueta,
-  sortActual,
-  dirActual,
+  column,
+  label,
+  currentSort,
+  currentDir,
 }: {
-  columna: AudienciasSort
-  etiqueta: string
-  sortActual: AudienciasSort
-  dirActual: "asc" | "desc"
+  column: AudiencesSort
+  label: string
+  currentSort: AudiencesSort
+  currentDir: "asc" | "desc"
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const activa = sortActual === columna
+  const active = currentSort === column
 
   function onClick() {
     const params = new URLSearchParams(searchParams.toString())
-    params.set("sort", columna)
-    params.set("dir", activa && dirActual === "desc" ? "asc" : "desc")
+    params.set("sort", column)
+    params.set("dir", active && currentDir === "desc" ? "asc" : "desc")
     params.delete("page")
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const Icono = activa && dirActual === "asc" ? ChevronUp : ChevronDown
+  const Icon = active && currentDir === "asc" ? ChevronUp : ChevronDown
 
   return (
     <button
@@ -58,11 +58,11 @@ function SortableHeader({
       onClick={onClick}
       className="flex items-center gap-[5px]"
     >
-      {etiqueta}
-      <Icono
+      {label}
+      <Icon
         className={cn(
           "size-[9px]",
-          activa ? "text-foreground" : "text-muted-foreground/50"
+          active ? "text-foreground" : "text-muted-foreground/50"
         )}
       />
     </button>
@@ -70,56 +70,52 @@ function SortableHeader({
 }
 
 /** Cuadro de selección puramente visual (704:312 en Figma) — sin acción de bulk que respalde marcarlo, mismo espíritu que el "…" de `PromocionesTabla`. */
-function CasillaVisual() {
+function VisualCheckbox() {
   return (
     <div className="flex size-[17px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] border-border-strong" />
   )
 }
 
-type AudienciasTablaProps = {
-  audiencias: AudienciaListItem[]
-  sort: AudienciasSort
+type AudiencesTableProps = {
+  audiences: AudienceListItem[]
+  sort: AudiencesSort
   dir: "asc" | "desc"
 }
 
 /** Figma "11.1 · Audiencias · listado" (842:5955), tabla. */
-export function AudienciasTabla({
-  audiencias,
-  sort,
-  dir,
-}: AudienciasTablaProps) {
+export function AudiencesTable({ audiences, sort, dir }: AudiencesTableProps) {
   const router = useRouter()
 
   const columns = useMemo(
     () =>
       helper.columns([
         helper.display({
-          id: "seleccion",
+          id: "select",
           size: 44,
-          header: () => <CasillaVisual />,
-          cell: () => <CasillaVisual />,
+          header: () => <VisualCheckbox />,
+          cell: () => <VisualCheckbox />,
         }),
         helper.display({
-          id: "audiencia",
+          id: "audience",
           header: () => "AUDIENCIA",
           cell: (info) => {
             const a = info.row.original
-            const paleta = paletaAvatar(a.id)
+            const palette = avatarPalette(a.id)
             return (
               <div className="flex min-w-0 items-center gap-2.5">
                 <AvatarInitials
-                  name={a.nombre}
+                  name={a.name}
                   size={34}
-                  bgClassName={paleta.bg}
-                  fgClassName={paleta.fg}
+                  bgClassName={palette.bg}
+                  fgClassName={palette.fg}
                   textClassName="text-[11px] leading-[15px]"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] leading-[18px] font-semibold text-foreground">
-                    {a.nombre}
+                    {a.name}
                   </p>
                   <p className="truncate text-[11px] leading-[15px] text-muted-foreground">
-                    {a.codigo}
+                    {a.code}
                   </p>
                 </div>
               </div>
@@ -127,32 +123,32 @@ export function AudienciasTabla({
           },
         }),
         helper.display({
-          id: "nivel",
+          id: "tier",
           size: 130,
           header: () => "NIVEL",
           cell: (info) => {
-            const nivel = info.row.original.nivelDominante
-            if (!nivel)
+            const tier = info.row.original.dominantTier
+            if (!tier)
               return <span className="text-xs text-muted-foreground">—</span>
-            return <Badge variant="info">{TIER_LABEL[nivel]}</Badge>
+            return <Badge variant="info">{TIER_LABEL[tier]}</Badge>
           },
         }),
         helper.display({
-          id: "tamano",
+          id: "size",
           size: 96,
           header: () => (
             <div className="flex justify-end">
               <SortableHeader
-                columna="tamano"
-                etiqueta="TAMAÑO"
-                sortActual={sort}
-                dirActual={dir}
+                column="tamano"
+                label="TAMAÑO"
+                currentSort={sort}
+                currentDir={dir}
               />
             </div>
           ),
           cell: (info) => (
             <span className="block text-right text-[13px] font-medium text-foreground">
-              {formatNumber(info.row.original.tamano)}
+              {formatNumber(info.row.original.size)}
             </span>
           ),
         }),
@@ -162,30 +158,30 @@ export function AudienciasTabla({
           header: () => (
             <div className="flex justify-end">
               <SortableHeader
-                columna="journeys"
-                etiqueta="LOYALTY RULES"
-                sortActual={sort}
-                dirActual={dir}
+                column="journeys"
+                label="LOYALTY RULES"
+                currentSort={sort}
+                currentDir={dir}
               />
             </div>
           ),
           cell: (info) => (
             <span className="block text-right text-[13px] font-semibold text-foreground">
-              {formatNumber(info.row.original.journeysVinculados)}
+              {formatNumber(info.row.original.linkedJourneys)}
             </span>
           ),
         }),
         helper.display({
-          id: "tendencia",
+          id: "trend",
           size: 110,
           header: () => "TENDENCIA",
           cell: (info) => (
             <div className="flex justify-center">
               <Sparkline
-                valores={info.row.original.serie}
+                values={info.row.original.series}
                 className="w-[90px]"
                 strokeClassName={
-                  info.row.original.tendenciaPositiva
+                  info.row.original.positiveTrend
                     ? "stroke-success"
                     : "stroke-destructive"
                 }
@@ -194,35 +190,35 @@ export function AudienciasTabla({
           ),
         }),
         helper.display({
-          id: "estado",
+          id: "status",
           size: 110,
           header: () => "ESTADO",
           cell: (info) => {
-            const estado = info.row.original.estado
+            const status = info.row.original.status
             return (
               <div className="flex items-center gap-[7px]">
                 <span
                   className={cn(
                     "size-[7px] shrink-0 rounded-full",
-                    estado === "activa" ? "bg-success" : "bg-border-strong"
+                    status === "activa" ? "bg-success" : "bg-border-strong"
                   )}
                 />
                 <span
                   className={cn(
                     "text-xs font-medium",
-                    estado === "activa"
+                    status === "activa"
                       ? "text-foreground"
                       : "text-muted-foreground"
                   )}
                 >
-                  {SEGMENT_ESTADO_LABEL[estado]}
+                  {SEGMENT_STATUS_LABEL[status]}
                 </span>
               </div>
             )
           },
         }),
         helper.display({
-          id: "acciones",
+          id: "actions",
           size: 80,
           header: () => null,
           cell: () => (
@@ -235,7 +231,7 @@ export function AudienciasTabla({
     [sort, dir]
   )
 
-  const data = useMemo(() => audiencias, [audiencias])
+  const data = useMemo(() => audiences, [audiences])
   const table = useTable({ features, columns, data })
 
   return (

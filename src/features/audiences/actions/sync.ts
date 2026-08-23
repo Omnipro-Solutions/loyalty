@@ -6,11 +6,11 @@ import { z } from "zod"
 import { actionClient } from "@/lib/safe-action"
 import { createClient } from "@/lib/supabase/server"
 
-const sincronizarAudienciaSchema = z.object({ segmentId: z.string().uuid() })
+const syncAudienceSchema = z.object({ segmentId: z.string().uuid() })
 
 /** "Sincronizar ahora" (11.2): sin AJO real conectado, esto marca la audiencia como sincronizada y actualiza el timestamp — el mismo efecto observable que el propio Figma pinta, sin fingir una llamada a un sistema externo que no existe. */
-export const sincronizarAudienciaAction = actionClient
-  .inputSchema(sincronizarAudienciaSchema)
+export const syncAudienceAction = actionClient
+  .inputSchema(syncAudienceSchema)
   .action(async ({ parsedInput }) => {
     const supabase = await createClient()
     const { error } = await supabase
