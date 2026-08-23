@@ -8,7 +8,7 @@ import { test } from "@playwright/test"
  * spec es la herramienta del bucle de verificación, no un test que falle
  * el CI (ver CLAUDE.md §7).
  */
-const COMPONENTES = {
+const COMPONENTS = {
   "brand-mark": "686:204",
   "layout-sidebar": "624:561",
   "layout-sidebar-rail": "680:230",
@@ -17,11 +17,11 @@ const COMPONENTES = {
   badge: "624:215",
   switch: "624:441",
   tabs: "1088:4445",
-  "catalogo-bitacora": "1218:4026",
+  "catalog-product-history": "1218:4026",
 } as const
 
 test.describe("pixel-perfect", () => {
-  for (const [key, nodeId] of Object.entries(COMPONENTES)) {
+  for (const [key, nodeId] of Object.entries(COMPONENTS)) {
     test(`${key} (nodeId ${nodeId})`, async ({ page }) => {
       await page.goto("/ds")
       await page
@@ -33,7 +33,7 @@ test.describe("pixel-perfect", () => {
 
 /**
  * Pantallas completas de "01 · Acceso" (Fase 3) — a diferencia de
- * COMPONENTES arriba, cada frame del Figma mide 1440x1024 completos, así
+ * COMPONENTS arriba, cada frame del Figma mide 1440x1024 completos, así
  * que se captura la página entera (no un recorte `[data-ds]`) al mismo
  * tamaño con `deviceScaleFactor: 2` para comparar 1:1 contra
  * `get_screenshot` del nodeId a esa escala.
@@ -43,7 +43,7 @@ test.describe("pixel-perfect", () => {
  * de prueba confirmado sin pasar por el correo de confirmación real — ver
  * reporte de Fase 3.
  */
-const PANTALLAS_ACCESO = {
+const AUTH_SCREENS = {
   "01.1-login": { nodeId: "634:773", path: "/login" },
   "01.3-sso-proveedor": { nodeId: "1145:4809", path: "/sso" },
   "01.4-sso-redirigiendo": {
@@ -59,7 +59,7 @@ const PANTALLAS_ACCESO = {
 test.describe("pixel-perfect · 01 Acceso", () => {
   test.use({ viewport: { width: 1440, height: 1024 }, deviceScaleFactor: 2 })
 
-  for (const [key, { nodeId, path }] of Object.entries(PANTALLAS_ACCESO)) {
+  for (const [key, { nodeId, path }] of Object.entries(AUTH_SCREENS)) {
     test(`${key} (nodeId ${nodeId})`, async ({ page }) => {
       await page.goto(path)
       // DM Sans es una web font — sin esto, la captura puede tomarse con el
@@ -128,7 +128,7 @@ test.describe("pixel-perfect · 01 Acceso", () => {
  *   exactos del mock, que no son internamente consistentes entre sí).
  *   Divergencia honesta: la casilla de selección de fila es solo visual
  *   (704:312) — no hay una acción de bulk que la respalde todavía, mismo
- *   espíritu que el "…" sin `onClick` de `PromocionesTabla`.
+ *   espíritu que el "…" sin `onClick` de `PromotionsTable`.
  * - `11.2-audiencia-detalle` (nodeId `842:6209`) — hero con "Sincronizar
  *   ahora" real (marca `sincronizado_con_ajo`/`ultima_sincronizacion_en`,
  *   sin fingir una llamada a AJO que no existe), tamaño de audiencia con

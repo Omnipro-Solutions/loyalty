@@ -53,14 +53,22 @@ src/
 │   └── globals.css           # única fuente de tokens (@theme inline)
 ├── features/                 # módulos de dominio (aislados entre sí)
 │   ├── auth/
-│   └── builder/{blocks,canvas,inspector,engine,validation}
+│   ├── audiences/            # 11 · Audiencias
+│   ├── builder/{blocks,canvas,inspector,engine,validation}  # Loyalty Builder
+│   ├── catalog/              # 03 · Catálogo
+│   ├── integrations/         # 12 · Integraciones
+│   ├── members/              # 05 · Clientes (tabla `members`)
+│   ├── profile/               # perfil del usuario autenticado
+│   ├── promotions/           # 06-07 · Promociones y reglas
+│   ├── stores/                # 04 · Tiendas
+│   └── team/                  # 09 · Equipo y permisos
 ├── components/
 │   ├── ui/                   # primitivos shadcn — no editar a mano
 │   ├── layout/                # AppSidebar, SidebarRail, AppTopbar, NavItem…
 │   ├── form/ data/ filters/ feedback/
 ├── lib/
 │   ├── supabase/{client,server,proxy}.ts
-│   ├── permissions.ts        # can(rol, accion, recurso), puro
+│   ├── permissions.ts        # can(baseRole, action, resource), puro
 │   └── format.ts             # COP, %, fechas es-CO
 ├── config/                    # navegación, catálogo de bloques del builder
 ├── types/{database.types.ts, domain.ts}
@@ -111,13 +119,25 @@ Arquitectura por capas: cada capa solo importa **hacia abajo**, y las
 
   ```ts
   export const ROLES = ["admin", "gestor", "aprobador", "lector"] as const
-  export type Rol = (typeof ROLES)[number]
+  export type Role = (typeof ROLES)[number]
   ```
 
-- **Constantes de esas tuplas:** `UPPER_SNAKE_CASE` (`ROLES`, `TIER_NOMBRES`).
+- **Constantes de esas tuplas:** `UPPER_SNAKE_CASE` (`ROLES`, `TIER_NAMES`).
 - **Valores de dominio (miembros del union):** `snake_case` en minúscula y en
   español (`en_progreso`, `descuento_porcentaje`). Cada tupla TS debe reflejar
   exactamente el `check` de la columna equivalente en `supabase/migrations/`.
+  **Solo el valor del string se queda en español — el nombre de la tupla y
+  del type alias van en inglés** (`ROLES` → `Role`, no `Rol`).
+- **Idioma de los identificadores de código: inglés**, siempre — nombres de
+  función, variable, tipo, prop, componente, hook y comentario de código.
+  Excepciones explícitas, que se quedan en español:
+  - Segmentos de ruta bajo `src/app` (URLs visibles: `/clientes`, `/tiendas`…).
+  - Nombres de tabla/columna de Supabase y cualquier acceso directo a una
+    propiedad de un `Row` (ej. `member.nombre`, `producto.estado_cuenta`) —
+    es el contrato de datos, no un identificador de código.
+  - Los valores literales de los union types de dominio (ver punto anterior).
+  - Todo el copy visible al usuario (texto JSX, `aria-label`, `placeholder`,
+    mensajes de error/éxito) — el tenant de demo es hispanohablante.
 - **Alias de import:** `@/*` → `src/*`. No uses rutas relativas largas.
 - **SQL:** tablas y columnas en `snake_case`; sin `enum` de Postgres — usar
   `text` + `check` (misma razón: evolucionar un valor no debe requerir
@@ -173,7 +193,7 @@ App Router: **todo es Server Component por defecto.**
   además de sus políticas RLS, o Postgres rechaza el acceso antes de
   evaluarlas.
 - **Autorización fina por rol** (quién puede publicar, aprobar, etc.) vive en
-  la función pura `can(rol, accion, recurso)` de `src/lib/permissions.ts` —
+  la función pura `can(baseRole, action, resource)` de `src/lib/permissions.ts` —
   debe mantenerse equivalente a la tabla `role_permissions` (sembrada en
   `supabase/seed.sql`, pensada para la UI de 09.2).
 - **MFA:** "Basic MFA" (TOTP vía app authenticator) está incluido en el plan

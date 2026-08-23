@@ -482,7 +482,10 @@ export default function DesignSystemPage() {
         <LoadingState />
       </section>
 
-      <section data-ds="catalogo-bitacora" className="w-[1116px] bg-muted p-6">
+      <section
+        data-ds="catalog-product-history"
+        className="w-[1116px] bg-muted p-6"
+      >
         <ProductHistoryCard events={PRODUCT_HISTORY_MOCK} />
       </section>
     </div>

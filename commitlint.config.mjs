@@ -1,6 +1,7 @@
 /**
  * Conventional Commits + scope-enum alineado a las secciones del Figma
- * "Loyalty-Desing" y a las features/dominio del portal.
+ * "Loyalty-Desing" y a las features/dominio del portal (nombres de carpeta
+ * bajo src/features/**, ya en inglés — ver CLAUDE.md §3).
  * Amplía la lista `scope-enum` a medida que aparezcan nuevas features.
  *
  * @type {import("@commitlint/types").UserConfig}
@@ -15,16 +16,16 @@ const config = {
         // features / dominio (secciones 01-12 del Figma)
         "auth",
         "dashboard",
-        "catalogo",
-        "tiendas",
-        "clientes",
-        "promociones",
+        "catalog",
+        "stores",
+        "members",
+        "promotions",
         "reglas",
         "journeys",
         "builder",
-        "equipo",
-        "audiencias",
-        "integraciones",
+        "team",
+        "audiences",
+        "integrations",
         "profile",
         // transversal / infra
         "ui",
