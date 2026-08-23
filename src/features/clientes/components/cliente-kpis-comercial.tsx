@@ -25,8 +25,8 @@ export function ClienteKpisComercial({
         </p>
         <PlaceholderCard
           icon={Receipt}
-          titulo="Sin pedidos todavía"
-          descripcion="LTV, margen, valor previsto y riesgo de fuga aparecen en cuanto el socio tenga compras registradas."
+          title="Sin pedidos todavía"
+          description="LTV, margen, valor previsto y riesgo de fuga aparecen en cuanto el socio tenga compras registradas."
           compact
           className="w-full rounded-[18px]"
         />

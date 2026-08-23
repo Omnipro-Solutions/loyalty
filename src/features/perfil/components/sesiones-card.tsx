@@ -15,8 +15,8 @@ export function SesionesCard({ dispositivos }: SesionesCardProps) {
       <div className="w-full rounded-[20px] bg-background shadow-form-section">
         <EmptyState
           icon={ShieldCheck}
-          titulo="Sin dispositivos recordados"
-          descripcion="Esta lista no es un registro de cada inicio de sesión: solo aparece un dispositivo aquí cuando marcas “Recordar este dispositivo” al iniciar sesión."
+          title="Sin dispositivos recordados"
+          description="Esta lista no es un registro de cada inicio de sesión: solo aparece un dispositivo aquí cuando marcas “Recordar este dispositivo” al iniciar sesión."
         />
       </div>
     )

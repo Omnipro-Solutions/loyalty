@@ -48,16 +48,16 @@ export function AudienciasCard({
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
-            titulo="Todavía no hay audiencias"
-            descripcion="Las audiencias se definen desde el Loyalty Builder — en cuanto exista un segmento, aparece aquí."
+            title="Todavía no hay audiencias"
+            description="Las audiencias se definen desde el Loyalty Builder — en cuanto exista un segmento, aparece aquí."
           />
         </div>
       ) : sinResultadosDeFiltro ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
-            titulo="Sin resultados"
-            descripcion="Ninguna audiencia coincide con la búsqueda aplicada."
+            title="Sin resultados"
+            description="Ninguna audiencia coincide con la búsqueda aplicada."
           />
         </div>
       ) : (

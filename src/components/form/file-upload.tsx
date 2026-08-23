@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 type FileUploadProps = {
   label: string
-  file?: { nombre: string; tamano: string; dimensiones?: string } | null
+  file?: { name: string; size: string; dimensions?: string } | null
   onFileSelected?: (file: File) => void
   onRemove?: () => void
   accept?: string
@@ -15,7 +15,7 @@ type FileUploadProps = {
   className?: string
 }
 
-/** Figma "Form / Carga de archivo" (709:405): Default (dashed) / Arrastrando / Con archivo. */
+/** Figma "Form / Carga de archivo" (709:405): Default (dashed) / Dragging / With file. */
 export function FileUpload({
   label,
   file,
@@ -46,11 +46,11 @@ export function FileUpload({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12px] leading-[17px] font-medium text-foreground">
-              {file.nombre}
+              {file.name}
             </p>
             <p className="text-[10px] leading-[14px] text-muted-foreground">
-              {file.tamano}
-              {file.dimensiones ? ` · ${file.dimensiones}` : ""}
+              {file.size}
+              {file.dimensions ? ` · ${file.dimensions}` : ""}
             </p>
           </div>
           <button

@@ -3,16 +3,16 @@ import { cn } from "@/lib/utils"
 type ChipProps = {
   children: React.ReactNode
   active?: boolean
-  conteo?: number
+  count?: number
   onClick?: () => void
   className?: string
 }
 
-/** Figma "Filtro / Chip" (699:311): Default/Activo/Con conteo. */
+/** Figma "Filtro / Chip" (699:311): Default/Activo/Con count. */
 export function Chip({
   children,
   active,
-  conteo,
+  count,
   onClick,
   className,
 }: ChipProps) {
@@ -29,9 +29,9 @@ export function Chip({
       )}
     >
       {children}
-      {typeof conteo === "number" && (
+      {typeof count === "number" && (
         <span className="rounded-full bg-muted px-[7px] py-px text-[10px] leading-[14px] font-semibold text-muted-foreground">
-          {conteo}
+          {count}
         </span>
       )}
     </button>

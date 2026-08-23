@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-/** Figma "Form / Fila · 2/3 columnas" (711:315, 711:344): fila con gap-14, cada campo a flex-1. */
+/** Figma "Form / Fila · 2/3 columnas" (711:315, 711:344): row with gap-14, each field at flex-1. */
 export function Row({
   children,
   className,

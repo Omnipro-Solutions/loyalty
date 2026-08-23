@@ -16,7 +16,7 @@ export default async function NuevoClientePage() {
   return (
     <AppPage
       breadcrumb="Comercial  ›  Clientes  ›  Nuevo cliente"
-      titulo="Nuevo cliente"
+      title="Nuevo cliente"
     >
       <BackLink href="/clientes">Volver a Clientes</BackLink>
       <ClienteForm tiendas={tiendas} tiers={tiers} />

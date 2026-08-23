@@ -5,17 +5,17 @@ import { cn } from "@/lib/utils"
 
 type EmptyStateProps = {
   icon: LucideIcon
-  titulo: string
-  descripcion: string
+  title: string
+  description: string
   children?: ReactNode
   className?: string
 }
 
-/** Figma "10.1 · Estado vacío": círculo bg-accent 64px + título 16/22 + descripción 13/20, w-420. */
+/** Figma "10.1 · Estado vacío": bg-accent 64px circle + 16/22 title + 13/20 description, w-420. */
 export function EmptyState({
   icon: Icon,
-  titulo,
-  descripcion,
+  title,
+  description,
   children,
   className,
 }: EmptyStateProps) {
@@ -30,10 +30,10 @@ export function EmptyState({
         <Icon className="size-[26px] text-accent-foreground" />
       </div>
       <p className="text-center text-base leading-[22px] font-semibold text-foreground">
-        {titulo}
+        {title}
       </p>
       <p className="max-w-[420px] text-center text-[13px] leading-5 text-muted-foreground">
-        {descripcion}
+        {description}
       </p>
       {children}
     </div>

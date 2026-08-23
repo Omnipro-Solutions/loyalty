@@ -36,7 +36,7 @@ export default async function ProductoDetallePage({
   return (
     <AppPage
       breadcrumb={`Catálogo  ›  ${producto.nombre}`}
-      titulo={producto.nombre}
+      title={producto.nombre}
     >
       <BackLink href="/catalogo">Volver a Catálogo</BackLink>
       <ProductoHero producto={producto} />

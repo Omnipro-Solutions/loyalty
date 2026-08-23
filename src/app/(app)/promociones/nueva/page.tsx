@@ -18,7 +18,7 @@ export default async function NuevaPromocionPage() {
   return (
     <AppPage
       breadcrumb="Comercial  ›  Promociones  ›  Nueva promoción"
-      titulo="Nueva promoción"
+      title="Nueva promoción"
     >
       <BackLink href="/promociones">Volver a Promociones</BackLink>
       <PromocionForm

@@ -1,25 +1,25 @@
 import { PillTabsNav } from "@/components/layout/pill-tabs-nav"
 
 export const INTEGRACIONES_TABS = [
-  { value: "origenes", etiqueta: "Orígenes" },
-  { value: "destinos", etiqueta: "Destinos" },
-  { value: "conexiones", etiqueta: "Conexiones activas" },
-  { value: "cuentas", etiqueta: "Cuentas" },
-  { value: "sistema", etiqueta: "Vista del sistema" },
+  { value: "origenes", label: "Orígenes" },
+  { value: "destinos", label: "Destinos" },
+  { value: "conexiones", label: "Conexiones activas" },
+  { value: "cuentas", label: "Cuentas" },
+  { value: "sistema", label: "Vista del sistema" },
 ] as const
 
 export type IntegracionesTab = (typeof INTEGRACIONES_TABS)[number]["value"]
 
-type IntegracionesTabsNavProps = { activo: IntegracionesTab }
+type IntegracionesTabsNavProps = { active: IntegracionesTab }
 
-/** Mismo `PillTabsNav` que "09 · Equipo y permisos" — consistencia entre las sub-vistas de Ajustes en vez del subrayado propio del Figma (1262:4214). */
-export function IntegracionesTabsNav({ activo }: IntegracionesTabsNavProps) {
+/** Same `PillTabsNav` as "09 · Equipo y permisos" — consistency across Ajustes sub-views instead of the Figma's own underline (1262:4214). */
+export function IntegracionesTabsNav({ active }: IntegracionesTabsNavProps) {
   return (
     <PillTabsNav
-      activo={activo}
+      active={active}
       tabs={INTEGRACIONES_TABS.map((tab) => ({
         value: tab.value,
-        etiqueta: tab.etiqueta,
+        label: tab.label,
         href:
           tab.value === "origenes"
             ? "/ajustes/integraciones"

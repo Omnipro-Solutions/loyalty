@@ -107,9 +107,9 @@ export function NuevoRolDialog() {
         </DialogHeader>
         {resultado?.ok === false && (
           <Message
-            tipo="error"
-            titulo="No se pudo crear el rol"
-            descripcion={resultado.message ?? "Intenta de nuevo."}
+            variant="error"
+            title="No se pudo crear el rol"
+            description={resultado.message ?? "Intenta de nuevo."}
           />
         )}
         <form

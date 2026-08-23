@@ -26,26 +26,26 @@ export function VistaSistemaCard() {
     <div className="flex w-full flex-col gap-4">
       <div className="flex items-start gap-4">
         <KpiCard
-          etiqueta="Orígenes conectados"
-          valor={formatNumber(origenes.length)}
+          label="Orígenes conectados"
+          value={formatNumber(origenes.length)}
         />
         <KpiCard
-          etiqueta="Destinos conectados"
-          valor={formatNumber(destinos.length)}
+          label="Destinos conectados"
+          value={formatNumber(destinos.length)}
         />
         <KpiCard
-          etiqueta="Eventos procesados hoy"
-          valor={formatNumber(EVENTOS_PROCESADOS_HOY)}
+          label="Eventos procesados hoy"
+          value={formatNumber(EVENTOS_PROCESADOS_HOY)}
         />
         <KpiCard
-          etiqueta="Requieren atención"
-          valor={formatNumber(conAtencion)}
-          detalle={conAtencion > 0 ? "ver Conexiones activas" : "todo en orden"}
+          label="Requieren atención"
+          value={formatNumber(conAtencion)}
+          detail={conAtencion > 0 ? "ver Conexiones activas" : "todo en orden"}
         />
       </div>
 
       <div className="flex w-full items-stretch gap-3 rounded-2xl bg-background p-5 shadow-form-section">
-        <FlowColumn titulo="Orígenes" conexiones={origenes} />
+        <FlowColumn title="Orígenes" conexiones={origenes} />
 
         <div className="flex flex-col items-center justify-center px-1">
           <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
@@ -63,23 +63,23 @@ export function VistaSistemaCard() {
           <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
         </div>
 
-        <FlowColumn titulo="Destinos" conexiones={destinos} />
+        <FlowColumn title="Destinos" conexiones={destinos} />
       </div>
     </div>
   )
 }
 
 function FlowColumn({
-  titulo,
+  title,
   conexiones,
 }: {
-  titulo: string
+  title: string
   conexiones: ConexionActiva[]
 }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2">
       <p className="text-[11px] font-semibold tracking-[0.5px] text-muted-foreground uppercase">
-        {titulo}
+        {title}
       </p>
       {conexiones.map((conexion) => {
         const integracion = buscarIntegracion(

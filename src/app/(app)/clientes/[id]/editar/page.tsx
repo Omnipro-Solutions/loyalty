@@ -26,7 +26,7 @@ export default async function EditarClientePage({
   return (
     <AppPage
       breadcrumb={`Comercial  ›  Clientes  ›  ${nombreCompleto}`}
-      titulo={nombreCompleto}
+      title={nombreCompleto}
     >
       <BackLink href={`/clientes/${id}`}>Volver al perfil</BackLink>
       <ClienteForm cliente={cliente} tiendas={tiendas} tiers={tiers} />

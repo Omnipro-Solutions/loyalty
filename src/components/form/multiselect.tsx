@@ -29,8 +29,8 @@ type MultiselectProps = {
 }
 
 /**
- * Figma "Form / Multiselect" (709:370): chips en bg-accent/text-accent-foreground,
- * ajuste de línea, y "+N más" cuando no caben. Selección vía Command en un Popover.
+ * Figma "Form / Multiselect" (709:370): chips in bg-accent/text-accent-foreground,
+ * line wrap, and "+N más" when they don't fit. Selection via Command in a Popover.
  */
 export function Multiselect({
   options,
@@ -39,15 +39,15 @@ export function Multiselect({
   placeholder = "Selecciona…",
   className,
 }: MultiselectProps) {
-  const seleccionadas = options.filter((o) => value.includes(o.value))
-  const visibles = seleccionadas.slice(0, 3)
-  const restantes = seleccionadas.length - visibles.length
+  const selected = options.filter((o) => value.includes(o.value))
+  const visibleItems = selected.slice(0, 3)
+  const remaining = selected.length - visibleItems.length
 
-  function quitar(v: string) {
+  function remove(v: string) {
     onValueChange(value.filter((x) => x !== v))
   }
 
-  function agregar(v: string) {
+  function add(v: string) {
     onValueChange(
       value.includes(v) ? value.filter((x) => x !== v) : [...value, v]
     )
@@ -62,7 +62,7 @@ export function Multiselect({
           className
         )}
       >
-        {visibles.map((o) => (
+        {visibleItems.map((o) => (
           <span
             key={o.value}
             className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent py-1 pr-2 pl-2.5 text-[11px] leading-[15px] font-medium text-accent-foreground"
@@ -72,17 +72,17 @@ export function Multiselect({
               className="size-2.5 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation()
-                quitar(o.value)
+                remove(o.value)
               }}
             />
           </span>
         ))}
-        {restantes > 0 && (
+        {remaining > 0 && (
           <span className="shrink-0 text-xs leading-[18px] text-muted-foreground">
-            + {restantes} más
+            + {remaining} más
           </span>
         )}
-        {seleccionadas.length === 0 && (
+        {selected.length === 0 && (
           <span className="min-w-0 flex-1 text-[13px] leading-[19px] text-muted-foreground">
             {placeholder}
           </span>
@@ -98,7 +98,7 @@ export function Multiselect({
                 <CommandItem
                   key={o.value}
                   value={o.label}
-                  onSelect={() => agregar(o.value)}
+                  onSelect={() => add(o.value)}
                 >
                   <span
                     className={cn(

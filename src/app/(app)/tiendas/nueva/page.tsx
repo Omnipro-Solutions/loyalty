@@ -7,7 +7,7 @@ export default function NuevaTiendaPage() {
   return (
     <AppPage
       breadcrumb="Catálogo  ›  Tiendas  ›  Nueva tienda"
-      titulo="Nueva tienda"
+      title="Nueva tienda"
     >
       <BackLink href="/tiendas">Volver a Tiendas</BackLink>
       <TiendaForm />

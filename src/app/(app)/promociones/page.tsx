@@ -50,7 +50,7 @@ export default async function PromocionesPage({
   const segmentoNombrePorId = new Map(segmentos.map((s) => [s.id, s.nombre]))
 
   return (
-    <AppPage breadcrumb="Comercial  ›  Promociones" titulo="Promociones">
+    <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <p className="text-base font-semibold text-foreground">

@@ -21,7 +21,7 @@ export default async function JourneyEditorPage({
     <>
       <AppTopbar
         breadcrumb="Comercial  ›  Loyalty Builder"
-        titulo={workflow.nombre}
+        title={workflow.nombre}
         className="shrink-0"
       />
       <JourneyEditor workflow={workflow} tiers={tiers} />

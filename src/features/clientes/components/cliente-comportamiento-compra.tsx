@@ -61,8 +61,8 @@ export function ClienteComportamientoCompra({
     return (
       <PlaceholderCard
         icon={Receipt}
-        titulo="Sin pedidos todavía"
-        descripcion="Este socio no tiene compras registradas."
+        title="Sin pedidos todavía"
+        description="Este socio no tiene compras registradas."
         compact
         className="w-full rounded-[20px] px-5 py-4"
       />

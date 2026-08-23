@@ -17,8 +17,8 @@ type IntegracionesCatalogoProps = {
   direccion: "origen" | "destino"
   grupos: IntegracionGrupo[]
   seleccionInicialId: string
-  titulo: string
-  descripcion: string
+  title: string
+  description: string
   labelBuscar: string
   labelTotal: string
   labelTodos: string
@@ -36,8 +36,8 @@ export function IntegracionesCatalogo({
   direccion,
   grupos,
   seleccionInicialId,
-  titulo,
-  descripcion,
+  title,
+  description,
   labelBuscar,
   labelTotal,
   labelTodos,
@@ -89,9 +89,9 @@ export function IntegracionesCatalogo({
       <div className="flex items-start gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-[22px] leading-7 font-bold text-foreground">
-            {titulo}
+            {title}
           </p>
-          <p className="text-xs text-muted-foreground">{descripcion}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
@@ -122,8 +122,8 @@ export function IntegracionesCatalogo({
           <div className="flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
             <EmptyState
               icon={PlugZap}
-              titulo="Todavía no tienes conexiones activas"
-              descripcion="Cuando actives una integración desde el catálogo, aparecerá acá."
+              title="Todavía no tienes conexiones activas"
+              description="Cuando actives una integración desde el catálogo, aparecerá acá."
             />
           </div>
         ) : (

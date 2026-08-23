@@ -1,24 +1,24 @@
 import { PillTabsNav } from "@/components/layout/pill-tabs-nav"
 
 export const EQUIPO_TABS = [
-  { value: "usuarios", etiqueta: "Usuarios" },
-  { value: "roles", etiqueta: "Roles y permisos" },
-  { value: "invitaciones", etiqueta: "Invitaciones" },
-  { value: "auditoria", etiqueta: "Registro de auditoría" },
+  { value: "usuarios", label: "Usuarios" },
+  { value: "roles", label: "Roles y permisos" },
+  { value: "invitaciones", label: "Invitaciones" },
+  { value: "auditoria", label: "Registro de auditoría" },
 ] as const
 
 export type EquipoTab = (typeof EQUIPO_TABS)[number]["value"]
 
-type EquipoTabsNavProps = { activo: EquipoTab }
+type EquipoTabsNavProps = { active: EquipoTab }
 
-/** Figma "Tabs" (720:3001 / 718:2883) vía `PillTabsNav`, compartido con `features/integraciones`. */
-export function EquipoTabsNav({ activo }: EquipoTabsNavProps) {
+/** Figma "Tabs" (720:3001 / 718:2883) via `PillTabsNav`, shared with `features/integraciones`. */
+export function EquipoTabsNav({ active }: EquipoTabsNavProps) {
   return (
     <PillTabsNav
-      activo={activo}
+      active={active}
       tabs={EQUIPO_TABS.map((tab) => ({
         value: tab.value,
-        etiqueta: tab.etiqueta,
+        label: tab.label,
         href:
           tab.value === "usuarios"
             ? "/ajustes/equipo"

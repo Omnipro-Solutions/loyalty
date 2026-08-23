@@ -4,18 +4,18 @@ import { FIELD_CHROME } from "@/components/form/field"
 import { cn } from "@/lib/utils"
 
 type CurrencyInputProps = Omit<React.ComponentProps<"input">, "type"> & {
-  moneda?: string
+  currency?: string
 }
 
 /**
- * Figma "Form / Input · Moneda" (708:471): prefijo fijo ("COP $") sobre
- * bg-subtle + valor numérico. El borde/estados viven en el contenedor y
- * reaccionan al input real vía `:has()`/`:focus-within`, no hay estado
- * propio duplicado.
+ * Figma "Form / Input · Moneda" (708:471): fixed prefix ("COP $") over
+ * bg-subtle + numeric value. Border/states live on the container and react
+ * to the real input via `:has()`/`:focus-within` — no duplicated state of
+ * its own.
  */
 export function CurrencyInput({
   className,
-  moneda = "COP $",
+  currency = "COP $",
   ...props
 }: CurrencyInputProps) {
   return (
@@ -27,7 +27,7 @@ export function CurrencyInput({
       )}
     >
       <span className="flex shrink-0 items-center bg-muted px-[13px] py-2.5 text-[13px] leading-[19px] font-medium text-muted-foreground">
-        {moneda}
+        {currency}
       </span>
       <input
         type="number"

@@ -21,8 +21,8 @@ export function ClienteAudienciasCard() {
       </div>
       <PlaceholderCard
         icon={Users}
-        titulo="Sin motor de audiencias todavía"
-        descripcion="`segments` solo guarda la definición — evaluar membresía en tiempo real es un motor aparte."
+        title="Sin motor de audiencias todavía"
+        description="`segments` solo guarda la definición — evaluar membresía en tiempo real es un motor aparte."
         className="flex-1 justify-center"
       />
     </div>

@@ -3,20 +3,20 @@ import { cn } from "@/lib/utils"
 
 type ActionBarProps = {
   hint?: string
-  onCancelar?: () => void
-  onGuardarBorrador?: () => void
-  onGuardarActivar?: () => void
+  onCancel?: () => void
+  onSaveDraft?: () => void
+  onSaveAndActivate?: () => void
   className?: string
 }
 
 const COMPACT = "h-auto rounded-lg px-[15px] py-2.5 text-xs leading-[17px]"
 
-/** Figma "Form / Barra de acciones" (711:386): flotante, rounded-[20px], sombra hacia arriba. */
+/** Figma "Form / Barra de acciones" (711:386): floating, rounded-[20px], upward shadow. */
 export function ActionBar({
   hint = "Los cambios se aplican al guardar",
-  onCancelar,
-  onGuardarBorrador,
-  onGuardarActivar,
+  onCancel,
+  onSaveDraft,
+  onSaveAndActivate,
   className,
 }: ActionBarProps) {
   return (
@@ -31,20 +31,20 @@ export function ActionBar({
       </p>
       <Button
         variant="ghost"
-        onClick={onCancelar}
+        onClick={onCancel}
         className={cn(COMPACT, "font-medium")}
       >
         Cancelar
       </Button>
       <Button
         variant="outline"
-        onClick={onGuardarBorrador}
+        onClick={onSaveDraft}
         className={cn(COMPACT, "font-medium")}
       >
         Guardar borrador
       </Button>
       <Button
-        onClick={onGuardarActivar}
+        onClick={onSaveAndActivate}
         className={cn(COMPACT, "font-semibold")}
       >
         Guardar y activar

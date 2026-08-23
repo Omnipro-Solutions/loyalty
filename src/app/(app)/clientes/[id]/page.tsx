@@ -58,7 +58,7 @@ export default async function ClientePerfilPage({
   return (
     <AppPage
       breadcrumb={`Comercial  ›  Clientes  ›  ${nombreCompleto}`}
-      titulo={nombreCompleto}
+      title={nombreCompleto}
     >
       <BackLink href="/clientes">Volver a Clientes</BackLink>
 

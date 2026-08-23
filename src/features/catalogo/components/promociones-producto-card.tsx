@@ -76,8 +76,8 @@ export function PromocionesProductoCard({
       {promociones.length === 0 ? (
         <EmptyState
           icon={TicketPercent}
-          titulo="Sin promociones vinculadas"
-          descripcion="Créalas desde Promociones filtrando por la categoría de este producto para que aparezcan aquí."
+          title="Sin promociones vinculadas"
+          description="Créalas desde Promociones filtrando por la categoría de este producto para que aparezcan aquí."
           className="pt-0 pb-8"
         />
       ) : (

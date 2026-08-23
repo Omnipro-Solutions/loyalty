@@ -23,10 +23,10 @@ type FilterSelectProps = {
 }
 
 /**
- * Figma "Filtro / Select" (699:324): State=Default (bg-white) cuando no hay
- * selección, State=Aplicado (bg-brand-subtle, borde brand) en cuanto hay una.
- * Un solo componente cubre tanto el multiselect de Categoría como el select
- * simple de Estado — la diferencia es `multiple`.
+ * Figma "Filtro / Select" (699:324): State=Default (bg-white) when there's no
+ * selection, State=Aplicado (bg-brand-subtle, brand border) once there is one.
+ * A single component covers both the Categoría multiselect and the simple
+ * Estado select — the difference is `multiple`.
  */
 export function FilterSelect({
   label,
@@ -37,8 +37,8 @@ export function FilterSelect({
   placeholder = "Todos",
   className,
 }: FilterSelectProps) {
-  const aplicado = value.length > 0
-  const valorTexto = !aplicado
+  const isApplied = value.length > 0
+  const displayValue = !isApplied
     ? placeholder
     : value.length === 1
       ? (options.find((o) => o.value === value[0])?.label ?? placeholder)
@@ -61,22 +61,24 @@ export function FilterSelect({
       <PopoverTrigger
         className={cn(
           "flex items-center gap-[7px] rounded-[10px] border py-[9px] pr-3 pl-3.5 text-xs leading-4",
-          aplicado ? "border-primary bg-accent" : "border-border bg-background",
+          isApplied
+            ? "border-primary bg-accent"
+            : "border-border bg-background",
           className
         )}
       >
         <span
-          className={aplicado ? "text-primary-700" : "text-muted-foreground"}
+          className={isApplied ? "text-primary-700" : "text-muted-foreground"}
         >
           {label}:
         </span>
         <span
           className={cn(
             "font-medium",
-            aplicado ? "text-primary-800" : "text-foreground"
+            isApplied ? "text-primary-800" : "text-foreground"
           )}
         >
-          {valorTexto}
+          {displayValue}
         </span>
         <ChevronDown className="size-[11px] text-muted-foreground" />
       </PopoverTrigger>

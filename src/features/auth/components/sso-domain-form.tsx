@@ -61,9 +61,9 @@ export function SsoDomainForm() {
 
       {notFound && (
         <Message
-          tipo="error"
-          titulo="No encontramos tu organización"
-          descripcion="Ese dominio de correo no tiene un proveedor de identidad configurado."
+          variant="error"
+          title="No encontramos tu organización"
+          description="Ese dominio de correo no tiene un proveedor de identidad configurado."
         />
       )}
 

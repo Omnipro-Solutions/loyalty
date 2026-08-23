@@ -5,9 +5,9 @@ export default function ReglasPage() {
   return (
     <AppPage
       breadcrumb="Comercial  ›  Reglas de descuento"
-      titulo="Reglas de descuento"
+      title="Reglas de descuento"
     >
-      <RoutePlaceholder fase="Fase 5" />
+      <RoutePlaceholder phase="Fase 5" />
     </AppPage>
   )
 }

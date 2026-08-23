@@ -228,9 +228,9 @@ export function PromocionForm({
 
       {errorGeneral && (
         <Message
-          tipo="error"
-          titulo="No se pudo guardar"
-          descripcion={errorGeneral}
+          variant="error"
+          title="No se pudo guardar"
+          description={errorGeneral}
         />
       )}
 
@@ -240,8 +240,8 @@ export function PromocionForm({
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
           {paso === 0 && (
             <Section
-              titulo="Identidad de la promoción"
-              descripcion="Cómo se identifica la promoción dentro del motor."
+              title="Identidad de la promoción"
+              description="Cómo se identifica la promoción dentro del motor."
             >
               <Row>
                 <Field
@@ -346,8 +346,8 @@ export function PromocionForm({
 
           {paso === 1 && (
             <Section
-              titulo="Condiciones (SI)"
-              descripcion="Según el combinador elegido, todas o alguna condición debe cumplirse para activar la promoción."
+              title="Condiciones (SI)"
+              description="Según el combinador elegido, todas o alguna condición debe cumplirse para activar la promoción."
             >
               <CondicionesBuilder
                 control={control}
@@ -361,8 +361,8 @@ export function PromocionForm({
 
           {paso === 2 && (
             <Section
-              titulo="Recompensa (ENTONCES)"
-              descripcion="Beneficio que entrega la promoción al cumplirse las condiciones."
+              title="Recompensa (ENTONCES)"
+              description="Beneficio que entrega la promoción al cumplirse las condiciones."
             >
               <Row>
                 <Field label="Tipo de beneficio" htmlFor="tipoBeneficio">
@@ -486,8 +486,8 @@ export function PromocionForm({
 
           {paso === 3 && (
             <Section
-              titulo="Vigencia"
-              descripcion="Fechas de la campaña y presupuesto asignado."
+              title="Vigencia"
+              description="Fechas de la campaña y presupuesto asignado."
             >
               <Row>
                 <Field
@@ -533,8 +533,8 @@ export function PromocionForm({
 
           {paso === 4 && (
             <Section
-              titulo="Resumen"
-              descripcion="Revisa todo antes de guardar."
+              title="Resumen"
+              description="Revisa todo antes de guardar."
             >
               <PromocionResumenRevision
                 valores={valores as Partial<PromocionValues>}

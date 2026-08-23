@@ -55,21 +55,21 @@ export function ChangePasswordForm() {
 
   return (
     <Section
-      titulo="Cambiar contraseña"
-      descripcion="Usa al menos 12 caracteres."
+      title="Cambiar contraseña"
+      description="Usa al menos 12 caracteres."
     >
       {resultado?.ok === false && (
         <Message
-          tipo="error"
-          titulo="No se pudo cambiar la contraseña"
-          descripcion={resultado.message ?? "Intenta de nuevo."}
+          variant="error"
+          title="No se pudo cambiar la contraseña"
+          description={resultado.message ?? "Intenta de nuevo."}
         />
       )}
       {resultado?.ok === true && (
         <Message
-          tipo="exito"
-          titulo="Contraseña actualizada"
-          descripcion="Tu contraseña se cambió correctamente."
+          variant="success"
+          title="Contraseña actualizada"
+          description="Tu contraseña se cambió correctamente."
         />
       )}
 

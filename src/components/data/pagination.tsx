@@ -12,7 +12,7 @@ type PaginationProps = {
   className?: string
 }
 
-function paginas(page: number, total: number): (number | "…")[] {
+function pageItems(page: number, total: number): (number | "…")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
   const set = new Set([1, 2, total - 1, total, page - 1, page, page + 1])
   const nums = [...set]
@@ -29,7 +29,7 @@ function paginas(page: number, total: number): (number | "…")[] {
 const PILL =
   "h-auto rounded-[9px] px-[11px] py-1.5 text-[12px] leading-4 font-medium"
 
-/** Figma "Table / Paginación" (698:357): "Mostrando X–Y de Z" + botones 28px sobre bg-subtle. */
+/** Figma "Table / Paginación" (698:357): "Mostrando X–Y de Z" + 28px buttons over bg-subtle. */
 export function Pagination({
   total,
   pageSize,
@@ -38,10 +38,10 @@ export function Pagination({
   className,
 }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const desde = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const hasta = Math.min(page * pageSize, total)
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, total)
   const items = React.useMemo(
-    () => paginas(page, totalPages),
+    () => pageItems(page, totalPages),
     [page, totalPages]
   )
 
@@ -53,7 +53,7 @@ export function Pagination({
       )}
     >
       <p className="min-w-0 flex-1 text-[12px] leading-4 text-muted-foreground">
-        Mostrando {formatNumber(desde)}–{formatNumber(hasta)} de{" "}
+        Mostrando {formatNumber(from)}–{formatNumber(to)} de{" "}
         {formatNumber(total)}
       </p>
       <Button

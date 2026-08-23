@@ -62,16 +62,16 @@ export function UsuariosCard({
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
-            titulo="Todavía no hay usuarios"
-            descripcion="Invita a tu equipo para que pueda acceder a Loyalty System."
+            title="Todavía no hay usuarios"
+            description="Invita a tu equipo para que pueda acceder a Loyalty System."
           />
         </div>
       ) : sinResultadosDeFiltro ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
-            titulo="Sin resultados"
-            descripcion="Ningún usuario coincide con la búsqueda o el filtro aplicado."
+            title="Sin resultados"
+            description="Ningún usuario coincide con la búsqueda o el filtro aplicado."
           />
         </div>
       ) : (

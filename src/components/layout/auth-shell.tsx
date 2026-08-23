@@ -3,32 +3,30 @@ import type { ReactNode } from "react"
 import { BrandMark } from "@/components/layout/brand-mark"
 
 const STATS = [
-  { valor: "42", etiqueta: "tiendas conectadas" },
-  { valor: "8.412", etiqueta: "clientes activos" },
-  { valor: "99,9%", etiqueta: "disponibilidad" },
+  { value: "42", label: "tiendas conectadas" },
+  { value: "8.412", label: "clientes activos" },
+  { value: "99,9%", label: "disponibilidad" },
 ] as const
 
 /**
- * Split-screen compartido por las 5 pantallas de "01 · Acceso" (634:774 y
- * análogos): panel de marca con gradiente + 3 stats a la izquierda, y un
- * slot a la derecha para la tarjeta de cada pantalla. El copy del panel es
- * idéntico en 4 de las 5 pantallas del Figma; 01.2 trae una variante con
- * "POS y el e-commerce" que se trata como inconsistencia del archivo y se
- * normaliza al texto común.
+ * Split-screen shared by the 5 "01 · Acceso" screens (634:774 and
+ * analogous): gradient brand panel + 3 stats on the left, and a slot on the
+ * right for each screen's card. The panel copy is identical across 4 of the
+ * Figma's 5 screens; 01.2 has a variant with "POS y el e-commerce" that's
+ * treated as a file inconsistency and normalized to the common text.
  *
- * El Figma solo cubre el ancho de escritorio. Por debajo de `lg` el panel
- * de marca se oculta (no cabe junto a la tarjeta sin recortarla) y se
- * reemplaza por un encabezado compacto con la marca.
+ * The Figma only covers desktop width. Below `lg` the brand panel is
+ * hidden (it doesn't fit next to the card without clipping it) and is
+ * replaced by a compact header with the mark.
  *
- * Altura fija a la ventana (`h-dvh` + `overflow-hidden`), sin scroll de
- * página ni interno bajo ninguna circunstancia — pedido explícito del
- * usuario. `dvh` en vez de `vh`/`h-screen` porque en navegadores móviles
- * `vh` incluye el área que la barra de direcciones puede ocultar/mostrar,
- * lo que causaría un scroll fantasma de unos pocos px al hacer scroll.
- * El padding vertical de la columna de la tarjeta se mantiene mínimo
- * (`py-2`/`py-3`) porque el centrado real lo hace `justify-center`, no el
- * padding — cualquier padding de más solo le resta espacio disponible a
- * la tarjeta más alta del grupo (01.2, con el QR de enrolamiento).
+ * Height fixed to the viewport (`h-dvh` + `overflow-hidden`), no page or
+ * internal scroll under any circumstance — explicit user request. `dvh`
+ * instead of `vh`/`h-screen` because on mobile browsers `vh` includes the
+ * area the address bar can hide/show, which would cause a phantom scroll of
+ * a few px when scrolling. The card column's vertical padding stays minimal
+ * (`py-2`/`py-3`) because the real centering is done by `justify-center`,
+ * not the padding — any extra padding just takes away available space from
+ * the group's tallest card (01.2, with the enrollment QR).
  */
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
@@ -38,7 +36,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         style={{ backgroundImage: "var(--gradient-auth-panel)" }}
       >
         <div className="flex items-center gap-3">
-          <BrandMark variant="inverso" className="size-10 shrink-0" />
+          <BrandMark variant="inverse" className="size-10 shrink-0" />
           <div className="flex flex-col leading-[26px]">
             <p className="text-4xl font-semibold">Loyalty System</p>
             <p className="text-sm font-extrabold">By Omni</p>
@@ -53,11 +51,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </p>
         <div className="flex gap-8 pt-4">
           {STATS.map((stat) => (
-            <div key={stat.etiqueta} className="flex flex-col gap-0.5">
-              <p className="text-4xl leading-7 font-semibold">{stat.valor}</p>
-              <p className="text-xs leading-4 text-primary-100">
-                {stat.etiqueta}
-              </p>
+            <div key={stat.label} className="flex flex-col gap-0.5">
+              <p className="text-4xl leading-7 font-semibold">{stat.value}</p>
+              <p className="text-xs leading-4 text-primary-100">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -65,16 +61,15 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden px-3 py-2 sm:px-6">
         {/*
-          Solo el ícono (sin texto) en mobile: con las pantallas más
-          cargadas de contenido (login con 2 botones SSO, SSO denegado con
-          la tabla de detalle) hasta el encabezado compacto anterior
-          (ícono + "Loyalty System / By Omni") hacía que el total no
-          entrara sin recortarse en un viewport de ~667px (iPhone SE). El
-          ícono solo mantiene el `aria-label` de BrandMark, así que sigue
-          siendo accesible sin el texto visible. Por debajo de 680px de
-          alto (algunos Android compactos, ~640px) hasta el ícono se oculta
-          — con el login (el más cargado, 2 botones SSO) igual sobraban
-          ~18px ahí.
+          Icon only (no text) on mobile: with the most content-heavy screens
+          (login with 2 SSO buttons, SSO denied with the detail table) even
+          the previous compact header (icon + "Loyalty System / By Omni")
+          made the total not fit without clipping on a ~667px viewport
+          (iPhone SE). The icon-only version keeps BrandMark's `aria-label`,
+          so it's still accessible without the visible text. Below 680px of
+          height (some compact Androids, ~640px) even the icon is hidden —
+          with login (the heaviest, 2 SSO buttons) there were still only
+          ~18px to spare there.
         */}
         <BrandMark className="size-6 shrink-0 lg:hidden [@media(max-height:680px)]:hidden" />
         {children}

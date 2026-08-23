@@ -43,22 +43,22 @@ export function ConexionesActivasCard() {
     <div className="flex w-full flex-col gap-4">
       <div className="flex items-start gap-4">
         <KpiCard
-          etiqueta="Conexiones activas"
-          valor={formatNumber(activas.length)}
-          detalle={`de ${formatNumber(CONEXIONES_ACTIVAS.length)} en total`}
+          label="Conexiones activas"
+          value={formatNumber(activas.length)}
+          detail={`de ${formatNumber(CONEXIONES_ACTIVAS.length)} en total`}
         />
         <KpiCard
-          etiqueta="Con errores"
-          valor={formatNumber(conError.length)}
-          detalle={conError.length > 0 ? "revisar en Cuentas" : "todo en orden"}
+          label="Con errores"
+          value={formatNumber(conError.length)}
+          detail={conError.length > 0 ? "revisar en Cuentas" : "todo en orden"}
         />
         <KpiCard
-          etiqueta="Orígenes conectados"
-          valor={formatNumber(origenes.length)}
+          label="Orígenes conectados"
+          value={formatNumber(origenes.length)}
         />
         <KpiCard
-          etiqueta="Destinos conectados"
-          valor={formatNumber(destinos.length)}
+          label="Destinos conectados"
+          value={formatNumber(destinos.length)}
         />
       </div>
 

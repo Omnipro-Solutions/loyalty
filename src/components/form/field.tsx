@@ -14,18 +14,18 @@ type FieldProps = {
 }
 
 /**
- * Borde/fondo/estados compartidos por los campos compuestos que no pueden
- * usar `Input` directamente (traen prefijo, botones o un trigger propio):
- * CurrencyInput, PasswordInput, Stepper, Multiselect. Mismo tratamiento
- * visual que `ui/input.tsx`, para no repetir el string de clases en cada uno.
+ * Border/background/states shared by composite fields that can't use
+ * `Input` directly (they bring their own prefix, buttons, or trigger):
+ * CurrencyInput, PasswordInput, Stepper, Multiselect. Same visual treatment
+ * as `ui/input.tsx`, so the class string isn't repeated in each one.
  */
 export const FIELD_CHROME =
   "rounded-lg border border-input bg-background transition-colors has-[:disabled]:border-input has-[:disabled]:bg-muted has-[[aria-invalid=true]]:border-destructive"
 
 /**
- * Envoltorio de campo compartido por todos los controles de formulario
- * (Figma "Form / Input" 708:313 y análogos): etiqueta 12/17 + asterisco
- * rojo opcional, el control, y texto de ayuda/error 11/15 debajo.
+ * Field wrapper shared by all form controls (Figma "Form / Input" 708:313
+ * and analogous): 12/17 label + optional red asterisk, the control, and
+ * 11/15 help/error text below.
  */
 export function Field({
   label,

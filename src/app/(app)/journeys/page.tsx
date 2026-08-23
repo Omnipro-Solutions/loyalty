@@ -37,10 +37,7 @@ export default async function JourneysPage({
   const sinJourneysAun = total === 0 && !estado && !q
 
   return (
-    <AppPage
-      breadcrumb="Comercial  ›  Loyalty Builder"
-      titulo="Loyalty Builder"
-    >
+    <AppPage breadcrumb="Comercial  ›  Loyalty Builder" title="Loyalty Builder">
       <JourneysKpiRow />
 
       <div className="w-full rounded-[20px] bg-background shadow-form-section">
@@ -59,8 +56,8 @@ export default async function JourneysPage({
           <div className="px-[22px] pb-6">
             <EmptyState
               icon={Workflow}
-              titulo="Todavía no hay workflows"
-              descripcion="Crea el primero para empezar a automatizar el recorrido de tus socios de lealtad."
+              title="Todavía no hay workflows"
+              description="Crea el primero para empezar a automatizar el recorrido de tus socios de lealtad."
             >
               <NuevoJourneyButton />
             </EmptyState>
@@ -69,8 +66,8 @@ export default async function JourneysPage({
           <div className="px-[22px] pb-6">
             <EmptyState
               icon={Workflow}
-              titulo="Sin resultados"
-              descripcion="Ningún workflow coincide con la búsqueda o el filtro aplicado."
+              title="Sin resultados"
+              description="Ningún workflow coincide con la búsqueda o el filtro aplicado."
             />
           </div>
         ) : (

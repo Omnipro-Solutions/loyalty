@@ -10,8 +10,8 @@ export async function JourneysKpiRow() {
   return (
     <div className="flex w-full items-start gap-4">
       <KpiWidget
-        etiqueta="Workflows activos"
-        valor={formatNumber(kpis.activos)}
+        label="Workflows activos"
+        value={formatNumber(kpis.activos)}
         delta={
           kpis.publicadosEstaSemana > 0
             ? formatNumber(kpis.publicadosEstaSemana)
@@ -24,8 +24,8 @@ export async function JourneysKpiRow() {
         }
       />
       <KpiWidget
-        etiqueta="Clientes en recorrido"
-        valor={
+        label="Clientes en recorrido"
+        value={
           kpis.clientesEnRecorrido !== null
             ? formatNumber(kpis.clientesEnRecorrido)
             : "—"
@@ -37,8 +37,8 @@ export async function JourneysKpiRow() {
         }
       />
       <KpiWidget
-        etiqueta="Conversión media"
-        valor={
+        label="Conversión media"
+        value={
           kpis.conversionMedia !== null
             ? formatPercent(kpis.conversionMedia)
             : "—"
@@ -50,8 +50,8 @@ export async function JourneysKpiRow() {
         }
       />
       <KpiWidget
-        etiqueta="Ingreso atribuido"
-        valor={
+        label="Ingreso atribuido"
+        value={
           kpis.ingresoAtribuido !== null
             ? formatCOP(kpis.ingresoAtribuido)
             : "—"

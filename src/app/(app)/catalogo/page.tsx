@@ -36,24 +36,24 @@ export default async function CatalogoPage({
   ])
 
   return (
-    <AppPage breadcrumb="Catálogo  ›  Productos" titulo="Catálogo de productos">
+    <AppPage breadcrumb="Catálogo  ›  Productos" title="Catálogo de productos">
       <div className="flex items-start gap-4">
         <KpiCard
-          etiqueta="SKU activos"
-          valor={formatNumber(kpis.skuActivos)}
-          detalle={`${formatPercent(
+          label="SKU activos"
+          value={formatNumber(kpis.skuActivos)}
+          detail={`${formatPercent(
             kpis.totalSku ? kpis.skuActivos / kpis.totalSku : 0
           )} del catálogo total`}
         />
         <KpiCard
-          etiqueta="Total de SKU"
-          valor={formatNumber(kpis.totalSku)}
-          detalle={`en ${kpis.categoriasCount} categorías`}
+          label="Total de SKU"
+          value={formatNumber(kpis.totalSku)}
+          detail={`en ${kpis.categoriasCount} categorías`}
         />
         <KpiCard
-          etiqueta="Precio promedio"
-          valor={formatCOP(kpis.precioPromedio)}
-          detalle="precio de lista promedio"
+          label="Precio promedio"
+          value={formatCOP(kpis.precioPromedio)}
+          detail="precio de lista promedio"
         />
         <InventoryHealthCard
           promedio={kpis.completitudPromedio}

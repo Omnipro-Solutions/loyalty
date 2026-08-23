@@ -16,7 +16,7 @@ export default async function EditarTiendaPage({
   return (
     <AppPage
       breadcrumb={`Catálogo  ›  Tiendas  ›  ${tienda.nombre}`}
-      titulo={tienda.nombre}
+      title={tienda.nombre}
     >
       <BackLink href="/tiendas">Volver a Tiendas</BackLink>
       <TiendaForm tienda={tienda} />

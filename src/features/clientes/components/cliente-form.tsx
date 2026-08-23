@@ -168,16 +168,16 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
 
       {errorGeneral && (
         <Message
-          tipo="error"
-          titulo="No se pudo guardar"
-          descripcion={errorGeneral}
+          variant="error"
+          title="No se pudo guardar"
+          description={errorGeneral}
         />
       )}
 
       <div className="flex w-full flex-col gap-5">
         <Section
-          titulo="Identidad"
-          descripcion="Datos de contacto e identificación del socio."
+          title="Identidad"
+          description="Datos de contacto e identificación del socio."
         >
           <Row>
             <Field
@@ -265,8 +265,8 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
         </Section>
 
         <Section
-          titulo="Relación con la marca"
-          descripcion="Cómo y dónde se vinculó el socio al programa."
+          title="Relación con la marca"
+          description="Cómo y dónde se vinculó el socio al programa."
         >
           <Row>
             <Field label="Provincia" htmlFor="provincia">
@@ -383,8 +383,8 @@ export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
         </Section>
 
         <Section
-          titulo="Perfil comercial"
-          descripcion="Preferencias del socio y consentimiento de marketing."
+          title="Perfil comercial"
+          description="Preferencias del socio y consentimiento de marketing."
         >
           <Row>
             <Field label="Estado civil" htmlFor="estadoCivil">

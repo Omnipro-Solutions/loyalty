@@ -2,7 +2,7 @@ import { Search as SearchIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-/** Figma "Filtro / Buscador" (699:330): pastilla con borde, sin sombra (a diferencia del buscador del topbar). */
+/** Figma "Filtro / Buscador" (699:330): bordered pill, no shadow (unlike the topbar's search). */
 export function FilterSearch({
   className,
   ...props

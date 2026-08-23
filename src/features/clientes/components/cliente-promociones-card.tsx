@@ -21,8 +21,8 @@ export function ClientePromocionesCard() {
       </div>
       <PlaceholderCard
         icon={Gift}
-        titulo="Sin motor de elegibilidad todavía"
-        descripcion="Evaluar qué promociones aplican a este socio necesita reglas de elegibilidad, no solo el catálogo de promociones."
+        title="Sin motor de elegibilidad todavía"
+        description="Evaluar qué promociones aplican a este socio necesita reglas de elegibilidad, no solo el catálogo de promociones."
         className="flex-1 justify-center"
       />
     </div>

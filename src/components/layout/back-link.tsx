@@ -6,7 +6,7 @@ type BackLinkProps = {
   children: React.ReactNode
 }
 
-/** Enlace "‹ Volver" para páginas de detalle sin equivalente directo en el Figma. */
+/** "‹ Volver" link for detail pages with no direct Figma equivalent. */
 export function BackLink({ href, children }: BackLinkProps) {
   return (
     <Link

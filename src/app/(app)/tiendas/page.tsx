@@ -28,7 +28,7 @@ export default async function TiendasPage({
   ])
 
   return (
-    <AppPage breadcrumb="Catálogo  ›  Tiendas" titulo="Tiendas">
+    <AppPage breadcrumb="Catálogo  ›  Tiendas" title="Tiendas">
       <TiendasCard
         tiendas={tiendas}
         ciudades={ciudades}

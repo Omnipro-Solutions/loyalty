@@ -3,16 +3,16 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 type SectionProps = {
-  titulo: string
-  descripcion?: string
+  title: string
+  description?: string
   children: ReactNode
   className?: string
 }
 
-/** Figma "Form / Sección" (711:295): tarjeta rounded-[20px] con separador antes de los campos. */
+/** Figma "Form / Sección" (711:295): rounded-[20px] card with a separator before the fields. */
 export function Section({
-  titulo,
-  descripcion,
+  title,
+  description,
   children,
   className,
 }: SectionProps) {
@@ -25,11 +25,11 @@ export function Section({
     >
       <div className="flex w-full flex-col gap-[3px]">
         <p className="text-[15px] leading-[21px] font-semibold text-foreground">
-          {titulo}
+          {title}
         </p>
-        {descripcion && (
+        {description && (
           <p className="text-xs leading-[18px] text-muted-foreground">
-            {descripcion}
+            {description}
           </p>
         )}
       </div>

@@ -142,17 +142,17 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
 
       {errorGeneral && (
         <Message
-          tipo="error"
-          titulo="No se pudo guardar"
-          descripcion={errorGeneral}
+          variant="error"
+          title="No se pudo guardar"
+          description={errorGeneral}
         />
       )}
 
       <div className="flex w-full items-start gap-5">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           <Section
-            titulo="Identificación"
-            descripcion="Nombre visible y código con el que la tienda se sincroniza con el POS."
+            title="Identificación"
+            description="Nombre visible y código con el que la tienda se sincroniza con el POS."
           >
             <Row>
               <Field
@@ -228,8 +228,8 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
           </Section>
 
           <Section
-            titulo="Ubicación"
-            descripcion="Dirección completa del punto de venta. Se usa para segmentación geográfica y reportes."
+            title="Ubicación"
+            description="Dirección completa del punto de venta. Se usa para segmentación geográfica y reportes."
           >
             <Row>
               <Field
@@ -295,8 +295,8 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
           </Section>
 
           <Section
-            titulo="Contacto"
-            descripcion="Datos operativos de la tienda. El correo recibe notificaciones de promociones y cierres."
+            title="Contacto"
+            description="Datos operativos de la tienda. El correo recibe notificaciones de promociones y cierres."
           >
             <Row>
               <Field

@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-/** Tarjeta blanca compartida por las 5 pantallas de "01 · Acceso" (634:792 y análogos). */
+/** White card shared by the 5 "01 · Acceso" screens (634:792 and analogous). */
 export function AuthCard({
   children,
   className,
@@ -13,12 +13,12 @@ export function AuthCard({
   return (
     <div
       className={cn(
-        // Ancho fluido (antes fijo en 420px, desbordaba en mobile) y algo
-        // más compacto que el spec original de Figma (36px/18px de
-        // padding/gap) a propósito: así la tarjeta más alta del grupo
-        // (01.2 con QR de enrolamiento) entra sin scroll en más tamaños de
-        // ventana, sin depender de un breakpoint de ancho — un laptop
-        // angosto de alto también se beneficia.
+        // Fluid width (previously fixed at 420px, overflowed on mobile) and
+        // somewhat more compact than the original Figma spec (36px/18px
+        // padding/gap) on purpose: this way the group's tallest card (01.2
+        // with the enrollment QR) fits without scrolling across more window
+        // sizes, without depending on a width breakpoint — a narrow, tall
+        // laptop benefits too.
         "flex w-full max-w-md flex-col gap-4 rounded-2xl border border-border bg-background p-6 shadow-auth-card",
         className
       )}

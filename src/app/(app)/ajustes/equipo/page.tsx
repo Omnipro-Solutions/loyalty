@@ -45,9 +45,9 @@ export default async function EquipoPage({
   return (
     <AppPage
       breadcrumb="Configuración  ›  Equipo y permisos"
-      titulo="Equipo y permisos"
+      title="Equipo y permisos"
     >
-      <EquipoTabsNav activo={tab} />
+      <EquipoTabsNav active={tab} />
 
       {tab === "usuarios" && (
         <UsuariosTabContent params={params} puedeGestionar={puedeGestionar} />
@@ -61,7 +61,7 @@ export default async function EquipoPage({
       {tab === "invitaciones" && (
         <InvitacionesTabContent puedeGestionar={puedeGestionar} />
       )}
-      {tab === "auditoria" && <RoutePlaceholder fase="Fase 5" />}
+      {tab === "auditoria" && <RoutePlaceholder phase="Fase 5" />}
     </AppPage>
   )
 }
@@ -91,32 +91,32 @@ async function UsuariosTabContent({
     <>
       <div className="flex items-start gap-4">
         <KpiCard
-          etiqueta="Usuarios activos"
-          valor={formatNumber(kpis.usuariosActivos)}
-          detalle={`+${formatNumber(kpis.nuevosEsteMes)} este mes`}
+          label="Usuarios activos"
+          value={formatNumber(kpis.usuariosActivos)}
+          detail={`+${formatNumber(kpis.nuevosEsteMes)} este mes`}
         />
         <KpiCard
-          etiqueta="Invitaciones pendientes"
-          valor={formatNumber(kpis.invitacionesPendientes)}
-          detalle={
+          label="Invitaciones pendientes"
+          value={formatNumber(kpis.invitacionesPendientes)}
+          detail={
             kpis.invitacionesPorVencer > 0
               ? `${formatNumber(kpis.invitacionesPorVencer)} vencen en 3 días`
               : "ninguna vence pronto"
           }
         />
         <KpiCard
-          etiqueta="Con 2FA activo"
-          valor={`${formatNumber(kpis.con2fa)} de ${formatNumber(kpis.totalUsuarios)}`}
-          detalle={
+          label="Con 2FA activo"
+          value={`${formatNumber(kpis.con2fa)} de ${formatNumber(kpis.totalUsuarios)}`}
+          detail={
             kpis.totalUsuarios
               ? `${Math.round((kpis.con2fa / kpis.totalUsuarios) * 100)}% de cobertura`
               : "sin usuarios todavía"
           }
         />
         <KpiCard
-          etiqueta="Sin acceso hace 60 días"
-          valor={formatNumber(kpis.sinAccesoHace60Dias)}
-          detalle="revisar y desactivar"
+          label="Sin acceso hace 60 días"
+          value={formatNumber(kpis.sinAccesoHace60Dias)}
+          detail="revisar y desactivar"
         />
       </div>
       <UsuariosCard

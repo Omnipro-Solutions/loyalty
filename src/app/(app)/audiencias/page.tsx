@@ -33,16 +33,16 @@ export default async function AudienciasPage({
   ])
 
   return (
-    <AppPage breadcrumb="Comercial  ›  Audiencias" titulo="Audiencias">
+    <AppPage breadcrumb="Comercial  ›  Audiencias" title="Audiencias">
       <div className="flex items-start gap-5">
         <KpiWidget
-          etiqueta="Total audiencias"
-          valor={kpis.totalAudiencias}
+          label="Total audiencias"
+          value={kpis.totalAudiencias}
           caption="en el programa"
         />
         <KpiWidget
-          etiqueta="Perfiles alcanzados (total)"
-          valor={formatNumber(kpis.perfilesAlcanzados)}
+          label="Perfiles alcanzados (total)"
+          value={formatNumber(kpis.perfilesAlcanzados)}
           delta={
             kpis.perfilesAlcanzadosDeltaPct !== null
               ? formatDeltaPercent(kpis.perfilesAlcanzadosDeltaPct)
@@ -51,14 +51,14 @@ export default async function AudienciasPage({
           caption="vs mes anterior"
         />
         <KpiWidget
-          etiqueta="Sincronizadas con AJO"
-          valor={`${formatNumber(kpis.sincronizadas)} de ${formatNumber(kpis.totalAudiencias)}`}
+          label="Sincronizadas con AJO"
+          value={`${formatNumber(kpis.sincronizadas)} de ${formatNumber(kpis.totalAudiencias)}`}
           delta={formatPercent(kpis.coberturaPct)}
           caption="de cobertura"
         />
         <KpiWidget
-          etiqueta="Loyalty Rules activas"
-          valor={kpis.journeysActivos}
+          label="Loyalty Rules activas"
+          value={kpis.journeysActivos}
           caption="publicadas actualmente"
         />
       </div>

@@ -4,32 +4,32 @@ import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type KpiWidgetProps = {
-  etiqueta: string
-  valor: ReactNode
-  /** Pill verde con flecha (ej. "6,2%") — omite si no hay dato real que respalde la variación. */
+  label: string
+  value: ReactNode
+  /** Green pill with an arrow (e.g. "6.2%") — omit if there's no real data backing the variation. */
   delta?: string
-  /** Texto de contexto junto al delta, o solo (ej. "Aún sin seguimiento en vivo"). */
+  /** Context text next to the delta, or alone (e.g. "No live tracking yet"). */
   caption?: string
 }
 
 /**
- * Figma "Widget / KPI · sparkline" (731:399): tarjeta blanca con etiqueta,
- * valor grande y una píldora de variación. El Figma también dibuja un
- * sparkline junto al valor — se omite aquí a propósito: esta tarjeta no
- * finge una serie de tiempo que no existe (no hay tracking histórico de
- * estas métricas todavía). Cuando exista, se agrega un prop `trend` sin
- * cambiar la forma de esta API.
+ * Figma "Widget / KPI · sparkline" (731:399): white card with a label, a
+ * large value and a variation pill. The Figma also draws a sparkline next
+ * to the value — deliberately omitted here: this card doesn't fake a time
+ * series that doesn't exist (there's no historical tracking for these
+ * metrics yet). When it exists, a `trend` prop gets added without changing
+ * this API's shape.
  */
-export function KpiWidget({ etiqueta, valor, delta, caption }: KpiWidgetProps) {
-  const esNegativo = delta?.trim().startsWith("-") ?? false
+export function KpiWidget({ label, value, delta, caption }: KpiWidgetProps) {
+  const isNegative = delta?.trim().startsWith("-") ?? false
 
   return (
     <div className="flex flex-1 flex-col gap-1.5 rounded-[20px] bg-background px-[18px] py-4 shadow-form-section">
       <p className="text-[11px] leading-[15px] font-medium text-muted-foreground">
-        {etiqueta}
+        {label}
       </p>
       <p className="text-[22px] leading-7 font-semibold text-foreground">
-        {valor}
+        {value}
       </p>
       {(delta || caption) && (
         <div className="flex items-center gap-1.5">
@@ -37,12 +37,12 @@ export function KpiWidget({ etiqueta, valor, delta, caption }: KpiWidgetProps) {
             <span
               className={cn(
                 "flex items-center gap-0.5 rounded-full py-0.5 pr-2 pl-1.5 text-[10px] leading-[14px] font-semibold",
-                esNegativo
+                isNegative
                   ? "bg-destructive-bg text-destructive"
                   : "bg-success-bg text-success"
               )}
             >
-              {esNegativo ? (
+              {isNegative ? (
                 <ArrowDown className="size-2.5" />
               ) : (
                 <ArrowUp className="size-2.5" />

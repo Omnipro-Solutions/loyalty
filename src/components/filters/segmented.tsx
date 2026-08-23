@@ -7,7 +7,7 @@ type SegmentedProps = {
   className?: string
 }
 
-/** Figma "Filtro / Segmentado" (699:348): pastilla activa blanca con sombra sobre bg-subtle. */
+/** Figma "Filtro / Segmentado" (699:348): white active pill with shadow over bg-subtle. */
 export function Segmented({
   options,
   value,

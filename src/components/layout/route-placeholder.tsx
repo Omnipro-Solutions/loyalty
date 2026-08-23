@@ -2,14 +2,14 @@ import { Hammer } from "lucide-react"
 
 import { EmptyState } from "@/components/feedback/empty-state"
 
-/** Contenido temporal para rutas de `(app)` que aún no tienen su Fase construida. */
-export function RoutePlaceholder({ fase }: { fase: string }) {
+/** Temporary content for `(app)` routes that don't have their Phase built yet. */
+export function RoutePlaceholder({ phase }: { phase: string }) {
   return (
     <div className="flex flex-1 items-center justify-center rounded-2xl bg-background">
       <EmptyState
         icon={Hammer}
-        titulo="Todavía no construida"
-        descripcion={`Esta vista llega en la ${fase} del plan.`}
+        title="Todavía no construida"
+        description={`Esta vista llega en la ${phase} del plan.`}
       />
     </div>
   )

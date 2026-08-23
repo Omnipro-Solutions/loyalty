@@ -46,16 +46,16 @@ export function ClientesCard({
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
-            titulo="Todavía no hay clientes"
-            descripcion="Los clientes aparecerán aquí cuando se inscriban en el programa de lealtad."
+            title="Todavía no hay clientes"
+            description="Los clientes aparecerán aquí cuando se inscriban en el programa de lealtad."
           />
         </div>
       ) : sinResultadosDeFiltro ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
-            titulo="Sin resultados"
-            descripcion="Ningún cliente coincide con la búsqueda o el filtro aplicado."
+            title="Sin resultados"
+            description="Ningún cliente coincide con la búsqueda o el filtro aplicado."
           />
         </div>
       ) : (

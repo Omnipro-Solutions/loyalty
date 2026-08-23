@@ -68,9 +68,9 @@ export function VerificationCard(props: VerificationCardProps) {
     return (
       <AuthCard>
         <Message
-          tipo="error"
-          titulo="No se pudo continuar"
-          descripcion={props.message}
+          variant="error"
+          title="No se pudo continuar"
+          description={props.message}
         />
         <Button className="w-full" onClick={() => router.push("/login")}>
           Volver al inicio de sesión
@@ -150,9 +150,9 @@ export function VerificationCard(props: VerificationCardProps) {
 
       {errorGeneral && (
         <Message
-          tipo="error"
-          titulo="Verificación fallida"
-          descripcion={errorGeneral}
+          variant="error"
+          title="Verificación fallida"
+          description={errorGeneral}
         />
       )}
 

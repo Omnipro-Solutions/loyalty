@@ -29,35 +29,35 @@ export default async function ClientesPage({
   ])
 
   return (
-    <AppPage breadcrumb="Comercial  ›  Clientes" titulo="Clientes">
+    <AppPage breadcrumb="Comercial  ›  Clientes" title="Clientes">
       <div className="flex items-start gap-4">
         <KpiCard
-          etiqueta="Clientes activos"
-          valor={formatNumber(kpis.clientesActivos)}
-          detalle={`de ${formatNumber(kpis.totalClientes)} en total`}
+          label="Clientes activos"
+          value={formatNumber(kpis.clientesActivos)}
+          detail={`de ${formatNumber(kpis.totalClientes)} en total`}
         />
         <KpiCard
-          etiqueta="Nuevos este mes"
-          valor={formatNumber(kpis.nuevosEsteMes)}
-          detalle="altas registradas"
+          label="Nuevos este mes"
+          value={formatNumber(kpis.nuevosEsteMes)}
+          detail="altas registradas"
         />
         <KpiCard
-          etiqueta="Con consentimiento de marketing"
-          valor={
+          label="Con consentimiento de marketing"
+          value={
             kpis.totalClientes
               ? formatPercent(kpis.conConsentimiento / kpis.totalClientes)
               : "—"
           }
-          detalle={`${formatNumber(kpis.conConsentimiento)} clientes`}
+          detail={`${formatNumber(kpis.conConsentimiento)} clientes`}
         />
         <KpiCard
-          etiqueta="Perfil completo"
-          valor={
+          label="Perfil completo"
+          value={
             kpis.totalClientes
               ? formatPercent(kpis.perfilCompleto / kpis.totalClientes)
               : "—"
           }
-          detalle="80% o más de los campos"
+          detail="80% o más de los campos"
         />
       </div>
       <ClientesCard

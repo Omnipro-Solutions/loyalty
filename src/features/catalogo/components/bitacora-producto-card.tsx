@@ -238,8 +238,8 @@ export function BitacoraProductoCard({ eventos }: BitacoraProductoCardProps) {
       {eventos.length === 0 ? (
         <EmptyState
           icon={History}
-          titulo="Sin cambios registrados"
-          descripcion="Los cambios de precio, datos, promociones y estado de este producto aparecerán aquí a medida que ocurran."
+          title="Sin cambios registrados"
+          description="Los cambios de precio, datos, promociones y estado de este producto aparecerán aquí a medida que ocurran."
           className="pt-0 pb-8"
         />
       ) : (

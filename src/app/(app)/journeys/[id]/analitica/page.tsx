@@ -58,7 +58,7 @@ export default async function JourneyAnaliticaPage({
     <>
       <AppTopbar
         breadcrumb={`Comercial  ›  Loyalty Builder  ›  ${workflow.nombre}`}
-        titulo="Analítica del workflow"
+        title="Analítica del workflow"
       />
       <div className="flex flex-1 flex-col gap-5 p-6">
         <div className="flex items-center justify-between gap-4">
@@ -100,8 +100,8 @@ export default async function JourneyAnaliticaPage({
         {!corrida || corrida.pasos.length === 0 ? (
           <EmptyState
             icon={BarChart3}
-            titulo="Todavía no hay datos"
-            descripcion="Simula o publica este workflow para ver los conteos por bloque y rama aquí."
+            title="Todavía no hay datos"
+            description="Simula o publica este workflow para ver los conteos por bloque y rama aquí."
           />
         ) : (
           <div className="flex items-start gap-5">
@@ -116,24 +116,24 @@ export default async function JourneyAnaliticaPage({
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <KpiWidget
-                    etiqueta="Entradas"
-                    valor={
+                    label="Entradas"
+                    value={
                       typeof entradas === "number"
                         ? formatNumber(entradas)
                         : "—"
                     }
                   />
                   <KpiWidget
-                    etiqueta="Conversión"
-                    valor={
+                    label="Conversión"
+                    value={
                       typeof conversion === "number"
                         ? formatPercent(conversion)
                         : "—"
                     }
                   />
                   <KpiWidget
-                    etiqueta="Ingreso"
-                    valor={ingresoReal !== null ? formatCOP(ingresoReal) : "—"}
+                    label="Ingreso"
+                    value={ingresoReal !== null ? formatCOP(ingresoReal) : "—"}
                     caption={
                       ingresoReal !== null
                         ? "de socios que pasaron por aquí"

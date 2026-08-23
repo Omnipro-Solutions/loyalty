@@ -7,23 +7,23 @@ const messageVariants = cva(
   "flex w-full items-start gap-2.5 rounded-xl px-[13px] py-[11px]",
   {
     variants: {
-      tipo: {
+      variant: {
         error: "bg-destructive-bg",
-        aviso: "bg-warning-bg",
-        exito: "bg-success-bg",
+        warning: "bg-warning-bg",
+        success: "bg-success-bg",
         info: "bg-accent",
       },
     },
-    defaultVariants: { tipo: "error" },
+    defaultVariants: { variant: "error" },
   }
 )
 
 const titleVariants = cva("text-[12px] leading-[17px] font-semibold", {
   variants: {
-    tipo: {
+    variant: {
       error: "text-destructive",
-      aviso: "text-warning",
-      exito: "text-success",
+      warning: "text-warning",
+      success: "text-success",
       info: "text-accent-foreground",
     },
   },
@@ -31,34 +31,34 @@ const titleVariants = cva("text-[12px] leading-[17px] font-semibold", {
 
 const ICONS = {
   error: XCircle,
-  aviso: AlertTriangle,
-  exito: CheckCircle,
+  warning: AlertTriangle,
+  success: CheckCircle,
   info: Info,
 } as const
 
 type MessageProps = VariantProps<typeof messageVariants> & {
-  titulo: string
-  descripcion: string
+  title: string
+  description: string
   className?: string
 }
 
-/** Figma "Form / Mensaje" (711:377): 4 tipos, ícono 15px + título 12/17 + descripción 11/16. */
+/** Figma "Form / Mensaje" (711:377): 4 types, 15px icon + 12/17 title + 11/16 description. */
 export function Message({
-  tipo = "error",
-  titulo,
-  descripcion,
+  variant = "error",
+  title,
+  description,
   className,
 }: MessageProps) {
-  const Icon = ICONS[tipo ?? "error"]
+  const Icon = ICONS[variant ?? "error"]
   return (
-    <div className={cn(messageVariants({ tipo }), className)}>
+    <div className={cn(messageVariants({ variant }), className)}>
       <Icon
-        className={cn("mt-px size-[15px] shrink-0", titleVariants({ tipo }))}
+        className={cn("mt-px size-[15px] shrink-0", titleVariants({ variant }))}
       />
       <div className="min-w-0 flex-1">
-        <p className={titleVariants({ tipo })}>{titulo}</p>
+        <p className={titleVariants({ variant })}>{title}</p>
         <p className="text-[11px] leading-4 text-muted-foreground">
-          {descripcion}
+          {description}
         </p>
       </div>
     </div>

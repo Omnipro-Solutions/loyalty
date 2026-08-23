@@ -219,7 +219,7 @@ export default function DesignSystemPage() {
     <div className="min-h-screen space-y-16 bg-muted p-10">
       <section data-ds="brand-mark" className="flex gap-4 bg-white p-6">
         <BrandMark />
-        <BrandMark variant="inverso" className="bg-muted" />
+        <BrandMark variant="inverse" className="bg-muted" />
       </section>
 
       <section data-ds="layout-sidebar" className="h-[1024px] w-[260px] border">
@@ -236,7 +236,7 @@ export default function DesignSystemPage() {
       <section data-ds="layout-topbar" className="w-[1180px] border bg-white">
         <AppTopbar
           breadcrumb="Catálogo  ›  Productos"
-          titulo="Título de la vista"
+          title="Título de la vista"
         />
       </section>
 
@@ -360,13 +360,13 @@ export default function DesignSystemPage() {
         <RadioGroup defaultValue="segmento" className="flex-row gap-3">
           <RadioCard
             value="segmento"
-            titulo="Regla por segmento"
-            descripcion="Se dispara cuando el cliente entra a un segmento."
+            title="Regla por segmento"
+            description="Se dispara cuando el cliente entra a un segmento."
           />
           <RadioCard
             value="carrito"
-            titulo="Regla por carrito"
-            descripcion="Se dispara al superar un monto en el carrito."
+            title="Regla por carrito"
+            description="Se dispara al superar un monto en el carrito."
           />
         </RadioGroup>
         <Field
@@ -392,31 +392,31 @@ export default function DesignSystemPage() {
         className="flex flex-col items-start gap-3 bg-white p-6"
       >
         <Message
-          tipo="error"
-          titulo="No se pudo guardar"
-          descripcion="Revisa los campos marcados en rojo antes de continuar."
+          variant="error"
+          title="No se pudo guardar"
+          description="Revisa los campos marcados en rojo antes de continuar."
         />
         <Message
-          tipo="aviso"
-          titulo="Esta regla colisiona"
-          descripcion="“2x1 en Bebidas” aplica al mismo segmento y tiene mayor prioridad."
+          variant="warning"
+          title="Esta regla colisiona"
+          description="“2x1 en Bebidas” aplica al mismo segmento y tiene mayor prioridad."
         />
         <Message
-          tipo="exito"
-          titulo="Cambios guardados"
-          descripcion="La regla quedó activa en las 42 tiendas."
+          variant="success"
+          title="Cambios guardados"
+          description="La regla quedó activa en las 42 tiendas."
         />
         <Message
-          tipo="info"
-          titulo="Se aplicará al guardar"
-          descripcion="Los cambios impactan promociones en curso."
+          variant="info"
+          title="Se aplicará al guardar"
+          description="Los cambios impactan promociones en curso."
         />
       </section>
 
       <section data-ds="form-section" className="bg-white p-6">
         <Section
-          titulo="Título de la sección"
-          descripcion="Explicación breve de qué se configura en este bloque."
+          title="Título de la sección"
+          description="Explicación breve de qué se configura en este bloque."
         >
           <Row>
             <Field label="Nombre del producto" required>
@@ -456,7 +456,7 @@ export default function DesignSystemPage() {
       >
         <Chip active>Todos</Chip>
         <Chip>Activos</Chip>
-        <Chip conteo={14}>Con conteo</Chip>
+        <Chip count={14}>Con conteo</Chip>
         <Segmented
           value={rango}
           onValueChange={setRango}
@@ -473,8 +473,8 @@ export default function DesignSystemPage() {
       <section data-ds="empty-state" className="bg-white p-6">
         <EmptyState
           icon={Users}
-          titulo="Ningún cliente coincide con estos filtros"
-          descripcion="El segmento “En riesgo” no tiene clientes con compras en los últimos 30 días. Prueba ampliando el rango o quitando un filtro."
+          title="Ningún cliente coincide con estos filtros"
+          description="El segmento “En riesgo” no tiene clientes con compras en los últimos 30 días. Prueba ampliando el rango o quitando un filtro."
         />
       </section>
 

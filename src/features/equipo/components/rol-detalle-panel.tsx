@@ -217,16 +217,16 @@ export function RolDetallePanel({
 
       {resultado?.ok === false && (
         <Message
-          tipo="error"
-          titulo="No se pudo guardar el rol"
-          descripcion={resultado.message ?? "Intenta de nuevo."}
+          variant="error"
+          title="No se pudo guardar el rol"
+          description={resultado.message ?? "Intenta de nuevo."}
         />
       )}
       {resultado?.ok === true && (
         <Message
-          tipo="exito"
-          titulo="Role actualizado"
-          descripcion="Los cambios se guardaron correctamente."
+          variant="success"
+          title="Role actualizado"
+          description="Los cambios se guardaron correctamente."
         />
       )}
 

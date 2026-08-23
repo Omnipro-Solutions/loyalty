@@ -6,7 +6,7 @@ import * as React from "react"
 import { FIELD_CHROME } from "@/components/form/field"
 import { cn } from "@/lib/utils"
 
-/** Figma "Form / Contraseña" (708:548): Input con ícono de mostrar/ocultar. */
+/** Figma "Form / Contraseña" (708:548): Input with a show/hide icon. */
 export function PasswordInput({
   className,
   ...props

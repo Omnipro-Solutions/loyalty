@@ -353,9 +353,9 @@ function CanvasArea({
       {mensajePublicar && (
         <div className="border-b border-border px-6 py-2.5">
           <Message
-            tipo="error"
-            titulo="No se pudo publicar"
-            descripcion={mensajePublicar}
+            variant="error"
+            title="No se pudo publicar"
+            description={mensajePublicar}
           />
         </div>
       )}
@@ -371,9 +371,9 @@ function CanvasArea({
             resuelva, pero no hace falta alarmar por algo esperado.
           */}
           <Message
-            tipo="info"
-            titulo="Falta esto para poder publicar"
-            descripcion={erroresBloqueantes.map((e) => e.mensaje).join(" ")}
+            variant="info"
+            title="Falta esto para poder publicar"
+            description={erroresBloqueantes.map((e) => e.mensaje).join(" ")}
           />
         </div>
       )}

@@ -42,7 +42,7 @@ export default async function AudienciaDetallePage({
   return (
     <AppPage
       breadcrumb="Comercial  ›  Audiencias  ›  Detalle"
-      titulo="Audiencia"
+      title="Audiencia"
     >
       <BackLink href="/audiencias">Volver</BackLink>
 
@@ -59,8 +59,8 @@ export default async function AudienciaDetallePage({
         {miembros.length === 0 ? (
           <EmptyState
             icon={Users}
-            titulo="Sin muestra de socios todavía"
-            descripcion="Esta audiencia no tiene socios de ejemplo asignados en `segment_members`."
+            title="Sin muestra de socios todavía"
+            description="Esta audiencia no tiene socios de ejemplo asignados en `segment_members`."
           />
         ) : (
           <AudienciaMiembrosTabla miembros={miembros} />

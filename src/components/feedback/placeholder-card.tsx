@@ -5,22 +5,22 @@ import { cn } from "@/lib/utils"
 
 type PlaceholderCardProps = {
   icon: LucideIcon
-  titulo: string
-  descripcion: string
+  title: string
+  description: string
   compact?: boolean
   className?: string
 }
 
 /**
- * Marcador temporal para secciones del Figma que necesitan un subsistema
- * que este proyecto no tiene todavía (pedidos, motor de promociones,
- * scoring) — pixel-perfect en estructura, honesto en que el contenido
- * real todavía no existe, en vez de simular datos.
+ * Temporary placeholder for Figma sections that need a subsystem this
+ * project doesn't have yet (orders, promotion engine, scoring) —
+ * pixel-perfect in structure, honest that the real content doesn't exist
+ * yet, instead of faking data.
  */
 export function PlaceholderCard({
   icon: Icon,
-  titulo,
-  descripcion,
+  title,
+  description,
   compact,
   className,
 }: PlaceholderCardProps) {
@@ -38,8 +38,8 @@ export function PlaceholderCard({
         <Icon className="size-4" />
       </div>
       <div className={cn("min-w-0", compact && "flex-1")}>
-        <p className="text-[13px] font-semibold text-foreground">{titulo}</p>
-        <p className="text-xs text-muted-foreground">{descripcion}</p>
+        <p className="text-[13px] font-semibold text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <Badge variant="neutral" className="shrink-0">
         Próximamente

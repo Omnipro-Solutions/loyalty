@@ -21,16 +21,16 @@ function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 }
 
 function Grupo({
-  titulo,
+  title,
   children,
 }: {
-  titulo: string
+  title: string
   children: React.ReactNode
 }) {
   return (
     <div className="flex flex-col gap-2 border-b border-border pb-4 last:border-0 last:pb-0">
       <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {titulo}
+        {title}
       </p>
       <div className="flex flex-col gap-1.5">{children}</div>
     </div>
@@ -55,7 +55,7 @@ export function PromocionResumenRevision({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <Grupo titulo="Identidad">
+      <Grupo title="Identidad">
         <Fila etiqueta="Nombre" valor={valores.nombre || "—"} />
         <Fila etiqueta="Código" valor={valores.codigo || "—"} />
         <Fila
@@ -74,7 +74,7 @@ export function PromocionResumenRevision({
         />
       </Grupo>
 
-      <Grupo titulo="Condiciones (SI)">
+      <Grupo title="Condiciones (SI)">
         {condiciones.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Sin condiciones — aplica a todos los clientes.
@@ -101,7 +101,7 @@ export function PromocionResumenRevision({
         )}
       </Grupo>
 
-      <Grupo titulo="Recompensa (ENTONCES)">
+      <Grupo title="Recompensa (ENTONCES)">
         <Fila
           etiqueta="Beneficio"
           valor={
@@ -144,7 +144,7 @@ export function PromocionResumenRevision({
         />
       </Grupo>
 
-      <Grupo titulo="Vigencia">
+      <Grupo title="Vigencia">
         <Fila
           etiqueta="Desde"
           valor={valores.vigenteDesde ? formatDate(valores.vigenteDesde) : "—"}

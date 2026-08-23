@@ -5,14 +5,14 @@ function SkeletonBar({ className }: { className?: string }) {
 }
 
 /**
- * Figma "10.2 · Estado de carga": filas de tabla en skeleton. Sin spec de
- * medidas exactas fetcheada — proporciones razonables sobre nuestros tokens.
+ * Figma "10.2 · Estado de carga": skeleton table rows. No exact-measurement
+ * spec fetched — reasonable proportions over our tokens.
  */
 export function LoadingState({
-  filas = 6,
+  rows = 6,
   className,
 }: {
-  filas?: number
+  rows?: number
   className?: string
 }) {
   return (
@@ -21,7 +21,7 @@ export function LoadingState({
       aria-busy="true"
       aria-label="Cargando"
     >
-      {Array.from({ length: filas }).map((_, i) => (
+      {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex w-full items-center gap-3">
           <SkeletonBar className="size-[30px] shrink-0 rounded-full" />
           <SkeletonBar className="h-3 w-[30%]" />

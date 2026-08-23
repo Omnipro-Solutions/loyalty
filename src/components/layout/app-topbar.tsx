@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils"
 
 type AppTopbarProps = {
   breadcrumb?: string
-  titulo: string
+  title: string
   className?: string
 }
 
 /** Figma "Layout / Topbar" (624:614): 68px, px-7 pt-[18px] pb-4, gap-4. */
-export function AppTopbar({ breadcrumb, titulo, className }: AppTopbarProps) {
+export function AppTopbar({ breadcrumb, title, className }: AppTopbarProps) {
   return (
     <div
       className={cn(
@@ -25,7 +25,7 @@ export function AppTopbar({ breadcrumb, titulo, className }: AppTopbarProps) {
           </p>
         )}
         <p className="truncate text-[18px] leading-6 font-semibold text-foreground">
-          {titulo}
+          {title}
         </p>
       </div>
 

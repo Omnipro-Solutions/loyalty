@@ -25,18 +25,15 @@ export default async function IntegracionesPage({
   const tab = (primerValor(params.tab) ?? "origenes") as IntegracionesTab
 
   return (
-    <AppPage
-      breadcrumb="Configuración  ›  Integraciones"
-      titulo="Integraciones"
-    >
-      <IntegracionesTabsNav activo={tab} />
+    <AppPage breadcrumb="Configuración  ›  Integraciones" title="Integraciones">
+      <IntegracionesTabsNav active={tab} />
       {tab === "origenes" && (
         <IntegracionesCatalogo
           direccion="origen"
           grupos={ORIGENES}
           seleccionInicialId="cjo"
-          titulo="Integraciones"
-          descripcion="Conecta los sistemas que alimentan a Etteer y define a dónde enviar audiencias, eventos y resultados."
+          title="Integraciones"
+          description="Conecta los sistemas que alimentan a Etteer y define a dónde enviar audiencias, eventos y resultados."
           labelBuscar="Buscar integración…"
           labelTotal="orígenes"
           labelTodos="Todos los orígenes"
@@ -49,8 +46,8 @@ export default async function IntegracionesPage({
           direccion="destino"
           grupos={DESTINOS}
           seleccionInicialId="power-bi"
-          titulo="Integraciones"
-          descripcion="Elige a dónde enviar audiencias, eventos de lealtad y resultados de campaña desde Etteer."
+          title="Integraciones"
+          description="Elige a dónde enviar audiencias, eventos de lealtad y resultados de campaña desde Etteer."
           labelBuscar="Buscar destino…"
           labelTotal="destinos"
           labelTodos="Todos los destinos"

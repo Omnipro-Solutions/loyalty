@@ -69,9 +69,9 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
         </div>
         {reset.hasSucceeded && (
           <Message
-            tipo="exito"
-            titulo="Revisa tu correo"
-            descripcion="Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+            variant="success"
+            title="Revisa tu correo"
+            description="Si el correo existe, recibirás un enlace para restablecer tu contraseña."
           />
         )}
         <Field label="Correo corporativo" htmlFor="reset-email">
@@ -115,9 +115,9 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
 
       {errorGeneral && (
         <Message
-          tipo="error"
-          titulo="No se pudo iniciar sesión"
-          descripcion={errorGeneral}
+          variant="error"
+          title="No se pudo iniciar sesión"
+          description={errorGeneral}
         />
       )}
 

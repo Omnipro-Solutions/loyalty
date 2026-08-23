@@ -97,9 +97,9 @@ export function InvitarUsuarioDialog({
         </DialogHeader>
         {resultado?.ok === false && (
           <Message
-            tipo="error"
-            titulo="No se pudo enviar la invitación"
-            descripcion={resultado.message ?? "Intenta de nuevo."}
+            variant="error"
+            title="No se pudo enviar la invitación"
+            description={resultado.message ?? "Intenta de nuevo."}
           />
         )}
         <form

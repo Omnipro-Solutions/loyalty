@@ -23,7 +23,7 @@ export default async function PerfilPage() {
   ])
 
   return (
-    <AppPage breadcrumb="Cuenta  ›  Mi perfil" titulo="Mi perfil">
+    <AppPage breadcrumb="Cuenta  ›  Mi perfil" title="Mi perfil">
       <PerfilHero
         nombre={perfil.nombre}
         email={perfil.email}

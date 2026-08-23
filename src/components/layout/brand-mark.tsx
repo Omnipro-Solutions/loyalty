@@ -2,14 +2,14 @@ import { cn } from "@/lib/utils"
 
 type BrandMarkProps = {
   className?: string
-  /** "default" = fondo marca, ícono blanco. "inverso" = fondo blanco, ícono marca. */
-  variant?: "default" | "inverso"
+  /** "default" = brand background, white icon. "inverse" = white background, brand icon. */
+  variant?: "default" | "inverse"
 }
 
 /**
- * Marca de Loyalty System (Figma "Brand / Mark" 686:204 / "· inverso" 686:209).
- * Trazado exacto exportado del Figma; los colores se resuelven a tokens en
- * vez de los hex originales para que respete el tema.
+ * Loyalty System mark (Figma "Brand / Mark" 686:204 / "· inverso" 686:209).
+ * Exact path exported from Figma; colors are resolved to tokens instead of
+ * the original hex values so it respects the theme.
  */
 export function BrandMark({ className, variant = "default" }: BrandMarkProps) {
   const bg =

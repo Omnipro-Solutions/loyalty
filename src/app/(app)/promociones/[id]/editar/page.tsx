@@ -26,7 +26,7 @@ export default async function EditarPromocionPage({
   return (
     <AppPage
       breadcrumb={`Comercial  ›  Promociones  ›  ${promocion.nombre}`}
-      titulo="Editar promoción"
+      title="Editar promoción"
     >
       <BackLink href="/promociones">Volver a Promociones</BackLink>
       <PromocionForm

@@ -12,7 +12,7 @@ type StepperProps = {
   className?: string
 }
 
-/** Figma "Form / Stepper" (708:511): valor de solo lectura + botones −/+ sobre bg-subtle. */
+/** Figma "Form / Stepper" (708:511): read-only value + −/+ buttons over bg-subtle. */
 export function Stepper({
   value,
   onValueChange,
