@@ -32,122 +32,118 @@ import {
   type StoreScope,
 } from "@/types/domain"
 
-import { actualizarRolAction, duplicarRolAction } from "../actions/roles"
-import { paletaAvatar } from "../lib/avatar-palette"
-import { RECURSO_INFO } from "../lib/labels"
-import type { RoleDetalle } from "../lib/queries"
+import { updateRoleAction, duplicateRoleAction } from "../actions/roles"
+import { avatarPalette } from "../lib/avatar-palette"
+import { RESOURCE_INFO } from "../lib/labels"
+import type { RoleDetail } from "../lib/queries"
 
-const ALCANCE_TIENDAS_LABEL: Record<string, string> = {
+const STORE_SCOPE_LABEL: Record<string, string> = {
   todas: "Todas las tiendas",
   propia: "Solo su tienda",
 }
 
-const ALCANCE_CANAL_LABEL: Record<string, string> = {
+const CHANNEL_SCOPE_LABEL: Record<string, string> = {
   pos: "POS",
   ecommerce: "E-commerce",
   pos_ecommerce: "POS + E-commerce",
 }
 
-function permisosInicialesFrom(
-  permisos: RoleDetalle["permisos"]
+function initialPermissionsFrom(
+  permissions: RoleDetail["permissions"]
 ): Record<string, boolean> {
-  const mapa: Record<string, boolean> = {}
-  for (const recurso of RESOURCES) {
-    for (const accion of ACTIONS) {
-      if (!actionApplies(recurso, accion)) continue
-      mapa[`${recurso}:${accion}`] =
-        permisos[recurso]?.includes(accion) ?? false
+  const map: Record<string, boolean> = {}
+  for (const resource of RESOURCES) {
+    for (const action of ACTIONS) {
+      if (!actionApplies(resource, action)) continue
+      map[`${resource}:${action}`] =
+        permissions[resource]?.includes(action) ?? false
     }
   }
-  return mapa
+  return map
 }
 
-type RolDetallePanelProps = {
-  roleDetalle: RoleDetalle
-  puedeGestionar: boolean
+type RoleDetailPanelProps = {
+  roleDetail: RoleDetail
+  canManage: boolean
 }
 
 /** Figma "Detalle rol" (718:2930) + "Matriz de permisos" (719:2865), 09.2. */
-export function RolDetallePanel({
-  roleDetalle,
-  puedeGestionar,
-}: RolDetallePanelProps) {
+export function RoleDetailPanel({
+  roleDetail,
+  canManage,
+}: RoleDetailPanelProps) {
   const router = useRouter()
-  const [permisos, setPermisos] = useState(() =>
-    permisosInicialesFrom(roleDetalle.permisos)
+  const [permissions, setPermissions] = useState(() =>
+    initialPermissionsFrom(roleDetail.permissions)
   )
-  const [alcanceTiendas, setAlcanceTiendas] = useState(
-    roleDetalle.alcance_tiendas as StoreScope
+  const [storeScope, setStoreScope] = useState(
+    roleDetail.alcance_tiendas as StoreScope
   )
-  const [alcanceCanal, setAlcanceCanal] = useState(
-    roleDetalle.alcance_canal as ChannelScope
+  const [channelScope, setChannelScope] = useState(
+    roleDetail.alcance_canal as ChannelScope
   )
-  const [descuentoMaximoPct, setDescuentoMaximoPct] = useState(
-    roleDetalle.descuento_maximo_pct?.toString() ?? ""
+  const [maxDiscountPct, setMaxDiscountPct] = useState(
+    roleDetail.descuento_maximo_pct?.toString() ?? ""
   )
-  const [resultado, setResultado] = useState<{
+  const [result, setResult] = useState<{
     ok: boolean
     message?: string
   }>()
 
-  const soloLectura = !puedeGestionar
+  const readOnly = !canManage
 
-  function set(recurso: Resource, accion: Action, valor: boolean) {
-    if (soloLectura || !actionApplies(recurso, accion)) return
-    setPermisos((prev) => ({ ...prev, [`${recurso}:${accion}`]: valor }))
+  function set(resource: Resource, action: Action, value: boolean) {
+    if (readOnly || !actionApplies(resource, action)) return
+    setPermissions((prev) => ({ ...prev, [`${resource}:${action}`]: value }))
   }
 
-  function aplicarMasivo(criterio: (accion: Action) => boolean) {
-    if (soloLectura) return
-    const siguiente: Record<string, boolean> = {}
-    for (const recurso of RESOURCES) {
-      for (const accion of ACTIONS) {
-        if (!actionApplies(recurso, accion)) continue
-        siguiente[`${recurso}:${accion}`] = criterio(accion)
+  function applyBulk(criteria: (action: Action) => boolean) {
+    if (readOnly) return
+    const next: Record<string, boolean> = {}
+    for (const resource of RESOURCES) {
+      for (const action of ACTIONS) {
+        if (!actionApplies(resource, action)) continue
+        next[`${resource}:${action}`] = criteria(action)
       }
     }
-    setPermisos(siguiente)
+    setPermissions(next)
   }
 
-  const guardar = useAction(actualizarRolAction, {
+  const save = useAction(updateRoleAction, {
     onSuccess: ({ data }) => {
-      setResultado(
-        data?.ok ? { ok: true } : { ok: false, message: data?.message }
-      )
+      setResult(data?.ok ? { ok: true } : { ok: false, message: data?.message })
     },
     onError: () =>
-      setResultado({ ok: false, message: "No se pudo guardar el rol." }),
+      setResult({ ok: false, message: "No se pudo guardar el rol." }),
   })
 
-  const duplicar = useAction(duplicarRolAction, {
+  const duplicate = useAction(duplicateRoleAction, {
     onSuccess: ({ data }) => {
       if (data?.ok) router.push(`/ajustes/equipo?tab=roles&rol=${data.id}`)
     },
   })
 
-  function guardarCambios() {
-    const permisosGranted = Object.entries(permisos)
-      .filter(([, valor]) => valor)
-      .map(([clave]) => {
-        const [recurso, accion] = clave.split(":") as [Resource, Action]
-        return { recurso, accion }
+  function saveChanges() {
+    const grantedPermissions = Object.entries(permissions)
+      .filter(([, value]) => value)
+      .map(([key]) => {
+        const [resource, action] = key.split(":") as [Resource, Action]
+        return { resource, action }
       })
 
-    guardar.execute({
-      roleId: roleDetalle.id,
-      nombre: roleDetalle.nombre,
-      descripcion: roleDetalle.descripcion ?? undefined,
-      alcanceTiendas,
-      alcanceCanal,
-      descuentoMaximoPct: descuentoMaximoPct
-        ? Number(descuentoMaximoPct)
-        : undefined,
-      permisos: permisosGranted,
+    save.execute({
+      roleId: roleDetail.id,
+      name: roleDetail.nombre,
+      description: roleDetail.descripcion ?? undefined,
+      storeScope,
+      channelScope,
+      maxDiscountPct: maxDiscountPct ? Number(maxDiscountPct) : undefined,
+      permissions: grantedPermissions,
     })
   }
 
-  const miembrosVisibles = roleDetalle.miembrosPreview.slice(0, 3)
-  const restantes = roleDetalle.miembrosTotal - miembrosVisibles.length
+  const visibleMembers = roleDetail.membersPreview.slice(0, 3)
+  const remaining = roleDetail.membersTotal - visibleMembers.length
 
   return (
     <div className="flex h-full flex-1 flex-col gap-3.5">
@@ -157,48 +153,48 @@ export function RolDetallePanel({
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold text-foreground">
-            {roleDetalle.nombre}
+            {roleDetail.nombre}
           </p>
-          {roleDetalle.descripcion && (
+          {roleDetail.descripcion && (
             <p className="text-[11px] leading-4 text-muted-foreground">
-              {roleDetalle.descripcion}
+              {roleDetail.descripcion}
             </p>
           )}
         </div>
-        {miembrosVisibles.length > 0 && (
+        {visibleMembers.length > 0 && (
           <div className="flex shrink-0 items-center">
-            {miembrosVisibles.map((m) => {
-              const paleta = paletaAvatar(m.id)
+            {visibleMembers.map((m) => {
+              const palette = avatarPalette(m.id)
               return (
                 <AvatarInitials
                   key={m.id}
                   name={m.nombre}
                   size={30}
-                  bgClassName={paleta.bg}
-                  fgClassName={paleta.fg}
+                  bgClassName={palette.bg}
+                  fgClassName={palette.fg}
                   className="-mr-2 border-2 border-background"
                 />
               )
             })}
-            {restantes > 0 && (
+            {remaining > 0 && (
               <div className="-mr-2 flex size-[30px] items-center justify-center rounded-full border-2 border-background bg-muted">
                 <span className="text-[10px] font-semibold text-secondary-foreground">
-                  +{restantes}
+                  +{remaining}
                 </span>
               </div>
             )}
           </div>
         )}
-        {puedeGestionar && (
+        {canManage && (
           <>
             <Button
               type="button"
               variant="outline"
-              disabled={duplicar.isPending}
+              disabled={duplicate.isPending}
               onClick={() =>
-                duplicar.execute({
-                  roleId: roleDetalle.id,
-                  nombre: `${roleDetalle.nombre} (copia)`,
+                duplicate.execute({
+                  roleId: roleDetail.id,
+                  name: `${roleDetail.nombre} (copia)`,
                 })
               }
             >
@@ -206,8 +202,8 @@ export function RolDetallePanel({
             </Button>
             <Button
               type="button"
-              disabled={guardar.isPending}
-              onClick={guardarCambios}
+              disabled={save.isPending}
+              onClick={saveChanges}
             >
               Guardar cambios
             </Button>
@@ -215,14 +211,14 @@ export function RolDetallePanel({
         )}
       </div>
 
-      {resultado?.ok === false && (
+      {result?.ok === false && (
         <Message
           variant="error"
           title="No se pudo guardar el rol"
-          description={resultado.message ?? "Intenta de nuevo."}
+          description={result.message ?? "Intenta de nuevo."}
         />
       )}
-      {resultado?.ok === true && (
+      {result?.ok === true && (
         <Message
           variant="success"
           title="Role actualizado"
@@ -241,25 +237,25 @@ export function RolDetallePanel({
               cambios que afectan a clientes.
             </p>
           </div>
-          {puedeGestionar && (
+          {canManage && (
             <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                onClick={() => aplicarMasivo(() => true)}
+                onClick={() => applyBulk(() => true)}
                 className="rounded-full bg-muted px-[11px] py-1.5 text-[11px] font-medium text-secondary-foreground"
               >
                 Todo
               </button>
               <button
                 type="button"
-                onClick={() => aplicarMasivo(() => false)}
+                onClick={() => applyBulk(() => false)}
                 className="rounded-full bg-muted px-[11px] py-1.5 text-[11px] font-medium text-secondary-foreground"
               >
                 Nada
               </button>
               <button
                 type="button"
-                onClick={() => aplicarMasivo((accion) => accion === "ver")}
+                onClick={() => applyBulk((action) => action === "ver")}
                 className="rounded-full bg-muted px-[11px] py-1.5 text-[11px] font-medium text-secondary-foreground"
               >
                 Solo lectura
@@ -272,43 +268,43 @@ export function RolDetallePanel({
           <span className="flex-1 text-[10px] font-semibold tracking-[0.4px] text-muted-foreground">
             MÓDULO
           </span>
-          {ACTIONS.map((accion) => (
+          {ACTIONS.map((action) => (
             <span
-              key={accion}
+              key={action}
               className="w-24 shrink-0 text-center text-[10px] font-semibold tracking-[0.4px] text-muted-foreground"
             >
-              {accion.toUpperCase()}
+              {action.toUpperCase()}
             </span>
           ))}
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {RESOURCES.map((recurso) => (
+          {RESOURCES.map((resource) => (
             <div
-              key={recurso}
+              key={resource}
               className="flex items-center gap-2.5 border-t border-muted px-5 py-2.5"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium text-foreground">
-                  {RECURSO_INFO[recurso].etiqueta}
+                  {RESOURCE_INFO[resource].label}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  {RECURSO_INFO[recurso].descripcion}
+                  {RESOURCE_INFO[resource].description}
                 </p>
               </div>
-              {ACTIONS.map((accion) => {
-                const aplica = actionApplies(recurso, accion)
+              {ACTIONS.map((action) => {
+                const applies = actionApplies(resource, action)
                 return (
                   <div
-                    key={accion}
+                    key={action}
                     className="flex w-24 shrink-0 justify-center"
                   >
-                    {aplica ? (
+                    {applies ? (
                       <Checkbox
-                        checked={permisos[`${recurso}:${accion}`] ?? false}
-                        disabled={soloLectura}
+                        checked={permissions[`${resource}:${action}`] ?? false}
+                        disabled={readOnly}
                         onCheckedChange={(checked) =>
-                          set(recurso, accion, checked === true)
+                          set(resource, action, checked === true)
                         }
                       />
                     ) : (
@@ -334,46 +330,46 @@ export function RolDetallePanel({
             </p>
           </div>
           <Select
-            value={alcanceTiendas}
-            onValueChange={(v) => setAlcanceTiendas(v as typeof alcanceTiendas)}
+            value={storeScope}
+            onValueChange={(v) => setStoreScope(v as typeof storeScope)}
           >
             <SelectTrigger
-              disabled={soloLectura}
+              disabled={readOnly}
               className={cn(
                 "w-auto shrink-0 gap-1.5 rounded-[10px] py-2 pr-2.5 pl-3 text-[11px] font-medium",
-                alcanceTiendas === "propia"
+                storeScope === "propia"
                   ? "border-primary bg-accent text-primary-800"
                   : "text-secondary-foreground"
               )}
             >
               <SelectValue>
-                {() => `Tiendas: ${ALCANCE_TIENDAS_LABEL[alcanceTiendas]}`}
+                {() => `Tiendas: ${STORE_SCOPE_LABEL[storeScope]}`}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {STORE_SCOPES.map((a) => (
                 <SelectItem key={a} value={a}>
-                  {ALCANCE_TIENDAS_LABEL[a]}
+                  {STORE_SCOPE_LABEL[a]}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select
-            value={alcanceCanal}
-            onValueChange={(v) => setAlcanceCanal(v as typeof alcanceCanal)}
+            value={channelScope}
+            onValueChange={(v) => setChannelScope(v as typeof channelScope)}
           >
             <SelectTrigger
-              disabled={soloLectura}
+              disabled={readOnly}
               className="w-auto shrink-0 gap-1.5 rounded-[10px] py-2 pr-2.5 pl-3 text-[11px] font-medium text-secondary-foreground"
             >
               <SelectValue>
-                {() => `Canal: ${ALCANCE_CANAL_LABEL[alcanceCanal]}`}
+                {() => `Canal: ${CHANNEL_SCOPE_LABEL[channelScope]}`}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {CHANNEL_SCOPES.map((c) => (
                 <SelectItem key={c} value={c}>
-                  {ALCANCE_CANAL_LABEL[c]}
+                  {CHANNEL_SCOPE_LABEL[c]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -384,9 +380,9 @@ export function RolDetallePanel({
               type="number"
               min={0}
               max={100}
-              disabled={soloLectura}
-              value={descuentoMaximoPct}
-              onChange={(e) => setDescuentoMaximoPct(e.target.value)}
+              disabled={readOnly}
+              value={maxDiscountPct}
+              onChange={(e) => setMaxDiscountPct(e.target.value)}
               className="h-auto w-12 border-0 p-0 text-[11px] leading-4 focus-visible:border-0"
             />
             <span>%</span>

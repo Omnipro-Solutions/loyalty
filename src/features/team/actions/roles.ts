@@ -4,27 +4,27 @@ import { revalidatePath } from "next/cache"
 
 import { actionApplies } from "@/lib/permissions"
 
-import { equipoActionClient } from "./action-client"
+import { teamActionClient } from "./action-client"
 import {
-  actualizarRolSchema,
-  crearRolSchema,
-  duplicarRolSchema,
+  updateRoleSchema,
+  createRoleSchema,
+  duplicateRoleSchema,
 } from "../schemas"
 
-export const crearRolAction = equipoActionClient
-  .inputSchema(crearRolSchema)
+export const createRoleAction = teamActionClient
+  .inputSchema(createRoleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { data, error } = await ctx.supabase
       .from("roles")
       .insert({
         org_id: ctx.orgId,
-        nombre: parsedInput.nombre,
-        descripcion: parsedInput.descripcion || null,
+        nombre: parsedInput.name,
+        descripcion: parsedInput.description || null,
         tipo: "personalizado",
-        rol_base: parsedInput.rolBase,
-        alcance_tiendas: parsedInput.alcanceTiendas,
-        alcance_canal: parsedInput.alcanceCanal,
-        descuento_maximo_pct: parsedInput.descuentoMaximoPct ?? null,
+        rol_base: parsedInput.baseRole,
+        alcance_tiendas: parsedInput.storeScope,
+        alcance_canal: parsedInput.channelScope,
+        descuento_maximo_pct: parsedInput.maxDiscountPct ?? null,
       })
       .select("id")
       .single()
@@ -41,8 +41,8 @@ export const crearRolAction = equipoActionClient
     return { ok: true as const, id: data.id as string }
   })
 
-export const duplicarRolAction = equipoActionClient
-  .inputSchema(duplicarRolSchema)
+export const duplicateRoleAction = teamActionClient
+  .inputSchema(duplicateRoleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { data: original, error: errorOriginal } = await ctx.supabase
       .from("roles")
@@ -56,11 +56,11 @@ export const duplicarRolAction = equipoActionClient
       }
     }
 
-    const { data: nuevo, error } = await ctx.supabase
+    const { data: newRole, error } = await ctx.supabase
       .from("roles")
       .insert({
         org_id: ctx.orgId,
-        nombre: parsedInput.nombre,
+        nombre: parsedInput.name,
         descripcion: original.descripcion,
         tipo: "personalizado",
         rol_base: original.rol_base,
@@ -71,7 +71,7 @@ export const duplicarRolAction = equipoActionClient
       .select("id")
       .single()
 
-    if (error || !nuevo) {
+    if (error || !newRole) {
       const message =
         error?.code === "23505"
           ? "Ya existe un rol con ese nombre."
@@ -79,15 +79,15 @@ export const duplicarRolAction = equipoActionClient
       return { ok: false as const, message }
     }
 
-    const { data: permisos } = await ctx.supabase
+    const { data: permissions } = await ctx.supabase
       .from("role_permissions")
       .select("recurso, accion")
       .eq("role_id", parsedInput.roleId)
 
-    if (permisos?.length) {
+    if (permissions?.length) {
       await ctx.supabase.from("role_permissions").insert(
-        permisos.map((p) => ({
-          role_id: nuevo.id as string,
+        permissions.map((p) => ({
+          role_id: newRole.id as string,
           recurso: p.recurso,
           accion: p.accion,
         }))
@@ -95,20 +95,20 @@ export const duplicarRolAction = equipoActionClient
     }
 
     revalidatePath("/ajustes/equipo")
-    return { ok: true as const, id: nuevo.id as string }
+    return { ok: true as const, id: newRole.id as string }
   })
 
-export const actualizarRolAction = equipoActionClient
-  .inputSchema(actualizarRolSchema)
+export const updateRoleAction = teamActionClient
+  .inputSchema(updateRoleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { error: errorUpdate } = await ctx.supabase
       .from("roles")
       .update({
-        nombre: parsedInput.nombre,
-        descripcion: parsedInput.descripcion || null,
-        alcance_tiendas: parsedInput.alcanceTiendas,
-        alcance_canal: parsedInput.alcanceCanal,
-        descuento_maximo_pct: parsedInput.descuentoMaximoPct ?? null,
+        nombre: parsedInput.name,
+        descripcion: parsedInput.description || null,
+        alcance_tiendas: parsedInput.storeScope,
+        alcance_canal: parsedInput.channelScope,
+        descuento_maximo_pct: parsedInput.maxDiscountPct ?? null,
       })
       .eq("id", parsedInput.roleId)
 
@@ -122,8 +122,8 @@ export const actualizarRolAction = equipoActionClient
 
     // Reemplaza la matriz completa: más simple que diffear fila a fila, y
     // el conjunto siempre es pequeño (como mucho 9 recursos × 5 acciones).
-    const permisosValidos = parsedInput.permisos.filter((p) =>
-      actionApplies(p.recurso, p.accion)
+    const validPermissions = parsedInput.permissions.filter((p) =>
+      actionApplies(p.resource, p.action)
     )
 
     const { error: errorDelete } = await ctx.supabase
@@ -137,14 +137,14 @@ export const actualizarRolAction = equipoActionClient
       }
     }
 
-    if (permisosValidos.length) {
+    if (validPermissions.length) {
       const { error: errorInsert } = await ctx.supabase
         .from("role_permissions")
         .insert(
-          permisosValidos.map((p) => ({
+          validPermissions.map((p) => ({
             role_id: parsedInput.roleId,
-            recurso: p.recurso,
-            accion: p.accion,
+            recurso: p.resource,
+            accion: p.action,
           }))
         )
       if (errorInsert) {

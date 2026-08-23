@@ -2,27 +2,27 @@ import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
 import { RoutePlaceholder } from "@/components/layout/route-placeholder"
 import {
-  EquipoTabsNav,
-  type EquipoTab,
-} from "@/features/equipo/components/equipo-tabs-nav"
-import { InvitacionesTabla } from "@/features/equipo/components/invitaciones-tabla"
-import { RolDetallePanel } from "@/features/equipo/components/rol-detalle-panel"
-import { RolesList } from "@/features/equipo/components/roles-list"
-import { UsuariosCard } from "@/features/equipo/components/usuarios-card"
+  TeamTabsNav,
+  type TeamTab,
+} from "@/features/team/components/team-tabs-nav"
+import { InvitationsTable } from "@/features/team/components/invitations-table"
+import { RoleDetailPanel } from "@/features/team/components/role-detail-panel"
+import { RolesList } from "@/features/team/components/roles-list"
+import { UsersCard } from "@/features/team/components/users-card"
 import {
-  getEquipoKpis,
-  getPerfilConPermisos,
-  getRoleDetalle,
-  listInvitaciones,
+  getTeamKpis,
+  getProfileWithPermissions,
+  getRoleDetail,
+  listInvitations,
   listRoles,
-  listTiendasOptions,
-  listUsuarios,
-  tienePermiso,
-} from "@/features/equipo/lib/queries"
+  listStoreOptions,
+  listUsers,
+  hasPermission,
+} from "@/features/team/lib/queries"
 import { formatNumber } from "@/lib/format"
 
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }
 
 /**
@@ -35,11 +35,11 @@ export default async function EquipoPage({
   searchParams,
 }: PageProps<"/ajustes/equipo">) {
   const params = await searchParams
-  const tab = (primerValor(params.tab) ?? "usuarios") as EquipoTab
+  const tab = (firstValue(params.tab) ?? "usuarios") as TeamTab
 
-  const perfil = await getPerfilConPermisos()
-  const puedeGestionar = perfil
-    ? tienePermiso(perfil.permisos, "equipo", "editar")
+  const profile = await getProfileWithPermissions()
+  const canManage = profile
+    ? hasPermission(profile.permissions, "equipo", "editar")
     : false
 
   return (
@@ -47,19 +47,19 @@ export default async function EquipoPage({
       breadcrumb="Configuración  ›  Equipo y permisos"
       title="Equipo y permisos"
     >
-      <EquipoTabsNav active={tab} />
+      <TeamTabsNav active={tab} />
 
       {tab === "usuarios" && (
-        <UsuariosTabContent params={params} puedeGestionar={puedeGestionar} />
+        <UsersTabContent params={params} canManage={canManage} />
       )}
       {tab === "roles" && (
         <RolesTabContent
-          rolId={primerValor(params.rol)}
-          puedeGestionar={puedeGestionar}
+          roleId={firstValue(params.rol)}
+          canManage={canManage}
         />
       )}
       {tab === "invitaciones" && (
-        <InvitacionesTabContent puedeGestionar={puedeGestionar} />
+        <InvitationsTabContent canManage={canManage} />
       )}
       {tab === "auditoria" && <RoutePlaceholder phase="Fase 5" />}
     </AppPage>
@@ -68,23 +68,23 @@ export default async function EquipoPage({
 
 type SearchParams = Awaited<PageProps<"/ajustes/equipo">["searchParams"]>
 
-async function UsuariosTabContent({
+async function UsersTabContent({
   params,
-  puedeGestionar,
+  canManage,
 }: {
   params: SearchParams
-  puedeGestionar: boolean
+  canManage: boolean
 }) {
-  const busqueda = primerValor(params.q)
-  const roleId = primerValor(params.rolFiltro)
-  const estado = primerValor(params.estado) as "activo" | "inactivo" | undefined
-  const page = Number(primerValor(params.page) ?? "1")
+  const search = firstValue(params.q)
+  const roleId = firstValue(params.rolFiltro)
+  const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
+  const page = Number(firstValue(params.page) ?? "1")
 
-  const [{ usuarios, total }, kpis, roles, tiendas] = await Promise.all([
-    listUsuarios({ busqueda, roleId, estado, page }),
-    getEquipoKpis(),
+  const [{ users, total }, kpis, roles, stores] = await Promise.all([
+    listUsers({ search, roleId, status, page }),
+    getTeamKpis(),
     listRoles(),
-    listTiendasOptions(),
+    listStoreOptions(),
   ])
 
   return (
@@ -92,58 +92,58 @@ async function UsuariosTabContent({
       <div className="flex items-start gap-4">
         <KpiCard
           label="Usuarios activos"
-          value={formatNumber(kpis.usuariosActivos)}
-          detail={`+${formatNumber(kpis.nuevosEsteMes)} este mes`}
+          value={formatNumber(kpis.activeUsers)}
+          detail={`+${formatNumber(kpis.newThisMonth)} este mes`}
         />
         <KpiCard
           label="Invitaciones pendientes"
-          value={formatNumber(kpis.invitacionesPendientes)}
+          value={formatNumber(kpis.pendingInvitations)}
           detail={
-            kpis.invitacionesPorVencer > 0
-              ? `${formatNumber(kpis.invitacionesPorVencer)} vencen en 3 días`
+            kpis.expiringInvitations > 0
+              ? `${formatNumber(kpis.expiringInvitations)} vencen en 3 días`
               : "ninguna vence pronto"
           }
         />
         <KpiCard
           label="Con 2FA activo"
-          value={`${formatNumber(kpis.con2fa)} de ${formatNumber(kpis.totalUsuarios)}`}
+          value={`${formatNumber(kpis.with2fa)} de ${formatNumber(kpis.totalUsers)}`}
           detail={
-            kpis.totalUsuarios
-              ? `${Math.round((kpis.con2fa / kpis.totalUsuarios) * 100)}% de cobertura`
+            kpis.totalUsers
+              ? `${Math.round((kpis.with2fa / kpis.totalUsers) * 100)}% de cobertura`
               : "sin usuarios todavía"
           }
         />
         <KpiCard
           label="Sin acceso hace 60 días"
-          value={formatNumber(kpis.sinAccesoHace60Dias)}
+          value={formatNumber(kpis.noAccess60Days)}
           detail="revisar y desactivar"
         />
       </div>
-      <UsuariosCard
-        usuarios={usuarios}
+      <UsersCard
+        users={users}
         total={total}
-        totalActivos={kpis.usuariosActivos}
-        invitacionesPendientes={kpis.invitacionesPendientes}
+        activeUsers={kpis.activeUsers}
+        pendingInvitations={kpis.pendingInvitations}
         roles={roles}
-        tiendas={tiendas}
-        puedeGestionar={puedeGestionar}
-        hayFiltrosAplicados={!!(busqueda || roleId || estado)}
+        stores={stores}
+        canManage={canManage}
+        hasAppliedFilters={!!(search || roleId || status)}
       />
     </>
   )
 }
 
 async function RolesTabContent({
-  rolId,
-  puedeGestionar,
+  roleId,
+  canManage,
 }: {
-  rolId: string | undefined
-  puedeGestionar: boolean
+  roleId: string | undefined
+  canManage: boolean
 }) {
   const roles = await listRoles()
-  const rolSeleccionadoId = rolId ?? roles[0]?.id
+  const selectedRoleId = roleId ?? roles[0]?.id
 
-  if (!rolSeleccionadoId) {
+  if (!selectedRoleId) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
         <p className="py-16 text-sm text-muted-foreground">
@@ -153,8 +153,8 @@ async function RolesTabContent({
     )
   }
 
-  const roleDetalle = await getRoleDetalle(rolSeleccionadoId)
-  if (!roleDetalle) {
+  const roleDetail = await getRoleDetail(selectedRoleId)
+  if (!roleDetail) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
         <p className="py-16 text-sm text-muted-foreground">
@@ -168,24 +168,20 @@ async function RolesTabContent({
     <div className="flex min-h-0 flex-1 items-start gap-3.5">
       <RolesList
         roles={roles}
-        rolSeleccionadoId={rolSeleccionadoId}
-        puedeGestionar={puedeGestionar}
+        selectedRoleId={selectedRoleId}
+        canManage={canManage}
       />
-      <RolDetallePanel
-        key={roleDetalle.id}
-        roleDetalle={roleDetalle}
-        puedeGestionar={puedeGestionar}
+      <RoleDetailPanel
+        key={roleDetail.id}
+        roleDetail={roleDetail}
+        canManage={canManage}
       />
     </div>
   )
 }
 
-async function InvitacionesTabContent({
-  puedeGestionar,
-}: {
-  puedeGestionar: boolean
-}) {
-  const invitaciones = await listInvitaciones()
+async function InvitationsTabContent({ canManage }: { canManage: boolean }) {
+  const invitations = await listInvitations()
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
@@ -195,20 +191,17 @@ async function InvitacionesTabContent({
             Invitaciones
           </p>
           <p className="text-[11px] text-muted-foreground">
-            {formatNumber(invitaciones.length)} en total
+            {formatNumber(invitations.length)} en total
           </p>
         </div>
       </div>
-      {invitaciones.length === 0 ? (
+      {invitations.length === 0 ? (
         <p className="px-[22px] pb-6 text-sm text-muted-foreground">
           Todavía no se ha invitado a nadie. Invita a tu equipo desde la pestaña
           Usuarios.
         </p>
       ) : (
-        <InvitacionesTabla
-          invitaciones={invitaciones}
-          puedeGestionar={puedeGestionar}
-        />
+        <InvitationsTable invitations={invitations} canManage={canManage} />
       )}
     </div>
   )

@@ -15,34 +15,34 @@ import { Badge } from "@/components/ui/badge"
 import { formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { paletaAvatar } from "../lib/avatar-palette"
-import type { Usuario } from "../lib/queries"
+import { avatarPalette } from "../lib/avatar-palette"
+import type { User } from "../lib/queries"
 
 const features = tableFeatures({ columnSizingFeature })
-const helper = createColumnHelper<typeof features, Usuario>()
+const helper = createColumnHelper<typeof features, User>()
 
 const columns = helper.columns([
   helper.display({
-    id: "usuario",
+    id: "user",
     header: () => "USUARIO",
     cell: (info) => {
-      const usuario = info.row.original
-      const paleta = paletaAvatar(usuario.id)
+      const user = info.row.original
+      const palette = avatarPalette(user.id)
       return (
         <div className="flex min-w-0 items-center gap-[11px]">
           <AvatarInitials
-            name={usuario.nombre}
+            name={user.nombre}
             size={34}
-            bgClassName={paleta.bg}
-            fgClassName={paleta.fg}
+            bgClassName={palette.bg}
+            fgClassName={palette.fg}
             textClassName="text-[11px] leading-[15px]"
           />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] leading-[18px] font-semibold text-foreground">
-              {usuario.nombre}
+              {user.nombre}
             </p>
             <p className="truncate text-[11px] leading-[15px] text-muted-foreground">
-              {usuario.email}
+              {user.email}
             </p>
           </div>
         </div>
@@ -50,24 +50,24 @@ const columns = helper.columns([
     },
   }),
   helper.display({
-    id: "rol",
+    id: "role",
     size: 150,
     header: () => "ROL",
     cell: (info) => (
-      <Badge variant="info">{info.row.original.rol.nombre}</Badge>
+      <Badge variant="info">{info.row.original.role.nombre}</Badge>
     ),
   }),
   helper.display({
-    id: "alcance",
+    id: "scope",
     size: 150,
     header: () => "ALCANCE",
     cell: (info) => {
-      const usuario = info.row.original
-      const texto =
-        usuario.rol.alcance_tiendas === "todas"
+      const user = info.row.original
+      const text =
+        user.role.alcance_tiendas === "todas"
           ? "Todas las tiendas"
-          : (usuario.tienda?.nombre ?? "Sin tienda asignada")
-      return <span className="text-xs text-secondary-foreground">{texto}</span>
+          : (user.store?.nombre ?? "Sin tienda asignada")
+      return <span className="text-xs text-secondary-foreground">{text}</span>
     },
   }),
   helper.display({
@@ -75,10 +75,10 @@ const columns = helper.columns([
     size: 110,
     header: () => "2FA",
     cell: (info) => {
-      const activo = info.row.original.tiene2fa
+      const active = info.row.original.has2fa
       return (
         <div className="flex items-center gap-[7px]">
-          {activo ? (
+          {active ? (
             <Check className="size-3.5 shrink-0 text-success" />
           ) : (
             <AlertTriangle className="size-3.5 shrink-0 text-warning" />
@@ -86,49 +86,49 @@ const columns = helper.columns([
           <span
             className={cn(
               "text-[11px] font-medium",
-              activo ? "text-secondary-foreground" : "text-warning"
+              active ? "text-secondary-foreground" : "text-warning"
             )}
           >
-            {activo ? "Activo" : "Sin 2FA"}
+            {active ? "Activo" : "Sin 2FA"}
           </span>
         </div>
       )
     },
   }),
   helper.display({
-    id: "ultimo-acceso",
+    id: "last-access",
     size: 120,
     header: () => "ÚLTIMO ACCESO",
     cell: (info) => {
-      const valor = info.row.original.ultimoAccesoEn
+      const value = info.row.original.lastAccessAt
       return (
         <span className="text-xs text-secondary-foreground">
-          {valor ? formatRelativeTime(valor) : "Sin acceso"}
+          {value ? formatRelativeTime(value) : "Sin acceso"}
         </span>
       )
     },
   }),
   helper.display({
-    id: "estado",
+    id: "status",
     size: 90,
     header: () => "ESTADO",
     cell: (info) => {
-      const activo = info.row.original.estado === "activo"
+      const active = info.row.original.estado === "activo"
       return (
         <div className="flex items-center gap-[7px]">
           <span
             className={cn(
               "size-[7px] shrink-0 rounded-full",
-              activo ? "bg-success" : "bg-border-strong"
+              active ? "bg-success" : "bg-border-strong"
             )}
           />
           <span
             className={cn(
               "text-[11px] font-medium",
-              activo ? "text-foreground" : "text-muted-foreground"
+              active ? "text-foreground" : "text-muted-foreground"
             )}
           >
-            {activo ? "Activo" : "Inactivo"}
+            {active ? "Activo" : "Inactivo"}
           </span>
         </div>
       )
@@ -136,11 +136,11 @@ const columns = helper.columns([
   }),
 ])
 
-type UsuariosTablaProps = { usuarios: Usuario[] }
+type UsersTableProps = { users: User[] }
 
 /** Figma "09.1 · Equipo · usuarios" (720:3027): mismo `Table / Tabla de datos` que el resto de la app. */
-export function UsuariosTabla({ usuarios }: UsuariosTablaProps) {
-  const data = useMemo(() => usuarios, [usuarios])
+export function UsersTable({ users }: UsersTableProps) {
+  const data = useMemo(() => users, [users])
   const table = useTable({ features, columns, data })
 
   return <DataTable table={table} />

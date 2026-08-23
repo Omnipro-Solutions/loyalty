@@ -30,7 +30,7 @@ const STATUS_DOT: Record<ConnectionStatus, string> = {
 /**
  * Sin equivalente en Figma — "12 · Integraciones" (1261:3974) no dibuja
  * esta pestaña. Mismo lenguaje visual que el catálogo (KpiCard, tabla de
- * `InvitacionesTabla`) para no introducir un patrón nuevo.
+ * `InvitationsTable`) para no introducir un patrón nuevo.
  */
 export function ActiveConnectionsCard() {
   const active = ACTIVE_CONNECTIONS.filter((c) => c.status === "activa")

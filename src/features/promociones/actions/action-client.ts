@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 /**
  * Extiende el cliente base de next-safe-action con contexto de sesión y el
  * set de permisos reales de `role_permissions` (mismo patrón que
- * `equipoActionClient`) — cada action decide con qué `accion` exige
+ * `teamActionClient`) — cada action decide con qué `accion` exige
  * `tienePermiso`, ya que crear un borrador y activar una promoción piden
  * permisos distintos ("crear" vs "aprobar").
  */

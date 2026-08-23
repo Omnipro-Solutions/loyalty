@@ -3,37 +3,37 @@ import { Users } from "lucide-react"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { formatNumber } from "@/lib/format"
 
-import { EquipoPaginacion } from "./equipo-paginacion"
-import { InvitarUsuarioDialog } from "./invitar-usuario-dialog"
-import { UsuariosFiltrosBar } from "./usuarios-filtros-bar"
-import { UsuariosTabla } from "./usuarios-tabla"
-import { EQUIPO_PAGE_SIZE } from "../lib/queries"
-import type { RoleConConteo, TiendaOption, Usuario } from "../lib/queries"
+import { TeamPagination } from "./team-pagination"
+import { InviteUserDialog } from "./invite-user-dialog"
+import { UsersFiltersBar } from "./users-filters-bar"
+import { UsersTable } from "./users-table"
+import { TEAM_PAGE_SIZE } from "../lib/queries"
+import type { RoleWithCount, StoreOption, User } from "../lib/queries"
 
-type UsuariosCardProps = {
-  usuarios: Usuario[]
+type UsersCardProps = {
+  users: User[]
   total: number
-  totalActivos: number
-  invitacionesPendientes: number
-  roles: RoleConConteo[]
-  tiendas: TiendaOption[]
-  puedeGestionar: boolean
-  hayFiltrosAplicados: boolean
+  activeUsers: number
+  pendingInvitations: number
+  roles: RoleWithCount[]
+  stores: StoreOption[]
+  canManage: boolean
+  hasAppliedFilters: boolean
 }
 
 /** Figma "Table" (720:3027): título + conteo + filtros + "Invitar usuario" arriba, tabla, paginación. */
-export function UsuariosCard({
-  usuarios,
+export function UsersCard({
+  users,
   total,
-  totalActivos,
-  invitacionesPendientes,
+  activeUsers,
+  pendingInvitations,
   roles,
-  tiendas,
-  puedeGestionar,
-  hayFiltrosAplicados,
-}: UsuariosCardProps) {
-  const sinUsuariosAun = total === 0 && !hayFiltrosAplicados
-  const sinResultadosDeFiltro = total === 0 && hayFiltrosAplicados
+  stores,
+  canManage,
+  hasAppliedFilters,
+}: UsersCardProps) {
+  const noUsersYet = total === 0 && !hasAppliedFilters
+  const noFilterResults = total === 0 && hasAppliedFilters
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
@@ -48,17 +48,15 @@ export function UsuariosCard({
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {formatNumber(totalActivos)} activos ·{" "}
-            {formatNumber(invitacionesPendientes)} invitaciones pendientes
+            {formatNumber(activeUsers)} activos ·{" "}
+            {formatNumber(pendingInvitations)} invitaciones pendientes
           </p>
         </div>
-        <UsuariosFiltrosBar roles={roles} />
-        {puedeGestionar && (
-          <InvitarUsuarioDialog roles={roles} tiendas={tiendas} />
-        )}
+        <UsersFiltersBar roles={roles} />
+        {canManage && <InviteUserDialog roles={roles} stores={stores} />}
       </div>
 
-      {sinUsuariosAun ? (
+      {noUsersYet ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
@@ -66,7 +64,7 @@ export function UsuariosCard({
             description="Invita a tu equipo para que pueda acceder a Loyalty System."
           />
         </div>
-      ) : sinResultadosDeFiltro ? (
+      ) : noFilterResults ? (
         <div className="px-[22px] pb-6">
           <EmptyState
             icon={Users}
@@ -76,8 +74,8 @@ export function UsuariosCard({
         </div>
       ) : (
         <>
-          <UsuariosTabla usuarios={usuarios} />
-          <EquipoPaginacion total={total} pageSize={EQUIPO_PAGE_SIZE} />
+          <UsersTable users={users} />
+          <TeamPagination total={total} pageSize={TEAM_PAGE_SIZE} />
         </>
       )}
     </div>

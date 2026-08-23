@@ -8,7 +8,7 @@ import type {
   UsagePeriod,
 } from "@/types/domain"
 
-/** Igual que `features/equipo` `ALCANCE_CANAL_LABEL` — duplicado a propósito (features aisladas, CLAUDE.md §2). */
+/** Igual que `features/team` `CHANNEL_SCOPE_LABEL` — duplicado a propósito (features aisladas, CLAUDE.md §2). */
 export const CANAL_APLICACION_LABEL: Record<ChannelScope, string> = {
   pos: "POS",
   ecommerce: "E-commerce",

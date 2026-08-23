@@ -1,7 +1,7 @@
 import { actionClient } from "@/lib/safe-action"
 import { createClient } from "@/lib/supabase/server"
 
-import { tienePermiso } from "../lib/queries"
+import { hasPermission } from "../lib/queries"
 
 /**
  * Extiende el cliente base de next-safe-action: además de resolver
@@ -11,7 +11,7 @@ import { tienePermiso } from "../lib/queries"
  * de las Server Actions es el lugar natural para comprobarlo (RLS solo
  * aísla por organización, no decide esto — ver CLAUDE.md §5.2).
  */
-export const equipoActionClient = actionClient.use(async ({ next }) => {
+export const teamActionClient = actionClient.use(async ({ next }) => {
   const supabase = await createClient()
   const {
     data: { user },
@@ -25,15 +25,15 @@ export const equipoActionClient = actionClient.use(async ({ next }) => {
     .single()
   if (!profile) throw new Error("Perfil no encontrado.")
 
-  const { data: permisos } = await supabase
+  const { data: permissions } = await supabase
     .from("role_permissions")
     .select("recurso, accion")
     .eq("role_id", profile.role_id)
 
-  const permisosSet = new Set(
-    (permisos ?? []).map((p) => `${p.recurso}:${p.accion}`)
+  const permissionsSet = new Set(
+    (permissions ?? []).map((p) => `${p.recurso}:${p.accion}`)
   )
-  if (!tienePermiso(permisosSet, "equipo", "editar")) {
+  if (!hasPermission(permissionsSet, "equipo", "editar")) {
     throw new Error("No tienes permiso para gestionar el equipo.")
   }
 

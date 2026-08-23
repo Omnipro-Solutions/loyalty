@@ -2,17 +2,17 @@
 
 import { revalidatePath } from "next/cache"
 
-import { equipoActionClient } from "./action-client"
-import { cancelarInvitacionSchema, invitarUsuarioSchema } from "../schemas"
+import { teamActionClient } from "./action-client"
+import { cancelInvitationSchema, inviteUserSchema } from "../schemas"
 
-export const invitarUsuarioAction = equipoActionClient
-  .inputSchema(invitarUsuarioSchema)
+export const inviteUserAction = teamActionClient
+  .inputSchema(inviteUserSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { error } = await ctx.supabase.from("invitaciones").insert({
       org_id: ctx.orgId,
       email: parsedInput.email,
       role_id: parsedInput.roleId,
-      tienda_id: parsedInput.tiendaId ?? null,
+      tienda_id: parsedInput.storeId ?? null,
       invitado_por: ctx.userId,
     })
 
@@ -28,13 +28,13 @@ export const invitarUsuarioAction = equipoActionClient
     return { ok: true as const }
   })
 
-export const cancelarInvitacionAction = equipoActionClient
-  .inputSchema(cancelarInvitacionSchema)
+export const cancelInvitationAction = teamActionClient
+  .inputSchema(cancelInvitationSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { error } = await ctx.supabase
       .from("invitaciones")
       .update({ estado: "cancelada" })
-      .eq("id", parsedInput.invitacionId)
+      .eq("id", parsedInput.invitationId)
 
     if (error) {
       return {

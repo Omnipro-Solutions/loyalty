@@ -4,17 +4,17 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { Pagination } from "@/components/data/pagination"
 
-type EquipoPaginacionProps = { total: number; pageSize: number }
+type TeamPaginationProps = { total: number; pageSize: number }
 
-export function EquipoPaginacion({ total, pageSize }: EquipoPaginacionProps) {
+export function TeamPagination({ total, pageSize }: TeamPaginationProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const page = Number(searchParams.get("page") ?? "1")
 
-  function onPageChange(siguiente: number) {
+  function onPageChange(next: number) {
     const params = new URLSearchParams(searchParams.toString())
-    params.set("page", String(siguiente))
+    params.set("page", String(next))
     router.push(`${pathname}?${params.toString()}`)
   }
 

@@ -6,7 +6,7 @@ const PALETAS = [
   { bg: "bg-avatar-amber-bg", fg: "text-avatar-amber-fg" },
 ] as const
 
-/** Variedad visual estable (mismo id → mismo color) — mismo patrón que `features/equipo`, duplicado aquí por aislamiento entre features. */
+/** Variedad visual estable (mismo id → mismo color) — mismo patrón que `features/team`, duplicado aquí por aislamiento entre features. */
 export function paletaAvatar(id: string): { bg: string; fg: string } {
   let hash = 0
   for (let i = 0; i < id.length; i++)

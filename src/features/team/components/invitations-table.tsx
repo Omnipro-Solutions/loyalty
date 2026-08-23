@@ -14,33 +14,33 @@ import {
 import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { cancelarInvitacionAction } from "../actions/invitaciones"
-import type { Invitacion } from "../lib/queries"
+import { cancelInvitationAction } from "../actions/invitations"
+import type { Invitation } from "../lib/queries"
 
-const ESTADO_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<string, string> = {
   pendiente: "Pendiente",
   aceptada: "Aceptada",
   cancelada: "Cancelada",
   expirada: "Expirada",
 }
 
-const ESTADO_DOT: Record<string, string> = {
+const STATUS_DOT: Record<string, string> = {
   pendiente: "bg-warning",
   aceptada: "bg-success",
   cancelada: "bg-border-strong",
   expirada: "bg-border-strong",
 }
 
-type InvitacionesTablaProps = {
-  invitaciones: Invitacion[]
-  puedeGestionar: boolean
+type InvitationsTableProps = {
+  invitations: Invitation[]
+  canManage: boolean
 }
 
-export function InvitacionesTabla({
-  invitaciones,
-  puedeGestionar,
-}: InvitacionesTablaProps) {
-  const cancelar = useAction(cancelarInvitacionAction)
+export function InvitationsTable({
+  invitations,
+  canManage,
+}: InvitationsTableProps) {
+  const cancel = useAction(cancelInvitationAction)
 
   return (
     <Table>
@@ -51,46 +51,48 @@ export function InvitacionesTabla({
           <TableHead>INVITADO POR</TableHead>
           <TableHead>VENCE</TableHead>
           <TableHead>ESTADO</TableHead>
-          {puedeGestionar && <TableHead />}
+          {canManage && <TableHead />}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {invitaciones.map((inv) => (
-          <TableRow key={inv.id}>
+        {invitations.map((invitation) => (
+          <TableRow key={invitation.id}>
             <TableCell className="font-medium text-foreground">
-              {inv.email}
+              {invitation.email}
             </TableCell>
             <TableCell className="text-secondary-foreground">
-              {inv.rol.nombre}
+              {invitation.role.nombre}
             </TableCell>
             <TableCell className="text-secondary-foreground">
-              {inv.invitadoPor?.nombre ?? "—"}
+              {invitation.invitedBy?.nombre ?? "—"}
             </TableCell>
             <TableCell className="text-secondary-foreground">
-              {formatDateTime(inv.expira_en)}
+              {formatDateTime(invitation.expira_en)}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-[7px]">
                 <span
                   className={cn(
                     "size-[7px] rounded-full",
-                    ESTADO_DOT[inv.estado]
+                    STATUS_DOT[invitation.estado]
                   )}
                 />
                 <span className="text-[11px] font-medium">
-                  {ESTADO_LABEL[inv.estado]}
+                  {STATUS_LABEL[invitation.estado]}
                 </span>
               </div>
             </TableCell>
-            {puedeGestionar && (
+            {canManage && (
               <TableCell className="text-right">
-                {inv.estado === "pendiente" && (
+                {invitation.estado === "pendiente" && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    disabled={cancelar.isPending}
-                    onClick={() => cancelar.execute({ invitacionId: inv.id })}
+                    disabled={cancel.isPending}
+                    onClick={() =>
+                      cancel.execute({ invitationId: invitation.id })
+                    }
                   >
                     Cancelar
                   </Button>

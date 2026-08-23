@@ -6,38 +6,38 @@ import { useEffect, useState } from "react"
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 
-import type { RoleConConteo } from "../lib/queries"
+import type { RoleWithCount } from "../lib/queries"
 
-const ESTADO_OPTIONS = [
+const STATUS_OPTIONS = [
   { value: "activo", label: "Activo" },
   { value: "inactivo", label: "Inactivo" },
 ]
 
-type UsuariosFiltrosBarProps = { roles: RoleConConteo[] }
+type UsersFiltersBarProps = { roles: RoleWithCount[] }
 
 /** Mismo patrón que `CatalogFiltersBar`: cada cambio actualiza los searchParams, la página server-side vuelve a consultar. */
-export function UsuariosFiltrosBar({ roles }: UsuariosFiltrosBarProps) {
+export function UsersFiltersBar({ roles }: UsersFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [busqueda, setBusqueda] = useState(searchParams.get("q") ?? "")
+  const [search, setSearch] = useState(searchParams.get("q") ?? "")
 
   useEffect(() => {
-    const actual = new URLSearchParams(window.location.search)
-    if ((actual.get("q") ?? "") === busqueda) return
+    const current = new URLSearchParams(window.location.search)
+    if ((current.get("q") ?? "") === search) return
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
-      if (busqueda) params.set("q", busqueda)
+      if (search) params.set("q", search)
       else params.delete("q")
       params.delete("page")
       router.push(`${pathname}?${params.toString()}`)
     }, 300)
     return () => clearTimeout(timeout)
-  }, [busqueda, pathname, router])
+  }, [search, pathname, router])
 
-  function actualizar(mutar: (params: URLSearchParams) => void) {
+  function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
-    mutar(params)
+    mutate(params)
     params.delete("page")
     router.push(`${pathname}?${params.toString()}`)
   }
@@ -45,21 +45,21 @@ export function UsuariosFiltrosBar({ roles }: UsuariosFiltrosBarProps) {
   // `rolFiltro` (no `rol`): la pestaña de roles usa `?rol=` para el rol
   // seleccionado en el panel de detalle — mismo searchParam, dos pestañas
   // distintas, así que aquí se usa un nombre propio para no pisarlo.
-  const rolSeleccionado = searchParams.get("rolFiltro")
-  const estadoSeleccionado = searchParams.get("estado")
+  const selectedRole = searchParams.get("rolFiltro")
+  const selectedStatus = searchParams.get("estado")
 
   return (
     <div className="flex items-center gap-2.5">
       <FilterSearch
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <FilterSelect
         label="Role"
         options={roles.map((r) => ({ value: r.id, label: r.nombre }))}
-        value={rolSeleccionado ? [rolSeleccionado] : []}
+        value={selectedRole ? [selectedRole] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("rolFiltro", value[0])
             else params.delete("rolFiltro")
           })
@@ -67,10 +67,10 @@ export function UsuariosFiltrosBar({ roles }: UsuariosFiltrosBarProps) {
       />
       <FilterSelect
         label="Estado"
-        options={ESTADO_OPTIONS}
-        value={estadoSeleccionado ? [estadoSeleccionado] : []}
+        options={STATUS_OPTIONS}
+        value={selectedStatus ? [selectedStatus] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("estado", value[0])
             else params.delete("estado")
           })

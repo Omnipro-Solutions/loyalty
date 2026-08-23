@@ -27,24 +27,21 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { invitarUsuarioAction } from "../actions/invitaciones"
-import type { RoleConConteo, TiendaOption } from "../lib/queries"
-import { invitarUsuarioSchema } from "../schemas"
+import { inviteUserAction } from "../actions/invitations"
+import type { RoleWithCount, StoreOption } from "../lib/queries"
+import { inviteUserSchema } from "../schemas"
 
-type InvitarUsuarioValues = z.input<typeof invitarUsuarioSchema>
+type InviteUserValues = z.input<typeof inviteUserSchema>
 
-type InvitarUsuarioDialogProps = {
-  roles: RoleConConteo[]
-  tiendas: TiendaOption[]
+type InviteUserDialogProps = {
+  roles: RoleWithCount[]
+  stores: StoreOption[]
 }
 
 /** Figma "Invitar usuario" (720:3040): el botón está diseñado, el modal no — se construye siguiendo el patrón de diálogo + RHF ya usado en el resto del repo. */
-export function InvitarUsuarioDialog({
-  roles,
-  tiendas,
-}: InvitarUsuarioDialogProps) {
+export function InviteUserDialog({ roles, stores }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false)
-  const [resultado, setResultado] = useState<{
+  const [result, setResult] = useState<{
     ok: boolean
     message?: string
   }>()
@@ -56,35 +53,35 @@ export function InvitarUsuarioDialog({
     reset,
     setValue,
     formState: { errors },
-  } = useForm<InvitarUsuarioValues>({
-    resolver: zodResolver(invitarUsuarioSchema),
+  } = useForm<InviteUserValues>({
+    resolver: zodResolver(inviteUserSchema),
     defaultValues: { email: "", roleId: roles[0]?.id ?? "" },
   })
 
-  const valores = useWatch({ control })
-  const rolSeleccionado = roles.find((r) => r.id === valores.roleId)
-  const requiereTienda = rolSeleccionado?.alcance_tiendas === "propia"
+  const values = useWatch({ control })
+  const selectedRole = roles.find((r) => r.id === values.roleId)
+  const requiresStore = selectedRole?.alcance_tiendas === "propia"
 
-  const invitar = useAction(invitarUsuarioAction, {
+  const invite = useAction(inviteUserAction, {
     onSuccess: ({ data }) => {
       if (data?.ok) {
         setOpen(false)
         reset()
-        setResultado(undefined)
+        setResult(undefined)
         return
       }
-      setResultado({ ok: false, message: data?.message })
+      setResult({ ok: false, message: data?.message })
     },
     onError: () =>
-      setResultado({ ok: false, message: "No se pudo enviar la invitación." }),
+      setResult({ ok: false, message: "No se pudo enviar la invitación." }),
   })
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(siguiente) => {
-        setOpen(siguiente)
-        if (!siguiente) setResultado(undefined)
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setResult(undefined)
       }}
     >
       <DialogTrigger render={<Button />}>
@@ -95,25 +92,25 @@ export function InvitarUsuarioDialog({
         <DialogHeader>
           <DialogTitle>Invitar usuario</DialogTitle>
         </DialogHeader>
-        {resultado?.ok === false && (
+        {result?.ok === false && (
           <Message
             variant="error"
             title="No se pudo enviar la invitación"
-            description={resultado.message ?? "Intenta de nuevo."}
+            description={result.message ?? "Intenta de nuevo."}
           />
         )}
         <form
           className="flex flex-col gap-4"
-          onSubmit={handleSubmit((values) => invitar.execute(values))}
+          onSubmit={handleSubmit((formValues) => invite.execute(formValues))}
         >
           <Field
             label="Correo corporativo"
             required
-            htmlFor="invitar-email"
+            htmlFor="invite-email"
             error={errors.email?.message}
           >
             <Input
-              id="invitar-email"
+              id="invite-email"
               type="email"
               placeholder="nombre@omni.pro"
               {...register("email")}
@@ -121,7 +118,7 @@ export function InvitarUsuarioDialog({
           </Field>
           <Field label="Role" required error={errors.roleId?.message}>
             <Select
-              value={valores.roleId}
+              value={values.roleId}
               onValueChange={(v) => setValue("roleId", v ?? "")}
             >
               <SelectTrigger>
@@ -136,19 +133,19 @@ export function InvitarUsuarioDialog({
               </SelectContent>
             </Select>
           </Field>
-          {requiereTienda && (
-            <Field label="Tienda" required error={errors.tiendaId?.message}>
+          {requiresStore && (
+            <Field label="Tienda" required error={errors.storeId?.message}>
               <Select
-                value={valores.tiendaId}
-                onValueChange={(v) => setValue("tiendaId", v ?? undefined)}
+                value={values.storeId}
+                onValueChange={(v) => setValue("storeId", v ?? undefined)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona una tienda" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tiendas.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.nombre}
+                  {stores.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -156,7 +153,7 @@ export function InvitarUsuarioDialog({
             </Field>
           )}
           <DialogFooter>
-            <Button type="submit" disabled={invitar.isPending}>
+            <Button type="submit" disabled={invite.isPending}>
               Enviar invitación
             </Button>
           </DialogFooter>

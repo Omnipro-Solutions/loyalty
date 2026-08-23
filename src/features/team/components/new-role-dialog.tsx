@@ -30,28 +30,28 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { CHANNEL_SCOPES, STORE_SCOPES, ROLES } from "@/types/domain"
 
-import { crearRolAction } from "../actions/roles"
-import { ROL_BASE_LABELS } from "../lib/labels"
-import { crearRolSchema } from "../schemas"
+import { createRoleAction } from "../actions/roles"
+import { BASE_ROLE_LABELS } from "../lib/labels"
+import { createRoleSchema } from "../schemas"
 
-type CrearRolFormValues = z.input<typeof crearRolSchema>
+type CreateRoleFormValues = z.input<typeof createRoleSchema>
 
-const ALCANCE_TIENDAS_LABEL: Record<string, string> = {
+const STORE_SCOPE_LABEL: Record<string, string> = {
   todas: "Todas las tiendas",
   propia: "Solo su tienda",
 }
 
-const ALCANCE_CANAL_LABEL: Record<string, string> = {
+const CHANNEL_SCOPE_LABEL: Record<string, string> = {
   pos: "POS",
   ecommerce: "E-commerce",
   pos_ecommerce: "POS + E-commerce",
 }
 
 /** Figma "Nuevo" (718:2896): el botón está diseñado, el modal no — mismo patrón diálogo + RHF del resto del repo. */
-export function NuevoRolDialog() {
+export function NewRoleDialog() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [resultado, setResultado] = useState<{
+  const [result, setResult] = useState<{
     ok: boolean
     message?: string
   }>()
@@ -63,19 +63,19 @@ export function NuevoRolDialog() {
     setValue,
     reset,
     formState: { errors },
-  } = useForm<CrearRolFormValues>({
-    resolver: zodResolver(crearRolSchema),
+  } = useForm<CreateRoleFormValues>({
+    resolver: zodResolver(createRoleSchema),
     defaultValues: {
-      nombre: "",
-      rolBase: "lector",
-      alcanceTiendas: "todas",
-      alcanceCanal: "pos_ecommerce",
+      name: "",
+      baseRole: "lector",
+      storeScope: "todas",
+      channelScope: "pos_ecommerce",
     },
   })
 
-  const valores = useWatch({ control })
+  const values = useWatch({ control })
 
-  const crear = useAction(crearRolAction, {
+  const create = useAction(createRoleAction, {
     onSuccess: ({ data }) => {
       if (data?.ok) {
         setOpen(false)
@@ -83,18 +83,18 @@ export function NuevoRolDialog() {
         router.push(`/ajustes/equipo?tab=roles&rol=${data.id}`)
         return
       }
-      setResultado({ ok: false, message: data?.message })
+      setResult({ ok: false, message: data?.message })
     },
     onError: () =>
-      setResultado({ ok: false, message: "No se pudo crear el rol." }),
+      setResult({ ok: false, message: "No se pudo crear el rol." }),
   })
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(siguiente) => {
-        setOpen(siguiente)
-        if (!siguiente) setResultado(undefined)
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setResult(undefined)
       }}
     >
       <DialogTrigger render={<Button size="sm" />}>
@@ -105,45 +105,45 @@ export function NuevoRolDialog() {
         <DialogHeader>
           <DialogTitle>Nuevo rol</DialogTitle>
         </DialogHeader>
-        {resultado?.ok === false && (
+        {result?.ok === false && (
           <Message
             variant="error"
             title="No se pudo crear el rol"
-            description={resultado.message ?? "Intenta de nuevo."}
+            description={result.message ?? "Intenta de nuevo."}
           />
         )}
         <form
           className="flex flex-col gap-4"
-          onSubmit={handleSubmit((values) => crear.execute(values))}
+          onSubmit={handleSubmit((formValues) => create.execute(formValues))}
         >
           <Field
             label="Nombre"
             required
-            htmlFor="rol-nombre"
-            error={errors.nombre?.message}
+            htmlFor="role-name"
+            error={errors.name?.message}
           >
             <Input
-              id="rol-nombre"
+              id="role-name"
               placeholder="Ej. Supervisor de zona"
-              {...register("nombre")}
+              {...register("name")}
             />
           </Field>
           <Field
             label="Descripción"
-            htmlFor="rol-descripcion"
+            htmlFor="role-description"
             hint="Se muestra en la lista de roles."
           >
             <Textarea
-              id="rol-descripcion"
+              id="role-description"
               rows={2}
-              {...register("descripcion")}
+              {...register("description")}
             />
           </Field>
-          <Field label="Basado en" required error={errors.rolBase?.message}>
+          <Field label="Basado en" required error={errors.baseRole?.message}>
             <Select
-              value={valores.rolBase}
+              value={values.baseRole}
               onValueChange={(v) =>
-                setValue("rolBase", v as CrearRolFormValues["rolBase"])
+                setValue("baseRole", v as CreateRoleFormValues["baseRole"])
               }
             >
               <SelectTrigger>
@@ -152,7 +152,7 @@ export function NuevoRolDialog() {
               <SelectContent>
                 {ROLES.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROL_BASE_LABELS[r]}
+                    {BASE_ROLE_LABELS[r]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -161,11 +161,11 @@ export function NuevoRolDialog() {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tiendas" required>
               <Select
-                value={valores.alcanceTiendas}
+                value={values.storeScope}
                 onValueChange={(v) =>
                   setValue(
-                    "alcanceTiendas",
-                    v as CrearRolFormValues["alcanceTiendas"]
+                    "storeScope",
+                    v as CreateRoleFormValues["storeScope"]
                   )
                 }
               >
@@ -175,7 +175,7 @@ export function NuevoRolDialog() {
                 <SelectContent>
                   {STORE_SCOPES.map((a) => (
                     <SelectItem key={a} value={a}>
-                      {ALCANCE_TIENDAS_LABEL[a]}
+                      {STORE_SCOPE_LABEL[a]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -183,11 +183,11 @@ export function NuevoRolDialog() {
             </Field>
             <Field label="Canal" required>
               <Select
-                value={valores.alcanceCanal}
+                value={values.channelScope}
                 onValueChange={(v) =>
                   setValue(
-                    "alcanceCanal",
-                    v as CrearRolFormValues["alcanceCanal"]
+                    "channelScope",
+                    v as CreateRoleFormValues["channelScope"]
                   )
                 }
               >
@@ -197,7 +197,7 @@ export function NuevoRolDialog() {
                 <SelectContent>
                   {CHANNEL_SCOPES.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {ALCANCE_CANAL_LABEL[c]}
+                      {CHANNEL_SCOPE_LABEL[c]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -206,20 +206,20 @@ export function NuevoRolDialog() {
           </div>
           <Field
             label="Descuento máximo (%)"
-            htmlFor="rol-descuento"
+            htmlFor="role-discount"
             hint="Déjalo vacío para no fijar un tope."
-            error={errors.descuentoMaximoPct?.message}
+            error={errors.maxDiscountPct?.message}
           >
             <Input
-              id="rol-descuento"
+              id="role-discount"
               type="number"
               min={0}
               max={100}
-              {...register("descuentoMaximoPct")}
+              {...register("maxDiscountPct")}
             />
           </Field>
           <DialogFooter>
-            <Button type="submit" disabled={crear.isPending}>
+            <Button type="submit" disabled={create.isPending}>
               Crear rol
             </Button>
           </DialogFooter>
