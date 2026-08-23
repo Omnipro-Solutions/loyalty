@@ -25,6 +25,7 @@ const config = {
         "equipo",
         "audiencias",
         "integraciones",
+        "profile",
         // transversal / infra
         "ui",
         "db",

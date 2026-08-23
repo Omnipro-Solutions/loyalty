@@ -3,14 +3,14 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-type CampoProps = {
-  etiqueta: string
-  valor: ReactNode
+type FieldProps = {
+  label: string
+  value: ReactNode
   icon?: LucideIcon
   className?: string
 }
 
-export function Campo({ etiqueta, valor, icon: Icon, className }: CampoProps) {
+export function Field({ label, value, icon: Icon, className }: FieldProps) {
   return (
     <div className={cn("flex min-w-0 items-start gap-2.5", className)}>
       {Icon && (
@@ -20,10 +20,10 @@ export function Campo({ etiqueta, valor, icon: Icon, className }: CampoProps) {
       )}
       <div className="flex min-w-0 flex-col gap-0.5">
         <p className="text-[9px] font-semibold tracking-[0.6px] text-muted-foreground">
-          {etiqueta}
+          {label}
         </p>
         <p className="truncate text-[13px] font-medium text-foreground">
-          {valor}
+          {value}
         </p>
       </div>
     </div>

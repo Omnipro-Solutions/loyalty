@@ -24,7 +24,7 @@ export const changePasswordAction = actionClient
     // solo una sesión ya abierta.
     const { error: verifyError } = await supabase.auth.signInWithPassword({
       email: user.email,
-      password: parsedInput.contrasenaActual,
+      password: parsedInput.currentPassword,
     })
     if (verifyError) {
       return {
@@ -34,7 +34,7 @@ export const changePasswordAction = actionClient
     }
 
     const { error } = await supabase.auth.updateUser({
-      password: parsedInput.nuevaContrasena,
+      password: parsedInput.newPassword,
     })
     if (error) {
       return {

@@ -2,32 +2,32 @@ import { redirect } from "next/navigation"
 
 import { AppPage } from "@/components/layout/app-page"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChangePasswordForm } from "@/features/perfil/components/change-password-form"
-import { PerfilHero } from "@/features/perfil/components/perfil-hero"
-import { PerfilInfoCard } from "@/features/perfil/components/perfil-info-card"
-import { SeguridadCard } from "@/features/perfil/components/seguridad-card"
-import { SesionesCard } from "@/features/perfil/components/sesiones-card"
+import { ChangePasswordForm } from "@/features/profile/components/change-password-form"
+import { ProfileHero } from "@/features/profile/components/profile-hero"
+import { ProfileInfoCard } from "@/features/profile/components/profile-info-card"
+import { SecurityCard } from "@/features/profile/components/security-card"
+import { SessionsCard } from "@/features/profile/components/sessions-card"
 import {
-  getPerfilActual,
-  getSeguridadActual,
-  listDispositivosConfiados,
-} from "@/features/perfil/lib/queries"
+  getCurrentProfile,
+  getCurrentSecurity,
+  listTrustedDevices,
+} from "@/features/profile/lib/queries"
 
-export default async function PerfilPage() {
-  const perfil = await getPerfilActual()
-  if (!perfil) redirect("/login")
+export default async function ProfilePage() {
+  const profile = await getCurrentProfile()
+  if (!profile) redirect("/login")
 
-  const [seguridad, dispositivos] = await Promise.all([
-    getSeguridadActual(),
-    listDispositivosConfiados(),
+  const [security, devices] = await Promise.all([
+    getCurrentSecurity(),
+    listTrustedDevices(),
   ])
 
   return (
     <AppPage breadcrumb="Cuenta  ›  Mi perfil" title="Mi perfil">
-      <PerfilHero
-        nombre={perfil.nombre}
-        email={perfil.email}
-        rol={perfil.rol.nombre}
+      <ProfileHero
+        name={profile.nombre}
+        email={profile.email}
+        role={profile.role.nombre}
       />
 
       <Tabs defaultValue="datos">
@@ -38,19 +38,19 @@ export default async function PerfilPage() {
         </TabsList>
 
         <TabsContent value="datos">
-          <PerfilInfoCard perfil={perfil} />
+          <ProfileInfoCard profile={profile} />
         </TabsContent>
         <TabsContent value="seguridad">
           <div className="flex flex-col gap-5">
-            <SeguridadCard
-              seguridad={seguridad}
-              tenantIdp={perfil.organizacion?.tenant_idp ?? null}
+            <SecurityCard
+              security={security}
+              tenantIdp={profile.organization?.tenant_idp ?? null}
             />
             <ChangePasswordForm />
           </div>
         </TabsContent>
         <TabsContent value="sesiones">
-          <SesionesCard dispositivos={dispositivos} />
+          <SessionsCard devices={devices} />
         </TabsContent>
       </Tabs>
     </AppPage>

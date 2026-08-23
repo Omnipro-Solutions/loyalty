@@ -4,24 +4,24 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-import type { SeguridadInfo } from "../lib/queries"
-import { Campo } from "./campo"
+import type { SecurityInfo } from "../lib/queries"
+import { Field } from "./field"
 
-const METODO_ACCESO_LABELS: Record<string, string> = {
+const ACCESS_METHOD_LABELS: Record<string, string> = {
   microsoft_entra_id: "SSO · Microsoft Entra ID",
   saml_okta: "SSO · Okta (SAML)",
   saml_ping: "SSO · Ping (SAML)",
   saml_google_workspace: "SSO · Google Workspace (SAML)",
 }
 
-type SeguridadCardProps = {
-  seguridad: SeguridadInfo
+type SecurityCardProps = {
+  security: SecurityInfo
   tenantIdp: string | null
 }
 
-export function SeguridadCard({ seguridad, tenantIdp }: SeguridadCardProps) {
-  const metodoAcceso = tenantIdp
-    ? (METODO_ACCESO_LABELS[tenantIdp] ?? tenantIdp)
+export function SecurityCard({ security, tenantIdp }: SecurityCardProps) {
+  const accessMethod = tenantIdp
+    ? (ACCESS_METHOD_LABELS[tenantIdp] ?? tenantIdp)
     : "Correo y contraseña"
 
   return (
@@ -30,27 +30,27 @@ export function SeguridadCard({ seguridad, tenantIdp }: SeguridadCardProps) {
         Seguridad de la cuenta
       </p>
       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-        <Campo
+        <Field
           icon={ShieldCheck}
-          etiqueta="VERIFICACIÓN EN DOS PASOS"
-          valor={
-            <Badge variant={seguridad.mfaEnrolled ? "success" : "neutral"}>
-              {seguridad.mfaEnrolled ? "Activa" : "Inactiva"}
+          label="VERIFICACIÓN EN DOS PASOS"
+          value={
+            <Badge variant={security.mfaEnrolled ? "success" : "neutral"}>
+              {security.mfaEnrolled ? "Activa" : "Inactiva"}
             </Badge>
           }
         />
-        <Campo
+        <Field
           icon={KeyRound}
-          etiqueta="CÓDIGOS DE RESPALDO"
-          valor={
-            seguridad.mfaEnrolled
-              ? `${seguridad.backupCodesRestantes} disponibles`
+          label="CÓDIGOS DE RESPALDO"
+          value={
+            security.mfaEnrolled
+              ? `${security.remainingBackupCodes} disponibles`
               : "—"
           }
         />
-        <Campo icon={LogIn} etiqueta="MÉTODO DE ACCESO" valor={metodoAcceso} />
+        <Field icon={LogIn} label="MÉTODO DE ACCESO" value={accessMethod} />
       </div>
-      {!seguridad.mfaEnrolled && (
+      {!security.mfaEnrolled && (
         <div className="flex items-center justify-between gap-3.5 rounded-2xl border border-border px-4 py-3">
           <p className="text-xs text-muted-foreground">
             Protege tu cuenta pidiendo un código de tu app autenticadora además

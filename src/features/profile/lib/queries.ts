@@ -1,22 +1,22 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
-export type Organizacion = Pick<
+export type Organization = Pick<
   Database["public"]["Tables"]["organizations"]["Row"],
   "nombre" | "slug" | "dominio_correo" | "tenant_idp"
 >
 
-export type Perfil = Database["public"]["Tables"]["profiles"]["Row"] & {
-  organizacion: Organizacion | null
-  rol: Pick<Database["public"]["Tables"]["roles"]["Row"], "nombre" | "tipo">
-  ultimoAccesoEn: string | null
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  organization: Organization | null
+  role: Pick<Database["public"]["Tables"]["roles"]["Row"], "nombre" | "tipo">
+  lastSignInAt: string | null
 }
 
-const PERFIL_CON_ORG =
-  "*, organizacion:organizations(nombre, slug, dominio_correo, tenant_idp), rol:roles(nombre, tipo)"
+const PROFILE_WITH_ORG =
+  "*, organization:organizations(nombre, slug, dominio_correo, tenant_idp), role:roles(nombre, tipo)"
 
 /** Perfil (con organización) del usuario autenticado, o `null` sin sesión. */
-export async function getPerfilActual(): Promise<Perfil | null> {
+export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -25,27 +25,27 @@ export async function getPerfilActual(): Promise<Perfil | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select(PERFIL_CON_ORG)
+    .select(PROFILE_WITH_ORG)
     .eq("id", user.id)
     .maybeSingle()
   if (error) throw error
   if (!data) return null
 
-  return { ...data, ultimoAccesoEn: user.last_sign_in_at ?? null } as Perfil
+  return { ...data, lastSignInAt: user.last_sign_in_at ?? null } as Profile
 }
 
-export type SeguridadInfo = {
+export type SecurityInfo = {
   mfaEnrolled: boolean
-  backupCodesRestantes: number
+  remainingBackupCodes: number
 }
 
 /** Estado de seguridad (2FA + códigos de respaldo) del usuario autenticado. */
-export async function getSeguridadActual(): Promise<SeguridadInfo> {
+export async function getCurrentSecurity(): Promise<SecurityInfo> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { mfaEnrolled: false, backupCodesRestantes: 0 }
+  if (!user) return { mfaEnrolled: false, remainingBackupCodes: 0 }
 
   const [{ data: factors }, { count }] = await Promise.all([
     supabase.auth.mfa.listFactors(),
@@ -58,19 +58,17 @@ export async function getSeguridadActual(): Promise<SeguridadInfo> {
 
   return {
     mfaEnrolled: !!factors?.totp[0],
-    backupCodesRestantes: count ?? 0,
+    remainingBackupCodes: count ?? 0,
   }
 }
 
-export type DispositivoConfiado = Pick<
+export type TrustedDevice = Pick<
   Database["public"]["Tables"]["trusted_devices"]["Row"],
   "id" | "creado_en" | "expira_en"
 >
 
 /** Dispositivos de confianza del usuario autenticado, más reciente primero. */
-export async function listDispositivosConfiados(): Promise<
-  DispositivoConfiado[]
-> {
+export async function listTrustedDevices(): Promise<TrustedDevice[]> {
   const supabase = await createClient()
   const {
     data: { user },

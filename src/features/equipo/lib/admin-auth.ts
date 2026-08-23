@@ -8,7 +8,7 @@ export type EstadoAuthUsuario = {
 /**
  * Último acceso y estado de 2FA por perfil. La sesión propia de una
  * persona solo puede leer esto de sí misma
- * (`supabase.auth.mfa.listFactors()`, ver `features/perfil`) — 09.1
+ * (`supabase.auth.mfa.listFactors()`, ver `features/profile`) — 09.1
  * necesita verlo de TODO el equipo, así que requiere la API admin (service
  * role, solo servidor).
  */

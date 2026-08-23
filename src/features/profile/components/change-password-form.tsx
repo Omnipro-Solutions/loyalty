@@ -18,7 +18,7 @@ import { changePasswordSchema } from "../schemas"
 type ChangePasswordValues = z.input<typeof changePasswordSchema>
 
 export function ChangePasswordForm() {
-  const [resultado, setResultado] = useState<{
+  const [result, setResult] = useState<{
     ok: boolean
     message?: string
   }>()
@@ -31,23 +31,23 @@ export function ChangePasswordForm() {
   } = useForm<ChangePasswordValues>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: {
-      contrasenaActual: "",
-      nuevaContrasena: "",
-      confirmarContrasena: "",
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   })
 
-  const cambiar = useAction(changePasswordAction, {
+  const changePassword = useAction(changePasswordAction, {
     onSuccess: ({ data }) => {
       if (data?.ok) {
-        setResultado({ ok: true })
+        setResult({ ok: true })
         reset()
         return
       }
-      setResultado({ ok: false, message: data?.message })
+      setResult({ ok: false, message: data?.message })
     },
     onError: () =>
-      setResultado({
+      setResult({
         ok: false,
         message: "No se pudo actualizar la contraseña.",
       }),
@@ -58,14 +58,14 @@ export function ChangePasswordForm() {
       title="Cambiar contraseña"
       description="Usa al menos 12 caracteres."
     >
-      {resultado?.ok === false && (
+      {result?.ok === false && (
         <Message
           variant="error"
           title="No se pudo cambiar la contraseña"
-          description={resultado.message ?? "Intenta de nuevo."}
+          description={result.message ?? "Intenta de nuevo."}
         />
       )}
-      {resultado?.ok === true && (
+      {result?.ok === true && (
         <Message
           variant="success"
           title="Contraseña actualizada"
@@ -76,44 +76,48 @@ export function ChangePasswordForm() {
       <form
         className="flex flex-col gap-3.5"
         onSubmit={handleSubmit((values) => {
-          setResultado(undefined)
-          cambiar.execute(values)
+          setResult(undefined)
+          changePassword.execute(values)
         })}
       >
         <Field
           label="Contraseña actual"
           htmlFor="contrasena-actual"
-          error={errors.contrasenaActual?.message}
+          error={errors.currentPassword?.message}
         >
           <PasswordInput
             id="contrasena-actual"
             placeholder="Tu contraseña actual"
-            {...register("contrasenaActual")}
+            {...register("currentPassword")}
           />
         </Field>
         <Field
           label="Nueva contraseña"
           htmlFor="nueva-contrasena"
-          error={errors.nuevaContrasena?.message}
+          error={errors.newPassword?.message}
         >
           <PasswordInput
             id="nueva-contrasena"
             placeholder="Mínimo 12 caracteres"
-            {...register("nuevaContrasena")}
+            {...register("newPassword")}
           />
         </Field>
         <Field
           label="Confirmar nueva contraseña"
           htmlFor="confirmar-contrasena"
-          error={errors.confirmarContrasena?.message}
+          error={errors.confirmPassword?.message}
         >
           <PasswordInput
             id="confirmar-contrasena"
             placeholder="Repite la nueva contraseña"
-            {...register("confirmarContrasena")}
+            {...register("confirmPassword")}
           />
         </Field>
-        <Button type="submit" disabled={cambiar.isPending} className="w-fit">
+        <Button
+          type="submit"
+          disabled={changePassword.isPending}
+          className="w-fit"
+        >
           Actualizar contraseña
         </Button>
       </form>

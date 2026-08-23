@@ -2,18 +2,18 @@ import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
 
 import { AppShell } from "@/components/layout/app-shell"
-import { getPerfilActual } from "@/features/perfil/lib/queries"
+import { getCurrentProfile } from "@/features/profile/lib/queries"
 
 export default async function AppGroupLayout({
   children,
 }: {
   children: ReactNode
 }) {
-  const perfil = await getPerfilActual()
-  if (!perfil) redirect("/login")
+  const profile = await getCurrentProfile()
+  if (!profile) redirect("/login")
 
   return (
-    <AppShell name={perfil.nombre} email={perfil.email}>
+    <AppShell name={profile.nombre} email={profile.email}>
       {children}
     </AppShell>
   )
