@@ -21,20 +21,20 @@ import {
 } from "@/components/ui/select"
 import { STORE_STATUSES, STORE_FORMATS } from "@/types/domain"
 
-import { actualizarTiendaAction, crearTiendaAction } from "../actions/tiendas"
-import { ChecklistAntesDeGuardar } from "./checklist-antes-guardar"
-import { ResumenTiendaCard } from "./resumen-tienda-card"
-import { TIENDA_ESTADO_LABEL, TIENDA_FORMATO_LABEL } from "../lib/labels"
-import type { Tienda } from "../lib/queries"
-import { tiendaSchema, type TiendaValues } from "../schemas"
+import { createStoreAction, updateStoreAction } from "../actions/stores"
+import { PreSaveChecklist } from "./pre-save-checklist"
+import { StoreSummaryCard } from "./store-summary-card"
+import { STORE_STATUS_LABEL, STORE_FORMAT_LABEL } from "../lib/labels"
+import type { Store } from "../lib/queries"
+import { storeSchema, type StoreValues } from "../schemas"
 
-type TiendaFormProps = { tienda?: Tienda }
+type StoreFormProps = { store?: Store }
 
 /** Figma "04.2 · Tiendas · nueva tienda" (1238:4271) — reutilizado también para editar. */
-export function TiendaForm({ tienda }: TiendaFormProps) {
+export function StoreForm({ store }: StoreFormProps) {
   const router = useRouter()
-  const [errorGeneral, setErrorGeneral] = useState<string>()
-  const editando = Boolean(tienda)
+  const [generalError, setGeneralError] = useState<string>()
+  const isEditing = Boolean(store)
 
   const {
     register,
@@ -42,72 +42,72 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
     control,
     setValue,
     formState: { errors },
-  } = useForm<TiendaValues>({
-    resolver: zodResolver(tiendaSchema),
-    defaultValues: tienda
+  } = useForm<StoreValues>({
+    resolver: zodResolver(storeSchema),
+    defaultValues: store
       ? {
-          nombre: tienda.nombre,
-          codigoTienda: tienda.codigo_tienda,
-          formato: tienda.formato as TiendaValues["formato"],
-          estado: tienda.estado as TiendaValues["estado"],
-          pais: tienda.pais,
-          region: tienda.region,
-          ciudad: tienda.ciudad,
-          colonia: tienda.colonia,
-          direccion: tienda.direccion,
-          codigoPostal: tienda.codigo_postal,
-          referencia: tienda.referencia ?? "",
-          telefono: tienda.telefono,
-          email: tienda.email,
-          responsable: tienda.responsable ?? "",
-          zonaHoraria: tienda.zona_horaria ?? "",
+          name: store.nombre,
+          storeCode: store.codigo_tienda,
+          format: store.formato as StoreValues["format"],
+          status: store.estado as StoreValues["status"],
+          country: store.pais,
+          region: store.region,
+          city: store.ciudad,
+          neighborhood: store.colonia,
+          address: store.direccion,
+          postalCode: store.codigo_postal,
+          reference: store.referencia ?? "",
+          phone: store.telefono,
+          email: store.email,
+          manager: store.responsable ?? "",
+          timezone: store.zona_horaria ?? "",
         }
       : {
-          nombre: "",
-          codigoTienda: "",
-          formato: "flagship",
-          estado: "en_apertura",
-          pais: "México",
+          name: "",
+          storeCode: "",
+          format: "flagship",
+          status: "en_apertura",
+          country: "México",
           region: "",
-          ciudad: "",
-          colonia: "",
-          direccion: "",
-          codigoPostal: "",
-          telefono: "",
+          city: "",
+          neighborhood: "",
+          address: "",
+          postalCode: "",
+          phone: "",
           email: "",
         },
   })
 
-  const valores = useWatch({ control })
+  const values = useWatch({ control })
 
-  const crear = useAction(crearTiendaAction, {
+  const create = useAction(createStoreAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo crear la tienda.")
+        setGeneralError(data?.message ?? "No se pudo crear la tienda.")
         return
       }
       router.push(`/tiendas/${data.id}/editar`)
     },
-    onError: () => setErrorGeneral("No se pudo crear la tienda."),
+    onError: () => setGeneralError("No se pudo crear la tienda."),
   })
 
-  const actualizar = useAction(actualizarTiendaAction, {
+  const update = useAction(updateStoreAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo guardar la tienda.")
+        setGeneralError(data?.message ?? "No se pudo guardar la tienda.")
         return
       }
       router.push("/tiendas")
     },
-    onError: () => setErrorGeneral("No se pudo guardar la tienda."),
+    onError: () => setGeneralError("No se pudo guardar la tienda."),
   })
 
-  const enviando = crear.isPending || actualizar.isPending
+  const submitting = create.isPending || update.isPending
 
-  function onSubmit(values: TiendaValues) {
-    setErrorGeneral(undefined)
-    if (tienda) actualizar.execute({ id: tienda.id, ...values })
-    else crear.execute(values)
+  function onSubmit(values: StoreValues) {
+    setGeneralError(undefined)
+    if (store) update.execute({ id: store.id, ...values })
+    else create.execute(values)
   }
 
   return (
@@ -118,10 +118,10 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-2xl leading-7 font-semibold text-foreground">
-            {editando ? "Editar tienda" : "Nueva tienda"}
+            {isEditing ? "Editar tienda" : "Nueva tienda"}
           </p>
           <p className="text-[13px] leading-[18px] text-muted-foreground">
-            {editando
+            {isEditing
               ? "Actualiza los datos del punto de venta."
               : "Registra un punto de venta para asociarlo a promociones, reglas y programas de lealtad."}
           </p>
@@ -134,17 +134,17 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={enviando}>
-            {editando ? "Guardar cambios" : "Guardar tienda"}
+          <Button type="submit" disabled={submitting}>
+            {isEditing ? "Guardar cambios" : "Guardar tienda"}
           </Button>
         </div>
       </div>
 
-      {errorGeneral && (
+      {generalError && (
         <Message
           variant="error"
           title="No se pudo guardar"
-          description={errorGeneral}
+          description={generalError}
         />
       )}
 
@@ -157,68 +157,68 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
             <Row>
               <Field
                 label="Nombre de la tienda"
-                htmlFor="nombre"
+                htmlFor="name"
                 required
-                error={errors.nombre?.message}
+                error={errors.name?.message}
               >
                 <Input
-                  id="nombre"
+                  id="name"
                   placeholder="Omni Polanco"
-                  {...register("nombre")}
+                  {...register("name")}
                 />
               </Field>
               <Field
                 label="ID de tienda"
-                htmlFor="codigoTienda"
+                htmlFor="storeCode"
                 required
                 hint="Debe coincidir con el identificador del POS."
-                error={errors.codigoTienda?.message}
+                error={errors.storeCode?.message}
               >
                 <Input
-                  id="codigoTienda"
+                  id="storeCode"
                   placeholder="ST-0142"
-                  {...register("codigoTienda")}
+                  {...register("storeCode")}
                 />
               </Field>
             </Row>
             <Row>
-              <Field label="Formato" htmlFor="formato">
+              <Field label="Formato" htmlFor="format">
                 <Select
-                  value={valores.formato}
+                  value={values.format}
                   onValueChange={(v) =>
-                    setValue("formato", v as TiendaValues["formato"])
+                    setValue("format", v as StoreValues["format"])
                   }
                 >
-                  <SelectTrigger id="formato">
+                  <SelectTrigger id="format">
                     <SelectValue>
-                      {(v: TiendaValues["formato"]) => TIENDA_FORMATO_LABEL[v]}
+                      {(v: StoreValues["format"]) => STORE_FORMAT_LABEL[v]}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {STORE_FORMATS.map((f) => (
                       <SelectItem key={f} value={f}>
-                        {TIENDA_FORMATO_LABEL[f]}
+                        {STORE_FORMAT_LABEL[f]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Estado de la tienda" htmlFor="estado">
+              <Field label="Estado de la tienda" htmlFor="status">
                 <Select
-                  value={valores.estado}
+                  value={values.status}
                   onValueChange={(v) =>
-                    setValue("estado", v as TiendaValues["estado"])
+                    setValue("status", v as StoreValues["status"])
                   }
                 >
-                  <SelectTrigger id="estado">
+                  <SelectTrigger id="status">
                     <SelectValue>
-                      {(v: TiendaValues["estado"]) => TIENDA_ESTADO_LABEL[v]}
+                      {(v: StoreValues["status"]) => STORE_STATUS_LABEL[v]}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {STORE_STATUSES.map((e) => (
                       <SelectItem key={e} value={e}>
-                        {TIENDA_ESTADO_LABEL[e]}
+                        {STORE_STATUS_LABEL[e]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -234,11 +234,11 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
             <Row>
               <Field
                 label="País"
-                htmlFor="pais"
+                htmlFor="country"
                 required
-                error={errors.pais?.message}
+                error={errors.country?.message}
               >
-                <Input id="pais" {...register("pais")} />
+                <Input id="country" {...register("country")} />
               </Field>
               <Field
                 label="Departamento / Estado"
@@ -256,40 +256,40 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
             <Row>
               <Field
                 label="Ciudad"
-                htmlFor="ciudad"
+                htmlFor="city"
                 required
-                error={errors.ciudad?.message}
+                error={errors.city?.message}
               >
-                <Input id="ciudad" {...register("ciudad")} />
+                <Input id="city" {...register("city")} />
               </Field>
               <Field
                 label="Colonia / Barrio"
-                htmlFor="colonia"
+                htmlFor="neighborhood"
                 required
-                error={errors.colonia?.message}
+                error={errors.neighborhood?.message}
               >
-                <Input id="colonia" {...register("colonia")} />
+                <Input id="neighborhood" {...register("neighborhood")} />
               </Field>
             </Row>
             <Field
               label="Calle y número"
-              htmlFor="direccion"
+              htmlFor="address"
               required
-              error={errors.direccion?.message}
+              error={errors.address?.message}
             >
-              <Input id="direccion" {...register("direccion")} />
+              <Input id="address" {...register("address")} />
             </Field>
             <Row>
               <Field
                 label="Código postal"
-                htmlFor="codigoPostal"
+                htmlFor="postalCode"
                 required
-                error={errors.codigoPostal?.message}
+                error={errors.postalCode?.message}
               >
-                <Input id="codigoPostal" {...register("codigoPostal")} />
+                <Input id="postalCode" {...register("postalCode")} />
               </Field>
-              <Field label="Referencia (opcional)" htmlFor="referencia">
-                <Input id="referencia" {...register("referencia")} />
+              <Field label="Referencia (opcional)" htmlFor="reference">
+                <Input id="reference" {...register("reference")} />
               </Field>
             </Row>
           </Section>
@@ -301,11 +301,11 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
             <Row>
               <Field
                 label="Número de contacto"
-                htmlFor="telefono"
+                htmlFor="phone"
                 required
-                error={errors.telefono?.message}
+                error={errors.phone?.message}
               >
-                <Input id="telefono" {...register("telefono")} />
+                <Input id="phone" {...register("phone")} />
               </Field>
               <Field
                 label="Email"
@@ -317,14 +317,14 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
               </Field>
             </Row>
             <Row>
-              <Field label="Responsable" htmlFor="responsable">
-                <Input id="responsable" {...register("responsable")} />
+              <Field label="Responsable" htmlFor="manager">
+                <Input id="manager" {...register("manager")} />
               </Field>
-              <Field label="Zona horaria" htmlFor="zonaHoraria">
+              <Field label="Zona horaria" htmlFor="timezone">
                 <Input
-                  id="zonaHoraria"
+                  id="timezone"
                   placeholder="America/Mexico_City"
-                  {...register("zonaHoraria")}
+                  {...register("timezone")}
                 />
               </Field>
             </Row>
@@ -332,9 +332,9 @@ export function TiendaForm({ tienda }: TiendaFormProps) {
         </div>
 
         <div className="flex w-[340px] shrink-0 flex-col gap-5">
-          <ResumenTiendaCard valores={valores} />
-          {!editando && <ChecklistAntesDeGuardar />}
-          {!editando && (
+          <StoreSummaryCard values={values} />
+          {!isEditing && <PreSaveChecklist />}
+          {!isEditing && (
             <div className="flex flex-col gap-1.5 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
               <p className="text-sm font-semibold text-foreground">
                 Sincronización

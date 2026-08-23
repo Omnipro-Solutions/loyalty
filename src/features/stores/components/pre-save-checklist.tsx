@@ -6,7 +6,7 @@ const ITEMS = [
 ]
 
 /** Figma "Card · Antes de guardar" (1241:3998): checklist informativo, no interactivo. */
-export function ChecklistAntesDeGuardar() {
+export function PreSaveChecklist() {
   return (
     <div className="flex flex-col gap-3 rounded-[20px] bg-background px-5 py-5 shadow-form-section">
       <p className="text-sm font-semibold text-foreground">Antes de guardar</p>

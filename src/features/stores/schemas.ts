@@ -1,0 +1,27 @@
+import { z } from "zod"
+
+import { STORE_STATUSES, STORE_FORMATS } from "@/types/domain"
+
+export const storeSchema = z.object({
+  name: z.string().min(2, "Ingresa el nombre de la tienda"),
+  storeCode: z.string().min(2, "Ingresa el código de tienda"),
+  format: z.enum(STORE_FORMATS),
+  status: z.enum(STORE_STATUSES),
+  country: z.string().min(2, "Ingresa el país"),
+  region: z.string().min(2, "Ingresa el departamento o estado"),
+  city: z.string().min(2, "Ingresa la ciudad"),
+  neighborhood: z.string().min(2, "Ingresa la colonia o barrio"),
+  address: z.string().min(3, "Ingresa la calle y número"),
+  postalCode: z.string().min(3, "Ingresa el código postal"),
+  reference: z.string().optional(),
+  phone: z.string().min(7, "Ingresa un número de contacto"),
+  email: z.string().email("Correo inválido"),
+  manager: z.string().optional(),
+  timezone: z.string().optional(),
+})
+
+export type StoreValues = z.infer<typeof storeSchema>
+
+export const updateStoreSchema = storeSchema.extend({
+  id: z.string().uuid(),
+})

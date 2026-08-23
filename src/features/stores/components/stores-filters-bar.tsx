@@ -7,54 +7,54 @@ import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 import { STORE_FORMATS } from "@/types/domain"
 
-import { TIENDA_FORMATO_LABEL } from "../lib/labels"
+import { STORE_FORMAT_LABEL } from "../lib/labels"
 
-type TiendasFiltrosBarProps = {
-  ciudades: string[]
+type StoresFiltersBarProps = {
+  cities: string[]
 }
 
 /** Búsqueda + filtros de 04.1 — cada cambio actualiza los searchParams y la página server-side vuelve a consultar. */
-export function TiendasFiltrosBar({ ciudades }: TiendasFiltrosBarProps) {
+export function StoresFiltersBar({ cities }: StoresFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [busqueda, setBusqueda] = useState(searchParams.get("q") ?? "")
+  const [search, setSearch] = useState(searchParams.get("q") ?? "")
 
   useEffect(() => {
-    const actual = new URLSearchParams(window.location.search)
-    if ((actual.get("q") ?? "") === busqueda) return
+    const current = new URLSearchParams(window.location.search)
+    if ((current.get("q") ?? "") === search) return
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
-      if (busqueda) params.set("q", busqueda)
+      if (search) params.set("q", search)
       else params.delete("q")
       params.delete("page")
       router.push(`${pathname}?${params.toString()}`)
     }, 300)
     return () => clearTimeout(timeout)
-  }, [busqueda, pathname, router])
+  }, [search, pathname, router])
 
-  function actualizar(mutar: (params: URLSearchParams) => void) {
+  function updateParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
-    mutar(params)
+    mutate(params)
     params.delete("page")
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const ciudadSeleccionada = searchParams.get("ciudad")
-  const formatoSeleccionado = searchParams.get("formato")
+  const selectedCity = searchParams.get("ciudad")
+  const selectedFormat = searchParams.get("formato")
 
   return (
     <div className="flex items-center gap-2.5">
       <FilterSearch
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <FilterSelect
         label="Ciudad"
-        options={ciudades.map((c) => ({ value: c, label: c }))}
-        value={ciudadSeleccionada ? [ciudadSeleccionada] : []}
+        options={cities.map((c) => ({ value: c, label: c }))}
+        value={selectedCity ? [selectedCity] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          updateParams((params) => {
             if (value[0]) params.set("ciudad", value[0])
             else params.delete("ciudad")
           })
@@ -64,11 +64,11 @@ export function TiendasFiltrosBar({ ciudades }: TiendasFiltrosBarProps) {
         label="Formato"
         options={STORE_FORMATS.map((f) => ({
           value: f,
-          label: TIENDA_FORMATO_LABEL[f],
+          label: STORE_FORMAT_LABEL[f],
         }))}
-        value={formatoSeleccionado ? [formatoSeleccionado] : []}
+        value={selectedFormat ? [selectedFormat] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          updateParams((params) => {
             if (value[0]) params.set("formato", value[0])
             else params.delete("formato")
           })

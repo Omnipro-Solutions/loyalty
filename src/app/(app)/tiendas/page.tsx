@@ -1,40 +1,40 @@
 import { AppPage } from "@/components/layout/app-page"
-import { TiendasCard } from "@/features/tiendas/components/tiendas-card"
+import { StoresCard } from "@/features/stores/components/stores-card"
 import {
-  TIENDAS_PAGE_SIZE,
-  getTiendasResumen,
-  listCiudades,
-  listTiendas,
-} from "@/features/tiendas/lib/queries"
+  STORES_PAGE_SIZE,
+  getStoresSummary,
+  listCities,
+  listStores,
+} from "@/features/stores/lib/queries"
 
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }
 
 /** Figma "04.1 · Tiendas · listado" (631:543). */
-export default async function TiendasPage({
+export default async function StoresPage({
   searchParams,
 }: PageProps<"/tiendas">) {
   const params = await searchParams
-  const busqueda = primerValor(params.q)
-  const ciudad = primerValor(params.ciudad)
-  const formato = primerValor(params.formato)
-  const page = Number(primerValor(params.page) ?? "1")
+  const search = firstValue(params.q)
+  const city = firstValue(params.ciudad)
+  const format = firstValue(params.formato)
+  const page = Number(firstValue(params.page) ?? "1")
 
-  const [{ tiendas, total }, ciudades, resumen] = await Promise.all([
-    listTiendas({ busqueda, ciudad, formato, page }),
-    listCiudades(),
-    getTiendasResumen(),
+  const [{ stores, total }, cities, summary] = await Promise.all([
+    listStores({ search, city, format, page }),
+    listCities(),
+    getStoresSummary(),
   ])
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Tiendas" title="Tiendas">
-      <TiendasCard
-        tiendas={tiendas}
-        ciudades={ciudades}
+      <StoresCard
+        stores={stores}
+        cities={cities}
         total={total}
-        pageSize={TIENDAS_PAGE_SIZE}
-        resumen={resumen}
+        pageSize={STORES_PAGE_SIZE}
+        summary={summary}
       />
     </AppPage>
   )

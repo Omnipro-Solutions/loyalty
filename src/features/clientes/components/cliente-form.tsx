@@ -51,7 +51,7 @@ type ClienteFormProps = {
   tiers: TierOption[]
 }
 
-/** Sin diseño propio en el Figma (05 solo define listado y Perfil 360) — sigue el patrón de `TiendaForm` (04.2): Section/Row/Field, reutilizado para crear y editar. */
+/** Sin diseño propio en el Figma (05 solo define listado y Perfil 360) — sigue el patrón de `StoreForm` (04.2): Section/Row/Field, reutilizado para crear y editar. */
 export function ClienteForm({ cliente, tiendas, tiers }: ClienteFormProps) {
   const router = useRouter()
   const [errorGeneral, setErrorGeneral] = useState<string>()

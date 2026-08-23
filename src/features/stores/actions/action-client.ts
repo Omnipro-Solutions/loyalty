@@ -3,11 +3,11 @@ import { createClient } from "@/lib/supabase/server"
 
 /**
  * Extiende el cliente base de next-safe-action con contexto de sesión —
- * las acciones de `features/tiendas` corren detrás de `proxy.ts` (sesión
+ * las acciones de `features/stores` corren detrás de `proxy.ts` (sesión
  * completa). Resuelve `org_id` una sola vez aquí en vez de repetirlo en
  * cada acción.
  */
-export const tiendasActionClient = actionClient.use(async ({ next }) => {
+export const storesActionClient = actionClient.use(async ({ next }) => {
   const supabase = await createClient()
   const {
     data: { user },

@@ -5,7 +5,7 @@ import { tienePermiso } from "../lib/queries"
 
 /**
  * Extiende el cliente base de next-safe-action: además de resolver
- * `org_id` (como `tiendasActionClient`), exige que el rol real de quien
+ * `org_id` (como `storesActionClient`), exige que el rol real de quien
  * llama tenga `equipo:editar` — crear/duplicar/editar roles e invitar
  * gente es justo lo que esa matriz protege, así que la puerta de entrada
  * de las Server Actions es el lugar natural para comprobarlo (RLS solo
