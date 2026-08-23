@@ -4,18 +4,18 @@ import { Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-import type { RunResumen } from "./analytics-queries"
+import type { RunSummary } from "./analytics-queries"
 
-function exportarCsv(corrida: RunResumen) {
-  const encabezado = ["Bloque", "Puerto", "Entrada", "Salida"]
-  const filas = corrida.pasos.map((p) => [
-    p.etiqueta,
+function exportCsv(run: RunSummary) {
+  const header = ["Bloque", "Puerto", "Entrada", "Salida"]
+  const rows = run.steps.map((p) => [
+    p.label,
     p.port ?? "",
-    String(p.conteoEntrada),
-    String(p.conteoSalida),
+    String(p.entryCount),
+    String(p.exitCount),
   ])
-  const csv = [encabezado, ...filas]
-    .map((fila) => fila.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
+  const csv = [header, ...rows]
+    .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
     .join("\n")
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
   const url = URL.createObjectURL(blob)
@@ -26,13 +26,13 @@ function exportarCsv(corrida: RunResumen) {
   URL.revokeObjectURL(url)
 }
 
-export function AnaliticaExportButton({ corrida }: { corrida: RunResumen }) {
+export function AnalyticsExportButton({ run }: { run: RunSummary }) {
   return (
     <Button
       variant="outline"
       size="sm"
       className="gap-1.5"
-      onClick={() => exportarCsv(corrida)}
+      onClick={() => exportCsv(run)}
     >
       <Download className="size-3.5" />
       Exportar

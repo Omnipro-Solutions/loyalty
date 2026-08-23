@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  anotarConteos,
-  aplanarConteos,
-  contarReglasYProfundidad,
-  evaluarGrupo,
-  evaluarRegla,
-  type GrupoCondiciones,
-  type MiembroPreview,
-} from "./condicion-preview"
+  annotateCounts,
+  flattenCounts,
+  countRulesAndDepth,
+  evaluateGroup,
+  evaluateRule,
+  type ConditionGroup,
+  type MemberPreview,
+} from "./condition-preview"
 
-function miembro(sobrescribir: Partial<MiembroPreview> = {}): MiembroPreview {
+function member(overrides: Partial<MemberPreview> = {}): MemberPreview {
   return {
     tier: "bronce",
     saldo_puntos: 100,
@@ -22,35 +22,35 @@ function miembro(sobrescribir: Partial<MiembroPreview> = {}): MiembroPreview {
     tiene_mascotas: true,
     consentimiento_marketing: true,
     provincia: "Antioquia",
-    ...sobrescribir,
+    ...overrides,
   }
 }
 
-describe("evaluarRegla", () => {
+describe("evaluateRule", () => {
   it("compara texto (nivel) con igualdad", () => {
-    const m = miembro({ tier: "oro" })
+    const m = member({ tier: "oro" })
     expect(
-      evaluarRegla({ field: "tier", operator: "=", value: "oro" }, m)
+      evaluateRule({ field: "tier", operator: "=", value: "oro" }, m)
     ).toBe(true)
     expect(
-      evaluarRegla({ field: "tier", operator: "=", value: "bronce" }, m)
+      evaluateRule({ field: "tier", operator: "=", value: "bronce" }, m)
     ).toBe(false)
   })
 
   it("compara números (saldo_puntos) incluso cuando el valor esperado llega como string", () => {
-    const m = miembro({ saldo_puntos: 500 })
+    const m = member({ saldo_puntos: 500 })
     expect(
-      evaluarRegla({ field: "saldo_puntos", operator: ">=", value: "100" }, m)
+      evaluateRule({ field: "saldo_puntos", operator: ">=", value: "100" }, m)
     ).toBe(true)
     expect(
-      evaluarRegla({ field: "saldo_puntos", operator: "<", value: "100" }, m)
+      evaluateRule({ field: "saldo_puntos", operator: "<", value: "100" }, m)
     ).toBe(false)
   })
 
   it("compara fechas solo por la parte de fecha, ignorando la hora", () => {
-    const m = miembro({ fecha_alta: "2026-03-15T18:32:00Z" })
+    const m = member({ fecha_alta: "2026-03-15T18:32:00Z" })
     expect(
-      evaluarRegla(
+      evaluateRule(
         { field: "fecha_alta", operator: "=", value: "2026-03-15" },
         m
       )
@@ -58,34 +58,34 @@ describe("evaluarRegla", () => {
   })
 
   it("compara booleanos (tiene_hijos) contra el string 'true'/'false' del select", () => {
-    const m = miembro({ tiene_hijos: true })
+    const m = member({ tiene_hijos: true })
     expect(
-      evaluarRegla({ field: "tiene_hijos", operator: "=", value: "true" }, m)
+      evaluateRule({ field: "tiene_hijos", operator: "=", value: "true" }, m)
     ).toBe(true)
     expect(
-      evaluarRegla({ field: "tiene_hijos", operator: "=", value: "false" }, m)
+      evaluateRule({ field: "tiene_hijos", operator: "=", value: "false" }, m)
     ).toBe(false)
   })
 
   it("un campo inexistente en el mapa nunca cumple", () => {
-    const m = miembro()
+    const m = member()
     expect(
-      evaluarRegla({ field: "campo_inventado", operator: "=", value: "x" }, m)
+      evaluateRule({ field: "campo_inventado", operator: "=", value: "x" }, m)
     ).toBe(false)
   })
 
   describe("si falta el dato", () => {
     it("por defecto (no_cumple) un valor null nunca cumple", () => {
-      const m = miembro({ genero: null })
+      const m = member({ genero: null })
       expect(
-        evaluarRegla({ field: "genero", operator: "=", value: "femenino" }, m)
+        evaluateRule({ field: "genero", operator: "=", value: "femenino" }, m)
       ).toBe(false)
     })
 
     it("en modo si_cumple un valor null siempre cumple", () => {
-      const m = miembro({ genero: null })
+      const m = member({ genero: null })
       expect(
-        evaluarRegla(
+        evaluateRule(
           { field: "genero", operator: "=", value: "femenino" },
           m,
           "si_cumple"
@@ -95,15 +95,15 @@ describe("evaluarRegla", () => {
   })
 })
 
-describe("evaluarGrupo", () => {
-  const grupoAnd: GrupoCondiciones = {
+describe("evaluateGroup", () => {
+  const groupAnd: ConditionGroup = {
     combinator: "and",
     rules: [
       { field: "tier", operator: "=", value: "oro" },
       { field: "saldo_puntos", operator: ">=", value: "1000" },
     ],
   }
-  const grupoOr: GrupoCondiciones = {
+  const groupOr: ConditionGroup = {
     combinator: "or",
     rules: [
       { field: "tier", operator: "=", value: "oro" },
@@ -113,52 +113,52 @@ describe("evaluarGrupo", () => {
 
   it("AND exige que se cumplan todas las reglas", () => {
     expect(
-      evaluarGrupo(grupoAnd, miembro({ tier: "oro", saldo_puntos: 2000 }))
+      evaluateGroup(groupAnd, member({ tier: "oro", saldo_puntos: 2000 }))
     ).toBe(true)
     expect(
-      evaluarGrupo(grupoAnd, miembro({ tier: "oro", saldo_puntos: 10 }))
+      evaluateGroup(groupAnd, member({ tier: "oro", saldo_puntos: 10 }))
     ).toBe(false)
   })
 
   it("OR exige que se cumpla al menos una regla", () => {
-    expect(evaluarGrupo(grupoOr, miembro({ tier: "diamante" }))).toBe(true)
-    expect(evaluarGrupo(grupoOr, miembro({ tier: "plata" }))).toBe(false)
+    expect(evaluateGroup(groupOr, member({ tier: "diamante" }))).toBe(true)
+    expect(evaluateGroup(groupOr, member({ tier: "plata" }))).toBe(false)
   })
 
   it("un grupo sin reglas cumple siempre (verdad vacía)", () => {
-    expect(evaluarGrupo({ combinator: "and", rules: [] }, miembro())).toBe(true)
+    expect(evaluateGroup({ combinator: "and", rules: [] }, member())).toBe(true)
   })
 
   it("evalúa subgrupos anidados recursivamente", () => {
-    const conSubgrupo: GrupoCondiciones = {
+    const withSubgroup: ConditionGroup = {
       combinator: "and",
       rules: [
         { field: "estado_cuenta", operator: "=", value: "activo" },
-        grupoOr,
+        groupOr,
       ],
     }
     expect(
-      evaluarGrupo(
-        conSubgrupo,
-        miembro({ estado_cuenta: "activo", tier: "oro" })
+      evaluateGroup(
+        withSubgroup,
+        member({ estado_cuenta: "activo", tier: "oro" })
       )
     ).toBe(true)
     expect(
-      evaluarGrupo(
-        conSubgrupo,
-        miembro({ estado_cuenta: "activo", tier: "plata" })
+      evaluateGroup(
+        withSubgroup,
+        member({ estado_cuenta: "activo", tier: "plata" })
       )
     ).toBe(false)
   })
 })
 
-describe("anotarConteos", () => {
-  const miembros = [
-    miembro({ tier: "oro", saldo_puntos: 2000 }),
-    miembro({ tier: "oro", saldo_puntos: 10 }),
-    miembro({ tier: "plata", saldo_puntos: 5000 }),
+describe("annotateCounts", () => {
+  const members = [
+    member({ tier: "oro", saldo_puntos: 2000 }),
+    member({ tier: "oro", saldo_puntos: 10 }),
+    member({ tier: "plata", saldo_puntos: 5000 }),
   ]
-  const arbol: GrupoCondiciones = {
+  const tree: ConditionGroup = {
     id: "raiz",
     combinator: "and",
     rules: [
@@ -168,20 +168,20 @@ describe("anotarConteos", () => {
   }
 
   it("cuenta cuántos socios cumplen cada regla y el grupo completo", () => {
-    const conteo = anotarConteos(arbol, miembros)
-    expect(conteo).toEqual({
-      tipo: "grupo",
+    const count = annotateCounts(tree, members)
+    expect(count).toEqual({
+      type: "grupo",
       id: "raiz",
-      alcance: 1, // solo el primer socio (oro Y saldo>=1000)
-      hijos: [
-        { tipo: "regla", id: "r1", cumplen: 2 }, // 2 socios oro
-        { tipo: "regla", id: "r2", cumplen: 2 }, // 2 socios con saldo>=1000
+      scope: 1, // solo el primer socio (oro Y saldo>=1000)
+      children: [
+        { type: "regla", id: "r1", matchCount: 2 }, // 2 socios oro
+        { type: "regla", id: "r2", matchCount: 2 }, // 2 socios con saldo>=1000
       ],
     })
   })
 
   it("en modo omitir, un socio se excluye del grupo aunque cumpla por otra rama, si le falta un dato que el grupo también evalúa", () => {
-    const grupoOrConDosCampos: GrupoCondiciones = {
+    const groupOrWithTwoFields: ConditionGroup = {
       id: "g",
       combinator: "or",
       rules: [
@@ -190,21 +190,25 @@ describe("anotarConteos", () => {
       ],
     }
     // le falta "genero" pero SÍ cumple "tier = oro"
-    const socio = miembro({ genero: null, tier: "oro" })
+    const partner = member({ genero: null, tier: "oro" })
 
-    const conDefecto = anotarConteos(grupoOrConDosCampos, [socio], "no_cumple")
-    const conOmision = anotarConteos(grupoOrConDosCampos, [socio], "omitir")
+    const withDefault = annotateCounts(
+      groupOrWithTwoFields,
+      [partner],
+      "no_cumple"
+    )
+    const withOmit = annotateCounts(groupOrWithTwoFields, [partner], "omitir")
 
     // "no_cumple": el género faltante evalúa a `false`, pero el OR igual pasa por "tier = oro"
-    expect(conDefecto.tipo === "grupo" && conDefecto.alcance).toBe(1)
+    expect(withDefault.type === "grupo" && withDefault.scope).toBe(1)
     // "omitir": el socio se saca de la cuenta del grupo completo por faltarle un dato que el grupo evalúa, aunque hubiera cumplido por la otra rama
-    expect(conOmision.tipo === "grupo" && conOmision.alcance).toBe(0)
+    expect(withOmit.type === "grupo" && withOmit.scope).toBe(0)
   })
 })
 
-describe("aplanarConteos", () => {
+describe("flattenCounts", () => {
   it("indexa cada nodo del árbol de conteos por id, incluyendo anidados", () => {
-    const conteo = anotarConteos(
+    const count = annotateCounts(
       {
         id: "raiz",
         combinator: "and",
@@ -219,16 +223,16 @@ describe("aplanarConteos", () => {
           },
         ],
       },
-      [miembro()]
+      [member()]
     )
-    const mapa = aplanarConteos(conteo)
-    expect([...mapa.keys()].sort()).toEqual(["hoja", "hoja2", "raiz", "sub"])
+    const map = flattenCounts(count)
+    expect([...map.keys()].sort()).toEqual(["hoja", "hoja2", "raiz", "sub"])
   })
 })
 
-describe("contarReglasYProfundidad", () => {
+describe("countRulesAndDepth", () => {
   it("cuenta solo las hojas como reglas y la profundidad máxima de anidamiento", () => {
-    const arbol: GrupoCondiciones = {
+    const tree: ConditionGroup = {
       combinator: "and",
       rules: [
         { field: "tier", operator: "=", value: "oro" },
@@ -241,18 +245,18 @@ describe("contarReglasYProfundidad", () => {
         },
       ],
     }
-    expect(contarReglasYProfundidad(arbol)).toEqual({
-      reglas: 3,
-      profundidad: 2,
+    expect(countRulesAndDepth(tree)).toEqual({
+      rules: 3,
+      depth: 2,
     })
   })
 
   it("un grupo raíz sin subgrupos tiene profundidad 1", () => {
     expect(
-      contarReglasYProfundidad({
+      countRulesAndDepth({
         combinator: "and",
         rules: [{ field: "tier", operator: "=", value: "oro" }],
       })
-    ).toEqual({ reglas: 1, profundidad: 1 })
+    ).toEqual({ rules: 1, depth: 1 })
   })
 })

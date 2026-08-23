@@ -13,14 +13,14 @@ import {
   formatPercent,
 } from "@/lib/format"
 import { BUILDER_ENTRY_NODE_TYPES } from "@/types/domain"
-import { getUltimaCorrida } from "@/features/builder/canvas/analytics-queries"
-import { AnaliticaCanvas } from "@/features/builder/canvas/analitica-canvas"
-import { AnaliticaExportButton } from "@/features/builder/canvas/analitica-export-button"
-import { AnaliticaFunnel } from "@/features/builder/canvas/analitica-funnel"
-import { AnaliticaToolbar } from "@/features/builder/canvas/analitica-toolbar"
-import { JourneyEstadoBadge } from "@/features/builder/canvas/journey-estado-badge"
+import { getLatestRun } from "@/features/builder/canvas/analytics-queries"
+import { AnalyticsCanvas } from "@/features/builder/canvas/analytics-canvas"
+import { AnalyticsExportButton } from "@/features/builder/canvas/analytics-export-button"
+import { AnalyticsFunnel } from "@/features/builder/canvas/analytics-funnel"
+import { AnalyticsToolbar } from "@/features/builder/canvas/analytics-toolbar"
+import { JourneyStatusBadge } from "@/features/builder/canvas/journey-status-badge"
 import {
-  getAtribucionPorWorkflow,
+  getAttributionByWorkflow,
   getWorkflowWithGraph,
 } from "@/features/builder/canvas/queries"
 
@@ -31,27 +31,25 @@ export default async function JourneyAnaliticaPage({
   const workflow = await getWorkflowWithGraph(id)
   if (!workflow) notFound()
 
-  const [corrida, { porWorkflow: atribucion }] = await Promise.all([
-    getUltimaCorrida(id),
-    getAtribucionPorWorkflow(),
+  const [run, { byWorkflow: attribution }] = await Promise.all([
+    getLatestRun(id),
+    getAttributionByWorkflow(),
   ])
-  const ingresoReal = atribucion.get(id)?.ingreso ?? null
+  const realRevenue = attribution.get(id)?.revenue ?? null
 
-  const entradaTipos = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
-  const nodoEntradaId = workflow.nodes.find((n) => entradaTipos.has(n.tipo))?.id
-  const nodoFinIds = new Set(
+  const entryTypes = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
+  const entryNodeId = workflow.nodes.find((n) => entryTypes.has(n.tipo))?.id
+  const endNodeIds = new Set(
     workflow.nodes.filter((n) => n.tipo === "fin_workflow").map((n) => n.id)
   )
 
-  const entradas = corrida?.pasos.find(
-    (p) => p.nodeId === nodoEntradaId
-  )?.conteoEntrada
-  const llegaronAlFin = corrida?.pasos
-    .filter((p) => nodoFinIds.has(p.nodeId))
-    .reduce((acc, p) => acc + p.conteoEntrada, 0)
+  const entries = run?.steps.find((p) => p.nodeId === entryNodeId)?.entryCount
+  const reachedEnd = run?.steps
+    .filter((p) => endNodeIds.has(p.nodeId))
+    .reduce((acc, p) => acc + p.entryCount, 0)
   const conversion =
-    entradas && entradas > 0 && llegaronAlFin !== undefined
-      ? llegaronAlFin / entradas
+    entries && entries > 0 && reachedEnd !== undefined
+      ? reachedEnd / entries
       : undefined
 
   return (
@@ -67,14 +65,14 @@ export default async function JourneyAnaliticaPage({
               <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
                 {workflow.nombre} · rendimiento
               </p>
-              <JourneyEstadoBadge estado={workflow.estado} />
+              <JourneyStatusBadge status={workflow.estado} />
             </div>
-            {corrida ? (
+            {run ? (
               <p className="text-[12px] text-muted-foreground">
-                {corrida.tipo === "publicacion" ? "Publicado" : "Simulado"} el{" "}
-                {corrida.finalizado_en && formatDateTime(corrida.finalizado_en)}
-                {typeof entradas === "number" &&
-                  ` · ${formatNumber(entradas)} clientes en recorrido`}
+                {run.tipo === "publicacion" ? "Publicado" : "Simulado"} el{" "}
+                {run.finalizado_en && formatDateTime(run.finalizado_en)}
+                {typeof entries === "number" &&
+                  ` · ${formatNumber(entries)} clientes en recorrido`}
               </p>
             ) : (
               <p className="text-[12px] text-muted-foreground">
@@ -83,7 +81,7 @@ export default async function JourneyAnaliticaPage({
             )}
           </div>
           <div className="flex items-center gap-2.5">
-            <AnaliticaToolbar workflow={workflow} />
+            <AnalyticsToolbar workflow={workflow} />
             <Button
               variant="outline"
               size="sm"
@@ -97,7 +95,7 @@ export default async function JourneyAnaliticaPage({
           </div>
         </div>
 
-        {!corrida || corrida.pasos.length === 0 ? (
+        {!run || run.steps.length === 0 ? (
           <EmptyState
             icon={BarChart3}
             title="Todavía no hay datos"
@@ -106,7 +104,7 @@ export default async function JourneyAnaliticaPage({
         ) : (
           <div className="flex items-start gap-5">
             <div className="min-w-0 flex-1">
-              <AnaliticaCanvas workflow={workflow} corrida={corrida} />
+              <AnalyticsCanvas workflow={workflow} run={run} />
             </div>
 
             <div className="flex w-[300px] shrink-0 flex-col gap-5 rounded-2xl border border-border bg-background p-5">
@@ -118,9 +116,7 @@ export default async function JourneyAnaliticaPage({
                   <KpiWidget
                     label="Entradas"
                     value={
-                      typeof entradas === "number"
-                        ? formatNumber(entradas)
-                        : "—"
+                      typeof entries === "number" ? formatNumber(entries) : "—"
                     }
                   />
                   <KpiWidget
@@ -133,9 +129,9 @@ export default async function JourneyAnaliticaPage({
                   />
                   <KpiWidget
                     label="Ingreso"
-                    value={ingresoReal !== null ? formatCOP(ingresoReal) : "—"}
+                    value={realRevenue !== null ? formatCOP(realRevenue) : "—"}
                     caption={
-                      ingresoReal !== null
+                      realRevenue !== null
                         ? "de socios que pasaron por aquí"
                         : "Próx."
                     }
@@ -145,11 +141,11 @@ export default async function JourneyAnaliticaPage({
 
               <div className="h-px bg-border" />
 
-              <AnaliticaFunnel corrida={corrida} edges={workflow.edges} />
+              <AnalyticsFunnel run={run} edges={workflow.edges} />
 
               <div className="h-px bg-border" />
 
-              <AnaliticaExportButton corrida={corrida} />
+              <AnalyticsExportButton run={run} />
             </div>
           </div>
         )}

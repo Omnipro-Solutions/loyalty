@@ -4,13 +4,13 @@ import { z } from "zod"
 
 import { builderActionClient } from "../canvas/action-client"
 import {
-  anotarConteos,
-  type GrupoCondiciones,
-  type MiembroPreview,
-  type SiFaltaElDato,
-} from "./condicion-preview"
+  annotateCounts,
+  type ConditionGroup,
+  type MemberPreview,
+  type MissingDataPolicy,
+} from "./condition-preview"
 
-const reglaSchema = z
+const conditionRuleSchema = z
   .object({
     id: z.string().optional(),
     field: z.string(),
@@ -20,13 +20,13 @@ const reglaSchema = z
   })
   .passthrough()
 
-const grupoSchema: z.ZodType<GrupoCondiciones> = z.lazy(() =>
+const conditionGroupSchema: z.ZodType<ConditionGroup> = z.lazy(() =>
   z
     .object({
       id: z.string().optional(),
       combinator: z.enum(["and", "or"]),
       not: z.boolean().optional(),
-      rules: z.array(z.union([reglaSchema, grupoSchema])),
+      rules: z.array(z.union([conditionRuleSchema, conditionGroupSchema])),
     })
     .passthrough()
 )
@@ -37,16 +37,16 @@ const grupoSchema: z.ZodType<GrupoCondiciones> = z.lazy(() =>
  * cuando no hay dato real detrás), esta SÍ se puede calcular de verdad — la
  * tabla `members` ya existe con datos reales y sus columnas calzan 1:1 con
  * los campos que expone el condition builder. Trae todos los socios de la
- * org (RLS ya los limita) y evalúa el árbol en JS (`condicion-preview.ts`)
+ * org (RLS ya los limita) y evalúa el árbol en JS (`condition-preview.ts`)
  * en vez de traducirlo a un filtro Postgrest — mismo enfoque que
  * `engine/simulate.ts` ya usa para el motor de simulación del builder, y
  * evita construir/mantener un traductor de árbol AND/OR anidado a SQL para
  * un puñado de socios.
  */
-export const previsualizarCondicionAction = builderActionClient
+export const previewConditionAction = builderActionClient
   .inputSchema(
     z.object({
-      condiciones: grupoSchema,
+      condiciones: conditionGroupSchema,
       siFaltaElDato: z
         .enum(["no_cumple", "si_cumple", "omitir"])
         .default("no_cumple"),
@@ -63,7 +63,7 @@ export const previsualizarCondicionAction = builderActionClient
       return { ok: false as const, message: "No se pudo consultar socios." }
     }
 
-    const miembros: MiembroPreview[] = (members ?? []).map((m) => ({
+    const memberPreviews: MemberPreview[] = (members ?? []).map((m) => ({
       tier: m.tiers?.nombre ?? null,
       saldo_puntos: m.saldo_puntos,
       fecha_alta: m.fecha_alta,
@@ -76,12 +76,12 @@ export const previsualizarCondicionAction = builderActionClient
       provincia: m.provincia,
     }))
 
-    const siFaltaElDato: SiFaltaElDato = parsedInput.siFaltaElDato
-    const conteos = anotarConteos(
+    const missingDataPolicy: MissingDataPolicy = parsedInput.siFaltaElDato
+    const counts = annotateCounts(
       parsedInput.condiciones,
-      miembros,
-      siFaltaElDato
+      memberPreviews,
+      missingDataPolicy
     )
 
-    return { ok: true as const, totalMiembros: miembros.length, conteos }
+    return { ok: true as const, totalMembers: memberPreviews.length, counts }
   })

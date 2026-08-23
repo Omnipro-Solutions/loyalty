@@ -1,24 +1,24 @@
 import { createClient } from "@/lib/supabase/server"
 
-export type RunStepResumen = {
+export type RunStepSummary = {
   nodeId: string
-  etiqueta: string
+  label: string
   port: string | null
-  conteoEntrada: number
-  conteoSalida: number
+  entryCount: number
+  exitCount: number
 }
 
-export type RunResumen = {
+export type RunSummary = {
   id: string
   tipo: "simulacion" | "publicacion"
   finalizado_en: string | null
-  pasos: RunStepResumen[]
+  steps: RunStepSummary[]
 }
 
 /** Última corrida (simulación o publicación) del workflow, con sus pasos por nodo/rama. */
-export async function getUltimaCorrida(
+export async function getLatestRun(
   workflowId: string
-): Promise<RunResumen | null> {
+): Promise<RunSummary | null> {
   const supabase = await createClient()
 
   const { data: run } = await supabase
@@ -31,10 +31,10 @@ export async function getUltimaCorrida(
 
   if (!run) return null
 
-  const { data: steps } = await supabase
+  const { data: rows } = await supabase
     .from("workflow_run_steps")
     .select(
-      "node_id, port, conteo_entrada, conteo_salida, nodo:workflow_nodes(etiqueta)"
+      "node_id, port, conteo_entrada, conteo_salida, node:workflow_nodes(etiqueta)"
     )
     .eq("workflow_run_id", run.id)
 
@@ -42,12 +42,12 @@ export async function getUltimaCorrida(
     id: run.id,
     tipo: run.tipo as "simulacion" | "publicacion",
     finalizado_en: run.finalizado_en,
-    pasos: (steps ?? []).map((s) => ({
+    steps: (rows ?? []).map((s) => ({
       nodeId: s.node_id,
-      etiqueta: s.nodo?.etiqueta ?? "Bloque eliminado",
+      label: s.node?.etiqueta ?? "Bloque eliminado",
       port: s.port,
-      conteoEntrada: s.conteo_entrada ?? 0,
-      conteoSalida: s.conteo_salida ?? 0,
+      entryCount: s.conteo_entrada ?? 0,
+      exitCount: s.conteo_salida ?? 0,
     })),
   }
 }

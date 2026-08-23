@@ -76,7 +76,7 @@ export function SimpleConfigForm({
         }
 
         if (spec.kind === "time-range") {
-          const rango =
+          const range =
             (config[spec.key] as { desde?: string; hasta?: string }) ?? {}
           return (
             <Field key={spec.key} label={spec.label}>
@@ -84,18 +84,18 @@ export function SimpleConfigForm({
                 <Input
                   type="time"
                   aria-label={`${spec.label} · desde`}
-                  value={rango.desde ?? ""}
+                  value={range.desde ?? ""}
                   onChange={(e) =>
-                    set(spec.key, { ...rango, desde: e.target.value })
+                    set(spec.key, { ...range, desde: e.target.value })
                   }
                 />
                 <span className="text-xs text-muted-foreground">–</span>
                 <Input
                   type="time"
                   aria-label={`${spec.label} · hasta`}
-                  value={rango.hasta ?? ""}
+                  value={range.hasta ?? ""}
                   onChange={(e) =>
-                    set(spec.key, { ...rango, hasta: e.target.value })
+                    set(spec.key, { ...range, hasta: e.target.value })
                   }
                 />
               </div>
@@ -103,7 +103,7 @@ export function SimpleConfigForm({
           )
         }
 
-        const valorActual = config[spec.key]
+        const currentValue = config[spec.key]
 
         return (
           <Field
@@ -117,14 +117,14 @@ export function SimpleConfigForm({
               <Textarea
                 id={`cfg-${spec.key}`}
                 placeholder={spec.placeholder}
-                value={typeof valorActual === "string" ? valorActual : ""}
+                value={typeof currentValue === "string" ? currentValue : ""}
                 onChange={(e) => set(spec.key, e.target.value)}
               />
             ) : spec.kind === "currency" ? (
               <CurrencyInput
                 id={`cfg-${spec.key}`}
                 placeholder="0"
-                value={typeof valorActual === "number" ? valorActual : ""}
+                value={typeof currentValue === "number" ? currentValue : ""}
                 onChange={(e) =>
                   set(
                     spec.key,
@@ -136,14 +136,14 @@ export function SimpleConfigForm({
               <Multiselect
                 options={spec.options}
                 value={
-                  Array.isArray(valorActual) ? (valorActual as string[]) : []
+                  Array.isArray(currentValue) ? (currentValue as string[]) : []
                 }
                 onValueChange={(value) => set(spec.key, value)}
               />
             ) : spec.kind === "select" ? (
               <Select
                 value={
-                  typeof valorActual === "string" ? valorActual : undefined
+                  typeof currentValue === "string" ? currentValue : undefined
                 }
                 onValueChange={(value) => set(spec.key, value)}
               >
@@ -165,9 +165,9 @@ export function SimpleConfigForm({
                   type={spec.kind === "number" ? "number" : "text"}
                   placeholder={spec.placeholder}
                   value={
-                    valorActual === undefined || valorActual === null
+                    currentValue === undefined || currentValue === null
                       ? ""
-                      : String(valorActual)
+                      : String(currentValue)
                   }
                   onChange={(e) =>
                     set(

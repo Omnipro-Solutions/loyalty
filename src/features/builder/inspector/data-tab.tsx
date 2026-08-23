@@ -14,7 +14,7 @@ import type { BuilderNodeType } from "@/types/domain"
  * puede calcular todavía. `canje_cupon` y `alta_socio` no tienen tarjeta
  * en el catálogo de Figma; se les dejó una lista mínima razonable.
  */
-const VARIABLES_POR_TIPO: Partial<Record<BuilderNodeType, string[]>> = {
+const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   evento_compra: [
     "compra.monto",
     "compra.tienda",
@@ -48,24 +48,24 @@ const VARIABLES_POR_TIPO: Partial<Record<BuilderNodeType, string[]>> = {
  * Figma por variable individual (solo en las PROPIEDADES de entrada), así
  * que se infiere de sufijos comunes en vez de marcarlas todas "texto".
  */
-function inferirTipo(variable: string): string {
-  const clave = variable.split(".").pop() ?? ""
-  if (/^(monto|saldo|valor|progreso|meta|descontados|otorgados)$/.test(clave))
+function inferType(variable: string): string {
+  const suffix = variable.split(".").pop() ?? ""
+  if (/^(monto|saldo|valor|progreso|meta|descontados|otorgados)$/.test(suffix))
     return "número"
-  if (/^(fecha|vence|vigencia|inicio|fin|duracion|cumpleanos)$/.test(clave))
+  if (/^(fecha|vence|vigencia|inicio|fin|duracion|cumpleanos)$/.test(suffix))
     return "fecha"
-  if (/^(abierto|evaluadas)$/.test(clave)) return "booleano"
+  if (/^(abierto|evaluadas)$/.test(suffix)) return "booleano"
   if (
     /^(estado|resultado|tier|nivel|actual|anterior|segmento|grupo|variante|nombre)$/.test(
-      clave
+      suffix
     )
   )
     return "enum"
   return "texto"
 }
 
-export function DatosTab({ tipo }: { tipo: BuilderNodeType }) {
-  const variables = VARIABLES_POR_TIPO[tipo]
+export function DataTab({ tipo }: { tipo: BuilderNodeType }) {
+  const variables = VARIABLES_BY_TYPE[tipo]
 
   if (!variables?.length) {
     return (
@@ -95,7 +95,7 @@ export function DatosTab({ tipo }: { tipo: BuilderNodeType }) {
               {v}
             </p>
             <span className="shrink-0 text-[11px] text-muted-foreground">
-              {inferirTipo(v)}
+              {inferType(v)}
             </span>
           </div>
         ))}

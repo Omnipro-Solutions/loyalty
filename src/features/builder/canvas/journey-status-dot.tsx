@@ -1,35 +1,35 @@
 import { cn } from "@/lib/utils"
 import type { WorkflowStatus } from "@/types/domain"
 
-const ESTADO_META: Record<
+const STATUS_META: Record<
   WorkflowStatus,
-  { etiqueta: string; dotClassName: string; textClassName: string }
+  { label: string; dotClassName: string; textClassName: string }
 > = {
   publicado: {
-    etiqueta: "Publicado",
+    label: "Publicado",
     dotClassName: "bg-success",
     textClassName: "text-foreground",
   },
   pausado: {
-    etiqueta: "Pausado",
+    label: "Pausado",
     dotClassName: "bg-warning",
     textClassName: "text-foreground",
   },
   borrador: {
-    etiqueta: "Borrador",
+    label: "Borrador",
     dotClassName: "bg-border-strong",
     textClassName: "text-muted-foreground",
   },
   archivado: {
-    etiqueta: "Archivado",
+    label: "Archivado",
     dotClassName: "bg-border-strong",
     textClassName: "text-muted-foreground",
   },
 }
 
 /** Figma "08.2": punto + texto en la columna ESTADO de la tabla — más discreto que el `Badge` en píldora de la editor bar. */
-export function JourneyEstadoDot({ estado }: { estado: WorkflowStatus }) {
-  const meta = ESTADO_META[estado]
+export function JourneyStatusDot({ status }: { status: WorkflowStatus }) {
+  const meta = STATUS_META[status]
   return (
     <div className="flex items-center gap-1.5">
       <span
@@ -41,7 +41,7 @@ export function JourneyEstadoDot({ estado }: { estado: WorkflowStatus }) {
           meta.textClassName
         )}
       >
-        {meta.etiqueta}
+        {meta.label}
       </p>
     </div>
   )

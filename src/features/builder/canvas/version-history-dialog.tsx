@@ -25,20 +25,20 @@ export function VersionHistoryDialog({
   onOpenChange: (open: boolean) => void
   workflowId: string
   /** Sin esta prop el diálogo es de solo lectura (sin botón "Restaurar") — para páginas sin un canvas vivo al que aplicar un grafo pasado, como la de analítica. */
-  onRestore?: (grafo: {
+  onRestore?: (graph: {
     nodes: import("./queries").WorkflowGraphNode[]
     edges: import("./queries").WorkflowGraphEdge[]
   }) => void
 }) {
-  const [versiones, setVersiones] = useState<WorkflowVersionSummary[]>()
+  const [versions, setVersions] = useState<WorkflowVersionSummary[]>()
   const list = useAction(listVersionsAction, {
     onSuccess: ({ data }) => {
-      if (data?.ok) setVersiones(data.versiones)
+      if (data?.ok) setVersions(data.versions)
     },
   })
   const getGraph = useAction(getVersionGraphAction, {
     onSuccess: ({ data }) => {
-      if (data?.ok) onRestore?.(data.grafo)
+      if (data?.ok) onRestore?.(data.graph)
     },
   })
 
@@ -54,12 +54,12 @@ export function VersionHistoryDialog({
           <DialogTitle>Historial de versiones</DialogTitle>
         </DialogHeader>
         <div className="flex max-h-[360px] flex-col gap-2 overflow-y-auto">
-          {versiones?.length === 0 && (
+          {versions?.length === 0 && (
             <p className="text-[13px] text-muted-foreground">
               Todavía no hay versiones publicadas de este workflow.
             </p>
           )}
-          {versiones?.map((v) => (
+          {versions?.map((v) => (
             <div
               key={v.version}
               className="flex items-center justify-between rounded-lg border border-border p-3"
@@ -70,7 +70,7 @@ export function VersionHistoryDialog({
                 </p>
                 <p className="text-[11px] text-muted-foreground">
                   {formatDateTime(v.creado_en)}
-                  {v.autorNombre && ` · ${v.autorNombre}`}
+                  {v.authorName && ` · ${v.authorName}`}
                 </p>
               </div>
               {onRestore && (

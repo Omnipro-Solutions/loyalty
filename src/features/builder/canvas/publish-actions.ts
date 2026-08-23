@@ -5,16 +5,16 @@ import { revalidatePath } from "next/cache"
 import type { Json } from "@/types/database.types"
 
 import {
-  simularWorkflow,
+  simulateWorkflow,
   type SimEdge,
   type SimNode,
   type SimStep,
 } from "../engine/simulate"
-import { validarGrafo } from "../validation/graph-validation"
+import { validateGraph } from "../validation/graph-validation"
 import { builderActionClient } from "./action-client"
 import { runInputSchema } from "./schemas"
 
-type FilaRunStep = {
+type RunStepRow = {
   workflow_run_id: string
   node_id: string
   port: string | null
@@ -23,25 +23,25 @@ type FilaRunStep = {
 }
 
 /** Compartido por Simular y Publicar — ambos corren el mismo motor puro y guardan las mismas filas de `workflow_run_steps`. */
-function pasosAFilas(runId: string, pasos: SimStep[]): FilaRunStep[] {
-  return pasos.flatMap((p): FilaRunStep[] => {
-    if (!p.salidas.length) {
+function stepsToRows(runId: string, steps: SimStep[]): RunStepRow[] {
+  return steps.flatMap((p): RunStepRow[] => {
+    if (!p.outputs.length) {
       return [
         {
           workflow_run_id: runId,
           node_id: p.nodeId,
           port: null,
-          conteo_entrada: p.conteoEntrada,
+          conteo_entrada: p.entryCount,
           conteo_salida: 0,
         },
       ]
     }
-    return p.salidas.map((s) => ({
+    return p.outputs.map((s) => ({
       workflow_run_id: runId,
       node_id: p.nodeId,
       port: s.port,
-      conteo_entrada: p.conteoEntrada,
-      conteo_salida: s.conteo,
+      conteo_entrada: p.entryCount,
+      conteo_salida: s.count,
     }))
   })
 }
@@ -56,7 +56,7 @@ function pasosAFilas(runId: string, pasos: SimStep[]): FilaRunStep[] {
 export const simulateWorkflowAction = builderActionClient
   .inputSchema(runInputSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const { workflowId, nodes, edges, cohorteInicial } = parsedInput
+    const { workflowId, nodes, edges, initialCohort } = parsedInput
 
     const simNodes: SimNode[] = nodes.map((n) => ({
       id: n.id,
@@ -68,7 +68,7 @@ export const simulateWorkflowAction = builderActionClient
       source_port: e.source_port,
       target_node_id: e.target_node_id,
     }))
-    const pasos = simularWorkflow(simNodes, simEdges, cohorteInicial)
+    const steps = simulateWorkflow(simNodes, simEdges, initialCohort)
 
     const { data: run, error: runError } = await ctx.supabase
       .from("workflow_runs")
@@ -77,7 +77,7 @@ export const simulateWorkflowAction = builderActionClient
         workflow_version: 0,
         tipo: "simulacion",
         estado: "completado",
-        resumen: { cohorteInicial, pasos } as unknown as Json,
+        resumen: { initialCohort, steps } as unknown as Json,
         finalizado_en: new Date().toISOString(),
       })
       .select("id")
@@ -90,13 +90,13 @@ export const simulateWorkflowAction = builderActionClient
       }
     }
 
-    if (pasos.length) {
+    if (steps.length) {
       await ctx.supabase
         .from("workflow_run_steps")
-        .insert(pasosAFilas(run.id, pasos))
+        .insert(stepsToRows(run.id, steps))
     }
 
-    return { ok: true as const, pasos }
+    return { ok: true as const, steps }
   })
 
 /**
@@ -105,8 +105,8 @@ export const simulateWorkflowAction = builderActionClient
  * único punto donde "guardar" y "versionar" coinciden a propósito, para no
  * acumular una versión por cada autoguardado silencioso.
  *
- * Bloqueante vs. advertencia: solo los `nivel: "error"` de
- * `validarGrafo` (sin entrada, más de una entrada, ciclo) impiden publicar.
+ * Bloqueante vs. advertencia: solo los `level: "error"` de
+ * `validateGraph` (sin entrada, más de una entrada, ciclo) impiden publicar.
  * Ramas sin conectar son solo advertencia — un draft real casi siempre
  * tiene alguna mientras se construye, forzar conectarlas todas antes de
  * poder guardar una versión sería demasiada fricción.
@@ -114,23 +114,23 @@ export const simulateWorkflowAction = builderActionClient
  * También corre el motor de simulación y guarda sus pasos (igual que
  * Simular) — si no, la corrida de tipo "publicacion" quedaba sin filas en
  * `workflow_run_steps`, y como la analítica (08.3) siempre lee la corrida
- * MÁS RECIENTE (`getUltimaCorrida`), publicar después de simular tapaba los
+ * MÁS RECIENTE (`getLatestRun`), publicar después de simular tapaba los
  * conteos reales con una corrida vacía. Bug real, no solo cosmético.
  */
 export const publishWorkflowAction = builderActionClient
   .inputSchema(runInputSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const { workflowId, nodes, edges, cohorteInicial } = parsedInput
+    const { workflowId, nodes, edges, initialCohort } = parsedInput
 
-    const errores = validarGrafo(
+    const errors = validateGraph(
       nodes.map((n) => ({ id: n.id, tipo: n.tipo, config: n.config })),
       edges
-    ).filter((i) => i.nivel === "error")
+    ).filter((i) => i.level === "error")
 
-    if (errores.length) {
+    if (errors.length) {
       return {
         ok: false as const,
-        message: errores.map((e) => e.mensaje).join(" "),
+        message: errors.map((e) => e.message).join(" "),
       }
     }
 
@@ -139,16 +139,16 @@ export const publishWorkflowAction = builderActionClient
       .select("version_actual")
       .eq("id", workflowId)
       .single()
-    const nuevaVersion = (workflow?.version_actual ?? 0) + 1
+    const newVersion = (workflow?.version_actual ?? 0) + 1
 
-    const grafo = { nodes, edges }
+    const graph = { nodes, edges }
 
     const { error: versionError } = await ctx.supabase
       .from("workflow_versions")
       .insert({
         workflow_id: workflowId,
-        version: nuevaVersion,
-        grafo: grafo as unknown as Json,
+        version: newVersion,
+        grafo: graph as unknown as Json,
         autor_id: ctx.userId,
       })
     if (versionError) {
@@ -159,7 +159,7 @@ export const publishWorkflowAction = builderActionClient
       .from("workflows")
       .update({
         estado: "publicado",
-        version_actual: nuevaVersion,
+        version_actual: newVersion,
         actualizado_por: ctx.userId,
       })
       .eq("id", workflowId)
@@ -174,28 +174,28 @@ export const publishWorkflowAction = builderActionClient
       source_port: e.source_port,
       target_node_id: e.target_node_id,
     }))
-    const pasos = simularWorkflow(simNodes, simEdges, cohorteInicial)
+    const steps = simulateWorkflow(simNodes, simEdges, initialCohort)
 
     const { data: run } = await ctx.supabase
       .from("workflow_runs")
       .insert({
         workflow_id: workflowId,
-        workflow_version: nuevaVersion,
+        workflow_version: newVersion,
         tipo: "publicacion",
         estado: "completado",
-        resumen: { cohorteInicial, pasos } as unknown as Json,
+        resumen: { initialCohort, steps } as unknown as Json,
         finalizado_en: new Date().toISOString(),
       })
       .select("id")
       .single()
 
-    if (run && pasos.length) {
+    if (run && steps.length) {
       await ctx.supabase
         .from("workflow_run_steps")
-        .insert(pasosAFilas(run.id, pasos))
+        .insert(stepsToRows(run.id, steps))
     }
 
     revalidatePath("/journeys")
     revalidatePath(`/journeys/${workflowId}`)
-    return { ok: true as const, version: nuevaVersion }
+    return { ok: true as const, version: newVersion }
   })

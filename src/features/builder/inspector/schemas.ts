@@ -4,7 +4,7 @@ import type { BuilderNodeType } from "@/types/domain"
 
 import { SIMPLE_FIELD_SPECS, type FieldSpec } from "./field-specs"
 
-function schemaDeCampo(spec: FieldSpec) {
+function fieldSchema(spec: FieldSpec) {
   let base: z.ZodTypeAny
   switch (spec.kind) {
     case "number":
@@ -33,27 +33,27 @@ function schemaDeCampo(spec: FieldSpec) {
     default:
       base = z.string()
   }
-  const esRequerido = "required" in spec && spec.required
-  return esRequerido ? base : base.optional()
+  const isRequired = "required" in spec && spec.required
+  return isRequired ? base : base.optional()
 }
 
-function schemaDeEspecificaciones(specs: FieldSpec[]) {
+function specsSchema(specs: FieldSpec[]) {
   const shape: Record<string, z.ZodTypeAny> = {}
-  for (const spec of specs) shape[spec.key] = schemaDeCampo(spec)
+  for (const spec of specs) shape[spec.key] = fieldSchema(spec)
   return z.object(shape)
 }
 
-export const ramaSchema = z.object({
+export const branchSchema = z.object({
   id: z.string().min(1),
   etiqueta: z.string().min(1),
   peso: z.number().min(0).optional(),
 })
 
-export const ramasConfigSchema = z.object({
-  ramas: z.array(ramaSchema).min(1, "Agrega al menos una rama"),
+export const branchesConfigSchema = z.object({
+  ramas: z.array(branchSchema).min(1, "Agrega al menos una rama"),
 })
 
-export const acumularPuntosConfigSchema = z.object({
+export const accumulatePointsConfigSchema = z.object({
   multiplicador_override: z.number().min(0).optional(),
   tope_por_transaccion: z.number().min(0).optional(),
   tope_acumulado: z.number().min(0).optional(),
@@ -65,7 +65,7 @@ export const acumularPuntosConfigSchema = z.object({
 // Misma forma que `segments.condiciones` (ver comentario de esa columna en
 // `supabase/migrations/..._socios_niveles_ledger.sql`): el árbol que
 // produce `react-querybuilder` en el cliente, guardado tal cual.
-export const condicionMultipleConfigSchema = z.object({
+export const multiConditionConfigSchema = z.object({
   condiciones: z.record(z.string(), z.unknown()).default({
     combinator: "and",
     rules: [],
@@ -81,11 +81,11 @@ export const condicionMultipleConfigSchema = z.object({
  * por variante) sin forzar un `tipo` duplicado dentro de `config`.
  */
 export function nodeConfigSchemaFor(tipo: BuilderNodeType): z.ZodTypeAny {
-  if (tipo === "acumular_puntos") return acumularPuntosConfigSchema
-  if (tipo === "condicion_multiple") return condicionMultipleConfigSchema
+  if (tipo === "acumular_puntos") return accumulatePointsConfigSchema
+  if (tipo === "condicion_multiple") return multiConditionConfigSchema
   if (tipo === "ramificacion_valor" || tipo === "split_ab") {
-    return ramasConfigSchema
+    return branchesConfigSchema
   }
   const specs = SIMPLE_FIELD_SPECS[tipo] ?? []
-  return schemaDeEspecificaciones(specs)
+  return specsSchema(specs)
 }

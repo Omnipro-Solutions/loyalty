@@ -17,11 +17,11 @@ export function BlockPalette() {
       </p>
       {(
         Object.keys(BUILDER_NODE_GROUPS) as (keyof typeof BUILDER_NODE_GROUPS)[]
-      ).map((grupo) => {
-        const groupMeta = BUILDER_GROUP_META[grupo]
-        const tipos = BUILDER_NODE_GROUPS[grupo] as readonly BuilderNodeType[]
+      ).map((group) => {
+        const groupMeta = BUILDER_GROUP_META[group]
+        const tipos = BUILDER_NODE_GROUPS[group] as readonly BuilderNodeType[]
         return (
-          <div key={grupo} className="flex flex-col gap-1.5">
+          <div key={group} className="flex flex-col gap-1.5">
             <p className="text-[10px] leading-[14px] font-semibold tracking-[0.4px] text-muted-foreground uppercase">
               {groupMeta.label}
             </p>

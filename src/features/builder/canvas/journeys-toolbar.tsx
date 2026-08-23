@@ -10,31 +10,25 @@ import { FilterSelect } from "@/components/filters/select"
 import { WORKFLOW_STATUSES } from "@/types/domain"
 
 import type { WorkflowListItem } from "./queries"
-import { NuevoJourneyButton } from "./nuevo-journey-button"
+import { NewJourneyButton } from "./new-journey-button"
 
-const ESTADO_OPCIONES = WORKFLOW_STATUSES.map((e) => ({
+const STATUS_OPTIONS = WORKFLOW_STATUSES.map((e) => ({
   value: e,
   label: e[0]!.toUpperCase() + e.slice(1),
 }))
 
 /** Genera un CSV a partir de las filas visibles (la página actual, ya filtrada). */
-function exportarCsv(items: WorkflowListItem[]) {
-  const encabezado = [
-    "Workflow",
-    "Estado",
-    "Nodos",
-    "Editado por",
-    "Actualizado",
-  ]
-  const filas = items.map((w) => [
+function exportCsv(items: WorkflowListItem[]) {
+  const header = ["Workflow", "Estado", "Nodos", "Editado por", "Actualizado"]
+  const rows = items.map((w) => [
     w.nombre,
     w.estado,
-    String(w.totalNodos),
-    w.autorNombre ?? "",
+    String(w.totalNodes),
+    w.authorName ?? "",
     w.actualizado_en,
   ])
-  const csv = [encabezado, ...filas]
-    .map((fila) => fila.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
+  const csv = [header, ...rows]
+    .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
     .join("\n")
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
   const url = URL.createObjectURL(blob)
@@ -47,40 +41,37 @@ function exportarCsv(items: WorkflowListItem[]) {
 
 export function JourneysToolbar({
   total,
-  borradores,
-  pausados,
-  publicados,
-  clientesEnRecorrido,
-  itemsVisibles,
+  drafts,
+  paused,
+  published,
+  membersInJourney,
+  visibleItems,
 }: {
   total: number
-  borradores: number
-  pausados: number
-  publicados: number
-  clientesEnRecorrido: string
-  itemsVisibles: WorkflowListItem[]
+  drafts: number
+  paused: number
+  published: number
+  membersInJourney: string
+  visibleItems: WorkflowListItem[]
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  function actualizarParam(nombre: string, valor: string | null) {
+  function updateParam(name: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString())
-    if (valor) params.set(nombre, valor)
-    else params.delete(nombre)
+    if (value) params.set(name, value)
+    else params.delete(name)
     params.delete("page")
     router.push(`/journeys?${params.toString()}`)
   }
 
-  function onBuscar(valor: string) {
+  function onSearch(value: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(
-      () => actualizarParam("q", valor || null),
-      350
-    )
+    debounceRef.current = setTimeout(() => updateParam("q", value || null), 350)
   }
 
-  const estadoActual = searchParams.get("estado")
+  const selectedStatus = searchParams.get("estado")
 
   return (
     <div className="flex w-full items-center gap-2.5 pt-[18px] pb-4">
@@ -94,30 +85,30 @@ export function JourneysToolbar({
           </span>
         </div>
         <p className="truncate text-[11px] text-muted-foreground">
-          {publicados} publicados · {borradores} borradores · {pausados}{" "}
-          pausados · {clientesEnRecorrido} clientes en recorrido
+          {published} publicados · {drafts} borradores · {paused} pausados ·{" "}
+          {membersInJourney} clientes en recorrido
         </p>
       </div>
       <FilterSearch
         className="w-[190px]"
         defaultValue={searchParams.get("q") ?? ""}
-        onChange={(e) => onBuscar(e.target.value)}
+        onChange={(e) => onSearch(e.target.value)}
       />
       <FilterSelect
         label="Estado"
-        options={ESTADO_OPCIONES}
-        value={estadoActual ? [estadoActual] : []}
-        onChange={(v) => actualizarParam("estado", v[0] ?? null)}
+        options={STATUS_OPTIONS}
+        value={selectedStatus ? [selectedStatus] : []}
+        onChange={(v) => updateParam("estado", v[0] ?? null)}
       />
       <Button
         variant="outline"
         className="gap-1.5 rounded-[10px] text-xs"
-        onClick={() => exportarCsv(itemsVisibles)}
+        onClick={() => exportCsv(visibleItems)}
       >
         <Download className="size-3.5" />
         Exportar
       </Button>
-      <NuevoJourneyButton />
+      <NewJourneyButton />
     </div>
   )
 }

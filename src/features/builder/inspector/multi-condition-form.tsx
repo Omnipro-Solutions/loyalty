@@ -39,13 +39,13 @@ import {
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { previsualizarCondicionAction } from "./actions"
+import { previewConditionAction } from "./actions"
 import {
-  aplanarConteos,
-  contarReglasYProfundidad,
-  type ConteoNodo,
-  type SiFaltaElDato,
-} from "./condicion-preview"
+  flattenCounts,
+  countRulesAndDepth,
+  type CountNode,
+  type MissingDataPolicy,
+} from "./condition-preview"
 import { FieldSlashAutocomplete } from "./field-slash-autocomplete"
 
 /**
@@ -63,12 +63,12 @@ import { FieldSlashAutocomplete } from "./field-slash-autocomplete"
  * azul poco profesional que se reportó antes.
  */
 
-const OPERADORES_COMPARACION = [
+const COMPARISON_OPERATORS = [
   { name: "=", value: "=", label: "es igual a" },
   { name: "!=", value: "!=", label: "es distinto de" },
 ]
 
-const OPERADORES_NUMERICOS = [
+const NUMERIC_OPERATORS = [
   { name: "=", value: "=", label: "es igual a" },
   { name: "!=", value: "!=", label: "es distinto de" },
   { name: "<", value: "<", label: "menor que" },
@@ -77,7 +77,7 @@ const OPERADORES_NUMERICOS = [
   { name: ">=", value: ">=", label: "mayor o igual a" },
 ]
 
-const SI_NO = [
+const YES_NO = [
   { name: "true", label: "Sí" },
   { name: "false", label: "No" },
 ]
@@ -93,7 +93,7 @@ const SI_NO = [
  * los `select` verificados contra los `check` reales de la columna en
  * `20260823110000_clientes_perfil.sql` — no inventados.
  */
-const CAMPOS: Field[] = [
+const FIELDS: Field[] = [
   {
     name: "tier",
     label: "Nivel",
@@ -104,19 +104,19 @@ const CAMPOS: Field[] = [
       { name: "oro", label: "Oro" },
       { name: "diamante", label: "Diamante" },
     ],
-    operators: OPERADORES_COMPARACION,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "saldo_puntos",
     label: "Saldo de puntos",
     inputType: "number",
-    operators: OPERADORES_NUMERICOS,
+    operators: NUMERIC_OPERATORS,
   },
   {
     name: "fecha_alta",
     label: "Fecha de alta",
     inputType: "date",
-    operators: OPERADORES_NUMERICOS,
+    operators: NUMERIC_OPERATORS,
   },
   {
     name: "genero",
@@ -128,7 +128,7 @@ const CAMPOS: Field[] = [
       { name: "otro", label: "Otro" },
       { name: "prefiere_no_decir", label: "Prefiere no decir" },
     ],
-    operators: OPERADORES_COMPARACION,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "canal_adquisicion",
@@ -142,7 +142,7 @@ const CAMPOS: Field[] = [
       { name: "campana", label: "Campaña" },
       { name: "otro", label: "Otro" },
     ],
-    operators: OPERADORES_COMPARACION,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "estado_cuenta",
@@ -153,49 +153,49 @@ const CAMPOS: Field[] = [
       { name: "inactivo", label: "Inactivo" },
       { name: "suspendido", label: "Suspendido" },
     ],
-    operators: OPERADORES_COMPARACION,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "tiene_hijos",
     label: "Tiene hijos",
     valueEditorType: "select",
-    values: SI_NO,
-    operators: OPERADORES_COMPARACION,
+    values: YES_NO,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "tiene_mascotas",
     label: "Tiene mascotas",
     valueEditorType: "select",
-    values: SI_NO,
-    operators: OPERADORES_COMPARACION,
+    values: YES_NO,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "consentimiento_marketing",
     label: "Consiente marketing",
     valueEditorType: "select",
-    values: SI_NO,
-    operators: OPERADORES_COMPARACION,
+    values: YES_NO,
+    operators: COMPARISON_OPERATORS,
   },
   {
     name: "provincia",
     label: "Provincia",
     inputType: "text",
-    operators: OPERADORES_COMPARACION,
+    operators: COMPARISON_OPERATORS,
   },
 ]
 
-const AUTOCOMPLETE_FIELDS = CAMPOS.map((f) => ({
+const AUTOCOMPLETE_FIELDS = FIELDS.map((f) => ({
   name: String(f.name),
   label: f.label,
 }))
 
 /** Operador y valor por defecto al agregar una condición desde la barra de búsqueda rápida — mismo criterio "primer valor razonable" que ya aplica `autoSelectOperator`/`autoSelectValue` de `react-querybuilder` para el resto de los flujos de alta. */
-const PRIMER_OPERADOR: Record<string, string> = {
-  tier: OPERADORES_COMPARACION[0].name,
-  saldo_puntos: OPERADORES_NUMERICOS[0].name,
-  fecha_alta: OPERADORES_NUMERICOS[0].name,
+const DEFAULT_OPERATOR: Record<string, string> = {
+  tier: COMPARISON_OPERATORS[0].name,
+  saldo_puntos: NUMERIC_OPERATORS[0].name,
+  fecha_alta: NUMERIC_OPERATORS[0].name,
 }
-const VALOR_INICIAL: Record<string, string> = {
+const DEFAULT_VALUE: Record<string, string> = {
   tier: "bronce",
   saldo_puntos: "",
   fecha_alta: "",
@@ -203,12 +203,12 @@ const VALOR_INICIAL: Record<string, string> = {
 
 /** Conteos reales de la última corrida de "Resultado estimado" (`null` mientras no ha llegado la primera respuesta). Un `Map` por id de nodo es más cómodo de consumir desde `RuleControl`/`RuleGroupControl` que volver a recorrer el árbol en cada uno. */
 const PreviewContext = createContext<{
-  conteos: Map<string, ConteoNodo>
-  totalMiembros: number
+  counts: Map<string, CountNode>
+  totalMembers: number
 } | null>(null)
 
 /** "Contraer todo" (Figma, junto a "CONDICIONES · N en M niveles") — un solo interruptor global, no un chevron por grupo: colapsa el cuerpo de CADA `RuleGroupControl` (reglas + botones de agregar) dejando visible solo su encabezado (badge + Alcance), para poder ver de un vistazo cuántos grupos/niveles tiene un árbol grande sin desplazarse por todo. */
-const ColapsoContext = createContext(false)
+const CollapseContext = createContext(false)
 
 function FieldSelectorControl(props: FieldSelectorProps) {
   return (
@@ -225,7 +225,7 @@ function FieldSelectorControl(props: FieldSelectorProps) {
  * nunca les pasamos grupos — esto solo aplana el tipo para no pelear con
  * la unión `T | OptionGroup<T>` en los controles de abajo.
  */
-function aplanar<T extends { name: string }>(
+function flatten<T extends { name: string }>(
   options: readonly (T | { label: string; options: readonly T[] })[]
 ): T[] {
   return options.flatMap((o) => ("options" in o ? [...o.options] : [o]))
@@ -241,7 +241,7 @@ function CombinatorSelectorControl(props: CombinatorSelectorProps) {
   return (
     <div className="flex w-full items-center gap-2">
       <div className="flex shrink-0 overflow-hidden rounded-full border border-border bg-background text-[11px] font-semibold">
-        {aplanar(props.options).map((opt) => (
+        {flatten(props.options).map((opt) => (
           <button
             key={String(opt.name)}
             type="button"
@@ -263,11 +263,11 @@ function CombinatorSelectorControl(props: CombinatorSelectorProps) {
 }
 
 /** Busca la etiqueta de una opción por `name` — `undefined` si no hay match (campo recién creado sin valor todavía). */
-function etiquetaDe<T extends { name: string; label: string }>(
-  opciones: T[],
-  valor: string | undefined
+function labelFor<T extends { name: string; label: string }>(
+  options: T[],
+  value: string | undefined
 ) {
-  return opciones.find((o) => o.name === valor)?.label
+  return options.find((o) => o.name === value)?.label
 }
 
 /**
@@ -276,19 +276,19 @@ function etiquetaDe<T extends { name: string; label: string }>(
  * y del valor. `<SelectValue>` de Base UI NO resuelve automáticamente la
  * etiqueta del `<SelectItem>` seleccionado — sin el `children` de función
  * de abajo, el trigger cerrado muestra el `value` crudo (p. ej. ">="
- * en vez de "mayor o igual a"). Mismo patrón ya usado en `condicion-row.tsx`.
+ * en vez de "mayor o igual a"). Mismo patrón ya usado en `condition-row.tsx`.
  */
 function ValueSelectorControl(props: ValueSelectorProps) {
-  const opciones = aplanar(props.options)
+  const options = flatten(props.options)
   return (
     <Select value={props.value} onValueChange={props.handleOnChange}>
       <SelectTrigger className="h-9 w-fit max-w-[170px] shrink-0 gap-1 border-transparent bg-avatar-violet-bg px-2.5 text-avatar-violet-fg data-placeholder:text-avatar-violet-fg">
         <SelectValue placeholder="Selecciona">
-          {(v: string) => etiquetaDe(opciones, v) ?? v}
+          {(v: string) => labelFor(options, v) ?? v}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {opciones.map((opt) => (
+        {options.map((opt) => (
           <SelectItem key={String(opt.name)} value={String(opt.name)}>
             {opt.label}
           </SelectItem>
@@ -303,18 +303,18 @@ function ValueEditorControl(props: ValueEditorProps) {
     // `ValueEditorProps` trae las opciones en `values` (de `fieldData.values`),
     // no en `options` como `ValueSelectorProps` — reusar `ValueSelectorControl`
     // vía cast leía `props.options`, que siempre es `undefined` aquí y
-    // reventaba `aplanar` con "Cannot read properties of undefined
+    // reventaba `flatten` con "Cannot read properties of undefined
     // (reading 'flatMap')" al abrir cualquier condición sobre "Nivel".
-    const opciones = aplanar(props.values ?? [])
+    const options = flatten(props.values ?? [])
     return (
       <Select value={props.value ?? ""} onValueChange={props.handleOnChange}>
         <SelectTrigger className="h-9 w-fit max-w-[120px] shrink-0 gap-1 px-2.5">
           <SelectValue placeholder="Selecciona">
-            {(v: string) => etiquetaDe(opciones, v) ?? v}
+            {(v: string) => labelFor(options, v) ?? v}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {opciones.map((opt) => (
+          {options.map((opt) => (
             <SelectItem key={String(opt.name)} value={String(opt.name)}>
               {opt.label}
             </SelectItem>
@@ -339,13 +339,13 @@ function ValueEditorControl(props: ValueEditorProps) {
   )
 }
 
-type AccionControlProps = {
+type ActionControlProps = {
   handleOnClick: (e?: React.MouseEvent) => void
   label?: ReactNode
   title?: string
 }
 
-function AddActionControl({ handleOnClick, label, title }: AccionControlProps) {
+function AddActionControl({ handleOnClick, label, title }: ActionControlProps) {
   return (
     <Button
       type="button"
@@ -360,7 +360,7 @@ function AddActionControl({ handleOnClick, label, title }: AccionControlProps) {
   )
 }
 
-function RemoveActionControl({ handleOnClick, title }: AccionControlProps) {
+function RemoveActionControl({ handleOnClick, title }: ActionControlProps) {
   return (
     <Button
       type="button"
@@ -375,7 +375,7 @@ function RemoveActionControl({ handleOnClick, title }: AccionControlProps) {
   )
 }
 
-const COMBINADORES_LARGOS = [
+const LONG_COMBINATORS = [
   { name: "and", label: "todas las condiciones" },
   { name: "or", label: "al menos una condición" },
 ]
@@ -395,33 +395,30 @@ function RuleGroupControl(props: RuleGroupProps) {
   const addGroup = useStopEventPropagation(rg.addGroup)
   const removeGroup = useStopEventPropagation(rg.removeGroup)
   const preview = useContext(PreviewContext)
-  const colapsado = useContext(ColapsoContext)
+  const collapsed = useContext(CollapseContext)
 
-  const esRaiz = rg.path.length === 0
-  const totalHijos = rg.ruleGroup.rules.length
-  const nodo = preview?.conteos.get(rg.id ?? "")
-  const alcance = nodo?.tipo === "grupo" ? nodo.alcance : undefined
+  const isRoot = rg.path.length === 0
+  const totalChildren = rg.ruleGroup.rules.length
+  const node = preview?.counts.get(rg.id ?? "")
+  const scope = node?.type === "grupo" ? node.scope : undefined
   const pct =
-    esRaiz &&
-    typeof alcance === "number" &&
-    preview &&
-    preview.totalMiembros > 0
-      ? Math.round((alcance / preview.totalMiembros) * 100)
+    isRoot && typeof scope === "number" && preview && preview.totalMembers > 0
+      ? Math.round((scope / preview.totalMembers) * 100)
       : undefined
 
   return (
     <div
       className={cn(
         "flex flex-col gap-3",
-        !esRaiz &&
+        !isRoot &&
           "rounded-xl border border-dashed border-border bg-muted/40 p-3"
       )}
     >
       <div className="flex flex-col gap-1.5">
-        {totalHijos >= 2 && (
+        {totalChildren >= 2 && (
           <div className="flex flex-wrap items-center gap-1.5 text-[13px] text-foreground">
             <span>
-              {esRaiz
+              {isRoot
                 ? "El cliente entra si cumple"
                 : "Dentro de este grupo, si cumple"}
             </span>
@@ -432,12 +429,12 @@ function RuleGroupControl(props: RuleGroupProps) {
               <SelectTrigger className="h-7 w-fit gap-1 border-transparent bg-muted px-2 text-xs font-semibold">
                 <SelectValue>
                   {(v: string) =>
-                    COMBINADORES_LARGOS.find((c) => c.name === v)?.label ?? v
+                    LONG_COMBINATORS.find((c) => c.name === v)?.label ?? v
                   }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {COMBINADORES_LARGOS.map((c) => (
+                {LONG_COMBINATORS.map((c) => (
                   <SelectItem key={c.name} value={c.name}>
                     {c.label}
                   </SelectItem>
@@ -448,25 +445,25 @@ function RuleGroupControl(props: RuleGroupProps) {
         )}
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-medium text-foreground">
-            {esRaiz
+            {isRoot
               ? "Grupo principal"
               : `Subgrupo · nivel ${rg.path.length + 1}`}
           </span>
           <span className="h-px flex-1 bg-border" />
-          {typeof alcance === "number" && (
+          {typeof scope === "number" && (
             <span className="shrink-0">
               Alcance{" "}
               <b className="font-semibold text-foreground">
-                {formatNumber(alcance)}
+                {formatNumber(scope)}
               </b>
               {typeof pct === "number" &&
-                ` de ${formatNumber(preview!.totalMiembros)} (${pct}%)`}
+                ` de ${formatNumber(preview!.totalMembers)} (${pct}%)`}
             </span>
           )}
         </div>
       </div>
 
-      {!colapsado && (
+      {!collapsed && (
         <>
           <div className="flex flex-col gap-2">
             <RuleGroupBodyComponents {...rg} />
@@ -475,7 +472,7 @@ function RuleGroupControl(props: RuleGroupProps) {
           <div className="flex items-center gap-2">
             <AddActionControl
               handleOnClick={addRule}
-              label={esRaiz ? "Condición" : "Condición en este subgrupo"}
+              label={isRoot ? "Condición" : "Condición en este subgrupo"}
               title="Agregar condición"
             />
             <AddActionControl
@@ -483,7 +480,7 @@ function RuleGroupControl(props: RuleGroupProps) {
               label="Subgrupo"
               title="Agregar subgrupo"
             />
-            {!esRaiz && (
+            {!isRoot && (
               <RemoveActionControl
                 handleOnClick={removeGroup}
                 title="Eliminar subgrupo"
@@ -501,19 +498,19 @@ function RuleControl(props: RuleProps) {
   const r = useRule(props)
   const removeRule = useStopEventPropagation(r.removeRule)
   const preview = useContext(PreviewContext)
-  const nodo = preview?.conteos.get(r.id ?? "")
-  const cumplen = nodo?.tipo === "regla" ? nodo.cumplen : undefined
+  const node = preview?.counts.get(r.id ?? "")
+  const matchCount = node?.type === "regla" ? node.matchCount : undefined
 
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-background px-3 py-2.5 shadow-form-section">
       <div className="flex flex-wrap items-center gap-2">
         <RuleComponents {...r} removeRule={removeRule} />
       </div>
-      {typeof cumplen === "number" && (
+      {typeof matchCount === "number" && (
         <p className="text-[11px] text-muted-foreground">
           Cumplen{" "}
           <span className="font-semibold text-foreground">
-            {formatNumber(cumplen)}
+            {formatNumber(matchCount)}
           </span>
         </p>
       )}
@@ -534,62 +531,65 @@ const CONTROL_ELEMENTS = {
   removeGroupAction: RemoveActionControl,
 }
 
-const QUERY_VACIA: RuleGroupType = { combinator: "and", rules: [] }
+const EMPTY_QUERY: RuleGroupType = { combinator: "and", rules: [] }
 
 // react-querybuilder trae sus textos en inglés por defecto ("AND"/"OR",
 // "+ Rule"/"+ Group") — el resto de la app está en español, así que se
 // sobreescriben explícitamente en vez de dejar el default de la librería.
-const COMBINADORES = [
+const COMBINATORS = [
   { name: "and", value: "and", label: "Y" },
   { name: "or", value: "or", label: "O" },
 ]
 
-const SI_FALTA_EL_DATO_OPCIONES: { name: SiFaltaElDato; label: string }[] = [
+const MISSING_DATA_OPTIONS: { name: MissingDataPolicy; label: string }[] = [
   { name: "no_cumple", label: "No cumple" },
   { name: "si_cumple", label: "Sí cumple" },
   { name: "omitir", label: "Omitir" },
 ]
 
-export function CondicionMultipleForm({
+export function MultiConditionForm({
   config,
   onChange,
 }: {
   config: Record<string, unknown>
   onChange: (config: Record<string, unknown>) => void
 }) {
-  const query = (config.condiciones as RuleGroupType | undefined) ?? QUERY_VACIA
-  const siFaltaElDato =
-    (config.siFaltaElDato as SiFaltaElDato | undefined) ?? "no_cumple"
-  const { reglas, profundidad } = useMemo(
-    () => contarReglasYProfundidad(query),
+  const query = (config.condiciones as RuleGroupType | undefined) ?? EMPTY_QUERY
+  const missingDataPolicy =
+    (config.siFaltaElDato as MissingDataPolicy | undefined) ?? "no_cumple"
+  const { rules: ruleCount, depth } = useMemo(
+    () => countRulesAndDepth(query),
     [query]
   )
 
   const [preview, setPreview] = useState<{
-    conteos: Map<string, ConteoNodo>
-    totalMiembros: number
+    counts: Map<string, CountNode>
+    totalMembers: number
   } | null>(null)
-  const [colapsado, setColapsado] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
-  const previsualizar = useAction(previsualizarCondicionAction, {
+  const previewCondition = useAction(previewConditionAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) return
       setPreview({
-        conteos: aplanarConteos(data.conteos),
-        totalMiembros: data.totalMiembros,
+        counts: flattenCounts(data.counts),
+        totalMembers: data.totalMembers,
       })
     },
   })
 
   useEffect(() => {
     const t = setTimeout(() => {
-      previsualizar.execute({ condiciones: query, siFaltaElDato })
+      previewCondition.execute({
+        condiciones: query,
+        siFaltaElDato: missingDataPolicy,
+      })
     }, 500)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe re-disparar cuando cambia el árbol de condiciones o la política de dato faltante, no cuando cambia la identidad de `execute`.
-  }, [query, siFaltaElDato])
+  }, [query, missingDataPolicy])
 
-  function agregarCondicionRapida(fieldName: string) {
+  function addQuickCondition(fieldName: string) {
     onChange({
       ...config,
       condiciones: {
@@ -599,8 +599,8 @@ export function CondicionMultipleForm({
           {
             id: crypto.randomUUID(),
             field: fieldName,
-            operator: PRIMER_OPERADOR[fieldName] ?? "=",
-            value: VALOR_INICIAL[fieldName] ?? "",
+            operator: DEFAULT_OPERATOR[fieldName] ?? "=",
+            value: DEFAULT_VALUE[fieldName] ?? "",
             valueSource: "value" as const,
           },
         ],
@@ -610,37 +610,37 @@ export function CondicionMultipleForm({
 
   return (
     <PreviewContext.Provider value={preview}>
-      <ColapsoContext.Provider value={colapsado}>
+      <CollapseContext.Provider value={collapsed}>
         <div className="flex flex-col gap-3">
           <FieldSlashAutocomplete
             fields={AUTOCOMPLETE_FIELDS}
             value=""
-            onSelect={agregarCondicionRapida}
+            onSelect={addQuickCondition}
             placeholder="Escribe un atributo… ej. tier, saldo, fecha"
             className="w-full"
-            mostrarAtajo
+            showShortcut
           />
 
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground">
-              <span className="uppercase">Condiciones</span> · {reglas} en{" "}
-              {profundidad} {profundidad === 1 ? "nivel" : "niveles"}
+              <span className="uppercase">Condiciones</span> · {ruleCount} en{" "}
+              {depth} {depth === 1 ? "nivel" : "niveles"}
             </p>
             <button
               type="button"
-              onClick={() => setColapsado((c) => !c)}
+              onClick={() => setCollapsed((c) => !c)}
               className="shrink-0 text-[11px] font-medium text-primary"
             >
-              {colapsado ? "Expandir todo" : "Contraer todo"}
+              {collapsed ? "Expandir todo" : "Contraer todo"}
             </button>
           </div>
 
           <QueryBuilder
-            fields={CAMPOS}
+            fields={FIELDS}
             query={query}
             onQueryChange={(q) => onChange({ ...config, condiciones: q })}
             controlElements={CONTROL_ELEMENTS}
-            combinators={COMBINADORES}
+            combinators={COMBINATORS}
             showCombinatorsBetweenRules
             controlClassnames={{
               queryBuilder: "flex flex-col gap-3",
@@ -659,7 +659,7 @@ export function CondicionMultipleForm({
               Si falta el dato
             </p>
             <div className="flex overflow-hidden rounded-lg border border-border text-[12px] font-medium">
-              {SI_FALTA_EL_DATO_OPCIONES.map((opt) => (
+              {MISSING_DATA_OPTIONS.map((opt) => (
                 <button
                   key={opt.name}
                   type="button"
@@ -668,7 +668,7 @@ export function CondicionMultipleForm({
                   }
                   className={cn(
                     "flex-1 px-2.5 py-1.5",
-                    siFaltaElDato === opt.name
+                    missingDataPolicy === opt.name
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted-foreground hover:bg-muted"
                   )}
@@ -682,7 +682,7 @@ export function CondicionMultipleForm({
             </p>
           </div>
         </div>
-      </ColapsoContext.Provider>
+      </CollapseContext.Provider>
     </PreviewContext.Provider>
   )
 }

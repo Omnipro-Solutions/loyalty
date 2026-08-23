@@ -3,8 +3,8 @@ import { TrendingDown } from "lucide-react"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import { encontrarMayorCaida } from "./analitica-metrics"
-import type { RunResumen } from "./analytics-queries"
+import { findBiggestDrop } from "./analytics-metrics"
+import type { RunSummary } from "./analytics-queries"
 import type { WorkflowWithGraph } from "./queries"
 
 /**
@@ -15,35 +15,33 @@ import type { WorkflowWithGraph } from "./queries"
  * cuál rama es "la principal" es un juicio editorial que no se puede
  * calcular de forma objetiva a partir de los conteos, y mostrar de menos
  * sería menos honesto que mostrar de más. Comparte el cálculo de "mayor
- * caída" con `AnaliticaCanvas` (`encontrarMayorCaida`) para que ambos
+ * caída" con `AnalyticsCanvas` (`findBiggestDrop`) para que ambos
  * señalen siempre el mismo hallazgo.
  */
-export function AnaliticaFunnel({
-  corrida,
+export function AnalyticsFunnel({
+  run,
   edges,
 }: {
-  corrida: RunResumen
+  run: RunSummary
   edges: WorkflowWithGraph["edges"]
 }) {
-  const filas = corrida.pasos.map((p) => ({
+  const rows = run.steps.map((p) => ({
     key: `${p.nodeId}-${p.port ?? "fin"}`,
     nodeId: p.nodeId,
-    etiqueta: p.etiqueta,
+    label: p.label,
     port: p.port,
-    // Puerto `null` = nodo terminal — `simularWorkflow` no le calcula un
+    // Puerto `null` = nodo terminal — `simulateWorkflow` no le calcula un
     // `conteo_salida` real (no hay a dónde salir), así que se muestra su
-    // `conteoEntrada` (los que SÍ llegaron) en su lugar.
-    conteo: p.port === null ? p.conteoEntrada : p.conteoSalida,
-    pct: p.conteoEntrada
+    // `entryCount` (los que SÍ llegaron) en su lugar.
+    count: p.port === null ? p.entryCount : p.exitCount,
+    pct: p.entryCount
       ? Math.round(
-          ((p.port === null ? p.conteoEntrada : p.conteoSalida) /
-            p.conteoEntrada) *
-            100
+          ((p.port === null ? p.entryCount : p.exitCount) / p.entryCount) * 100
         )
       : 0,
   }))
 
-  const mayorCaida = encontrarMayorCaida(corrida.pasos, edges)
+  const biggestDrop = findBiggestDrop(run.steps, edges)
 
   return (
     <div className="flex flex-col gap-4">
@@ -51,20 +49,20 @@ export function AnaliticaFunnel({
         <p className="text-[13px] font-semibold text-foreground">
           Caída por nodo
         </p>
-        {filas.map((f) => {
-          const esMayorCaida =
-            mayorCaida?.nodeId === f.nodeId && mayorCaida.port === f.port
+        {rows.map((f) => {
+          const isBiggestDrop =
+            biggestDrop?.nodeId === f.nodeId && biggestDrop.port === f.port
           return (
             <div key={f.key} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-2 text-[12px]">
                 <p className="min-w-0 truncate text-foreground">
-                  {f.etiqueta}
+                  {f.label}
                   {f.port && (
                     <span className="text-muted-foreground"> · {f.port}</span>
                   )}
                 </p>
                 <p className="shrink-0 text-foreground">
-                  {formatNumber(f.conteo)}{" "}
+                  {formatNumber(f.count)}{" "}
                   <span className="text-muted-foreground">({f.pct}%)</span>
                 </p>
               </div>
@@ -72,7 +70,7 @@ export function AnaliticaFunnel({
                 <div
                   className={cn(
                     "h-full rounded-full",
-                    esMayorCaida
+                    isBiggestDrop
                       ? "bg-warning"
                       : f.port === null
                         ? "bg-success"
@@ -86,14 +84,14 @@ export function AnaliticaFunnel({
         })}
       </div>
 
-      {mayorCaida && mayorCaida.pct < 100 && (
+      {biggestDrop && biggestDrop.pct < 100 && (
         <div className="flex items-start gap-2.5 rounded-xl bg-warning-bg px-3.5 py-3">
           <TrendingDown className="mt-0.5 size-4 shrink-0 text-warning" />
           <p className="text-[12px] leading-[17px] text-foreground">
             <span className="font-semibold">
-              Mayor caída: {mayorCaida.etiqueta} · {mayorCaida.port}
+              Mayor caída: {biggestDrop.label} · {biggestDrop.port}
             </span>{" "}
-            — solo el {mayorCaida.pct}% de quienes llegan a este bloque
+            — solo el {biggestDrop.pct}% de quienes llegan a este bloque
             continúan.
           </p>
         </div>

@@ -31,7 +31,7 @@ export function FieldSlashAutocomplete({
   onSelect,
   placeholder,
   className,
-  mostrarAtajo = false,
+  showShortcut = false,
 }: {
   fields: AutocompleteField[]
   value: string
@@ -40,12 +40,12 @@ export function FieldSlashAutocomplete({
   /** Ancho del input — por defecto una celda compacta (uso dentro de una fila de condición). */
   className?: string
   /** Píldora "/" a la derecha, para la barra de búsqueda rápida del inspector — no aplica al chip de campo de cada condición. */
-  mostrarAtajo?: boolean
+  showShortcut?: boolean
 }) {
-  const [busqueda, setBusqueda] = useState("")
+  const [search, setSearch] = useState("")
   const [open, setOpen] = useState(false)
 
-  const etiquetaActual = useMemo(
+  const currentLabel = useMemo(
     () => fields.find((f) => f.name === value)?.label ?? value,
     [fields, value]
   )
@@ -57,24 +57,24 @@ export function FieldSlashAutocomplete({
           nativeButton={false}
           render={
             <input
-              value={open ? `/${busqueda}` : etiquetaActual}
-              title={etiquetaActual}
+              value={open ? `/${search}` : currentLabel}
+              title={currentLabel}
               placeholder={placeholder ?? "Escribe / para elegir un atributo"}
               onChange={(e) => {
                 const raw = e.target.value
                 if (!open && raw.endsWith("/")) {
                   setOpen(true)
-                  setBusqueda("")
+                  setSearch("")
                   return
                 }
-                setBusqueda(raw.startsWith("/") ? raw.slice(1) : raw)
+                setSearch(raw.startsWith("/") ? raw.slice(1) : raw)
               }}
               onFocus={() => {
                 if (!value) setOpen(true)
               }}
               className={cn(
                 "h-9 shrink-0 truncate rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-2 focus-visible:border-primary",
-                mostrarAtajo && "pr-8",
+                showShortcut && "pr-8",
                 className ?? "w-[110px]"
               )}
             />
@@ -96,14 +96,14 @@ export function FieldSlashAutocomplete({
               <CommandGroup>
                 {fields
                   .filter((f) =>
-                    f.label.toLowerCase().includes(busqueda.toLowerCase())
+                    f.label.toLowerCase().includes(search.toLowerCase())
                   )
                   .map((f) => (
                     <CommandItem
                       key={f.name}
                       onSelect={() => {
                         onSelect(f.name)
-                        setBusqueda("")
+                        setSearch("")
                         setOpen(false)
                       }}
                     >
@@ -115,7 +115,7 @@ export function FieldSlashAutocomplete({
           </Command>
         </PopoverContent>
       </Popover>
-      {mostrarAtajo && (
+      {showShortcut && (
         <kbd className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
           /
         </kbd>

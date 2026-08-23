@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-type Rama = { id: string; etiqueta: string; peso?: number }
+type Branch = { id: string; etiqueta: string; peso?: number }
 
 /**
  * Pestaña "Ramas" para `ramificacion_valor`/`split_ab` — agregar/quitar/
@@ -25,23 +25,23 @@ type Rama = { id: string; etiqueta: string; peso?: number }
  * de aristas, al que este panel aislado no tiene acceso hoy. Se deja
  * documentado como siguiente paso, no se simula con datos inventados.
  */
-export function RamasTab({
+export function BranchesTab({
   config,
   onChange,
 }: {
   config: Record<string, unknown>
   onChange: (config: Record<string, unknown>) => void
 }) {
-  const ramasIniciales = Array.isArray(config.ramas)
-    ? (config.ramas as Rama[])
+  const initialBranches = Array.isArray(config.ramas)
+    ? (config.ramas as Branch[])
     : [
         { id: "rama_1", etiqueta: "Rama 1", peso: 50 },
         { id: "por_defecto", etiqueta: "Por defecto", peso: 50 },
       ]
-  const [ramas, setRamas] = useState<Rama[]>(ramasIniciales)
+  const [branches, setBranches] = useState<Branch[]>(initialBranches)
 
-  function actualizar(next: Rama[]) {
-    setRamas(next)
+  function update(next: Branch[]) {
+    setBranches(next)
     onChange({ ...config, ramas: next })
   }
 
@@ -59,11 +59,11 @@ export function RamasTab({
         <button
           type="button"
           onClick={() =>
-            actualizar([
-              ...ramas,
+            update([
+              ...branches,
               {
                 id: crypto.randomUUID(),
-                etiqueta: `Rama ${String(ramas.length + 1)}`,
+                etiqueta: `Rama ${String(branches.length + 1)}`,
                 peso: 0,
               },
             ])
@@ -76,18 +76,18 @@ export function RamasTab({
       </div>
 
       <div className="flex flex-col gap-2">
-        {ramas.map((rama, i) => (
+        {branches.map((branch, i) => (
           <div
-            key={rama.id}
+            key={branch.id}
             className="flex flex-col gap-2 rounded-xl bg-neutral-50 p-3"
           >
             <div className="flex items-center gap-2">
               <Input
-                value={rama.etiqueta}
+                value={branch.etiqueta}
                 onChange={(e) => {
-                  const next = [...ramas]
-                  next[i] = { ...rama, etiqueta: e.target.value }
-                  actualizar(next)
+                  const next = [...branches]
+                  next[i] = { ...branch, etiqueta: e.target.value }
+                  update(next)
                 }}
                 className="h-8 flex-1 bg-background text-[13px]"
               />
@@ -96,14 +96,14 @@ export function RamasTab({
                   type="number"
                   min={0}
                   max={100}
-                  value={rama.peso ?? ""}
+                  value={branch.peso ?? ""}
                   onChange={(e) => {
-                    const next = [...ramas]
+                    const next = [...branches]
                     next[i] = {
-                      ...rama,
+                      ...branch,
                       peso: e.target.value ? Number(e.target.value) : undefined,
                     }
-                    actualizar(next)
+                    update(next)
                   }}
                   className="h-8 w-14 bg-background text-right text-[13px]"
                 />
@@ -114,8 +114,8 @@ export function RamasTab({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Quitar rama"
-                disabled={ramas.length <= 1}
-                onClick={() => actualizar(ramas.filter((_, idx) => idx !== i))}
+                disabled={branches.length <= 1}
+                onClick={() => update(branches.filter((_, idx) => idx !== i))}
               >
                 <Trash2 className="size-3.5 text-destructive" />
               </Button>

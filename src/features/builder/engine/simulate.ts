@@ -14,19 +14,19 @@ export type SimEdge = {
 export type SimStep = {
   nodeId: string
   tipo: BuilderNodeType
-  conteoEntrada: number
-  salidas: { port: string; conteo: number }[]
+  entryCount: number
+  outputs: { port: string; count: number }[]
 }
 
-const ENTRY_TIPOS = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
+const ENTRY_TYPES = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
 
-function numeroConfig(
+function configNumber(
   config: Record<string, unknown>,
   key: string,
-  porDefecto: number
+  defaultValue: number
 ): number {
   const v = config[key]
-  return typeof v === "number" && Number.isFinite(v) ? v : porDefecto
+  return typeof v === "number" && Number.isFinite(v) ? v : defaultValue
 }
 
 /**
@@ -36,59 +36,59 @@ function numeroConfig(
  * evaluación real, fuera de alcance de un simulador de vista previa) pero
  * determinística y testeable: mismos parámetros, mismo resultado siempre.
  */
-function distribuir(
+function distribute(
   node: SimNode,
   entrada: number
-): { port: string; conteo: number }[] {
+): { port: string; count: number }[] {
   if (entrada <= 0) return []
 
   if (node.tipo === "condicion_multiple") {
-    const pctCumple = Math.min(
+    const matchPct = Math.min(
       100,
-      Math.max(0, numeroConfig(node.config, "porcentaje_cumple_estimado", 60))
+      Math.max(0, configNumber(node.config, "porcentaje_cumple_estimado", 60))
     )
-    const cumple = Math.round((entrada * pctCumple) / 100)
+    const matchCount = Math.round((entrada * matchPct) / 100)
     return [
-      { port: "cumple", conteo: cumple },
-      { port: "no_cumple", conteo: entrada - cumple },
+      { port: "cumple", count: matchCount },
+      { port: "no_cumple", count: entrada - matchCount },
     ]
   }
 
   if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
-    const ramas = Array.isArray(node.config.ramas)
+    const branches = Array.isArray(node.config.ramas)
       ? (node.config.ramas as { id: string; peso?: number }[])
       : [{ id: "rama_1" }, { id: "por_defecto" }]
-    const pesos = ramas.map((r) =>
+    const weights = branches.map((r) =>
       typeof r.peso === "number" && r.peso > 0 ? r.peso : 1
     )
-    const pesoTotal = pesos.reduce((a, b) => a + b, 0)
-    let restante = entrada
-    const salidas = ramas.map((r, i) => {
-      const esUltima = i === ramas.length - 1
-      const conteo = esUltima
-        ? restante
-        : Math.round((entrada * pesos[i]) / pesoTotal)
-      restante -= conteo
-      return { port: r.id, conteo }
+    const totalWeight = weights.reduce((a, b) => a + b, 0)
+    let remaining = entrada
+    const outputs = branches.map((r, i) => {
+      const isLast = i === branches.length - 1
+      const count = isLast
+        ? remaining
+        : Math.round((entrada * weights[i]) / totalWeight)
+      remaining -= count
+      return { port: r.id, count }
     })
-    return salidas
+    return outputs
   }
 
   if (node.tipo === "acumular_puntos") {
-    const pctTope = Math.min(
+    const capPct = Math.min(
       100,
-      Math.max(0, numeroConfig(node.config, "tasa_tope_estimada", 8))
+      Math.max(0, configNumber(node.config, "tasa_tope_estimada", 8))
     )
-    const tope = Math.round((entrada * pctTope) / 100)
+    const cap = Math.round((entrada * capPct) / 100)
     return [
-      { port: "out", conteo: entrada - tope },
-      { port: "tope_alcanzado", conteo: tope },
+      { port: "out", count: entrada - cap },
+      { port: "tope_alcanzado", count: cap },
     ]
   }
 
   if (node.tipo === "fin_workflow") return []
 
-  return [{ port: "out", conteo: entrada }]
+  return [{ port: "out", count: entrada }]
 }
 
 /**
@@ -103,56 +103,56 @@ function distribuir(
  * máximo una vez — la segunda vez que le llegaría cohorte, se ignora, para
  * que el simulador nunca entre en un loop infinito.
  */
-export function simularWorkflow(
+export function simulateWorkflow(
   nodes: SimNode[],
   edges: SimEdge[],
-  cohorteInicial: number
+  initialCohort: number
 ): SimStep[] {
-  const porId = new Map(nodes.map((n) => [n.id, n]))
-  const salientesPorNodo = new Map<string, SimEdge[]>()
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const outgoingByNode = new Map<string, SimEdge[]>()
   for (const e of edges) {
-    const lista = salientesPorNodo.get(e.source_node_id) ?? []
-    lista.push(e)
-    salientesPorNodo.set(e.source_node_id, lista)
+    const list = outgoingByNode.get(e.source_node_id) ?? []
+    list.push(e)
+    outgoingByNode.set(e.source_node_id, list)
   }
 
-  const entradaAcumulada = new Map<string, number>()
-  const procesados = new Set<string>()
-  const pasos: SimStep[] = []
+  const accumulatedInputByNode = new Map<string, number>()
+  const processed = new Set<string>()
+  const steps: SimStep[] = []
 
-  const entradas = nodes.filter((n) => ENTRY_TIPOS.has(n.tipo))
-  const cola: string[] = []
-  for (const n of entradas) {
-    entradaAcumulada.set(n.id, cohorteInicial)
-    cola.push(n.id)
+  const entryNodes = nodes.filter((n) => ENTRY_TYPES.has(n.tipo))
+  const queue: string[] = []
+  for (const n of entryNodes) {
+    accumulatedInputByNode.set(n.id, initialCohort)
+    queue.push(n.id)
   }
 
-  while (cola.length) {
-    const id = cola.shift()!
-    if (procesados.has(id)) continue
-    procesados.add(id)
+  while (queue.length) {
+    const id = queue.shift()!
+    if (processed.has(id)) continue
+    processed.add(id)
 
-    const node = porId.get(id)
+    const node = byId.get(id)
     if (!node) continue
 
-    const conteoEntrada = entradaAcumulada.get(id) ?? 0
-    const salidas = distribuir(node, conteoEntrada)
-    pasos.push({ nodeId: id, tipo: node.tipo, conteoEntrada, salidas })
+    const entryCount = accumulatedInputByNode.get(id) ?? 0
+    const outputs = distribute(node, entryCount)
+    steps.push({ nodeId: id, tipo: node.tipo, entryCount, outputs })
 
-    for (const salida of salidas) {
-      if (salida.conteo <= 0) continue
-      const edgesDeEstePuerto = (salientesPorNodo.get(id) ?? []).filter(
-        (e) => e.source_port === salida.port
+    for (const output of outputs) {
+      if (output.count <= 0) continue
+      const edgesForThisPort = (outgoingByNode.get(id) ?? []).filter(
+        (e) => e.source_port === output.port
       )
-      for (const edge of edgesDeEstePuerto) {
-        const previo = entradaAcumulada.get(edge.target_node_id) ?? 0
-        entradaAcumulada.set(edge.target_node_id, previo + salida.conteo)
-        if (!procesados.has(edge.target_node_id)) {
-          cola.push(edge.target_node_id)
+      for (const edge of edgesForThisPort) {
+        const previous = accumulatedInputByNode.get(edge.target_node_id) ?? 0
+        accumulatedInputByNode.set(edge.target_node_id, previous + output.count)
+        if (!processed.has(edge.target_node_id)) {
+          queue.push(edge.target_node_id)
         }
       }
     }
   }
 
-  return pasos
+  return steps
 }

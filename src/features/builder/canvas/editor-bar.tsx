@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { formatRelativeTime } from "@/lib/format"
 import type { WorkflowStatus } from "@/types/domain"
 
-const ESTADO_LABEL: Record<WorkflowStatus, string> = {
+const STATUS_LABEL: Record<WorkflowStatus, string> = {
   borrador: "Borrador",
   publicado: "Publicado",
   pausado: "Pausado",
@@ -18,55 +18,53 @@ const ESTADO_LABEL: Record<WorkflowStatus, string> = {
 
 export function EditorBar({
   workflowId,
-  nombre,
-  estado,
-  autorNombre,
-  actualizadoEn,
-  guardando,
-  simulando,
-  publicando,
-  motivoPublicarDeshabilitado,
+  name,
+  status,
+  authorName,
+  updatedAt,
+  saving,
+  simulating,
+  publishing,
+  publishDisabledReason,
   onRename,
-  onHistorial,
-  onSimular,
-  onPublicar,
+  onHistory,
+  onSimulate,
+  onPublish,
 }: {
   workflowId: string
-  nombre: string
-  estado: WorkflowStatus
-  autorNombre: string | null
-  actualizadoEn: string
-  guardando: boolean
-  simulando: boolean
-  publicando: boolean
+  name: string
+  status: WorkflowStatus
+  authorName: string | null
+  updatedAt: string
+  saving: boolean
+  simulating: boolean
+  publishing: boolean
   /** `undefined` = se puede publicar. Un string = motivo del tooltip Y por qué está deshabilitado. */
-  motivoPublicarDeshabilitado: string | undefined
-  onRename: (nombre: string) => void
-  onHistorial: () => void
-  onSimular: () => void
-  onPublicar: () => void
+  publishDisabledReason: string | undefined
+  onRename: (name: string) => void
+  onHistory: () => void
+  onSimulate: () => void
+  onPublish: () => void
 }) {
-  const [valor, setValor] = useState(nombre)
+  const [value, setValue] = useState(name)
 
   return (
     <div className="flex items-center gap-4 border-b border-border bg-background px-6 py-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2.5">
           <input
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
             onBlur={() => {
-              if (valor.trim() && valor !== nombre) onRename(valor.trim())
+              if (value.trim() && value !== name) onRename(value.trim())
             }}
             className="min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-[15px] font-semibold text-foreground outline-none hover:border-border focus:border-primary"
           />
-          <Badge variant="neutral">{ESTADO_LABEL[estado]}</Badge>
+          <Badge variant="neutral">{STATUS_LABEL[status]}</Badge>
         </div>
         <p className="px-1.5 text-[11px] text-muted-foreground">
-          {guardando
-            ? "Guardando…"
-            : `Guardado ${formatRelativeTime(actualizadoEn)}`}
-          {autorNombre && ` · editado por ${autorNombre}`}
+          {saving ? "Guardando…" : `Guardado ${formatRelativeTime(updatedAt)}`}
+          {authorName && ` · editado por ${authorName}`}
         </p>
       </div>
 
@@ -79,27 +77,27 @@ export function EditorBar({
         <BarChart3 className="size-3.5" />
         Analítica
       </Button>
-      <Button variant="outline" size="sm" onClick={onHistorial}>
+      <Button variant="outline" size="sm" onClick={onHistory}>
         <History className="size-3.5" />
         Historial de versiones
       </Button>
       <Button
         variant="outline"
         size="sm"
-        disabled={simulando}
-        onClick={onSimular}
+        disabled={simulating}
+        onClick={onSimulate}
       >
         <Play className="size-3.5" />
-        {simulando ? "Simulando…" : "Simular"}
+        {simulating ? "Simulando…" : "Simular"}
       </Button>
       <Button
         size="sm"
-        disabled={publicando || !!motivoPublicarDeshabilitado}
-        title={motivoPublicarDeshabilitado}
-        onClick={onPublicar}
+        disabled={publishing || !!publishDisabledReason}
+        title={publishDisabledReason}
+        onClick={onPublish}
       >
         <Rocket className="size-3.5" />
-        {publicando ? "Publicando…" : "Publicar workflow"}
+        {publishing ? "Publicando…" : "Publicar workflow"}
       </Button>
     </div>
   )

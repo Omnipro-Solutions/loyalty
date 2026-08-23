@@ -11,14 +11,14 @@ export async function JourneysKpiRow() {
     <div className="flex w-full items-start gap-4">
       <KpiWidget
         label="Workflows activos"
-        value={formatNumber(kpis.activos)}
+        value={formatNumber(kpis.active)}
         delta={
-          kpis.publicadosEstaSemana > 0
-            ? formatNumber(kpis.publicadosEstaSemana)
+          kpis.publishedThisWeek > 0
+            ? formatNumber(kpis.publishedThisWeek)
             : undefined
         }
         caption={
-          kpis.publicadosEstaSemana > 0
+          kpis.publishedThisWeek > 0
             ? "publicados esta semana"
             : "sin publicaciones esta semana"
         }
@@ -26,12 +26,12 @@ export async function JourneysKpiRow() {
       <KpiWidget
         label="Clientes en recorrido"
         value={
-          kpis.clientesEnRecorrido !== null
-            ? formatNumber(kpis.clientesEnRecorrido)
+          kpis.membersInJourney !== null
+            ? formatNumber(kpis.membersInJourney)
             : "—"
         }
         caption={
-          kpis.clientesEnRecorrido !== null
+          kpis.membersInJourney !== null
             ? "con al menos un workflow publicado"
             : "Aún sin seguimiento en vivo"
         }
@@ -39,12 +39,12 @@ export async function JourneysKpiRow() {
       <KpiWidget
         label="Conversión media"
         value={
-          kpis.conversionMedia !== null
-            ? formatPercent(kpis.conversionMedia)
+          kpis.averageConversion !== null
+            ? formatPercent(kpis.averageConversion)
             : "—"
         }
         caption={
-          kpis.conversionMedia !== null
+          kpis.averageConversion !== null
             ? "de la base total de socios"
             : "Necesita ejecuciones publicadas"
         }
@@ -52,12 +52,12 @@ export async function JourneysKpiRow() {
       <KpiWidget
         label="Ingreso atribuido"
         value={
-          kpis.ingresoAtribuido !== null
-            ? formatCOP(kpis.ingresoAtribuido)
+          kpis.attributedRevenue !== null
+            ? formatCOP(kpis.attributedRevenue)
             : "—"
         }
         caption={
-          kpis.ingresoAtribuido !== null
+          kpis.attributedRevenue !== null
             ? "compras de socios que pasaron por un workflow"
             : "Atribución de ingreso: próximamente"
         }

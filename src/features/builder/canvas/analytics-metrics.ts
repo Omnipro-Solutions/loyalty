@@ -1,14 +1,14 @@
-import type { RunStepResumen } from "./analytics-queries"
+import type { RunStepSummary } from "./analytics-queries"
 
-export type MayorCaida = {
+export type BiggestDrop = {
   nodeId: string
   port: string
-  etiqueta: string
+  label: string
   pct: number
   targetNodeId: string | null
 }
 
-type Arista = {
+type EdgeRef = {
   source_node_id: string
   source_port: string | null
   target_node_id: string
@@ -20,26 +20,26 @@ type Arista = {
  * "Caída por nodo" del sidebar (que resalta la fila), para que ambos
  * señalen siempre el mismo hallazgo.
  */
-export function encontrarMayorCaida(
-  pasos: RunStepResumen[],
-  edges: Arista[]
-): MayorCaida | null {
-  let peor: MayorCaida | null = null
-  for (const p of pasos) {
-    if (p.port === null || p.conteoEntrada <= 0) continue
-    const pct = Math.round((p.conteoSalida / p.conteoEntrada) * 100)
-    if (!peor || pct < peor.pct) {
+export function findBiggestDrop(
+  steps: RunStepSummary[],
+  edges: EdgeRef[]
+): BiggestDrop | null {
+  let worst: BiggestDrop | null = null
+  for (const p of steps) {
+    if (p.port === null || p.entryCount <= 0) continue
+    const pct = Math.round((p.exitCount / p.entryCount) * 100)
+    if (!worst || pct < worst.pct) {
       const edge = edges.find(
         (e) => e.source_node_id === p.nodeId && e.source_port === p.port
       )
-      peor = {
+      worst = {
         nodeId: p.nodeId,
         port: p.port,
-        etiqueta: p.etiqueta,
+        label: p.label,
         pct,
         targetNodeId: edge?.target_node_id ?? null,
       }
     }
   }
-  return peor
+  return worst
 }

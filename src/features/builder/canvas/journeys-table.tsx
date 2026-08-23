@@ -28,9 +28,9 @@ import { cn } from "@/lib/utils"
 
 import { deleteWorkflowsAction } from "./actions"
 import type { WorkflowListItem } from "./queries"
-import { JourneyEstadoDot } from "./journey-estado-dot"
+import { JourneyStatusDot } from "./journey-status-dot"
 
-const AVATAR_COLORES = [
+const AVATAR_COLORS = [
   { bg: "bg-avatar-indigo-bg", fg: "text-avatar-indigo-fg" },
   { bg: "bg-avatar-teal-bg", fg: "text-avatar-teal-fg" },
   { bg: "bg-avatar-coral-bg", fg: "text-avatar-coral-fg" },
@@ -45,10 +45,10 @@ const columnHelper = createColumnHelper<
 >()
 
 function useColumns(
-  seleccionados: Set<string>,
+  selected: Set<string>,
   onToggle: (id: string) => void,
-  onToggleTodos: (marcar: boolean) => void,
-  todosMarcados: boolean
+  onToggleAll: (checkAll: boolean) => void,
+  allSelected: boolean
 ) {
   return columnHelper.columns([
     columnHelper.display({
@@ -56,15 +56,15 @@ function useColumns(
       size: 44,
       header: () => (
         <Checkbox
-          checked={todosMarcados}
-          onCheckedChange={(v) => onToggleTodos(v === true)}
+          checked={allSelected}
+          onCheckedChange={(v) => onToggleAll(v === true)}
           onClick={(e) => e.stopPropagation()}
           aria-label="Seleccionar todos"
         />
       ),
       cell: (info) => (
         <Checkbox
-          checked={seleccionados.has(info.row.original.id)}
+          checked={selected.has(info.row.original.id)}
           onCheckedChange={() => onToggle(info.row.original.id)}
           onClick={(e) => e.stopPropagation()}
           aria-label={`Seleccionar ${info.row.original.nombre}`}
@@ -74,8 +74,8 @@ function useColumns(
     columnHelper.accessor("nombre", {
       header: "Workflow",
       cell: (info) => {
-        const idx = info.row.index % AVATAR_COLORES.length
-        const color = AVATAR_COLORES[idx]!
+        const idx = info.row.index % AVATAR_COLORS.length
+        const color = AVATAR_COLORS[idx]!
         return (
           <div className="flex min-w-0 items-center gap-2.5">
             <span
@@ -103,14 +103,14 @@ function useColumns(
     columnHelper.accessor("estado", {
       header: "Estado",
       size: 118,
-      cell: (info) => <JourneyEstadoDot estado={info.getValue()} />,
+      cell: (info) => <JourneyStatusDot status={info.getValue()} />,
     }),
-    columnHelper.accessor("enRecorrido", {
-      id: "enRecorrido",
+    columnHelper.accessor("inJourney", {
+      id: "inJourney",
       size: 120,
       header: () => <span className="block text-right">En recorrido</span>,
       // `null` = ningún socio con un `points_ledger` vinculado a una
-      // corrida de este workflow todavía (ver `getAtribucionPorWorkflow`
+      // corrida de este workflow todavía (ver `getAttributionByWorkflow`
       // en queries.ts) — "—" es el mismo estado que el propio Figma usa
       // para journeys sin datos, no un placeholder inventado.
       cell: (info) => (
@@ -152,7 +152,7 @@ function useColumns(
       // detrás.
       cell: () => <span className="text-xs text-muted-foreground">—</span>,
     }),
-    columnHelper.accessor("totalNodos", {
+    columnHelper.accessor("totalNodes", {
       header: () => <span className="block text-right">Nodos</span>,
       size: 88,
       cell: (info) => (
@@ -161,8 +161,8 @@ function useColumns(
         </span>
       ),
     }),
-    columnHelper.accessor("ingreso", {
-      id: "ingreso",
+    columnHelper.accessor("revenue", {
+      id: "revenue",
       size: 120,
       header: () => <span className="block text-right">Ingreso</span>,
       cell: (info) => (
@@ -180,19 +180,19 @@ export function JourneysTable({
   workflows: WorkflowListItem[]
 }) {
   const router = useRouter()
-  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
-  const [confirmarAbierto, setConfirmarAbierto] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const eliminar = useAction(deleteWorkflowsAction, {
+  const deleteWorkflows = useAction(deleteWorkflowsAction, {
     onSuccess: () => {
-      setSeleccionados(new Set())
-      setConfirmarAbierto(false)
+      setSelected(new Set())
+      setConfirmOpen(false)
       router.refresh()
     },
   })
 
   function onToggle(id: string) {
-    setSeleccionados((prev) => {
+    setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -200,19 +200,14 @@ export function JourneysTable({
     })
   }
 
-  function onToggleTodos(marcar: boolean) {
-    setSeleccionados(marcar ? new Set(workflows.map((w) => w.id)) : new Set())
+  function onToggleAll(checkAll: boolean) {
+    setSelected(checkAll ? new Set(workflows.map((w) => w.id)) : new Set())
   }
 
-  const todosMarcados =
-    workflows.length > 0 && workflows.every((w) => seleccionados.has(w.id))
+  const allSelected =
+    workflows.length > 0 && workflows.every((w) => selected.has(w.id))
 
-  const columns = useColumns(
-    seleccionados,
-    onToggle,
-    onToggleTodos,
-    todosMarcados
-  )
+  const columns = useColumns(selected, onToggle, onToggleAll, allSelected)
 
   const table = useTable({
     features: tableFeaturesConfig,
@@ -222,17 +217,17 @@ export function JourneysTable({
 
   return (
     <>
-      {seleccionados.size > 0 && (
+      {selected.size > 0 && (
         <div className="flex items-center gap-3 border-b border-border bg-accent px-[22px] py-2.5">
           <p className="flex-1 text-[12px] font-medium text-accent-foreground">
-            {seleccionados.size} seleccionado
-            {seleccionados.size === 1 ? "" : "s"}
+            {selected.size} seleccionado
+            {selected.size === 1 ? "" : "s"}
           </p>
           <Button
             variant="outline"
             size="sm"
             className="gap-1.5 text-destructive"
-            onClick={() => setConfirmarAbierto(true)}
+            onClick={() => setConfirmOpen(true)}
           >
             <Trash2 className="size-3.5" />
             Eliminar
@@ -244,12 +239,12 @@ export function JourneysTable({
         onRowClick={(row) => router.push(`/journeys/${row.id}`)}
         headerClassName="bg-neutral-50"
       />
-      <Dialog open={confirmarAbierto} onOpenChange={setConfirmarAbierto}>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              ¿Eliminar {seleccionados.size} workflow
-              {seleccionados.size === 1 ? "" : "s"}?
+              ¿Eliminar {selected.size} workflow
+              {selected.size === 1 ? "" : "s"}?
             </DialogTitle>
             <DialogDescription>
               Esta acción no se puede deshacer. Se borran también sus nodos,
@@ -262,9 +257,9 @@ export function JourneysTable({
             </DialogClose>
             <Button
               variant="destructive"
-              disabled={eliminar.isPending}
+              disabled={deleteWorkflows.isPending}
               onClick={() =>
-                eliminar.execute({ workflowIds: [...seleccionados] })
+                deleteWorkflows.execute({ workflowIds: [...selected] })
               }
             >
               Eliminar

@@ -150,5 +150,5 @@ export const saveGraphAction = builderActionClient
       .update({ actualizado_por: ctx.userId })
       .eq("id", workflowId)
 
-    return { ok: true as const, guardadoEn: new Date().toISOString() }
+    return { ok: true as const, savedAt: new Date().toISOString() }
   })

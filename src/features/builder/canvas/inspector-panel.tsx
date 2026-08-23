@@ -5,20 +5,20 @@ import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
-import { AcumularPuntosForm } from "@/features/builder/inspector/acumular-puntos-form"
-import { CondicionMultipleForm } from "@/features/builder/inspector/condicion-multiple-form"
-import { DatosTab } from "@/features/builder/inspector/datos-tab"
+import { AccumulatePointsForm } from "@/features/builder/inspector/accumulate-points-form"
+import { MultiConditionForm } from "@/features/builder/inspector/multi-condition-form"
+import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
-import { RamasTab } from "@/features/builder/inspector/ramas-tab"
+import { BranchesTab } from "@/features/builder/inspector/branches-tab"
 import { SimpleConfigForm } from "@/features/builder/inspector/simple-config-form"
 import { cn } from "@/lib/utils"
 
-import type { TierResumen } from "./queries"
+import type { TierSummary } from "./queries"
 
-const RAMAS_TIPOS = new Set(["ramificacion_valor", "split_ab"])
+const BRANCH_TYPES = new Set(["ramificacion_valor", "split_ab"])
 
-function tabsPara(tipo: string): readonly string[] {
-  if (RAMAS_TIPOS.has(tipo)) return ["Configuración", "Ramas", "Datos"]
+function tabsFor(tipo: string): readonly string[] {
+  if (BRANCH_TYPES.has(tipo)) return ["Configuración", "Ramas", "Datos"]
   return ["Configuración", "Datos"]
 }
 
@@ -33,14 +33,14 @@ export function InspectorPanel({
     id: string
     data: { tipo: string; etiqueta: string; config: Record<string, unknown> }
   } | null
-  tiers: TierResumen[]
+  tiers: TierSummary[]
   onClose: () => void
   onDelete: (id: string) => void
   onConfigChange: (id: string, config: Record<string, unknown>) => void
 }) {
-  const tabs = node ? tabsPara(node.data.tipo) : []
+  const tabs = node ? tabsFor(node.data.tipo) : []
   const [tab, setTab] = useState<string>("Configuración")
-  const tabActivo = tabs.includes(tab) ? tab : "Configuración"
+  const activeTab = tabs.includes(tab) ? tab : "Configuración"
 
   if (!node) {
     return (
@@ -60,7 +60,7 @@ export function InspectorPanel({
   const Icon = meta.icon
   const tipo = node.data.tipo
 
-  function actualizar(config: Record<string, unknown>) {
+  function update(config: Record<string, unknown>) {
     onConfigChange(node!.id, config)
   }
 
@@ -101,7 +101,7 @@ export function InspectorPanel({
             onClick={() => setTab(t)}
             className={cn(
               "border-b-2 px-3 py-2.5 text-[13px] font-medium",
-              t === tabActivo
+              t === activeTab
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground"
             )}
@@ -112,18 +112,15 @@ export function InspectorPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {tabActivo === "Configuración" &&
+        {activeTab === "Configuración" &&
           (tipo === "acumular_puntos" ? (
-            <AcumularPuntosForm
+            <AccumulatePointsForm
               config={node.data.config}
               tiers={tiers}
-              onChange={actualizar}
+              onChange={update}
             />
           ) : tipo === "condicion_multiple" ? (
-            <CondicionMultipleForm
-              config={node.data.config}
-              onChange={actualizar}
-            />
+            <MultiConditionForm config={node.data.config} onChange={update} />
           ) : (
             <SimpleConfigForm
               specs={
@@ -131,13 +128,13 @@ export function InspectorPanel({
                 []
               }
               config={node.data.config}
-              onChange={actualizar}
+              onChange={update}
             />
           ))}
-        {tabActivo === "Ramas" && (
-          <RamasTab config={node.data.config} onChange={actualizar} />
+        {activeTab === "Ramas" && (
+          <BranchesTab config={node.data.config} onChange={update} />
         )}
-        {tabActivo === "Datos" && <DatosTab tipo={tipo as never} />}
+        {activeTab === "Datos" && <DataTab tipo={tipo as never} />}
       </div>
 
       <div className="border-t border-border p-4">

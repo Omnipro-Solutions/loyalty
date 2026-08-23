@@ -20,15 +20,15 @@ import { VersionHistoryDialog } from "./version-history-dialog"
  * siendo trabajo exclusivo del editor), así que `VersionHistoryDialog` se
  * usa sin `onRestore`.
  */
-export function AnaliticaToolbar({
+export function AnalyticsToolbar({
   workflow,
 }: {
   workflow: WorkflowWithGraph
 }) {
   const router = useRouter()
-  const [historialAbierto, setHistorialAbierto] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
-  const simular = useAction(simulateWorkflowAction, {
+  const simulate = useAction(simulateWorkflowAction, {
     onSuccess: ({ data }) => {
       if (data?.ok) router.refresh()
     },
@@ -40,31 +40,31 @@ export function AnaliticaToolbar({
         variant="outline"
         size="sm"
         className="gap-1.5"
-        disabled={simular.isPending}
+        disabled={simulate.isPending}
         onClick={() =>
-          simular.execute({
+          simulate.execute({
             workflowId: workflow.id,
             nodes: workflow.nodes,
             edges: workflow.edges,
-            cohorteInicial: 1514,
+            initialCohort: 1514,
           })
         }
       >
         <Play className="size-3.5" />
-        {simular.isPending ? "Simulando…" : "Simular"}
+        {simulate.isPending ? "Simulando…" : "Simular"}
       </Button>
       <Button
         variant="outline"
         size="sm"
         className="gap-1.5"
-        onClick={() => setHistorialAbierto(true)}
+        onClick={() => setHistoryOpen(true)}
       >
         <History className="size-3.5" />
         Historial de versiones
       </Button>
       <VersionHistoryDialog
-        open={historialAbierto}
-        onOpenChange={setHistorialAbierto}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
         workflowId={workflow.id}
       />
     </>

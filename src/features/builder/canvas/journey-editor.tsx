@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Message } from "@/components/form/message"
 import { BUILDER_BLOCKS } from "@/config/builder-blocks"
 import {
-  validarGrafo,
+  validateGraph,
   type ValidationIssue,
 } from "@/features/builder/validation/graph-validation"
 import type { BuilderNodeType } from "@/types/domain"
@@ -35,7 +35,7 @@ import {
   simulateWorkflowAction,
 } from "./publish-actions"
 import { InspectorPanel } from "./inspector-panel"
-import type { TierResumen, WorkflowWithGraph } from "./queries"
+import type { TierSummary, WorkflowWithGraph } from "./queries"
 import { VersionHistoryDialog } from "./version-history-dialog"
 
 const NODE_TYPES = { builderNode: BuilderNode }
@@ -47,7 +47,7 @@ const AUTOSAVE_DEBOUNCE_MS = 1200
  * ninguno de los dos es un cambio real de diseño que deba reactivar
  * "Publicar workflow".
  */
-function esCambioRealDeGrafo(change: { type: string }) {
+function isRealGraphChange(change: { type: string }) {
   return change.type !== "dimensions" && change.type !== "select"
 }
 
@@ -80,7 +80,7 @@ function CanvasArea({
   tiers,
 }: {
   workflow: WorkflowWithGraph
-  tiers: TierResumen[]
+  tiers: TierSummary[]
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BuilderNodeData>>(
     workflow.nodes.map(toFlowNode)
@@ -89,17 +89,17 @@ function CanvasArea({
     workflow.edges.map(toFlowEdge)
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [actualizadoEn, setActualizadoEn] = useState(workflow.actualizado_en)
-  const [estado, setEstado] = useState(workflow.estado)
-  const [historialAbierto, setHistorialAbierto] = useState(false)
-  const [mensajePublicar, setMensajePublicar] = useState<string>()
+  const [updatedAt, setUpdatedAt] = useState(workflow.actualizado_en)
+  const [status, setStatus] = useState(workflow.estado)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [publishMessage, setPublishMessage] = useState<string>()
   // Publicar debe quedar inhabilitado apenas se publica con éxito, hasta
   // que el grafo cambie de verdad — si no, un doble clic (o clic accidental
   // otra vez) crea una versión y una fila de `workflow_runs` idénticas a la
   // que ya existía. Arranca en `false` si ya estaba publicado al cargar
   // (nada nuevo que publicar todavía), o en `true` para borrador/pausado/
   // archivado (siempre hay algo que publicar la primera vez).
-  const [huboCambiosSinPublicar, setHuboCambiosSinPublicar] = useState(
+  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
     workflow.estado !== "publicado"
   )
   const { screenToFlowPosition } = useReactFlow()
@@ -108,25 +108,25 @@ function CanvasArea({
 
   const save = useAction(saveGraphAction, {
     onSuccess: ({ data }) => {
-      if (data?.ok) setActualizadoEn(data.guardadoEn)
+      if (data?.ok) setUpdatedAt(data.savedAt)
     },
   })
   const rename = useAction(renameWorkflowAction)
   const simulate = useAction(simulateWorkflowAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) return
-      const porId = new Map(data.pasos.map((p) => [p.nodeId, p]))
+      const byId = new Map(data.steps.map((p) => [p.nodeId, p]))
       setNodes((nds) =>
         nds.map((n) => {
-          const paso = porId.get(n.id)
-          return paso
+          const step = byId.get(n.id)
+          return step
             ? {
                 ...n,
                 data: {
                   ...n.data,
                   simulacion: {
-                    conteoEntrada: paso.conteoEntrada,
-                    salidas: paso.salidas,
+                    entryCount: step.entryCount,
+                    outputs: step.outputs,
                   },
                 },
               }
@@ -138,11 +138,11 @@ function CanvasArea({
   const publish = useAction(publishWorkflowAction, {
     onSuccess: ({ data }) => {
       if (data?.ok) {
-        setEstado("publicado")
-        setMensajePublicar(undefined)
-        setHuboCambiosSinPublicar(false)
+        setStatus("publicado")
+        setPublishMessage(undefined)
+        setHasUnpublishedChanges(false)
       } else {
-        setMensajePublicar(data?.message ?? "No se pudo publicar.")
+        setPublishMessage(data?.message ?? "No se pudo publicar.")
       }
     },
   })
@@ -197,30 +197,30 @@ function CanvasArea({
   // "Publicar workflow"). Se llama explícitamente desde cada mutación real
   // del grafo (conectar, soltar un bloque, editar config, borrar, restaurar
   // versión) y desde los handlers de xyflow (mover/soltar/borrar con teclado).
-  const marcarCambio = useCallback(() => setHuboCambiosSinPublicar(true), [])
+  const markChanged = useCallback(() => setHasUnpublishedChanges(true), [])
 
   const handleNodesChange: typeof onNodesChange = useCallback(
     (changes) => {
       onNodesChange(changes)
-      if (changes.some(esCambioRealDeGrafo)) marcarCambio()
+      if (changes.some(isRealGraphChange)) markChanged()
     },
-    [onNodesChange, marcarCambio]
+    [onNodesChange, markChanged]
   )
 
   const handleEdgesChange: typeof onEdgesChange = useCallback(
     (changes) => {
       onEdgesChange(changes)
-      if (changes.some(esCambioRealDeGrafo)) marcarCambio()
+      if (changes.some(isRealGraphChange)) markChanged()
     },
-    [onEdgesChange, marcarCambio]
+    [onEdgesChange, markChanged]
   )
 
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) => addEdge(connection, eds))
-      marcarCambio()
+      markChanged()
     },
-    [setEdges, marcarCambio]
+    [setEdges, markChanged]
   )
 
   const onDrop = useCallback(
@@ -235,46 +235,46 @@ function CanvasArea({
         x: event.clientX,
         y: event.clientY,
       })
-      const nuevo: Node<BuilderNodeData> = {
+      const newNode: Node<BuilderNodeData> = {
         id: crypto.randomUUID(),
         type: "builderNode",
         position,
         data: { tipo, etiqueta: BUILDER_BLOCKS[tipo].label, config: {} },
       }
-      setNodes((nds) => [...nds, nuevo])
-      marcarCambio()
+      setNodes((nds) => [...nds, newNode])
+      markChanged()
     },
-    [screenToFlowPosition, setNodes, marcarCambio]
+    [screenToFlowPosition, setNodes, markChanged]
   )
 
-  const actualizarConfigNodo = useCallback(
+  const updateNodeConfig = useCallback(
     (id: string, config: Record<string, unknown>) => {
       setNodes((nds) =>
         nds.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, config } } : n
         )
       )
-      marcarCambio()
+      markChanged()
     },
-    [setNodes, marcarCambio]
+    [setNodes, markChanged]
   )
 
-  const eliminarNodo = useCallback(
+  const deleteNode = useCallback(
     (id: string) => {
       setNodes((nds) => nds.filter((n) => n.id !== id))
       setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id))
       setSelectedId(null)
-      marcarCambio()
+      markChanged()
     },
-    [setNodes, setEdges, marcarCambio]
+    [setNodes, setEdges, markChanged]
   )
 
-  const nodoSeleccionado = useMemo(() => {
+  const selectedNode = useMemo(() => {
     const n = nodes.find((n) => n.id === selectedId)
     return n ? { id: n.id, data: n.data } : null
   }, [nodes, selectedId])
 
-  const grafoParaAcciones = useCallback(
+  const graphForActions = useCallback(
     () => ({
       workflowId: workflow.id,
       nodes: nodes.map((n) => ({
@@ -295,9 +295,9 @@ function CanvasArea({
     [nodes, edges, workflow.id]
   )
 
-  const validacion: ValidationIssue[] = useMemo(
+  const validation: ValidationIssue[] = useMemo(
     () =>
-      validarGrafo(
+      validateGraph(
         nodes.map((n) => ({
           id: n.id,
           tipo: n.data.tipo,
@@ -311,55 +311,55 @@ function CanvasArea({
       ),
     [nodes, edges]
   )
-  const erroresBloqueantes = validacion.filter((v) => v.nivel === "error")
+  const blockingErrors = validation.filter((v) => v.level === "error")
 
-  function restaurarVersion(grafo: {
+  function restoreVersion(graph: {
     nodes: WorkflowWithGraph["nodes"]
     edges: WorkflowWithGraph["edges"]
   }) {
-    setNodes(grafo.nodes.map(toFlowNode))
-    setEdges(grafo.edges.map(toFlowEdge))
-    setHistorialAbierto(false)
-    marcarCambio()
+    setNodes(graph.nodes.map(toFlowNode))
+    setEdges(graph.edges.map(toFlowEdge))
+    setHistoryOpen(false)
+    markChanged()
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <EditorBar
         workflowId={workflow.id}
-        nombre={workflow.nombre}
-        estado={estado}
-        autorNombre={workflow.autorNombre}
-        actualizadoEn={actualizadoEn}
-        guardando={save.isPending}
-        simulando={simulate.isPending}
-        publicando={publish.isPending}
-        motivoPublicarDeshabilitado={
-          erroresBloqueantes.length > 0
+        name={workflow.nombre}
+        status={status}
+        authorName={workflow.authorName}
+        updatedAt={updatedAt}
+        saving={save.isPending}
+        simulating={simulate.isPending}
+        publishing={publish.isPending}
+        publishDisabledReason={
+          blockingErrors.length > 0
             ? "Resuelve los errores del workflow antes de publicar"
-            : !huboCambiosSinPublicar
+            : !hasUnpublishedChanges
               ? "Ya está publicado — no hay cambios nuevos que publicar"
               : undefined
         }
-        onRename={(nombre) =>
-          rename.execute({ workflowId: workflow.id, nombre })
+        onRename={(name) =>
+          rename.execute({ workflowId: workflow.id, nombre: name })
         }
-        onHistorial={() => setHistorialAbierto(true)}
-        onSimular={() =>
-          simulate.execute({ ...grafoParaAcciones(), cohorteInicial: 1514 })
+        onHistory={() => setHistoryOpen(true)}
+        onSimulate={() =>
+          simulate.execute({ ...graphForActions(), initialCohort: 1514 })
         }
-        onPublicar={() => publish.execute(grafoParaAcciones())}
+        onPublish={() => publish.execute(graphForActions())}
       />
-      {mensajePublicar && (
+      {publishMessage && (
         <div className="border-b border-border px-6 py-2.5">
           <Message
             variant="error"
             title="No se pudo publicar"
-            description={mensajePublicar}
+            description={publishMessage}
           />
         </div>
       )}
-      {!mensajePublicar && erroresBloqueantes.length > 0 && (
+      {!publishMessage && blockingErrors.length > 0 && (
         <div className="border-b border-border px-6 py-2.5">
           {/*
             "info", no "error": esto no es una falla, es el estado normal
@@ -367,13 +367,13 @@ function CanvasArea({
             de entrada todavía) — antes mostraba una banda roja de "el
             workflow tiene errores" apenas se creaba el journey, antes de
             que el usuario hubiera arrastrado un solo bloque. Publicar
-            sigue bloqueado (`deshabilitarPublicar` abajo) hasta que se
+            sigue bloqueado (`publishDisabledReason` arriba) hasta que se
             resuelva, pero no hace falta alarmar por algo esperado.
           */}
           <Message
             variant="info"
             title="Falta esto para poder publicar"
-            description={erroresBloqueantes.map((e) => e.mensaje).join(" ")}
+            description={blockingErrors.map((e) => e.message).join(" ")}
           />
         </div>
       )}
@@ -401,18 +401,18 @@ function CanvasArea({
           </ReactFlow>
         </div>
         <InspectorPanel
-          node={nodoSeleccionado}
+          node={selectedNode}
           tiers={tiers}
           onClose={() => setSelectedId(null)}
-          onDelete={eliminarNodo}
-          onConfigChange={actualizarConfigNodo}
+          onDelete={deleteNode}
+          onConfigChange={updateNodeConfig}
         />
       </div>
       <VersionHistoryDialog
-        open={historialAbierto}
-        onOpenChange={setHistorialAbierto}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
         workflowId={workflow.id}
-        onRestore={restaurarVersion}
+        onRestore={restoreVersion}
       />
     </div>
   )
@@ -423,7 +423,7 @@ export function JourneyEditor({
   tiers,
 }: {
   workflow: WorkflowWithGraph
-  tiers: TierResumen[]
+  tiers: TierSummary[]
 }) {
   return (
     <ReactFlowProvider>

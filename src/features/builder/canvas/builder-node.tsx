@@ -12,8 +12,8 @@ export type BuilderNodeData = {
   config: Record<string, unknown>
   /** Conteos de la última corrida de Simular — solo presentational, no se persiste con el grafo. */
   simulacion?: {
-    conteoEntrada: number
-    salidas: { port: string; conteo: number }[]
+    entryCount: number
+    outputs: { port: string; count: number }[]
   }
 }
 
@@ -26,12 +26,12 @@ export type BuilderNodeData = {
  * salida es intrínsecamente binaria (cumple/no cumple el árbol de
  * condiciones), así que se queda fija.
  */
-function ramasDeConfig(
+function branchesFromConfig(
   config: Record<string, unknown>
 ): { id: string; label: string }[] | null {
-  const ramas = config.ramas
-  if (!Array.isArray(ramas) || ramas.length === 0) return null
-  return ramas
+  const branches = config.ramas
+  if (!Array.isArray(branches) || branches.length === 0) return null
+  return branches
     .filter(
       (r): r is { id: string; etiqueta: string } =>
         !!r &&
@@ -75,20 +75,20 @@ export const OUTPUT_HANDLES: Partial<
 }
 
 const DEFAULT_OUTPUT = [{ id: "out", label: "" }]
-const RAMAS_DINAMICAS: readonly BuilderNodeType[] = [
+const DYNAMIC_BRANCHES: readonly BuilderNodeType[] = [
   "ramificacion_valor",
   "split_ab",
 ]
 
 /** Etiquetas humanas de los puertos de salida de un nodo — misma fuente que usa el canvas del editor, reutilizada por la analítica (08.3) para las píldoras "vino de…". */
-export function outputsDeNodo(
+export function outputsForNode(
   tipo: BuilderNodeType,
   config: Record<string, unknown>
 ): { id: string; label: string }[] {
-  const ramasConfig = RAMAS_DINAMICAS.includes(tipo)
-    ? ramasDeConfig(config ?? {})
+  const branchesConfig = DYNAMIC_BRANCHES.includes(tipo)
+    ? branchesFromConfig(config ?? {})
     : null
-  return ramasConfig ?? OUTPUT_HANDLES[tipo] ?? DEFAULT_OUTPUT
+  return branchesConfig ?? OUTPUT_HANDLES[tipo] ?? DEFAULT_OUTPUT
 }
 
 export function BuilderNode({
@@ -98,10 +98,10 @@ export function BuilderNode({
   const meta = BUILDER_BLOCKS[data.tipo]
   const groupMeta = BUILDER_GROUP_META[meta.group]
   const Icon = meta.icon
-  const esEntrada = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
+  const isEntry = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
     data.tipo
   )
-  const outputs = outputsDeNodo(data.tipo, data.config ?? {})
+  const outputs = outputsForNode(data.tipo, data.config ?? {})
 
   return (
     <div
@@ -110,7 +110,7 @@ export function BuilderNode({
         selected ? "border-primary" : "border-border"
       )}
     >
-      {!esEntrada && (
+      {!isEntry && (
         <Handle
           type="target"
           position={Position.Left}
@@ -137,7 +137,7 @@ export function BuilderNode({
         </div>
         {data.simulacion && (
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
-            {data.simulacion.conteoEntrada.toLocaleString("es-CO")}
+            {data.simulacion.entryCount.toLocaleString("es-CO")}
           </span>
         )}
       </div>
@@ -145,18 +145,18 @@ export function BuilderNode({
       {outputs.length > 1 && (
         <div className="flex flex-col gap-1.5 border-t border-border px-3 py-2">
           {outputs.map((output) => {
-            const conteo = data.simulacion?.salidas.find(
+            const count = data.simulacion?.outputs.find(
               (s) => s.port === output.id
-            )?.conteo
+            )?.count
             return (
               <div
                 key={output.id}
                 className="relative flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground"
               >
                 {output.label}
-                {typeof conteo === "number" && (
+                {typeof count === "number" && (
                   <span className="font-semibold text-foreground">
-                    {conteo.toLocaleString("es-CO")}
+                    {count.toLocaleString("es-CO")}
                   </span>
                 )}
                 <Handle

@@ -6,7 +6,7 @@ import { JourneysKpiRow } from "@/features/builder/canvas/journeys-kpis"
 import { JourneysPagination } from "@/features/builder/canvas/journeys-pagination"
 import { JourneysTable } from "@/features/builder/canvas/journeys-table"
 import { JourneysToolbar } from "@/features/builder/canvas/journeys-toolbar"
-import { NuevoJourneyButton } from "@/features/builder/canvas/nuevo-journey-button"
+import { NewJourneyButton } from "@/features/builder/canvas/new-journey-button"
 import {
   getJourneysKpis,
   listWorkflows,
@@ -20,21 +20,21 @@ export default async function JourneysPage({
 }: PageProps<"/journeys">) {
   const params = await searchParams
   const page = Number(params.page) > 0 ? Number(params.page) : 1
-  const estado = typeof params.estado === "string" ? params.estado : undefined
+  const status = typeof params.estado === "string" ? params.estado : undefined
   const q = typeof params.q === "string" ? params.q : undefined
 
   const [{ items, total }, kpis] = await Promise.all([
     listWorkflows({
       page,
       pageSize: PAGE_SIZE,
-      estado: estado as WorkflowStatus | undefined,
+      status: status as WorkflowStatus | undefined,
       q,
     }),
     getJourneysKpis(),
   ])
 
-  const sinResultadosDeFiltro = total === 0 && (!!estado || !!q)
-  const sinJourneysAun = total === 0 && !estado && !q
+  const noFilterResults = total === 0 && (!!status || !!q)
+  const noJourneysYet = total === 0 && !status && !q
 
   return (
     <AppPage breadcrumb="Comercial  ›  Loyalty Builder" title="Loyalty Builder">
@@ -44,25 +44,25 @@ export default async function JourneysPage({
         <div className="px-[22px]">
           <JourneysToolbar
             total={total}
-            publicados={kpis.activos}
-            borradores={kpis.borradores}
-            pausados={kpis.pausados}
-            clientesEnRecorrido="—"
-            itemsVisibles={items}
+            published={kpis.active}
+            drafts={kpis.drafts}
+            paused={kpis.paused}
+            membersInJourney="—"
+            visibleItems={items}
           />
         </div>
 
-        {sinJourneysAun ? (
+        {noJourneysYet ? (
           <div className="px-[22px] pb-6">
             <EmptyState
               icon={Workflow}
               title="Todavía no hay workflows"
               description="Crea el primero para empezar a automatizar el recorrido de tus socios de lealtad."
             >
-              <NuevoJourneyButton />
+              <NewJourneyButton />
             </EmptyState>
           </div>
-        ) : sinResultadosDeFiltro ? (
+        ) : noFilterResults ? (
           <div className="px-[22px] pb-6">
             <EmptyState
               icon={Workflow}

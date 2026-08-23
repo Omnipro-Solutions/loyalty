@@ -7,43 +7,43 @@ import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
-export type AnaliticaStepData = {
+export type AnalyticsStepData = {
   tipo: BuilderNodeType
   etiqueta: string
-  /** % = conteoEntrada de este nodo / entradas del nodo de entrada — el mismo criterio en cada tarjeta, por eso el nodo de entrada y cualquier bloque sin fuga muestran 100%. */
-  conteoEntrada: number | undefined
+  /** % = entryCount de este nodo / entradas del nodo de entrada — el mismo criterio en cada tarjeta, por eso el nodo de entrada y cualquier bloque sin fuga muestran 100%. */
+  entryCount: number | undefined
   pct: number | undefined
-  ramaEntrante: { etiqueta: string; conteo: number } | null
-  puertosSalida: string[]
-  esMayorCaida: boolean
+  incomingBranch: { label: string; count: number } | null
+  outputPorts: string[]
+  isBiggestDrop: boolean
 }
 
-export function AnaliticaStepNode({
+export function AnalyticsStepNode({
   data,
-}: NodeProps & { data: AnaliticaStepData }) {
+}: NodeProps & { data: AnalyticsStepData }) {
   const meta = BUILDER_BLOCKS[data.tipo]
   const groupMeta = BUILDER_GROUP_META[meta.group]
   const Icon = meta.icon
-  const esEntrada = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
+  const isEntry = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
     data.tipo
   )
 
   return (
     <div className="flex w-[300px] flex-col items-center gap-2.5">
-      {data.ramaEntrante && (
+      {data.incomingBranch && (
         <div className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
-          {data.ramaEntrante.etiqueta} ·{" "}
-          {formatNumber(data.ramaEntrante.conteo)}
+          {data.incomingBranch.label} ·{" "}
+          {formatNumber(data.incomingBranch.count)}
         </div>
       )}
 
       <div
         className={cn(
           "relative flex w-full flex-col gap-3 rounded-2xl border bg-background p-4 shadow-form-section",
-          data.esMayorCaida ? "border-warning" : "border-border"
+          data.isBiggestDrop ? "border-warning" : "border-border"
         )}
       >
-        {!esEntrada && (
+        {!isEntry && (
           <Handle
             type="target"
             position={Position.Top}
@@ -72,15 +72,15 @@ export function AnaliticaStepNode({
 
         <div className="flex items-end justify-between gap-2">
           <p className="text-2xl leading-7 font-bold text-foreground">
-            {typeof data.conteoEntrada === "number"
-              ? formatNumber(data.conteoEntrada)
+            {typeof data.entryCount === "number"
+              ? formatNumber(data.entryCount)
               : "—"}
           </p>
           {typeof data.pct === "number" && (
             <span
               className={cn(
                 "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                data.esMayorCaida
+                data.isBiggestDrop
                   ? "bg-warning-bg text-warning"
                   : "bg-muted text-foreground"
               )}
@@ -94,20 +94,20 @@ export function AnaliticaStepNode({
           <div
             className={cn(
               "h-full rounded-full",
-              data.esMayorCaida ? "bg-warning" : "bg-primary"
+              data.isBiggestDrop ? "bg-warning" : "bg-primary"
             )}
             style={{ width: `${String(Math.min(data.pct ?? 0, 100))}%` }}
           />
         </div>
 
-        {data.puertosSalida.map((puertoId, i) => (
+        {data.outputPorts.map((portId, i) => (
           <Handle
-            key={puertoId}
+            key={portId}
             type="source"
-            id={puertoId}
+            id={portId}
             position={Position.Bottom}
             style={{
-              left: `${String(((i + 1) / (data.puertosSalida.length + 1)) * 100)}%`,
+              left: `${String(((i + 1) / (data.outputPorts.length + 1)) * 100)}%`,
             }}
             className="!size-2.5 !border-2 !border-background !bg-border-strong"
           />

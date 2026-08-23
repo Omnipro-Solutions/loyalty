@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 
 import { createWorkflowAction } from "./actions"
 
-export function NuevoJourneyButton() {
+export function NewJourneyButton() {
   const router = useRouter()
   const create = useAction(createWorkflowAction, {
     onSuccess: ({ data }) => {

@@ -16,9 +16,9 @@ export function JourneysPagination({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  function onPageChange(nuevaPagina: number) {
+  function onPageChange(newPage: number) {
     const params = new URLSearchParams(searchParams.toString())
-    params.set("page", String(nuevaPagina))
+    params.set("page", String(newPage))
     router.push(`/journeys?${params.toString()}`)
   }
 

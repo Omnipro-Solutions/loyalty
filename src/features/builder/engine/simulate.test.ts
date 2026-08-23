@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import { simularWorkflow, type SimEdge, type SimNode } from "./simulate"
+import { simulateWorkflow, type SimEdge, type SimNode } from "./simulate"
 
-describe("simularWorkflow", () => {
+describe("simulateWorkflow", () => {
   it("pasa el 100% por un nodo simple sin ramas", () => {
     const nodes: SimNode[] = [
       { id: "a", tipo: "evento_compra", config: {} },
@@ -11,11 +11,11 @@ describe("simularWorkflow", () => {
     const edges: SimEdge[] = [
       { source_node_id: "a", source_port: "out", target_node_id: "b" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 1000)
-    expect(pasos.find((p) => p.nodeId === "a")?.salidas).toEqual([
-      { port: "out", conteo: 1000 },
+    const steps = simulateWorkflow(nodes, edges, 1000)
+    expect(steps.find((p) => p.nodeId === "a")?.outputs).toEqual([
+      { port: "out", count: 1000 },
     ])
-    expect(pasos.find((p) => p.nodeId === "b")?.conteoEntrada).toBe(1000)
+    expect(steps.find((p) => p.nodeId === "b")?.entryCount).toBe(1000)
   })
 
   it("condicion_multiple divide cumple/no_cumple según el porcentaje configurado", () => {
@@ -30,11 +30,11 @@ describe("simularWorkflow", () => {
     const edges: SimEdge[] = [
       { source_node_id: "a", source_port: "out", target_node_id: "cond" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 1000)
-    const salidasCond = pasos.find((p) => p.nodeId === "cond")?.salidas
-    expect(salidasCond).toEqual([
-      { port: "cumple", conteo: 700 },
-      { port: "no_cumple", conteo: 300 },
+    const steps = simulateWorkflow(nodes, edges, 1000)
+    const condOutputs = steps.find((p) => p.nodeId === "cond")?.outputs
+    expect(condOutputs).toEqual([
+      { port: "cumple", count: 700 },
+      { port: "no_cumple", count: 300 },
     ])
   })
 
@@ -46,10 +46,10 @@ describe("simularWorkflow", () => {
     const edges: SimEdge[] = [
       { source_node_id: "a", source_port: "out", target_node_id: "cond" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 200)
-    expect(pasos.find((p) => p.nodeId === "cond")?.salidas).toEqual([
-      { port: "cumple", conteo: 120 },
-      { port: "no_cumple", conteo: 80 },
+    const steps = simulateWorkflow(nodes, edges, 200)
+    expect(steps.find((p) => p.nodeId === "cond")?.outputs).toEqual([
+      { port: "cumple", count: 120 },
+      { port: "no_cumple", count: 80 },
     ])
   })
 
@@ -70,10 +70,10 @@ describe("simularWorkflow", () => {
     const edges: SimEdge[] = [
       { source_node_id: "a", source_port: "out", target_node_id: "ram" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 800)
-    expect(pasos.find((p) => p.nodeId === "ram")?.salidas).toEqual([
-      { port: "oro", conteo: 600 },
-      { port: "plata", conteo: 200 },
+    const steps = simulateWorkflow(nodes, edges, 800)
+    expect(steps.find((p) => p.nodeId === "ram")?.outputs).toEqual([
+      { port: "oro", count: 600 },
+      { port: "plata", count: 200 },
     ])
   })
 
@@ -89,17 +89,17 @@ describe("simularWorkflow", () => {
     const edges: SimEdge[] = [
       { source_node_id: "a", source_port: "out", target_node_id: "pts" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 500)
-    expect(pasos.find((p) => p.nodeId === "pts")?.salidas).toEqual([
-      { port: "out", conteo: 450 },
-      { port: "tope_alcanzado", conteo: 50 },
+    const steps = simulateWorkflow(nodes, edges, 500)
+    expect(steps.find((p) => p.nodeId === "pts")?.outputs).toEqual([
+      { port: "out", count: 450 },
+      { port: "tope_alcanzado", count: 50 },
     ])
   })
 
   it("fin_workflow no produce salidas", () => {
     const nodes: SimNode[] = [{ id: "a", tipo: "fin_workflow", config: {} }]
-    const pasos = simularWorkflow(nodes, [], 100)
-    expect(pasos).toEqual([])
+    const steps = simulateWorkflow(nodes, [], 100)
+    expect(steps).toEqual([])
   })
 
   it("no entra en loop infinito si el grafo tiene un ciclo", () => {
@@ -111,8 +111,8 @@ describe("simularWorkflow", () => {
       { source_node_id: "a", source_port: "out", target_node_id: "b" },
       { source_node_id: "b", source_port: "out", target_node_id: "a" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 100)
-    expect(pasos).toHaveLength(2)
+    const steps = simulateWorkflow(nodes, edges, 100)
+    expect(steps).toHaveLength(2)
   })
 
   it("suma la cohorte de múltiples aristas entrantes antes de procesar el nodo", () => {
@@ -125,7 +125,7 @@ describe("simularWorkflow", () => {
       { source_node_id: "a", source_port: "out", target_node_id: "c" },
       { source_node_id: "b", source_port: "out", target_node_id: "c" },
     ]
-    const pasos = simularWorkflow(nodes, edges, 100)
-    expect(pasos.find((p) => p.nodeId === "c")?.conteoEntrada).toBe(200)
+    const steps = simulateWorkflow(nodes, edges, 100)
+    expect(steps.find((p) => p.nodeId === "c")?.entryCount).toBe(200)
   })
 })

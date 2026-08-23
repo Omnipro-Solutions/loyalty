@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { BUILDER_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
-const builderNodeTipoSchema = z
+const builderNodeTypeSchema = z
   .string()
   .refine((v): v is BuilderNodeType =>
     (BUILDER_NODE_TYPES as readonly string[]).includes(v)
@@ -23,7 +23,7 @@ export const deleteWorkflowsSchema = z.object({
 
 export const graphNodeSchema = z.object({
   id: z.string(),
-  tipo: builderNodeTipoSchema,
+  tipo: builderNodeTypeSchema,
   etiqueta: z.string().min(1),
   posicion_x: z.number(),
   posicion_y: z.number(),
@@ -47,5 +47,5 @@ export const runInputSchema = z.object({
   workflowId: z.string().uuid(),
   nodes: z.array(graphNodeSchema),
   edges: z.array(graphEdgeSchema),
-  cohorteInicial: z.number().min(1).default(1000),
+  initialCohort: z.number().min(1).default(1000),
 })

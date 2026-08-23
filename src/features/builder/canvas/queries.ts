@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
 import type { BuilderNodeType, TierName, WorkflowStatus } from "@/types/domain"
 
-export type TierResumen = { nombre: TierName; multiplicador: number }
+export type TierSummary = { nombre: TierName; multiplicador: number }
 
 /** Multiplicadores reales por nivel — alimenta la vista previa en vivo de `acumular_puntos`. */
-export async function listTiers(): Promise<TierResumen[]> {
+export async function listTiers(): Promise<TierSummary[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from("tiers")
@@ -22,24 +22,24 @@ export type WorkflowListItem = {
   descripcion: string | null
   estado: WorkflowStatus
   actualizado_en: string
-  autorNombre: string | null
-  totalNodos: number
-  /** `null` = sin evidencia real todavía (ningún socio con un `points_ledger` vinculado a una corrida de este workflow) — se muestra "—", no un placeholder inventado. Ver `getAtribucionPorWorkflow`. */
-  enRecorrido: number | null
+  authorName: string | null
+  totalNodes: number
+  /** `null` = sin evidencia real todavía (ningún socio con un `points_ledger` vinculado a una corrida de este workflow) — se muestra "—", no un placeholder inventado. Ver `getAttributionByWorkflow`. */
+  inJourney: number | null
   conversion: number | null
-  ingreso: number | null
+  revenue: number | null
 }
 
-export type AtribucionWorkflow = {
-  enRecorrido: number
+export type WorkflowAttribution = {
+  inJourney: number
   conversion: number
-  ingreso: number
+  revenue: number
 }
 
-export type AtribucionGlobal = {
-  clientesEnRecorrido: number | null
-  conversionMedia: number | null
-  ingresoAtribuido: number | null
+export type GlobalAttribution = {
+  membersInJourney: number | null
+  averageConversion: number | null
+  attributedRevenue: number | null
 }
 
 /**
@@ -55,13 +55,13 @@ export type AtribucionGlobal = {
  * esos socios. Workflows sin ningún movimiento vinculado no aparecen en el
  * mapa devuelto — el llamador debe tratarlos como "—", no como cero.
  */
-export async function getAtribucionPorWorkflow(): Promise<{
-  porWorkflow: Map<string, AtribucionWorkflow>
-  global: AtribucionGlobal
+export async function getAttributionByWorkflow(): Promise<{
+  byWorkflow: Map<string, WorkflowAttribution>
+  global: GlobalAttribution
 }> {
   const supabase = await createClient()
 
-  const [{ count: totalMiembros }, { data: runs }, { data: ledger }] =
+  const [{ count: totalMembers }, { data: runs }, { data: ledger }] =
     await Promise.all([
       supabase.from("members").select("*", { count: "exact", head: true }),
       supabase.from("workflow_runs").select("id, workflow_id"),
@@ -71,66 +71,66 @@ export async function getAtribucionPorWorkflow(): Promise<{
         .not("workflow_run_id", "is", null),
     ])
 
-  if (!totalMiembros || !ledger?.length) {
+  if (!totalMembers || !ledger?.length) {
     return {
-      porWorkflow: new Map(),
+      byWorkflow: new Map(),
       global: {
-        clientesEnRecorrido: null,
-        conversionMedia: null,
-        ingresoAtribuido: null,
+        membersInJourney: null,
+        averageConversion: null,
+        attributedRevenue: null,
       },
     }
   }
 
-  const workflowPorRun = new Map((runs ?? []).map((r) => [r.id, r.workflow_id]))
-  const miembrosPorWorkflow = new Map<string, Set<string>>()
-  const todosLosMiembros = new Set<string>()
-  for (const fila of ledger) {
-    todosLosMiembros.add(fila.member_id)
-    const workflowId = workflowPorRun.get(fila.workflow_run_id!)
+  const workflowByRun = new Map((runs ?? []).map((r) => [r.id, r.workflow_id]))
+  const membersByWorkflow = new Map<string, Set<string>>()
+  const allMembers = new Set<string>()
+  for (const row of ledger) {
+    allMembers.add(row.member_id)
+    const workflowId = workflowByRun.get(row.workflow_run_id!)
     if (!workflowId) continue
-    if (!miembrosPorWorkflow.has(workflowId)) {
-      miembrosPorWorkflow.set(workflowId, new Set())
+    if (!membersByWorkflow.has(workflowId)) {
+      membersByWorkflow.set(workflowId, new Set())
     }
-    miembrosPorWorkflow.get(workflowId)!.add(fila.member_id)
+    membersByWorkflow.get(workflowId)!.add(row.member_id)
   }
 
-  const { data: pedidos } = await supabase
+  const { data: orders } = await supabase
     .from("pedidos")
     .select("member_id, total")
     .eq("estado", "completado")
-    .in("member_id", [...todosLosMiembros])
+    .in("member_id", [...allMembers])
 
-  const ingresoPorMiembro = new Map<string, number>()
-  for (const p of pedidos ?? []) {
-    ingresoPorMiembro.set(
+  const revenueByMember = new Map<string, number>()
+  for (const p of orders ?? []) {
+    revenueByMember.set(
       p.member_id,
-      (ingresoPorMiembro.get(p.member_id) ?? 0) + Number(p.total)
+      (revenueByMember.get(p.member_id) ?? 0) + Number(p.total)
     )
   }
 
-  const porWorkflow = new Map<string, AtribucionWorkflow>()
-  for (const [workflowId, miembros] of miembrosPorWorkflow) {
-    porWorkflow.set(workflowId, {
-      enRecorrido: miembros.size,
-      conversion: miembros.size / totalMiembros,
-      ingreso: [...miembros].reduce(
-        (acc, id) => acc + (ingresoPorMiembro.get(id) ?? 0),
+  const byWorkflow = new Map<string, WorkflowAttribution>()
+  for (const [workflowId, members] of membersByWorkflow) {
+    byWorkflow.set(workflowId, {
+      inJourney: members.size,
+      conversion: members.size / totalMembers,
+      revenue: [...members].reduce(
+        (acc, id) => acc + (revenueByMember.get(id) ?? 0),
         0
       ),
     })
   }
 
-  const conversiones = [...porWorkflow.values()].map((a) => a.conversion)
+  const conversions = [...byWorkflow.values()].map((a) => a.conversion)
 
   return {
-    porWorkflow,
+    byWorkflow,
     global: {
-      clientesEnRecorrido: todosLosMiembros.size,
-      conversionMedia:
-        conversiones.reduce((a, b) => a + b, 0) / conversiones.length,
-      ingresoAtribuido: [...todosLosMiembros].reduce(
-        (acc, id) => acc + (ingresoPorMiembro.get(id) ?? 0),
+      membersInJourney: allMembers.size,
+      averageConversion:
+        conversions.reduce((a, b) => a + b, 0) / conversions.length,
+      attributedRevenue: [...allMembers].reduce(
+        (acc, id) => acc + (revenueByMember.get(id) ?? 0),
         0
       ),
     },
@@ -140,7 +140,7 @@ export async function getAtribucionPorWorkflow(): Promise<{
 export type ListWorkflowsParams = {
   page?: number
   pageSize?: number
-  estado?: WorkflowStatus
+  status?: WorkflowStatus
   q?: string
 }
 
@@ -157,40 +157,40 @@ export type ListWorkflowsResult = {
 export async function listWorkflows(
   params: ListWorkflowsParams = {}
 ): Promise<ListWorkflowsResult> {
-  const { page = 1, pageSize = 25, estado, q } = params
+  const { page = 1, pageSize = 25, status, q } = params
   const supabase = await createClient()
 
   let query = supabase
     .from("workflows")
     .select(
-      "id, nombre, descripcion, estado, actualizado_en, autor:profiles!actualizado_por(nombre), nodos:workflow_nodes(count)",
+      "id, nombre, descripcion, estado, actualizado_en, author:profiles!actualizado_por(nombre), nodes:workflow_nodes(count)",
       { count: "exact" }
     )
     .order("actualizado_en", { ascending: false })
 
-  if (estado) query = query.eq("estado", estado)
+  if (status) query = query.eq("estado", status)
   if (q) query = query.or(`nombre.ilike.%${q}%,descripcion.ilike.%${q}%`)
 
-  const desde = (page - 1) * pageSize
-  const [{ data, count }, { porWorkflow: atribucion }] = await Promise.all([
-    query.range(desde, desde + pageSize - 1),
-    getAtribucionPorWorkflow(),
+  const from = (page - 1) * pageSize
+  const [{ data, count }, { byWorkflow: attribution }] = await Promise.all([
+    query.range(from, from + pageSize - 1),
+    getAttributionByWorkflow(),
   ])
 
   return {
     items: (data ?? []).map((w) => {
-      const atribucionFila = atribucion.get(w.id)
+      const attributionRow = attribution.get(w.id)
       return {
         id: w.id,
         nombre: w.nombre,
         descripcion: w.descripcion,
         estado: w.estado as WorkflowStatus,
         actualizado_en: w.actualizado_en,
-        autorNombre: w.autor?.nombre ?? null,
-        totalNodos: w.nodos?.[0]?.count ?? 0,
-        enRecorrido: atribucionFila?.enRecorrido ?? null,
-        conversion: atribucionFila?.conversion ?? null,
-        ingreso: atribucionFila?.ingreso ?? null,
+        authorName: w.author?.nombre ?? null,
+        totalNodes: w.nodes?.[0]?.count ?? 0,
+        inJourney: attributionRow?.inJourney ?? null,
+        conversion: attributionRow?.conversion ?? null,
+        revenue: attributionRow?.revenue ?? null,
       }
     }),
     total: count ?? 0,
@@ -198,41 +198,41 @@ export async function listWorkflows(
 }
 
 export type JourneysKpis = {
-  activos: number
-  publicadosEstaSemana: number
-  borradores: number
-  pausados: number
-} & AtribucionGlobal
+  active: number
+  publishedThisWeek: number
+  drafts: number
+  paused: number
+} & GlobalAttribution
 
-const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
  * Los conteos por estado siempre son reales (derivados directo de
  * `workflows`). "Clientes en recorrido"/"Conversión media"/"Ingreso
  * atribuido" ahora también son reales cuando hay al menos un socio con un
- * `points_ledger` vinculado a una corrida (ver `getAtribucionPorWorkflow`)
+ * `points_ledger` vinculado a una corrida (ver `getAttributionByWorkflow`)
  * — `null` cuando ningún workflow tiene evidencia todavía, y
  * `JourneysKpiRow` los muestra como "—" en ese caso, no como cero.
  */
 export async function getJourneysKpis(): Promise<JourneysKpis> {
   const supabase = await createClient()
-  const [{ data }, { global: atribucion }] = await Promise.all([
+  const [{ data }, { global: attribution }] = await Promise.all([
     supabase.from("workflows").select("estado, actualizado_en"),
-    getAtribucionPorWorkflow(),
+    getAttributionByWorkflow(),
   ])
 
   const rows = data ?? []
-  const ahora = Date.now()
+  const now = Date.now()
   return {
-    activos: rows.filter((r) => r.estado === "publicado").length,
-    publicadosEstaSemana: rows.filter(
+    active: rows.filter((r) => r.estado === "publicado").length,
+    publishedThisWeek: rows.filter(
       (r) =>
         r.estado === "publicado" &&
-        ahora - new Date(r.actualizado_en).getTime() <= SIETE_DIAS_MS
+        now - new Date(r.actualizado_en).getTime() <= SEVEN_DAYS_MS
     ).length,
-    borradores: rows.filter((r) => r.estado === "borrador").length,
-    pausados: rows.filter((r) => r.estado === "pausado").length,
-    ...atribucion,
+    drafts: rows.filter((r) => r.estado === "borrador").length,
+    paused: rows.filter((r) => r.estado === "pausado").length,
+    ...attribution,
   }
 }
 
@@ -257,7 +257,7 @@ export type WorkflowWithGraph = {
   nombre: string
   estado: WorkflowStatus
   actualizado_en: string
-  autorNombre: string | null
+  authorName: string | null
   nodes: WorkflowGraphNode[]
   edges: WorkflowGraphEdge[]
 }
@@ -265,7 +265,7 @@ export type WorkflowWithGraph = {
 export type WorkflowVersionSummary = {
   version: number
   creado_en: string
-  autorNombre: string | null
+  authorName: string | null
 }
 
 export async function listWorkflowVersions(
@@ -274,14 +274,14 @@ export async function listWorkflowVersions(
   const supabase = await createClient()
   const { data } = await supabase
     .from("workflow_versions")
-    .select("version, creado_en, autor:profiles!autor_id(nombre)")
+    .select("version, creado_en, author:profiles!autor_id(nombre)")
     .eq("workflow_id", workflowId)
     .order("version", { ascending: false })
 
   return (data ?? []).map((v) => ({
     version: v.version,
     creado_en: v.creado_en,
-    autorNombre: v.autor?.nombre ?? null,
+    authorName: v.author?.nombre ?? null,
   }))
 }
 
@@ -312,7 +312,7 @@ export async function getWorkflowWithGraph(
   const { data: workflow } = await supabase
     .from("workflows")
     .select(
-      "id, nombre, estado, actualizado_en, autor:profiles!actualizado_por(nombre)"
+      "id, nombre, estado, actualizado_en, author:profiles!actualizado_por(nombre)"
     )
     .eq("id", id)
     .maybeSingle()
@@ -335,7 +335,7 @@ export async function getWorkflowWithGraph(
     nombre: workflow.nombre,
     estado: workflow.estado as WorkflowStatus,
     actualizado_en: workflow.actualizado_en,
-    autorNombre: workflow.autor?.nombre ?? null,
+    authorName: workflow.author?.nombre ?? null,
     nodes: (nodes ?? []).map((n) => ({
       id: n.id,
       tipo: n.tipo as BuilderNodeType,
