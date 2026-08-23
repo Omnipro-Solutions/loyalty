@@ -37,30 +37,30 @@ import {
 } from "@/types/domain"
 
 import {
-  actualizarPromocionAction,
-  crearPromocionAction,
-} from "../actions/promociones"
-import { CondicionesBuilder } from "./condiciones-builder"
-import { PromocionResumenRevision } from "./promocion-resumen-revision"
-import { PromocionStepper } from "./promocion-stepper"
-import { ResumenPromocionCard } from "./resumen-promocion-card"
+  updatePromotionAction,
+  createPromotionAction,
+} from "../actions/promotions"
+import { ConditionsBuilder } from "./conditions-builder"
+import { PromotionReviewSummary } from "./promotion-review-summary"
+import { PromotionStepper } from "./promotion-stepper"
+import { PromotionSummaryCard } from "./promotion-summary-card"
 import {
-  APLICAR_SOBRE_LABEL,
-  CANAL_APLICACION_LABEL,
-  TIPO_BENEFICIO_LABEL,
-  TIPO_PROMOCION_LABEL,
-  USOS_PERIODO_LABEL,
+  APPLY_TO_LABEL,
+  CHANNEL_SCOPE_LABEL,
+  BENEFIT_TYPE_LABEL,
+  PROMOTION_TYPE_LABEL,
+  USAGE_PERIOD_LABEL,
 } from "../lib/labels"
 import type {
-  CategoriaCondicion,
-  CiudadCondicion,
-  Condicion,
-  Promocion,
-  SegmentoCondicion,
+  ConditionCategory,
+  ConditionCity,
+  Condition,
+  Promotion,
+  ConditionSegment,
 } from "../lib/queries"
-import { promocionSchema, type PromocionValues } from "../schemas"
+import { promotionSchema, type PromotionValues } from "../schemas"
 
-const PASOS = [
+const STEPS = [
   "Definición",
   "Condiciones",
   "Recompensa",
@@ -68,26 +68,26 @@ const PASOS = [
   "Resumen",
 ] as const
 
-const CAMPOS_POR_PASO: (keyof PromocionValues)[][] = [
-  ["nombre", "codigo", "tipo", "prioridad", "acumulable", "canalAplicacion"],
-  ["combinadorCondiciones", "condiciones"],
+const FIELDS_BY_STEP: (keyof PromotionValues)[][] = [
+  ["name", "code", "type", "priority", "stackable", "channelScope"],
+  ["conditionCombinator", "conditions"],
   [
-    "tipoBeneficio",
-    "valorBeneficio",
-    "topeMaximo",
-    "aplicarSobre",
-    "usosPorCliente",
-    "usosPeriodo",
+    "benefitType",
+    "benefitValue",
+    "maxCap",
+    "applyTo",
+    "usesPerMember",
+    "usagePeriod",
   ],
-  ["vigenteDesde", "vigenteHasta", "presupuestoAsignado"],
+  ["validFrom", "validUntil", "assignedBudget"],
   [],
 ]
 
-type PromocionFormProps = {
-  categorias: CategoriaCondicion[]
-  ciudades: CiudadCondicion[]
-  segmentos: SegmentoCondicion[]
-  promocion?: Promocion
+type PromotionFormProps = {
+  categories: ConditionCategory[]
+  cities: ConditionCity[]
+  segments: ConditionSegment[]
+  promotion?: Promotion
 }
 
 /**
@@ -102,16 +102,16 @@ type PromocionFormProps = {
  * lo capturado (el Figma solo diseñó el panel lateral, no una pantalla de
  * revisión, pero el stepper sí lo contempla como paso final).
  */
-export function PromocionForm({
-  categorias,
-  ciudades,
-  segmentos,
-  promocion,
-}: PromocionFormProps) {
+export function PromotionForm({
+  categories,
+  cities,
+  segments,
+  promotion,
+}: PromotionFormProps) {
   const router = useRouter()
-  const [errorGeneral, setErrorGeneral] = useState<string>()
-  const [paso, setPaso] = useState(0)
-  const editando = Boolean(promocion)
+  const [generalError, setGeneralError] = useState<string>()
+  const [step, setStep] = useState(0)
+  const isEditing = Boolean(promotion)
 
   const {
     register,
@@ -120,104 +120,108 @@ export function PromocionForm({
     setValue,
     trigger,
     formState: { errors },
-  } = useForm<PromocionValues>({
-    resolver: zodResolver(promocionSchema),
-    defaultValues: promocion
+  } = useForm<PromotionValues>({
+    resolver: zodResolver(promotionSchema),
+    defaultValues: promotion
       ? {
-          nombre: promocion.nombre,
-          codigo: promocion.codigo,
-          tipo: promocion.tipo as PromotionType,
-          prioridad: promocion.prioridad,
-          acumulable: promocion.acumulable,
-          canalAplicacion: promocion.canal_aplicacion as ChannelScope,
-          combinadorCondiciones:
-            promocion.combinador_condiciones as ConditionCombinator,
-          condiciones: promocion.condiciones as PromocionValues["condiciones"],
-          tipoBeneficio: promocion.tipo_beneficio as BenefitType,
-          valorBeneficio: promocion.valor_beneficio ?? 0,
-          topeMaximo: promocion.tope_maximo ?? undefined,
-          aplicarSobre: promocion.aplicar_sobre as ApplyTo,
-          usosPorCliente: promocion.usos_por_cliente ?? undefined,
-          usosPeriodo: (promocion.usos_periodo as UsagePeriod) ?? undefined,
-          presupuestoAsignado: promocion.presupuesto_asignado,
-          vigenteDesde: promocion.vigente_desde,
-          vigenteHasta: promocion.vigente_hasta ?? undefined,
-          estadoPublicacion:
-            promocion.estado_publicacion as PromotionPublicationStatus,
+          name: promotion.nombre,
+          code: promotion.codigo,
+          type: promotion.tipo as PromotionType,
+          priority: promotion.prioridad,
+          stackable: promotion.acumulable,
+          channelScope: promotion.canal_aplicacion as ChannelScope,
+          conditionCombinator:
+            promotion.combinador_condiciones as ConditionCombinator,
+          conditions: promotion.condiciones as PromotionValues["conditions"],
+          benefitType: promotion.tipo_beneficio as BenefitType,
+          benefitValue: promotion.valor_beneficio ?? 0,
+          maxCap: promotion.tope_maximo ?? undefined,
+          applyTo: promotion.aplicar_sobre as ApplyTo,
+          usesPerMember: promotion.usos_por_cliente ?? undefined,
+          usagePeriod: (promotion.usos_periodo as UsagePeriod) ?? undefined,
+          assignedBudget: promotion.presupuesto_asignado,
+          validFrom: promotion.vigente_desde,
+          validUntil: promotion.vigente_hasta ?? undefined,
+          publicationStatus:
+            promotion.estado_publicacion as PromotionPublicationStatus,
         }
       : {
-          nombre: "",
-          codigo: "",
-          tipo: "categoria",
-          prioridad: 5,
-          acumulable: false,
-          canalAplicacion: "pos_ecommerce",
-          combinadorCondiciones: "todas",
-          condiciones: [],
-          tipoBeneficio: "descuento_porcentual",
-          valorBeneficio: 10,
-          aplicarSobre: "subtotal_carrito",
-          usosPeriodo: "mes",
-          presupuestoAsignado: 0,
-          vigenteDesde: new Date().toISOString().slice(0, 10),
-          estadoPublicacion: "borrador",
+          name: "",
+          code: "",
+          type: "categoria",
+          priority: 5,
+          stackable: false,
+          channelScope: "pos_ecommerce",
+          conditionCombinator: "todas",
+          conditions: [],
+          benefitType: "descuento_porcentual",
+          benefitValue: 10,
+          applyTo: "subtotal_carrito",
+          usagePeriod: "mes",
+          assignedBudget: 0,
+          validFrom: new Date().toISOString().slice(0, 10),
+          publicationStatus: "borrador",
         },
   })
 
-  const valores = useWatch({ control })
+  const values = useWatch({ control })
 
-  const crear = useAction(crearPromocionAction, {
+  const create = useAction(createPromotionAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo crear la promoción.")
+        setGeneralError(data?.message ?? "No se pudo crear la promoción.")
         return
       }
       router.push("/promociones")
     },
-    onError: () => setErrorGeneral("No se pudo crear la promoción."),
+    onError: () => setGeneralError("No se pudo crear la promoción."),
   })
 
-  const actualizar = useAction(actualizarPromocionAction, {
+  const update = useAction(updatePromotionAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) {
-        setErrorGeneral(data?.message ?? "No se pudo guardar la promoción.")
+        setGeneralError(data?.message ?? "No se pudo guardar la promoción.")
         return
       }
       router.push("/promociones")
     },
-    onError: () => setErrorGeneral("No se pudo guardar la promoción."),
+    onError: () => setGeneralError("No se pudo guardar la promoción."),
   })
 
-  const guardando = crear.isPending || actualizar.isPending
+  const saving = create.isPending || update.isPending
 
-  function guardar(estadoPublicacion: "activa" | "borrador") {
-    return handleSubmit((values: PromocionValues) => {
-      setErrorGeneral(undefined)
-      if (promocion) {
-        actualizar.execute({ id: promocion.id, ...values, estadoPublicacion })
+  function save(publicationStatus: "activa" | "borrador") {
+    return handleSubmit((formValues: PromotionValues) => {
+      setGeneralError(undefined)
+      if (promotion) {
+        update.execute({
+          id: promotion.id,
+          ...formValues,
+          publicationStatus,
+        })
       } else {
-        crear.execute({ ...values, estadoPublicacion })
+        create.execute({ ...formValues, publicationStatus })
       }
     })
   }
 
-  async function siguiente() {
-    const valido = await trigger(CAMPOS_POR_PASO[paso])
-    if (valido) setPaso((p) => Math.min(p + 1, PASOS.length - 1))
+  async function next() {
+    const isValid = await trigger(FIELDS_BY_STEP[step])
+    if (isValid) setStep((s) => Math.min(s + 1, STEPS.length - 1))
   }
 
-  function anterior() {
-    setPaso((p) => Math.max(p - 1, 0))
+  function previous() {
+    setStep((s) => Math.max(s - 1, 0))
   }
 
-  const sinFechaFin = !valores.vigenteHasta
+  const hasNoEndDate = !values.validUntil
 
   return (
     <form className="flex w-full flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-2xl leading-7 font-semibold text-foreground">
-            {editando ? "Editar promoción" : "Nueva promoción"}
+            {isEditing ? "Editar promoción" : "Nueva promoción"}
           </p>
           <p className="text-[13px] leading-[18px] text-muted-foreground">
             Define identidad, condiciones, recompensa y vigencia de la
@@ -226,19 +230,19 @@ export function PromocionForm({
         </div>
       </div>
 
-      {errorGeneral && (
+      {generalError && (
         <Message
           variant="error"
           title="No se pudo guardar"
-          description={errorGeneral}
+          description={generalError}
         />
       )}
 
-      <PromocionStepper steps={PASOS} current={paso} onStepClick={setPaso} />
+      <PromotionStepper steps={STEPS} current={step} onStepClick={setStep} />
 
       <div className="flex w-full items-start gap-5">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
-          {paso === 0 && (
+          {step === 0 && (
             <Section
               title="Identidad de la promoción"
               description="Cómo se identifica la promoción dentro del motor."
@@ -246,67 +250,67 @@ export function PromocionForm({
               <Row>
                 <Field
                   label="Nombre de la promoción"
-                  htmlFor="nombre"
+                  htmlFor="name"
                   required
-                  error={errors.nombre?.message}
+                  error={errors.name?.message}
                 >
                   <Input
-                    id="nombre"
+                    id="name"
                     placeholder="2x1 en Bebidas"
-                    {...register("nombre")}
+                    {...register("name")}
                   />
                 </Field>
                 <Field
                   label="Código"
-                  htmlFor="codigo"
+                  htmlFor="code"
                   required
                   hint="Mayúsculas, números y guiones."
-                  error={errors.codigo?.message}
+                  error={errors.code?.message}
                 >
                   <Input
-                    id="codigo"
+                    id="code"
                     placeholder="PROMO-2X1-BEB"
-                    {...register("codigo")}
+                    {...register("code")}
                     onChange={(e) =>
-                      setValue("codigo", e.target.value.toUpperCase())
+                      setValue("code", e.target.value.toUpperCase())
                     }
                   />
                 </Field>
               </Row>
               <Row>
-                <Field label="Tipo de promoción" htmlFor="tipo">
+                <Field label="Tipo de promoción" htmlFor="type">
                   <Select
-                    value={valores.tipo}
-                    onValueChange={(v) => setValue("tipo", v as PromotionType)}
+                    value={values.type}
+                    onValueChange={(v) => setValue("type", v as PromotionType)}
                   >
-                    <SelectTrigger id="tipo">
+                    <SelectTrigger id="type">
                       <SelectValue>
-                        {(v: PromotionType) => TIPO_PROMOCION_LABEL[v]}
+                        {(v: PromotionType) => PROMOTION_TYPE_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {PROMOTION_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>
-                          {TIPO_PROMOCION_LABEL[t]}
+                          {PROMOTION_TYPE_LABEL[t]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Prioridad" htmlFor="prioridad">
+                <Field label="Prioridad" htmlFor="priority">
                   <Stepper
-                    value={valores.prioridad ?? 5}
-                    onValueChange={(v) => setValue("prioridad", v)}
+                    value={values.priority ?? 5}
+                    onValueChange={(v) => setValue("priority", v)}
                     min={1}
                     max={10}
                   />
                 </Field>
-                <Field label="Acumulable" htmlFor="acumulable">
+                <Field label="Acumulable" htmlFor="stackable">
                   <Select
-                    value={valores.acumulable ? "si" : "no"}
-                    onValueChange={(v) => setValue("acumulable", v === "si")}
+                    value={values.stackable ? "si" : "no"}
+                    onValueChange={(v) => setValue("stackable", v === "si")}
                   >
-                    <SelectTrigger id="acumulable">
+                    <SelectTrigger id="stackable">
                       <SelectValue>
                         {(v: "si" | "no") =>
                           v === "si" ? "Acumulable" : "No acumulable"
@@ -319,22 +323,22 @@ export function PromocionForm({
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Canal de aplicación" htmlFor="canal">
+                <Field label="Canal de aplicación" htmlFor="channelScope">
                   <Select
-                    value={valores.canalAplicacion}
+                    value={values.channelScope}
                     onValueChange={(v) =>
-                      setValue("canalAplicacion", v as ChannelScope)
+                      setValue("channelScope", v as ChannelScope)
                     }
                   >
-                    <SelectTrigger id="canal">
+                    <SelectTrigger id="channelScope">
                       <SelectValue>
-                        {(v: ChannelScope) => CANAL_APLICACION_LABEL[v]}
+                        {(v: ChannelScope) => CHANNEL_SCOPE_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {CHANNEL_SCOPES.map((c) => (
                         <SelectItem key={c} value={c}>
-                          {CANAL_APLICACION_LABEL[c]}
+                          {CHANNEL_SCOPE_LABEL[c]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -344,43 +348,43 @@ export function PromocionForm({
             </Section>
           )}
 
-          {paso === 1 && (
+          {step === 1 && (
             <Section
               title="Condiciones (SI)"
               description="Según el combinador elegido, todas o alguna condición debe cumplirse para activar la promoción."
             >
-              <CondicionesBuilder
+              <ConditionsBuilder
                 control={control}
-                onCombinadorChange={(v) => setValue("combinadorCondiciones", v)}
-                categorias={categorias}
-                ciudades={ciudades}
-                segmentos={segmentos}
+                onCombinatorChange={(v) => setValue("conditionCombinator", v)}
+                categories={categories}
+                cities={cities}
+                segments={segments}
               />
             </Section>
           )}
 
-          {paso === 2 && (
+          {step === 2 && (
             <Section
               title="Recompensa (ENTONCES)"
               description="Beneficio que entrega la promoción al cumplirse las condiciones."
             >
               <Row>
-                <Field label="Tipo de beneficio" htmlFor="tipoBeneficio">
+                <Field label="Tipo de beneficio" htmlFor="benefitType">
                   <Select
-                    value={valores.tipoBeneficio}
+                    value={values.benefitType}
                     onValueChange={(v) =>
-                      setValue("tipoBeneficio", v as BenefitType)
+                      setValue("benefitType", v as BenefitType)
                     }
                   >
-                    <SelectTrigger id="tipoBeneficio">
+                    <SelectTrigger id="benefitType">
                       <SelectValue>
-                        {(v: BenefitType) => TIPO_BENEFICIO_LABEL[v]}
+                        {(v: BenefitType) => BENEFIT_TYPE_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {BENEFIT_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>
-                          {TIPO_BENEFICIO_LABEL[t]}
+                          {BENEFIT_TYPE_LABEL[t]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -388,24 +392,24 @@ export function PromocionForm({
                 </Field>
                 <Field
                   label={
-                    valores.tipoBeneficio === "descuento_porcentual"
+                    values.benefitType === "descuento_porcentual"
                       ? "Valor (%)"
                       : "Valor"
                   }
-                  htmlFor="valorBeneficio"
-                  error={errors.valorBeneficio?.message}
+                  htmlFor="benefitValue"
+                  error={errors.benefitValue?.message}
                 >
-                  {valores.tipoBeneficio === "descuento_porcentual" ? (
+                  {values.benefitType === "descuento_porcentual" ? (
                     <Input
-                      id="valorBeneficio"
+                      id="benefitValue"
                       type="number"
                       step="0.1"
-                      {...register("valorBeneficio", { valueAsNumber: true })}
+                      {...register("benefitValue", { valueAsNumber: true })}
                     />
                   ) : (
                     <CurrencyInput
-                      id="valorBeneficio"
-                      {...register("valorBeneficio", {
+                      id="benefitValue"
+                      {...register("benefitValue", {
                         valueAsNumber: true,
                       })}
                     />
@@ -413,34 +417,32 @@ export function PromocionForm({
                 </Field>
                 <Field
                   label="Tope máximo (opcional)"
-                  htmlFor="topeMaximo"
-                  error={errors.topeMaximo?.message}
+                  htmlFor="maxCap"
+                  error={errors.maxCap?.message}
                 >
                   <CurrencyInput
-                    id="topeMaximo"
-                    {...register("topeMaximo", {
+                    id="maxCap"
+                    {...register("maxCap", {
                       setValueAs: (v) => (v === "" ? undefined : Number(v)),
                     })}
                   />
                 </Field>
               </Row>
               <Row>
-                <Field label="Aplicar sobre" htmlFor="aplicarSobre">
+                <Field label="Aplicar sobre" htmlFor="applyTo">
                   <Select
-                    value={valores.aplicarSobre}
-                    onValueChange={(v) =>
-                      setValue("aplicarSobre", v as ApplyTo)
-                    }
+                    value={values.applyTo}
+                    onValueChange={(v) => setValue("applyTo", v as ApplyTo)}
                   >
-                    <SelectTrigger id="aplicarSobre">
+                    <SelectTrigger id="applyTo">
                       <SelectValue>
-                        {(v: ApplyTo) => APLICAR_SOBRE_LABEL[v]}
+                        {(v: ApplyTo) => APPLY_TO_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {APPLY_TO_OPTIONS.map((o) => (
                         <SelectItem key={o} value={o}>
-                          {APLICAR_SOBRE_LABEL[o]}
+                          {APPLY_TO_LABEL[o]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -448,33 +450,33 @@ export function PromocionForm({
                 </Field>
                 <Field
                   label="Usos por cliente (opcional)"
-                  htmlFor="usosPorCliente"
+                  htmlFor="usesPerMember"
                 >
                   <Stepper
-                    value={valores.usosPorCliente ?? 0}
+                    value={values.usesPerMember ?? 0}
                     onValueChange={(v) =>
-                      setValue("usosPorCliente", v === 0 ? undefined : v)
+                      setValue("usesPerMember", v === 0 ? undefined : v)
                     }
                     min={0}
                     max={30}
                   />
                 </Field>
-                <Field label="Periodo" htmlFor="usosPeriodo">
+                <Field label="Periodo" htmlFor="usagePeriod">
                   <Select
-                    value={valores.usosPeriodo}
+                    value={values.usagePeriod}
                     onValueChange={(v) =>
-                      setValue("usosPeriodo", v as UsagePeriod)
+                      setValue("usagePeriod", v as UsagePeriod)
                     }
                   >
-                    <SelectTrigger id="usosPeriodo">
+                    <SelectTrigger id="usagePeriod">
                       <SelectValue>
-                        {(v: UsagePeriod) => USOS_PERIODO_LABEL[v]}
+                        {(v: UsagePeriod) => USAGE_PERIOD_LABEL[v]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {USAGE_PERIODS.map((u) => (
                         <SelectItem key={u} value={u}>
-                          {USOS_PERIODO_LABEL[u]}
+                          {USAGE_PERIOD_LABEL[u]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -484,7 +486,7 @@ export function PromocionForm({
             </Section>
           )}
 
-          {paso === 3 && (
+          {step === 3 && (
             <Section
               title="Vigencia"
               description="Fechas de la campaña y presupuesto asignado."
@@ -492,37 +494,37 @@ export function PromocionForm({
               <Row>
                 <Field
                   label="Fecha de inicio"
-                  htmlFor="vigenteDesde"
+                  htmlFor="validFrom"
                   required
-                  error={errors.vigenteDesde?.message}
+                  error={errors.validFrom?.message}
                 >
                   <Input
-                    id="vigenteDesde"
+                    id="validFrom"
                     type="date"
-                    {...register("vigenteDesde")}
+                    {...register("validFrom")}
                   />
                 </Field>
                 <Field
                   label="Fecha de fin"
-                  htmlFor="vigenteHasta"
+                  htmlFor="validUntil"
                   hint={
-                    sinFechaFin ? "Sin fecha de fin = permanente." : undefined
+                    hasNoEndDate ? "Sin fecha de fin = permanente." : undefined
                   }
                 >
                   <Input
-                    id="vigenteHasta"
+                    id="validUntil"
                     type="date"
-                    {...register("vigenteHasta")}
+                    {...register("validUntil")}
                   />
                 </Field>
                 <Field
                   label="Presupuesto asignado"
-                  htmlFor="presupuestoAsignado"
-                  error={errors.presupuestoAsignado?.message}
+                  htmlFor="assignedBudget"
+                  error={errors.assignedBudget?.message}
                 >
                   <CurrencyInput
-                    id="presupuestoAsignado"
-                    {...register("presupuestoAsignado", {
+                    id="assignedBudget"
+                    {...register("assignedBudget", {
                       setValueAs: (v) => (v === "" ? 0 : Number(v)),
                     })}
                   />
@@ -531,15 +533,15 @@ export function PromocionForm({
             </Section>
           )}
 
-          {paso === 4 && (
+          {step === 4 && (
             <Section
               title="Resumen"
               description="Revisa todo antes de guardar."
             >
-              <PromocionResumenRevision
-                valores={valores as Partial<PromocionValues>}
-                categorias={categorias}
-                segmentos={segmentos}
+              <PromotionReviewSummary
+                values={values as Partial<PromotionValues>}
+                categories={categories}
+                segments={segments}
               />
             </Section>
           )}
@@ -548,13 +550,13 @@ export function PromocionForm({
             <Button
               type="button"
               variant="ghost"
-              onClick={anterior}
-              disabled={paso === 0}
+              onClick={previous}
+              disabled={step === 0}
             >
               Anterior
             </Button>
-            {paso < PASOS.length - 1 && (
-              <Button type="button" onClick={siguiente}>
+            {step < STEPS.length - 1 && (
+              <Button type="button" onClick={next}>
                 Siguiente
               </Button>
             )}
@@ -562,14 +564,14 @@ export function PromocionForm({
         </div>
 
         <div className="flex w-[330px] shrink-0 flex-col gap-3.5">
-          <ResumenPromocionCard
-            idExcluir={promocion?.id}
-            condiciones={(valores.condiciones ?? []) as Condicion[]}
-            segmentos={segmentos}
-            canalAplicacion={valores.canalAplicacion ?? "pos_ecommerce"}
-            prioridad={valores.prioridad ?? 5}
-            onGuardar={(estado) => guardar(estado)()}
-            guardando={guardando}
+          <PromotionSummaryCard
+            excludeId={promotion?.id}
+            conditions={(values.conditions ?? []) as Condition[]}
+            segments={segments}
+            channelScope={values.channelScope ?? "pos_ecommerce"}
+            priority={values.priority ?? 5}
+            onSave={(status) => save(status)()}
+            saving={saving}
           />
         </div>
       </div>

@@ -35,7 +35,7 @@ function csvCell(value: string): string {
 
 type ExportMembersButtonProps = { members: AudienceMember[] }
 
-/** "Exportar" (11.2 hero) — exporta la muestra de socios de la audiencia, mismo patrón CSV que `ExportarPromocionesButton`. */
+/** "Exportar" (11.2 hero) — exporta la muestra de socios de la audiencia, mismo patrón CSV que `ExportPromotionsButton`. */
 export function ExportMembersButton({ members }: ExportMembersButtonProps) {
   function exportCsv() {
     const rows = [

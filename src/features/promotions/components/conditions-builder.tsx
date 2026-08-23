@@ -8,53 +8,53 @@ import { cn } from "@/lib/utils"
 import { CONDITION_COMBINATORS } from "@/types/domain"
 import type { ConditionCombinator } from "@/types/domain"
 
-import { CondicionRow } from "./condicion-row"
-import { COMBINADOR_CONDICION_LABEL } from "../lib/labels"
+import { ConditionRow } from "./condition-row"
+import { CONDITION_COMBINATOR_LABEL } from "../lib/labels"
 import type {
-  CategoriaCondicion,
-  CiudadCondicion,
-  SegmentoCondicion,
+  ConditionCategory,
+  ConditionCity,
+  ConditionSegment,
 } from "../lib/queries"
-import type { PromocionValues } from "../schemas"
+import type { PromotionValues } from "../schemas"
 
-type CondicionesBuilderProps = {
-  control: Control<PromocionValues>
-  onCombinadorChange: (valor: ConditionCombinator) => void
-  categorias: CategoriaCondicion[]
-  ciudades: CiudadCondicion[]
-  segmentos: SegmentoCondicion[]
+type ConditionsBuilderProps = {
+  control: Control<PromotionValues>
+  onCombinatorChange: (value: ConditionCombinator) => void
+  categories: ConditionCategory[]
+  cities: ConditionCity[]
+  segments: ConditionSegment[]
 }
 
 /** Figma "Card · Condiciones (SI)" (633:851): combinador AND/OR + filas dinámicas + "Agregar condición". */
-export function CondicionesBuilder({
+export function ConditionsBuilder({
   control,
-  onCombinadorChange,
-  categorias,
-  ciudades,
-  segmentos,
-}: CondicionesBuilderProps) {
+  onCombinatorChange,
+  categories,
+  cities,
+  segments,
+}: ConditionsBuilderProps) {
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: "condiciones",
+    name: "conditions",
   })
-  const combinador = useWatch({ control, name: "combinadorCondiciones" })
+  const combinator = useWatch({ control, name: "conditionCombinator" })
 
   return (
     <div className="flex w-full flex-col gap-3.5">
       <div className="flex items-center gap-2">
-        {CONDITION_COMBINATORS.map((valor) => (
+        {CONDITION_COMBINATORS.map((value) => (
           <button
-            key={valor}
+            key={value}
             type="button"
-            onClick={() => onCombinadorChange(valor)}
+            onClick={() => onCombinatorChange(value)}
             className={cn(
               "rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap",
-              combinador === valor
+              combinator === value
                 ? "border-primary bg-brand-subtle text-primary-800"
                 : "border-border bg-background text-secondary-foreground"
             )}
           >
-            {COMBINADOR_CONDICION_LABEL[valor]}
+            {CONDITION_COMBINATOR_LABEL[value]}
           </button>
         ))}
       </div>
@@ -66,14 +66,14 @@ export function CondicionesBuilder({
       )}
 
       {fields.map((field, index) => (
-        <CondicionRow
+        <ConditionRow
           key={field.id}
-          numero={index + 1}
-          condicion={field}
-          categorias={categorias}
-          ciudades={ciudades}
-          segmentos={segmentos}
-          onChange={(siguiente) => update(index, siguiente)}
+          rowNumber={index + 1}
+          condition={field}
+          categories={categories}
+          cities={cities}
+          segments={segments}
+          onChange={(next) => update(index, next)}
           onRemove={() => remove(index)}
         />
       ))}

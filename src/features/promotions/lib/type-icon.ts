@@ -10,7 +10,7 @@ import {
 
 import type { PromotionType } from "@/types/domain"
 
-export const TIPO_PROMOCION_ICONO: Record<PromotionType, LucideIcon> = {
+export const PROMOTION_TYPE_ICON: Record<PromotionType, LucideIcon> = {
   cantidad: Layers,
   categoria: Tag,
   segmento: Users,
@@ -19,7 +19,7 @@ export const TIPO_PROMOCION_ICONO: Record<PromotionType, LucideIcon> = {
   bundle: Package,
 }
 
-export const TIPO_PROMOCION_COLOR: Record<
+export const PROMOTION_TYPE_COLOR: Record<
   PromotionType,
   { bg: string; fg: string }
 > = {

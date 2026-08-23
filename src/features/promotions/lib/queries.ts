@@ -1,72 +1,72 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
-import { estadoPromocion } from "./estado"
+import { promotionStatus } from "./status"
 
-export type PromocionRow = Database["public"]["Tables"]["promociones"]["Row"]
+export type PromotionRow = Database["public"]["Tables"]["promociones"]["Row"]
 
-export type Condicion =
+export type Condition =
   | { campo: "categoria"; valor: string[] }
   | { campo: "tienda"; valor: string }
   | { campo: "segmento"; valor: string }
   | { campo: "monto_carrito"; valor: number }
 
-export type Promocion = Omit<PromocionRow, "condiciones"> & {
-  condiciones: Condicion[]
+export type Promotion = Omit<PromotionRow, "condiciones"> & {
+  condiciones: Condition[]
 }
 
-function conCondicionesTipadas(fila: PromocionRow): Promocion {
-  return { ...fila, condiciones: (fila.condiciones ?? []) as Condicion[] }
+function withTypedConditions(row: PromotionRow): Promotion {
+  return { ...row, condiciones: (row.condiciones ?? []) as Condition[] }
 }
 
-export type PromocionesFiltros = {
-  busqueda?: string
-  estadoPublicacion?: "borrador" | "activa"
-  canal?: string
+export type PromotionsFilters = {
+  search?: string
+  publicationStatus?: "borrador" | "activa"
+  channel?: string
   page?: number
 }
 
-export const PROMOCIONES_PAGE_SIZE = 6
+export const PROMOTIONS_PAGE_SIZE = 6
 
 /** PostgREST interpreta `,()%` dentro de un filtro `.or()` — se descartan del texto de búsqueda. */
-function sanitizarBusqueda(valor: string): string {
-  return valor.replace(/[,()%]/g, "").trim()
+function sanitizeSearch(value: string): string {
+  return value.replace(/[,()%]/g, "").trim()
 }
 
-export async function listPromociones(
-  filtros: PromocionesFiltros = {}
-): Promise<{ promociones: Promocion[]; total: number }> {
+export async function listPromotions(
+  filters: PromotionsFilters = {}
+): Promise<{ promotions: Promotion[]; total: number }> {
   const supabase = await createClient()
-  const page = filtros.page ?? 1
-  const desde = (page - 1) * PROMOCIONES_PAGE_SIZE
-  const hasta = desde + PROMOCIONES_PAGE_SIZE - 1
+  const page = filters.page ?? 1
+  const from = (page - 1) * PROMOTIONS_PAGE_SIZE
+  const to = from + PROMOTIONS_PAGE_SIZE - 1
 
   let query = supabase
     .from("promociones")
     .select("*", { count: "exact" })
     .order("creado_en", { ascending: false })
-    .range(desde, hasta)
+    .range(from, to)
 
-  const busqueda = filtros.busqueda ? sanitizarBusqueda(filtros.busqueda) : ""
-  if (busqueda) {
-    query = query.or(`nombre.ilike.%${busqueda}%,codigo.ilike.%${busqueda}%`)
+  const search = filters.search ? sanitizeSearch(filters.search) : ""
+  if (search) {
+    query = query.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`)
   }
-  if (filtros.estadoPublicacion) {
-    query = query.eq("estado_publicacion", filtros.estadoPublicacion)
+  if (filters.publicationStatus) {
+    query = query.eq("estado_publicacion", filters.publicationStatus)
   }
-  if (filtros.canal) {
-    query = query.eq("canal_aplicacion", filtros.canal)
+  if (filters.channel) {
+    query = query.eq("canal_aplicacion", filters.channel)
   }
 
   const { data, error, count } = await query
   if (error) throw error
   return {
-    promociones: (data ?? []).map(conCondicionesTipadas),
+    promotions: (data ?? []).map(withTypedConditions),
     total: count ?? 0,
   }
 }
 
-export async function getPromocionById(id: string): Promise<Promocion | null> {
+export async function getPromotionById(id: string): Promise<Promotion | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("promociones")
@@ -74,33 +74,33 @@ export async function getPromocionById(id: string): Promise<Promocion | null> {
     .eq("id", id)
     .maybeSingle()
   if (error) throw error
-  return data ? conCondicionesTipadas(data) : null
+  return data ? withTypedConditions(data) : null
 }
 
-/** Excluye `excluirId` (la promoción que se está editando) al calcular colisiones. */
-export async function listPromocionesActivas(
-  excluirId?: string
-): Promise<Promocion[]> {
+/** Excluye `excludeId` (la promoción que se está editando) al calcular colisiones. */
+export async function listActivePromotions(
+  excludeId?: string
+): Promise<Promotion[]> {
   const supabase = await createClient()
   let query = supabase
     .from("promociones")
     .select("*")
     .eq("estado_publicacion", "activa")
-  if (excluirId) query = query.neq("id", excluirId)
+  if (excludeId) query = query.neq("id", excludeId)
   const { data, error } = await query
   if (error) throw error
-  return (data ?? []).map(conCondicionesTipadas)
+  return (data ?? []).map(withTypedConditions)
 }
 
-export type PromocionesResumen = {
+export type PromotionsSummary = {
   total: number
-  activas: number
-  programadas: number
-  presupuestoAsignado: number
+  active: number
+  scheduled: number
+  assignedBudget: number
 }
 
 /** Subtítulo de 06.1: "3 activas · 2 programadas · presupuesto asignado $ 12.400.000". */
-export async function getPromocionesResumen(): Promise<PromocionesResumen> {
+export async function getPromotionsSummary(): Promise<PromotionsSummary> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("promociones")
@@ -109,30 +109,28 @@ export async function getPromocionesResumen(): Promise<PromocionesResumen> {
     )
   if (error) throw error
 
-  const filas = data ?? []
-  let activas = 0
-  let programadas = 0
-  for (const fila of filas) {
-    const estado = estadoPromocion(fila)
-    if (estado === "activa") activas += 1
-    else if (estado === "programada") programadas += 1
+  const rows = data ?? []
+  let active = 0
+  let scheduled = 0
+  for (const row of rows) {
+    const status = promotionStatus(row)
+    if (status === "activa") active += 1
+    else if (status === "programada") scheduled += 1
   }
 
   return {
-    total: filas.length,
-    activas,
-    programadas,
-    presupuestoAsignado: filas.reduce(
-      (acc, f) => acc + (f.presupuesto_asignado ?? 0),
+    total: rows.length,
+    active,
+    scheduled,
+    assignedBudget: rows.reduce(
+      (acc, r) => acc + (r.presupuesto_asignado ?? 0),
       0
     ),
   }
 }
 
 /** Top 3 realmente en curso hoy, por presupuesto consumido (06.1: 3 "Promo card" superiores). */
-export async function getPromocionesDestacadas(
-  limite = 3
-): Promise<Promocion[]> {
+export async function getFeaturedPromotions(limit = 3): Promise<Promotion[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("promociones")
@@ -141,15 +139,15 @@ export async function getPromocionesDestacadas(
     .order("presupuesto_consumido", { ascending: false })
   if (error) throw error
   return (data ?? [])
-    .map(conCondicionesTipadas)
-    .filter((p) => estadoPromocion(p) === "activa")
-    .slice(0, limite)
+    .map(withTypedConditions)
+    .filter((p) => promotionStatus(p) === "activa")
+    .slice(0, limit)
 }
 
-export type CategoriaCondicion = { id: string; nombre: string }
+export type ConditionCategory = { id: string; name: string }
 
 /** Categorías raíz reales de Catálogo, para el selector de la condición "Categoría del producto". */
-export async function listCategoriasCondicion(): Promise<CategoriaCondicion[]> {
+export async function listConditionCategories(): Promise<ConditionCategory[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("categorias")
@@ -157,27 +155,27 @@ export async function listCategoriasCondicion(): Promise<CategoriaCondicion[]> {
     .is("parent_id", null)
     .order("nombre")
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((c) => ({ id: c.id, name: c.nombre }))
 }
 
-export type CiudadCondicion = { ciudad: string; totalTiendas: number }
+export type ConditionCity = { city: string; totalStores: number }
 
 /** Ciudades reales de Tiendas con conteo, para el selector de la condición "Tienda" (07.1: "Barranquilla (14)"). */
-export async function listCiudadesCondicion(): Promise<CiudadCondicion[]> {
+export async function listConditionCities(): Promise<ConditionCity[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.from("tiendas").select("ciudad")
   if (error) throw error
 
-  const conteo = new Map<string, number>()
-  for (const fila of data ?? []) {
-    conteo.set(fila.ciudad, (conteo.get(fila.ciudad) ?? 0) + 1)
+  const count = new Map<string, number>()
+  for (const row of data ?? []) {
+    count.set(row.ciudad, (count.get(row.ciudad) ?? 0) + 1)
   }
-  return [...conteo.entries()]
-    .map(([ciudad, totalTiendas]) => ({ ciudad, totalTiendas }))
-    .sort((a, b) => a.ciudad.localeCompare(b.ciudad))
+  return [...count.entries()]
+    .map(([city, totalStores]) => ({ city, totalStores }))
+    .sort((a, b) => a.city.localeCompare(b.city))
 }
 
-export async function getTotalTiendas(): Promise<number> {
+export async function getTotalStores(): Promise<number> {
   const supabase = await createClient()
   const { count, error } = await supabase
     .from("tiendas")
@@ -186,14 +184,14 @@ export async function getTotalTiendas(): Promise<number> {
   return count ?? 0
 }
 
-export type SegmentoCondicion = {
+export type ConditionSegment = {
   id: string
-  nombre: string
-  conteoEstimado: number | null
+  name: string
+  estimatedCount: number | null
 }
 
 /** Audiencias reales de 11 · Audiencias (`segments`), para el selector de la condición "Segmento del cliente" — duplicado de `features/audiences` por aislamiento entre features (ver CLAUDE.md §2). */
-export async function listSegmentosCondicion(): Promise<SegmentoCondicion[]> {
+export async function listConditionSegments(): Promise<ConditionSegment[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("segments")
@@ -202,12 +200,12 @@ export async function listSegmentosCondicion(): Promise<SegmentoCondicion[]> {
   if (error) throw error
   return (data ?? []).map((s) => ({
     id: s.id,
-    nombre: s.nombre,
-    conteoEstimado: s.conteo_estimado,
+    name: s.nombre,
+    estimatedCount: s.conteo_estimado,
   }))
 }
 
-export async function getNombresCategorias(
+export async function getCategoryNames(
   ids: string[]
 ): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map()

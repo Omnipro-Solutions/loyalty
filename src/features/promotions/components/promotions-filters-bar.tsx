@@ -7,55 +7,55 @@ import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 import { CHANNEL_SCOPES } from "@/types/domain"
 
-import { CANAL_APLICACION_LABEL } from "../lib/labels"
+import { CHANNEL_SCOPE_LABEL } from "../lib/labels"
 
-const ESTADO_OPCIONES = [
+const STATUS_OPTIONS = [
   { value: "activa", label: "Activas" },
   { value: "borrador", label: "Borradores" },
 ]
 
 /** Búsqueda + filtros de 06.1 — cada cambio actualiza los searchParams y la página server-side vuelve a consultar. */
-export function PromocionesFiltrosBar() {
+export function PromotionsFiltersBar() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [busqueda, setBusqueda] = useState(searchParams.get("q") ?? "")
+  const [search, setSearch] = useState(searchParams.get("q") ?? "")
 
   useEffect(() => {
-    const actual = new URLSearchParams(window.location.search)
-    if ((actual.get("q") ?? "") === busqueda) return
+    const current = new URLSearchParams(window.location.search)
+    if ((current.get("q") ?? "") === search) return
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
-      if (busqueda) params.set("q", busqueda)
+      if (search) params.set("q", search)
       else params.delete("q")
       params.delete("page")
       router.push(`${pathname}?${params.toString()}`)
     }, 300)
     return () => clearTimeout(timeout)
-  }, [busqueda, pathname, router])
+  }, [search, pathname, router])
 
-  function actualizar(mutar: (params: URLSearchParams) => void) {
+  function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
-    mutar(params)
+    mutate(params)
     params.delete("page")
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const estadoSeleccionado = searchParams.get("estado")
-  const canalSeleccionado = searchParams.get("canal")
+  const selectedStatus = searchParams.get("estado")
+  const selectedChannel = searchParams.get("canal")
 
   return (
     <div className="flex items-center gap-2.5">
       <FilterSearch
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <FilterSelect
         label="Estado"
-        options={ESTADO_OPCIONES}
-        value={estadoSeleccionado ? [estadoSeleccionado] : []}
+        options={STATUS_OPTIONS}
+        value={selectedStatus ? [selectedStatus] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("estado", value[0])
             else params.delete("estado")
           })
@@ -65,11 +65,11 @@ export function PromocionesFiltrosBar() {
         label="Canal"
         options={CHANNEL_SCOPES.map((c) => ({
           value: c,
-          label: CANAL_APLICACION_LABEL[c],
+          label: CHANNEL_SCOPE_LABEL[c],
         }))}
-        value={canalSeleccionado ? [canalSeleccionado] : []}
+        value={selectedChannel ? [selectedChannel] : []}
         onChange={(value) =>
-          actualizar((params) => {
+          update((params) => {
             if (value[0]) params.set("canal", value[0])
             else params.delete("canal")
           })

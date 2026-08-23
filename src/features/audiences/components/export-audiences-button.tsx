@@ -33,7 +33,7 @@ function csvCell(value: string): string {
 
 type ExportAudiencesButtonProps = { audiences: AudienceListItem[] }
 
-/** Exporta la página actual de la tabla (11.1 "Exportar") como CSV — mismo patrón que `ExportarPromocionesButton`. */
+/** Exporta la página actual de la tabla (11.1 "Exportar") como CSV — mismo patrón que `ExportPromotionsButton`. */
 export function ExportAudiencesButton({
   audiences,
 }: ExportAudiencesButtonProps) {

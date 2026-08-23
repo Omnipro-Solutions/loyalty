@@ -3,20 +3,20 @@ import Link from "next/link"
 
 import { AppPage } from "@/components/layout/app-page"
 import { formatCOP } from "@/lib/format"
-import { PromoKpiCard } from "@/features/promociones/components/promo-kpi-card"
-import { PromocionesCard } from "@/features/promociones/components/promociones-card"
+import { PromoKpiCard } from "@/features/promotions/components/promo-kpi-card"
+import { PromotionsCard } from "@/features/promotions/components/promotions-card"
 import {
-  PROMOCIONES_PAGE_SIZE,
-  getPromocionesDestacadas,
-  getPromocionesResumen,
-  getTotalTiendas,
-  listCategoriasCondicion,
-  listPromociones,
-  listSegmentosCondicion,
-} from "@/features/promociones/lib/queries"
+  PROMOTIONS_PAGE_SIZE,
+  getFeaturedPromotions,
+  getPromotionsSummary,
+  getTotalStores,
+  listConditionCategories,
+  listPromotions,
+  listConditionSegments,
+} from "@/features/promotions/lib/queries"
 
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
 }
 
 /** Figma "06.1 · Promociones · listado" (630:428). */
@@ -24,30 +24,30 @@ export default async function PromocionesPage({
   searchParams,
 }: PageProps<"/promociones">) {
   const params = await searchParams
-  const busqueda = primerValor(params.q)
-  const estadoPublicacion = primerValor(params.estado) as
+  const search = firstValue(params.q)
+  const publicationStatus = firstValue(params.estado) as
     "borrador" | "activa" | undefined
-  const canal = primerValor(params.canal)
-  const page = Number(primerValor(params.page) ?? "1")
+  const channel = firstValue(params.canal)
+  const page = Number(firstValue(params.page) ?? "1")
 
   const [
-    { promociones, total },
-    destacadas,
-    resumen,
-    totalTiendas,
-    categorias,
-    segmentos,
+    { promotions, total },
+    featured,
+    summary,
+    totalStores,
+    categories,
+    segments,
   ] = await Promise.all([
-    listPromociones({ busqueda, estadoPublicacion, canal, page }),
-    getPromocionesDestacadas(3),
-    getPromocionesResumen(),
-    getTotalTiendas(),
-    listCategoriasCondicion(),
-    listSegmentosCondicion(),
+    listPromotions({ search, publicationStatus, channel, page }),
+    getFeaturedPromotions(3),
+    getPromotionsSummary(),
+    getTotalStores(),
+    listConditionCategories(),
+    listConditionSegments(),
   ])
 
-  const categoriaNombrePorId = new Map(categorias.map((c) => [c.id, c.nombre]))
-  const segmentoNombrePorId = new Map(segmentos.map((s) => [s.id, s.nombre]))
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
+  const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
 
   return (
     <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
@@ -57,8 +57,8 @@ export default async function PromocionesPage({
             Campañas en curso
           </p>
           <p className="text-xs text-muted-foreground">
-            {resumen.activas} activas · {resumen.programadas} programadas ·
-            presupuesto asignado {formatCOP(resumen.presupuestoAsignado)}
+            {summary.active} activas · {summary.scheduled} programadas ·
+            presupuesto asignado {formatCOP(summary.assignedBudget)}
           </p>
         </div>
         <Link
@@ -70,22 +70,22 @@ export default async function PromocionesPage({
         </Link>
       </div>
 
-      {destacadas.length > 0 && (
+      {featured.length > 0 && (
         <div className="flex w-full items-stretch gap-4">
-          {destacadas.map((promocion) => (
-            <PromoKpiCard key={promocion.id} promocion={promocion} />
+          {featured.map((promotion) => (
+            <PromoKpiCard key={promotion.id} promotion={promotion} />
           ))}
         </div>
       )}
 
-      <PromocionesCard
-        promociones={promociones}
+      <PromotionsCard
+        promotions={promotions}
         total={total}
-        pageSize={PROMOCIONES_PAGE_SIZE}
-        resumen={resumen}
-        totalTiendas={totalTiendas}
-        categoriaNombrePorId={categoriaNombrePorId}
-        segmentoNombrePorId={segmentoNombrePorId}
+        pageSize={PROMOTIONS_PAGE_SIZE}
+        summary={summary}
+        totalStores={totalStores}
+        categoryNameById={categoryNameById}
+        segmentNameById={segmentNameById}
       />
     </AppPage>
   )

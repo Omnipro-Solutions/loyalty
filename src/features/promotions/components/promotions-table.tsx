@@ -15,61 +15,61 @@ import { formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { PromotionType } from "@/types/domain"
 
-import { alcanceCorto, alcanceResumen } from "../lib/alcance"
-import { estadoPromocion } from "../lib/estado"
-import { TIPO_PROMOCION_LABEL } from "../lib/labels"
-import type { Promocion } from "../lib/queries"
-import { TIPO_PROMOCION_COLOR, TIPO_PROMOCION_ICONO } from "../lib/tipo-icono"
+import { shortScope, scopeSummary } from "../lib/scope"
+import { promotionStatus } from "../lib/status"
+import { PROMOTION_TYPE_LABEL } from "../lib/labels"
+import type { Promotion } from "../lib/queries"
+import { PROMOTION_TYPE_COLOR, PROMOTION_TYPE_ICON } from "../lib/type-icon"
 
 const features = tableFeatures({ columnSizingFeature })
-const helper = createColumnHelper<typeof features, Promocion>()
+const helper = createColumnHelper<typeof features, Promotion>()
 
-const ESTADO_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<string, string> = {
   activa: "Activa",
   programada: "Programada",
   finalizada: "Finalizada",
   borrador: "Borrador",
 }
 
-const ESTADO_DOT: Record<string, string> = {
+const STATUS_DOT: Record<string, string> = {
   activa: "bg-success",
   programada: "bg-warning",
   finalizada: "bg-border-strong",
   borrador: "bg-muted-foreground",
 }
 
-type PromocionesTablaProps = {
-  promociones: Promocion[]
-  totalTiendas: number
-  categoriaNombrePorId: Map<string, string>
-  segmentoNombrePorId: Map<string, string>
+type PromotionsTableProps = {
+  promotions: Promotion[]
+  totalStores: number
+  categoryNameById: Map<string, string>
+  segmentNameById: Map<string, string>
 }
 
 /** Figma "Table" de 06.1 (706:2518): fila muestra ícono por tipo + nombre/subtítulo, alcance, canjes, presupuesto, ROI, vigencia, estado. */
-export function PromocionesTabla({
-  promociones,
-  totalTiendas,
-  categoriaNombrePorId,
-  segmentoNombrePorId,
-}: PromocionesTablaProps) {
+export function PromotionsTable({
+  promotions,
+  totalStores,
+  categoryNameById,
+  segmentNameById,
+}: PromotionsTableProps) {
   const router = useRouter()
   const ctx = useMemo(
-    () => ({ totalTiendas, categoriaNombrePorId, segmentoNombrePorId }),
-    [totalTiendas, categoriaNombrePorId, segmentoNombrePorId]
+    () => ({ totalStores, categoryNameById, segmentNameById }),
+    [totalStores, categoryNameById, segmentNameById]
   )
 
   const columns = useMemo(
     () =>
       helper.columns([
         helper.display({
-          id: "promocion",
+          id: "promotion",
           size: 240,
           header: () => "PROMOCIÓN",
           cell: (info) => {
-            const promocion = info.row.original
-            const tipo = promocion.tipo as PromotionType
-            const Icon = TIPO_PROMOCION_ICONO[tipo]
-            const color = TIPO_PROMOCION_COLOR[tipo]
+            const promotion = info.row.original
+            const type = promotion.tipo as PromotionType
+            const Icon = PROMOTION_TYPE_ICON[type]
+            const color = PROMOTION_TYPE_COLOR[type]
             return (
               <div className="flex min-w-0 items-center gap-2.5">
                 <div
@@ -82,11 +82,10 @@ export function PromocionesTabla({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[12px] leading-[17px] font-medium text-foreground">
-                    {promocion.nombre}
+                    {promotion.nombre}
                   </p>
                   <p className="truncate text-[10px] leading-[14px] text-muted-foreground">
-                    {TIPO_PROMOCION_LABEL[tipo]} ·{" "}
-                    {alcanceCorto(promocion, ctx)}
+                    {PROMOTION_TYPE_LABEL[type]} · {shortScope(promotion, ctx)}
                   </p>
                 </div>
               </div>
@@ -94,12 +93,12 @@ export function PromocionesTabla({
           },
         }),
         helper.display({
-          id: "alcance",
+          id: "scope",
           size: 130,
           header: () => "ALCANCE",
           cell: (info) => (
             <span className="truncate text-secondary-foreground">
-              {alcanceResumen(info.row.original, ctx)}
+              {scopeSummary(info.row.original, ctx)}
             </span>
           ),
         }),
@@ -113,31 +112,31 @@ export function PromocionesTabla({
           ),
         }),
         helper.display({
-          id: "presupuesto",
+          id: "budget",
           size: 130,
           header: () => "PRESUPUESTO",
           cell: (info) => {
             const p = info.row.original
-            const porcentaje =
+            const percentage =
               p.presupuesto_asignado > 0
                 ? p.presupuesto_consumido / p.presupuesto_asignado
                 : 0
             return (
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-foreground">
-                  {formatPercent(porcentaje)}
+                  {formatPercent(percentage)}
                 </span>
                 <div className="h-[5px] w-full max-w-[110px] overflow-hidden rounded-full bg-muted">
                   <div
                     className={cn(
                       "h-full rounded-full",
-                      porcentaje >= 0.85
+                      percentage >= 0.85
                         ? "bg-warning"
-                        : porcentaje >= 0.5
+                        : percentage >= 0.5
                           ? "bg-primary"
                           : "bg-success"
                     )}
-                    style={{ width: `${Math.min(porcentaje * 100, 100)}%` }}
+                    style={{ width: `${Math.min(percentage * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -157,7 +156,7 @@ export function PromocionesTabla({
           },
         }),
         helper.display({
-          id: "vigencia",
+          id: "validity",
           size: 120,
           header: () => "VIGENCIA",
           cell: (info) => {
@@ -172,26 +171,26 @@ export function PromocionesTabla({
           },
         }),
         helper.display({
-          id: "estado",
+          id: "status",
           size: 110,
           header: () => "ESTADO",
           cell: (info) => {
-            const estado = estadoPromocion(info.row.original)
+            const status = promotionStatus(info.row.original)
             return (
               <div className="flex items-center gap-1.5">
                 <span
                   className={cn(
                     "size-[7px] shrink-0 rounded-full",
-                    ESTADO_DOT[estado]
+                    STATUS_DOT[status]
                   )}
                 />
-                <span className="text-xs">{ESTADO_LABEL[estado]}</span>
+                <span className="text-xs">{STATUS_LABEL[status]}</span>
               </div>
             )
           },
         }),
         helper.display({
-          id: "acciones",
+          id: "actions",
           size: 56,
           header: () => null,
           cell: () => (
@@ -204,15 +203,15 @@ export function PromocionesTabla({
     [ctx]
   )
 
-  const data = useMemo(() => promociones, [promociones])
+  const data = useMemo(() => promotions, [promotions])
   const table = useTable({ features, columns, data })
 
   return (
     <DataTable
       table={table}
       headerClassName="bg-neutral-50"
-      onRowClick={(promocion) =>
-        router.push(`/promociones/${promocion.id}/editar`)
+      onRowClick={(promotion) =>
+        router.push(`/promociones/${promotion.id}/editar`)
       }
     />
   )

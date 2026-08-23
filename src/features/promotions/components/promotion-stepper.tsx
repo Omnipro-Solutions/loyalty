@@ -5,18 +5,18 @@ import { Fragment } from "react"
 
 import { cn } from "@/lib/utils"
 
-type PromocionStepperProps = {
+type PromotionStepperProps = {
   steps: readonly string[]
   current: number
   onStepClick: (index: number) => void
 }
 
 /** Figma "Stepper" (633:798): 5 pasos, círculo + etiqueta + conector — interactivo (click salta al paso). */
-export function PromocionStepper({
+export function PromotionStepper({
   steps,
   current,
   onStepClick,
-}: PromocionStepperProps) {
+}: PromotionStepperProps) {
   return (
     <div className="flex w-full items-center rounded-[20px] bg-background px-[18px] py-3 shadow-form-section">
       {steps.map((label, index) => (

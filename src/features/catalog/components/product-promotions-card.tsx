@@ -9,7 +9,7 @@ import type { PromotionType } from "@/types/domain"
 
 import type { RelatedPromotion } from "../lib/related-promotions"
 
-/** Duplicado a propósito de `features/promociones/lib/labels.ts` — features aisladas (CLAUDE.md §2). */
+/** Duplicado a propósito de `features/promotions/lib/labels.ts` — features aisladas (CLAUDE.md §2). */
 const TYPE_LABEL: Record<PromotionType, string> = {
   cantidad: "Cantidad",
   categoria: "Categoría",

@@ -69,7 +69,7 @@ function SortableHeader({
   )
 }
 
-/** Cuadro de selección puramente visual (704:312 en Figma) — sin acción de bulk que respalde marcarlo, mismo espíritu que el "…" de `PromocionesTabla`. */
+/** Cuadro de selección puramente visual (704:312 en Figma) — sin acción de bulk que respalde marcarlo, mismo espíritu que el "…" de `PromotionsTable`. */
 function VisualCheckbox() {
   return (
     <div className="flex size-[17px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] border-border-strong" />

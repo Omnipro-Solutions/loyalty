@@ -15,98 +15,98 @@ import { formatNumber } from "@/lib/format"
 import { CONDITION_FIELDS, ENABLED_CONDITION_FIELDS } from "@/types/domain"
 import type { ConditionField } from "@/types/domain"
 
-import { CAMPO_CONDICION_LABEL, CAMPO_CONDICION_OPERADOR } from "../lib/labels"
+import { CONDITION_FIELD_LABEL, CONDITION_FIELD_OPERATOR } from "../lib/labels"
 import type {
-  CategoriaCondicion,
-  CiudadCondicion,
-  SegmentoCondicion,
+  ConditionCategory,
+  ConditionCity,
+  ConditionSegment,
 } from "../lib/queries"
-import type { CondicionValues } from "../schemas"
+import type { ConditionValues } from "../schemas"
 
-function valorPorDefecto(campo: ConditionField): CondicionValues {
-  switch (campo) {
+function defaultValueFor(field: ConditionField): ConditionValues {
+  switch (field) {
     case "categoria":
-      return { campo, valor: [] }
+      return { campo: field, valor: [] }
     case "tienda":
-      return { campo, valor: "" }
+      return { campo: field, valor: "" }
     case "segmento":
-      return { campo, valor: "" }
+      return { campo: field, valor: "" }
     case "monto_carrito":
-      return { campo, valor: 0 }
+      return { campo: field, valor: 0 }
   }
 }
 
-type CondicionRowProps = {
-  numero: number
-  condicion: CondicionValues
-  categorias: CategoriaCondicion[]
-  ciudades: CiudadCondicion[]
-  segmentos: SegmentoCondicion[]
-  onChange: (siguiente: CondicionValues) => void
+type ConditionRowProps = {
+  rowNumber: number
+  condition: ConditionValues
+  categories: ConditionCategory[]
+  cities: ConditionCity[]
+  segments: ConditionSegment[]
+  onChange: (next: ConditionValues) => void
   onRemove: () => void
 }
 
 /** Figma "Condición" (633:860): número + campo + operador (fijo por campo) + valor + eliminar. */
-export function CondicionRow({
-  numero,
-  condicion,
-  categorias,
-  ciudades,
-  segmentos,
+export function ConditionRow({
+  rowNumber,
+  condition,
+  categories,
+  cities,
+  segments,
   onChange,
   onRemove,
-}: CondicionRowProps) {
-  const habilitado = ENABLED_CONDITION_FIELDS.includes(condicion.campo)
+}: ConditionRowProps) {
+  const enabled = ENABLED_CONDITION_FIELDS.includes(condition.campo)
 
   return (
     <div className="flex w-full items-center gap-2.5 rounded-[10px] border border-border bg-neutral-50 px-3 py-2.5">
       <div className="flex size-[22px] shrink-0 items-center justify-center rounded-md bg-muted">
         <span className="text-[11px] font-semibold text-secondary-foreground">
-          {numero}
+          {rowNumber}
         </span>
       </div>
 
       <Select
-        value={condicion.campo}
-        onValueChange={(v) => onChange(valorPorDefecto(v as ConditionField))}
+        value={condition.campo}
+        onValueChange={(v) => onChange(defaultValueFor(v as ConditionField))}
       >
         <SelectTrigger className="flex-1">
           <SelectValue>
-            {(v: ConditionField) => CAMPO_CONDICION_LABEL[v]}
+            {(v: ConditionField) => CONDITION_FIELD_LABEL[v]}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {CONDITION_FIELDS.map((campo) => (
+          {CONDITION_FIELDS.map((field) => (
             <SelectItem
-              key={campo}
-              value={campo}
-              disabled={!ENABLED_CONDITION_FIELDS.includes(campo)}
+              key={field}
+              value={field}
+              disabled={!ENABLED_CONDITION_FIELDS.includes(field)}
             >
-              {CAMPO_CONDICION_LABEL[campo]}
-              {!ENABLED_CONDITION_FIELDS.includes(campo) && " · Próximamente"}
+              {CONDITION_FIELD_LABEL[field]}
+              {!ENABLED_CONDITION_FIELDS.includes(field) && " · Próximamente"}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
       <span className="w-32 shrink-0 truncate text-center text-xs text-muted-foreground">
-        {CAMPO_CONDICION_OPERADOR[condicion.campo]}
+        {CONDITION_FIELD_OPERATOR[condition.campo]}
       </span>
 
       <div className="min-w-0 flex-1">
-        {condicion.campo === "categoria" && (
+        {condition.campo === "categoria" && (
           <FilterSelect
             label="Categorías"
             multiple
             className="w-full justify-between"
-            options={categorias.map((c) => ({ value: c.id, label: c.nombre }))}
-            value={condicion.valor}
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            value={condition.valor}
             onChange={(valor) => onChange({ campo: "categoria", valor })}
           />
         )}
-        {condicion.campo === "tienda" && (
+        {condition.campo === "tienda" && (
           <Select
-            value={condicion.valor}
+            value={condition.valor}
             onValueChange={(v) =>
               onChange({ campo: "tienda", valor: v as string })
             }
@@ -115,17 +115,17 @@ export function CondicionRow({
               <SelectValue placeholder="Elige una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              {ciudades.map((c) => (
-                <SelectItem key={c.ciudad} value={c.ciudad}>
-                  {c.ciudad} ({c.totalTiendas})
+              {cities.map((c) => (
+                <SelectItem key={c.city} value={c.city}>
+                  {c.city} ({c.totalStores})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
-        {condicion.campo === "segmento" && (
+        {condition.campo === "segmento" && (
           <Select
-            value={condicion.valor}
+            value={condition.valor}
             onValueChange={(v) =>
               onChange({ campo: "segmento", valor: v as string })
             }
@@ -134,19 +134,19 @@ export function CondicionRow({
               <SelectValue placeholder="Elige una audiencia" />
             </SelectTrigger>
             <SelectContent>
-              {segmentos.map((s) => (
+              {segments.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.nombre}
-                  {s.conteoEstimado !== null &&
-                    ` (${formatNumber(s.conteoEstimado)})`}
+                  {s.name}
+                  {s.estimatedCount !== null &&
+                    ` (${formatNumber(s.estimatedCount)})`}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
-        {condicion.campo === "monto_carrito" && (
+        {condition.campo === "monto_carrito" && (
           <CurrencyInput
-            value={condicion.valor}
+            value={condition.valor}
             onChange={(e) =>
               onChange({
                 campo: "monto_carrito",
@@ -155,7 +155,7 @@ export function CondicionRow({
             }
           />
         )}
-        {!habilitado && (
+        {!enabled && (
           <p className="truncate text-xs text-muted-foreground italic">
             Disponible cuando exista el módulo de Clientes/Pedidos.
           </p>

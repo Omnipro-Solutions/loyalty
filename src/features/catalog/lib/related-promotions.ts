@@ -27,7 +27,7 @@ function dateOnly(value: string): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
 }
 
-/** Mismo cruce `estado_publicacion` + fechas que `features/promociones/lib/estado.ts` — duplicado a propósito, features aisladas (CLAUDE.md §2). */
+/** Mismo cruce `estado_publicacion` + fechas que `features/promotions/lib/status.ts` — duplicado a propósito, features aisladas (CLAUDE.md §2). */
 function validityStatus(
   row: {
     estado_publicacion: string
