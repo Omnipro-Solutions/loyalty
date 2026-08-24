@@ -31,7 +31,7 @@ export const passwordResetSchema = z.object({
 // Misma política de longitud que `loginSchema` — usado tanto al restablecer
 // contraseña (recovery) como al activar cuenta (invite): ambos flujos
 // terminan en el mismo `updateUser({ password })` sobre la sesión que deja
-// `verifyOtp` en `src/app/auth/confirm/route.ts`.
+// `establishSessionAction` (ver `link-callback-card.tsx`).
 export const setPasswordSchema = z
   .object({
     password: z.string().min(12, "Mínimo 12 caracteres"),
@@ -41,3 +41,13 @@ export const setPasswordSchema = z
     message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
   })
+
+// Tokens que Supabase Auth deja en el fragmento de la URL del flujo
+// implícito (ver `link-callback-card.tsx`) — el plan Free sin SMTP propio
+// no permite personalizar las plantillas de invite/recovery, así que
+// siempre caen en `{{ .ConfirmationURL }}` (implícito), nunca en un
+// `token_hash` verificable server-side.
+export const establishSessionSchema = z.object({
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+})

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getSiteOrigin } from "@/lib/site-origin"
 
 import { teamActionClient } from "./action-client"
 import { cancelInvitationSchema, inviteUserSchema } from "../schemas"
@@ -36,11 +37,16 @@ export const inviteUserAction = teamActionClient
     }
 
     // API admin (service role) — el correo real de invitación lo manda
-    // Supabase Auth con supabase/templates/invite.html, que apunta a
-    // /auth/confirm y de ahí a /activar-cuenta.
+    // Supabase Auth. El plan Free sin SMTP propio no permite personalizar
+    // esa plantilla (ver DEPLOY.md 4.1), así que el link usa el flujo
+    // implícito de siempre: `redirectTo` apunta a /verificando-enlace, que
+    // recibe los tokens de sesión en el fragmento de la URL y de ahí manda
+    // a /activar-cuenta (ver link-callback-card.tsx).
     const admin = createAdminClient()
+    const origin = await getSiteOrigin()
     const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(
-      parsedInput.email
+      parsedInput.email,
+      { redirectTo: `${origin}/verificando-enlace` }
     )
 
     if (inviteError) {

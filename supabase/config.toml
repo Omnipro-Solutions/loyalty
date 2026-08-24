@@ -156,11 +156,14 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "https://loyalty-puce.vercel.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "https://loyalty-puce.vercel.app/**",
+  "http://127.0.0.1:3000/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -243,18 +246,22 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Plantillas custom: apuntan a /auth/confirm (src/app/auth/confirm/route.ts)
-# con token_hash + type en vez del {{ .ConfirmationURL }} por defecto —
-# verifyOtp por token_hash funciona igual sin importar quién complete el
-# enlace (necesario para invite: quien lo recibe no es quien lo generó, así
-# que PKCE no aplica aquí — ver el comentario en confirm/route.ts).
-[auth.email.template.invite]
-subject = "Te invitaron a Loyalty Portal"
-content_path = "./supabase/templates/invite.html"
+# Plantillas custom (supabase/templates/invite.html, recovery.html):
+# deshabilitadas por ahora — el plan Free sin SMTP propio rechaza
+# `config push` con plantillas personalizadas ("Email template modification
+# is not available for free tier projects using the default email provider").
+# Mientras tanto, invite/recovery usan el flujo implícito de siempre
+# ({{ .ConfirmationURL }} con tokens en el fragmento de la URL) — ver
+# src/features/auth/components/link-callback-card.tsx. Si en algún momento
+# se configura SMTP propio (DEPLOY.md 4.2), se pueden reactivar estos dos
+# bloques y volver al flujo por token_hash.
+# [auth.email.template.invite]
+# subject = "Te invitaron a Loyalty Portal"
+# content_path = "./supabase/templates/invite.html"
 
-[auth.email.template.recovery]
-subject = "Restablecer tu contraseña"
-content_path = "./supabase/templates/recovery.html"
+# [auth.email.template.recovery]
+# subject = "Restablecer tu contraseña"
+# content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
