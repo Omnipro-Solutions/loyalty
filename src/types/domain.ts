@@ -112,21 +112,160 @@ export const POINTS_LEDGER_TYPES = [
 ] as const
 export type PointsLedgerType = (typeof POINTS_LEDGER_TYPES)[number]
 
-export const COUPON_TYPES = [
-  "descuento_porcentaje",
-  "descuento_monto",
-  "envio_gratis",
-  "2x1",
+/**
+ * Módulo de cupones (docs/cupones.md, features/coupons). EXCEPCIÓN a la
+ * regla de "valores de dominio en español" de CLAUDE.md §3: este módulo
+ * —tablas, columnas y valores de `check`— va en inglés, decisión explícita
+ * del usuario. La regla base sigue en pie: cada tupla espeja exactamente
+ * el `check` de su columna en supabase/migrations/20260824110000_cupones_esquema.sql.
+ * Reemplaza las viejas `COUPON_TYPES`/`COUPON_STATUSES` (español, de la
+ * tabla `coupons` plana que este módulo reemplazó — sin uso real en `src/`).
+ */
+export const COUPON_ORIGINS = [
+  "manual_customer",
+  "manual_bearer",
+  "points_redemption",
+  "batch_audience",
+  "batch_anonymous",
+  "csv_import",
 ] as const
-export type CouponType = (typeof COUPON_TYPES)[number]
+export type CouponOrigin = (typeof COUPON_ORIGINS)[number]
 
+export const COUPON_BATCH_STATUSES = [
+  "draft",
+  "pending_approval",
+  "generating",
+  "issued",
+  "closed",
+  "cancelled",
+] as const
+export type CouponBatchStatus = (typeof COUPON_BATCH_STATUSES)[number]
+
+export const COUPON_DISCOUNT_TYPES = [
+  "percentage",
+  "fixed_amount",
+  "free_product",
+] as const
+export type CouponDiscountType = (typeof COUPON_DISCOUNT_TYPES)[number]
+
+/** Estados ALMACENADOS en `coupon.status` — 'expired' no está aquí a propósito (ver COUPON_DISPLAY_STATUSES). */
 export const COUPON_STATUSES = [
-  "activo",
-  "canjeado",
-  "expirado",
-  "anulado",
+  "draft",
+  "issued",
+  "assigned",
+  "redeemed",
+  "cancelled",
 ] as const
 export type CouponStatus = (typeof COUPON_STATUSES)[number]
+
+/**
+ * Lo que ve el usuario: los estados almacenados más 'expired', que se
+ * DERIVA cruzando `status` con `valid_to` (mismo patrón que
+ * `features/promotions/lib/status.ts`) en vez de guardarse y desincronizarse.
+ */
+export const COUPON_DISPLAY_STATUSES = [...COUPON_STATUSES, "expired"] as const
+export type CouponDisplayStatus = (typeof COUPON_DISPLAY_STATUSES)[number]
+
+export const COUPON_AUDIENCE_MODES = ["dynamic", "frozen"] as const
+export type CouponAudienceMode = (typeof COUPON_AUDIENCE_MODES)[number]
+
+export const COUPON_POINTS_CHARGE_TIMINGS = ["on_create", "on_redeem"] as const
+export type CouponPointsChargeTiming =
+  (typeof COUPON_POINTS_CHARGE_TIMINGS)[number]
+
+/** Solo 'print' tiene implementación real — no hay sender de email/SMS en este proyecto. */
+export const COUPON_DELIVERY_CHANNELS = ["email", "sms", "print"] as const
+export type CouponDeliveryChannel = (typeof COUPON_DELIVERY_CHANNELS)[number]
+
+export const COUPON_CANCEL_REASON_CODES = [
+  "issued_in_error",
+  "duplicate",
+  "suspected_fraud",
+  "customer_request",
+  "other",
+] as const
+export type CouponCancelReasonCode = (typeof COUPON_CANCEL_REASON_CODES)[number]
+
+/** Motivos que exigen nota obligatoria (regla 7.4, espejo del check `coupon_cancel_note_required`). */
+export const COUPON_CANCEL_REASONS_REQUIRING_NOTE: readonly CouponCancelReasonCode[] =
+  ["suspected_fraud", "other"]
+
+export const COUPON_ASSIGNMENT_ROLES = [
+  "holder",
+  "previous_holder",
+  "issuer",
+] as const
+export type CouponAssignmentRole = (typeof COUPON_ASSIGNMENT_ROLES)[number]
+
+export const COUPON_ASSIGNMENT_SOURCES = [
+  "manual",
+  "rule",
+  "journey",
+  "redemption",
+  "csv",
+] as const
+export type CouponAssignmentSource = (typeof COUPON_ASSIGNMENT_SOURCES)[number]
+
+export const COUPON_REDEMPTION_RESULTS = [
+  "applied",
+  "rejected",
+  "validated",
+] as const
+export type CouponRedemptionResult = (typeof COUPON_REDEMPTION_RESULTS)[number]
+
+/**
+ * `viewed`, `reminder_sent` y `delivered` del doc quedan fuera: no hay
+ * sender de email/SMS ni tracking de apertura en este proyecto — emitirlos
+ * sería dato fabricado (misma postura que `producto_eventos`).
+ * `approval_requested`/`approval_rejected`/`approval_withdrawn` no estaban
+ * en el doc: sin ellos la petición y el rechazo de una doble aprobación
+ * quedarían invisibles en la línea de tiempo.
+ */
+export const COUPON_EVENT_TYPES = [
+  "batch_created",
+  "authorization_signed",
+  "approval_requested",
+  "approval_granted",
+  "approval_rejected",
+  "approval_revoked",
+  "approval_withdrawn",
+  "generation_started",
+  "generation_completed",
+  "issued",
+  "assigned",
+  "unassigned",
+  "validity_extended",
+  "redeemed",
+  "redemption_rejected",
+  "expired",
+  "cancelled",
+  "printed",
+  "exported",
+] as const
+export type CouponEventType = (typeof COUPON_EVENT_TYPES)[number]
+
+export const COUPON_ACTOR_TYPES = [
+  "user",
+  "system",
+  "rule",
+  "journey",
+  "store",
+] as const
+export type CouponActorType = (typeof COUPON_ACTOR_TYPES)[number]
+
+export const COUPON_PRINT_LAYOUTS = ["grid_8", "single_page"] as const
+export type CouponPrintLayout = (typeof COUPON_PRINT_LAYOUTS)[number]
+
+export const COUPON_PRINT_JOB_STATUSES = ["pending", "ready", "failed"] as const
+export type CouponPrintJobStatus = (typeof COUPON_PRINT_JOB_STATUSES)[number]
+
+/** Solo UI (searchParams de /cupones), sin columna de BD detrás. */
+export const COUPON_LIST_MODES = ["batches", "coupons", "approvals"] as const
+export type CouponListMode = (typeof COUPON_LIST_MODES)[number]
+
+/** Ámbito del buscador (docs/cupones.md §4.1: Todo · Persona · ID cupón · Emisión). Solo UI. */
+export const COUPON_SEARCH_SCOPES = ["all", "person", "code", "batch"] as const
+export type CouponSearchScope = (typeof COUPON_SEARCH_SCOPES)[number]
 
 // Product status in the catalog (03.1 "ESTADO" / 03.3 "Badge · ACTIVO").
 export const PRODUCT_STATUSES = ["activo", "inactivo"] as const

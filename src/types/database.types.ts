@@ -145,66 +145,676 @@ export type Database = {
           },
         ]
       }
-      coupons: {
+      coupon: {
         Row: {
-          codigo: string
-          creado_en: string
-          estado: string
+          assigned_at: string | null
+          batch_id: string
+          bearer: boolean
+          cancel_reason_code: string | null
+          cancel_reason_note: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          code: string
+          created_at: string
+          currency: string
+          discount_type: string
+          discount_value: number
           id: string
+          issued_at: string | null
+          max_uses: number
           member_id: string | null
+          min_purchase_amount: number | null
           org_id: string
-          tipo: string
-          valor: number | null
-          vigente_desde: string
-          vigente_hasta: string | null
-          workflow_run_id: string | null
+          points_charged_at: string | null
+          points_cost: number | null
+          points_refunded: boolean
+          print_count: number
+          printed_at: string | null
+          qr_value: string
+          redeemed_at: string | null
+          sequence: number
+          status: string
+          updated_at: string
+          uses_count: number
+          valid_from: string
+          valid_to: string | null
         }
         Insert: {
-          codigo: string
-          creado_en?: string
-          estado?: string
+          assigned_at?: string | null
+          batch_id: string
+          bearer?: boolean
+          cancel_reason_code?: string | null
+          cancel_reason_note?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code: string
+          created_at?: string
+          currency?: string
+          discount_type: string
+          discount_value?: number
           id?: string
+          issued_at?: string | null
+          max_uses?: number
           member_id?: string | null
+          min_purchase_amount?: number | null
           org_id: string
-          tipo: string
-          valor?: number | null
-          vigente_desde?: string
-          vigente_hasta?: string | null
-          workflow_run_id?: string | null
+          points_charged_at?: string | null
+          points_cost?: number | null
+          points_refunded?: boolean
+          print_count?: number
+          printed_at?: string | null
+          qr_value: string
+          redeemed_at?: string | null
+          sequence: number
+          status?: string
+          updated_at?: string
+          uses_count?: number
+          valid_from?: string
+          valid_to?: string | null
         }
         Update: {
-          codigo?: string
-          creado_en?: string
-          estado?: string
+          assigned_at?: string | null
+          batch_id?: string
+          bearer?: boolean
+          cancel_reason_code?: string | null
+          cancel_reason_note?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          created_at?: string
+          currency?: string
+          discount_type?: string
+          discount_value?: number
           id?: string
+          issued_at?: string | null
+          max_uses?: number
           member_id?: string | null
+          min_purchase_amount?: number | null
           org_id?: string
-          tipo?: string
-          valor?: number | null
-          vigente_desde?: string
-          vigente_hasta?: string | null
-          workflow_run_id?: string | null
+          points_charged_at?: string | null
+          points_cost?: number | null
+          points_refunded?: boolean
+          print_count?: number
+          printed_at?: string | null
+          qr_value?: string
+          redeemed_at?: string | null
+          sequence?: number
+          status?: string
+          updated_at?: string
+          uses_count?: number
+          valid_from?: string
+          valid_to?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "coupons_member_id_fkey"
+            foreignKeyName: "coupon_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "coupons_org_id_fkey"
+            foreignKeyName: "coupon_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_assignment: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          coupon_id: string
+          id: string
+          is_active: boolean
+          member_id: string
+          org_id: string
+          role: string
+          source: string
+          unassigned_at: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          coupon_id: string
+          id?: string
+          is_active?: boolean
+          member_id: string
+          org_id: string
+          role: string
+          source: string
+          unassigned_at?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          coupon_id?: string
+          id?: string
+          is_active?: boolean
+          member_id?: string
+          org_id?: string
+          role?: string
+          source?: string
+          unassigned_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_assignment_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_assignment_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_assignment_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_assignment_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_batch: {
+        Row: {
+          assigned_count: number
+          audience_mode: string | null
+          audience_name: string | null
+          audience_resolved_at: string | null
+          audience_segment_id: string | null
+          audience_size_at_issue: number | null
+          authorization_ip: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancelled_count: number
+          category_ids: string[]
+          code_pattern: string
+          code_prefix: string | null
+          created_at: string
+          created_by: string | null
+          csv_file_id: string | null
+          currency: string
+          delivery_channels: string[]
+          discount_type: string
+          discount_value: number
+          free_product_id: string | null
+          generated_count: number
+          generation_completed_at: string | null
+          generation_started_at: string | null
+          id: string
+          internal_reference: string | null
+          issue_reason: string | null
+          max_coupons_per_person: number
+          max_uses_per_coupon: number
+          min_purchase_amount: number | null
+          name: string
+          org_id: string
+          origin: string
+          points_charge_timing: string | null
+          points_cost: number | null
+          points_rate: number | null
+          promotion_id: string | null
+          redeemed_count: number
+          reference: string
+          requested_quantity: number
+          requires_approval: boolean
+          status: string
+          store_ids: string[]
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          assigned_count?: number
+          audience_mode?: string | null
+          audience_name?: string | null
+          audience_resolved_at?: string | null
+          audience_segment_id?: string | null
+          audience_size_at_issue?: number | null
+          authorization_ip?: string | null
+          authorized_at?: string | null
+          authorized_by?: string | null
+          cancelled_count?: number
+          category_ids?: string[]
+          code_pattern?: string
+          code_prefix?: string | null
+          created_at?: string
+          created_by?: string | null
+          csv_file_id?: string | null
+          currency?: string
+          delivery_channels?: string[]
+          discount_type: string
+          discount_value?: number
+          free_product_id?: string | null
+          generated_count?: number
+          generation_completed_at?: string | null
+          generation_started_at?: string | null
+          id?: string
+          internal_reference?: string | null
+          issue_reason?: string | null
+          max_coupons_per_person?: number
+          max_uses_per_coupon?: number
+          min_purchase_amount?: number | null
+          name: string
+          org_id: string
+          origin: string
+          points_charge_timing?: string | null
+          points_cost?: number | null
+          points_rate?: number | null
+          promotion_id?: string | null
+          redeemed_count?: number
+          reference?: string
+          requested_quantity?: number
+          requires_approval?: boolean
+          status?: string
+          store_ids?: string[]
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          assigned_count?: number
+          audience_mode?: string | null
+          audience_name?: string | null
+          audience_resolved_at?: string | null
+          audience_segment_id?: string | null
+          audience_size_at_issue?: number | null
+          authorization_ip?: string | null
+          authorized_at?: string | null
+          authorized_by?: string | null
+          cancelled_count?: number
+          category_ids?: string[]
+          code_pattern?: string
+          code_prefix?: string | null
+          created_at?: string
+          created_by?: string | null
+          csv_file_id?: string | null
+          currency?: string
+          delivery_channels?: string[]
+          discount_type?: string
+          discount_value?: number
+          free_product_id?: string | null
+          generated_count?: number
+          generation_completed_at?: string | null
+          generation_started_at?: string | null
+          id?: string
+          internal_reference?: string | null
+          issue_reason?: string | null
+          max_coupons_per_person?: number
+          max_uses_per_coupon?: number
+          min_purchase_amount?: number | null
+          name?: string
+          org_id?: string
+          origin?: string
+          points_charge_timing?: string | null
+          points_cost?: number | null
+          points_rate?: number | null
+          promotion_id?: string | null
+          redeemed_count?: number
+          reference?: string
+          requested_quantity?: number
+          requires_approval?: boolean
+          status?: string
+          store_ids?: string[]
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_batch_audience_segment_id_fkey"
+            columns: ["audience_segment_id"]
+            isOneToOne: false
+            referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_batch_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_batch_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_batch_csv_file_id_fkey"
+            columns: ["csv_file_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_import_file"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_batch_free_product_id_fkey"
+            columns: ["free_product_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_batch_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "coupons_workflow_run_id_fkey"
-            columns: ["workflow_run_id"]
+            foreignKeyName: "coupon_batch_promotion_id_fkey"
+            columns: ["promotion_id"]
             isOneToOne: false
-            referencedRelation: "workflow_runs"
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_event: {
+        Row: {
+          actor_id: string | null
+          actor_label: string
+          actor_type: string
+          batch_id: string | null
+          coupon_id: string | null
+          detail: string | null
+          id: string
+          ip: string | null
+          metadata: Json
+          occurred_at: string
+          org_id: string
+          reason_code: string | null
+          reason_note: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_label: string
+          actor_type: string
+          batch_id?: string | null
+          coupon_id?: string | null
+          detail?: string | null
+          id?: string
+          ip?: string | null
+          metadata?: Json
+          occurred_at?: string
+          org_id: string
+          reason_code?: string | null
+          reason_note?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_label?: string
+          actor_type?: string
+          batch_id?: string | null
+          coupon_id?: string | null
+          detail?: string | null
+          id?: string
+          ip?: string | null
+          metadata?: Json
+          occurred_at?: string
+          org_id?: string
+          reason_code?: string | null
+          reason_note?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_event_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_event_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_event_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_import_file: {
+        Row: {
+          column_mapping: Json
+          filename: string
+          id: string
+          matched_count: number
+          org_id: string
+          row_count: number
+          unmatched_count: number
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          column_mapping?: Json
+          filename: string
+          id?: string
+          matched_count?: number
+          org_id: string
+          row_count?: number
+          unmatched_count?: number
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          column_mapping?: Json
+          filename?: string
+          id?: string
+          matched_count?: number
+          org_id?: string
+          row_count?: number
+          unmatched_count?: number
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_import_file_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_import_file_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_print_job: {
+        Row: {
+          batch_id: string | null
+          coupon_ids: string[]
+          created_at: string
+          file_url: string | null
+          id: string
+          layout: string
+          org_id: string
+          page_count: number | null
+          requested_by: string | null
+          sequence_from: number | null
+          sequence_to: number | null
+          status: string
+        }
+        Insert: {
+          batch_id?: string | null
+          coupon_ids?: string[]
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          layout?: string
+          org_id: string
+          page_count?: number | null
+          requested_by?: string | null
+          sequence_from?: number | null
+          sequence_to?: number | null
+          status?: string
+        }
+        Update: {
+          batch_id?: string | null
+          coupon_ids?: string[]
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          layout?: string
+          org_id?: string
+          page_count?: number | null
+          requested_by?: string | null
+          sequence_from?: number | null
+          sequence_to?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_print_job_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_print_job_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_print_job_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_redemption: {
+        Row: {
+          channel: string
+          coupon_id: string
+          discount_applied: number | null
+          id: string
+          member_id: string | null
+          occurred_at: string
+          order_amount: number | null
+          org_id: string
+          pedido_id: string | null
+          points_charged: number | null
+          rejection_code: string | null
+          result: string
+          tienda_id: string | null
+        }
+        Insert: {
+          channel: string
+          coupon_id: string
+          discount_applied?: number | null
+          id?: string
+          member_id?: string | null
+          occurred_at?: string
+          order_amount?: number | null
+          org_id: string
+          pedido_id?: string | null
+          points_charged?: number | null
+          rejection_code?: string | null
+          result: string
+          tienda_id?: string | null
+        }
+        Update: {
+          channel?: string
+          coupon_id?: string
+          discount_applied?: number | null
+          id?: string
+          member_id?: string | null
+          occurred_at?: string
+          order_amount?: number | null
+          org_id?: string
+          pedido_id?: string | null
+          points_charged?: number | null
+          rejection_code?: string | null
+          result?: string
+          tienda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemption_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemption_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemption_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemption_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemption_tienda_id_fkey"
+            columns: ["tienda_id"]
+            isOneToOne: false
+            referencedRelation: "tiendas"
             referencedColumns: ["id"]
           },
         ]
@@ -1738,7 +2348,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coupon_search: {
+        Row: {
+          batch_id: string
+          batch_name: string | null
+          batch_reference: string | null
+          code: string
+          created_at: string
+          id: string
+          member_email: string | null
+          member_id: string | null
+          member_nombre: string | null
+          org_id: string
+          status: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_system_roles_for_org: {
@@ -1746,6 +2371,14 @@ export type Database = {
         Returns: undefined
       }
       current_org_id: { Args: never; Returns: string }
+      generate_coupon_batch_chunk: {
+        Args: { p_batch_id: string; p_chunk_size?: number }
+        Returns: {
+          generated: number
+          total: number
+          done: boolean
+        }[]
+      }
       lookup_org_idp_by_domain: {
         Args: { p_dominio: string }
         Returns: {
@@ -1757,6 +2390,10 @@ export type Database = {
       producto_owned_by_current_org: {
         Args: { target_producto_id: string }
         Returns: boolean
+      }
+      render_coupon_code: {
+        Args: { p_pattern: string; p_prefix: string; p_sequence: number }
+        Returns: string
       }
       role_owned_by_current_org: {
         Args: { target_role_id: string }
