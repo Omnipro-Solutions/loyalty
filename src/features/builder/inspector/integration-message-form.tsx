@@ -103,7 +103,7 @@ export function IntegrationMessageForm({
   return (
     <div className="flex flex-col gap-4">
       <Field label="Proveedor" required htmlFor="msg-proveedor">
-        <Select value={integrationId} onValueChange={setProvider}>
+        <Select value={integrationId ?? ""} onValueChange={setProvider}>
           <SelectTrigger id="msg-proveedor" className="w-full">
             <SelectValue placeholder="Selecciona un proveedor">
               {(v: string) =>
@@ -131,7 +131,7 @@ export function IntegrationMessageForm({
           htmlFor="msg-flujo"
           hint={selectedFlow?.description}
         >
-          <Select value={flowId} onValueChange={setFlow}>
+          <Select value={flowId ?? ""} onValueChange={setFlow}>
             <SelectTrigger id="msg-flujo" className="w-full">
               <SelectValue placeholder="Selecciona un flujo">
                 {(v: string) => flows.find((f) => f.id === v)?.name ?? v}

@@ -112,7 +112,7 @@ export function InviteUserDialog({ roles, stores }: InviteUserDialogProps) {
             <Input
               id="invite-email"
               type="email"
-              placeholder="nombre@omni.pro"
+              placeholder="nombre@etter.com"
               {...register("email")}
             />
           </Field>

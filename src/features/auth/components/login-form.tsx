@@ -103,7 +103,7 @@ export function LoginForm({
             <Input
               id="reset-email"
               type="email"
-              placeholder="elena@omni.pro"
+              placeholder="elena@etter.com"
               {...registerReset("email")}
             />
           </Field>
@@ -164,7 +164,7 @@ export function LoginForm({
           <Input
             id="email"
             type="email"
-            placeholder="elena@omni.pro"
+            placeholder="elena@etter.com"
             {...register("email")}
           />
         </Field>

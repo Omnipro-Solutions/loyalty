@@ -234,14 +234,14 @@ export default function DesignSystemPage() {
       </section>
 
       <section data-ds="layout-sidebar" className="h-[1024px] w-[260px] border">
-        <AppSidebar name="Elena Martínez" email="elena@omni.pro" />
+        <AppSidebar name="Elena Martínez" email="elena@etter.com" />
       </section>
 
       <section
         data-ds="layout-sidebar-rail"
         className="h-[1024px] w-[72px] border"
       >
-        <SidebarRail name="Elena Martínez" email="elena@omni.pro" />
+        <SidebarRail name="Elena Martínez" email="elena@etter.com" />
       </section>
 
       <section data-ds="layout-topbar" className="w-[1180px] border bg-white">
@@ -387,7 +387,7 @@ export default function DesignSystemPage() {
         >
           <Multiselect
             options={[
-              { value: "centro", label: "Omni Centro" },
+              { value: "centro", label: "Etter Centro" },
               { value: "prado", label: "Alto Prado" },
               { value: "buenavista", label: "Buenavista" },
             ]}

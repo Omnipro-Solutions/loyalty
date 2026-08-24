@@ -58,7 +58,7 @@ export function SsoDeniedCard({
         size="sm"
         nativeButton={false}
         render={
-          <a href="mailto:eduardo.t@omni.pro?subject=Solicitud%20de%20acceso%20SSO" />
+          <a href="mailto:eduardo.t@etter.com?subject=Solicitud%20de%20acceso%20SSO" />
         }
       >
         Solicitar acceso al administrador
@@ -74,7 +74,7 @@ export function SsoDeniedCard({
       </Button>
 
       <p className="text-center text-xs text-muted-foreground">
-        Administrador del tenant: Eduardo Tirado · eduardo.t@omni.pro
+        Administrador del tenant: Eduardo Tirado · eduardo.t@etter.com
       </p>
     </AuthCard>
   )

@@ -69,7 +69,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <BrandMark variant="inverse" className="size-10 shrink-0" />
           <div className="flex flex-col leading-[26px]">
             <p className="text-4xl font-semibold">Loyalty System</p>
-            <p className="text-sm font-extrabold">By Omni</p>
+            <p className="text-sm font-extrabold">By Etter</p>
           </div>
         </div>
         <p className="text-[34px] leading-[44px] font-semibold text-balance">

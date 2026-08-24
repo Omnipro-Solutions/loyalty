@@ -49,7 +49,7 @@ export function SsoDomainForm() {
         <Input
           id="sso-email"
           type="email"
-          placeholder="elena.marin@omni.pro"
+          placeholder="elena.marin@etter.com"
           value={email}
           onChange={(e) => {
             setEmail(e.target.value)

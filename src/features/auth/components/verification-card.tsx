@@ -250,7 +250,7 @@ export function VerificationCard(props: VerificationCardProps) {
               SMS al •••• 4821
             </span>
             {"  ·  Código de respaldo  ·  "}
-            <a href="mailto:eduardo.t@omni.pro" className="underline">
+            <a href="mailto:eduardo.t@etter.com" className="underline">
               Contactar a soporte
             </a>
           </p>

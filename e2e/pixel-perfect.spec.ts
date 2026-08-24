@@ -50,11 +50,11 @@ const AUTH_SCREENS = {
   "01.3-sso-proveedor": { nodeId: "1145:4809", path: "/sso" },
   "01.4-sso-redirigiendo": {
     nodeId: "1145:4884",
-    path: "/sso/redirigiendo?email=elena.marin@omni.pro",
+    path: "/sso/redirigiendo?email=elena.marin@etter.com",
   },
   "01.5-sso-no-autorizado": {
     nodeId: "1145:4959",
-    path: "/sso/no-autorizado?email=elena.marin@omni.pro",
+    path: "/sso/no-autorizado?email=elena.marin@etter.com",
   },
 } as const
 
