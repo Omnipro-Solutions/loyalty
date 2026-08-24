@@ -8,14 +8,13 @@ type CurrencyInputProps = Omit<React.ComponentProps<"input">, "type"> & {
 }
 
 /**
- * Figma "Form / Input · Moneda" (708:471): fixed prefix ("COP $") over
- * bg-subtle + numeric value. Border/states live on the container and react
- * to the real input via `:has()`/`:focus-within` — no duplicated state of
- * its own.
+ * Figma "Form / Input · Moneda" (708:471): fixed prefix over bg-subtle +
+ * numeric value. Border/states live on the container and react to the real
+ * input via `:has()`/`:focus-within` — no duplicated state of its own.
  */
 export function CurrencyInput({
   className,
-  currency = "COP $",
+  currency = "USD $",
   ...props
 }: CurrencyInputProps) {
   return (

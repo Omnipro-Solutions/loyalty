@@ -6,8 +6,9 @@
 
 const currency = new Intl.NumberFormat("es-CO", {
   style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 })
 
 const number = new Intl.NumberFormat("es-CO")
@@ -44,7 +45,7 @@ const shortTime = new Intl.DateTimeFormat("es-CO", {
   hour12: false,
 })
 
-export function formatCOP(value: number): string {
+export function formatUSD(value: number): string {
   return currency.format(value)
 }
 

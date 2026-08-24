@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { formatCOP, formatNumber } from "@/lib/format"
+import { formatUSD, formatNumber } from "@/lib/format"
 
 import { PromotionsFiltersBar } from "./promotions-filters-bar"
 import type { PromotionsSummary } from "../lib/queries"
@@ -41,7 +41,7 @@ export function PromotionsCard({
           <p className="text-[11px] text-muted-foreground">
             {formatNumber(summary.active)} activas ·{" "}
             {formatNumber(summary.scheduled)} programadas · presupuesto asignado{" "}
-            {formatCOP(summary.assignedBudget)}
+            {formatUSD(summary.assignedBudget)}
           </p>
         </div>
         <PromotionsFiltersBar />

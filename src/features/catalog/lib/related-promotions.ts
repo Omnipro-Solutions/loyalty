@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { formatCOP } from "@/lib/format"
+import { formatUSD } from "@/lib/format"
 import type { PromotionType } from "@/types/domain"
 
 export type PromotionValidityStatus =
@@ -50,13 +50,13 @@ function mechanicSummary(benefitType: string, benefitValue: number | null) {
     case "descuento_porcentual":
       return `${benefitValue ?? 0} % de descuento`
     case "descuento_monto_fijo":
-      return `${formatCOP(benefitValue ?? 0)} de descuento`
+      return `${formatUSD(benefitValue ?? 0)} de descuento`
     case "envio_gratis":
       return "Envío gratis"
     case "producto_gratis":
       return "Producto gratis (2x1, 3x2…)"
     case "precio_fijo_bundle":
-      return `Precio fijo: ${formatCOP(benefitValue ?? 0)}`
+      return `Precio fijo: ${formatUSD(benefitValue ?? 0)}`
     default:
       return "—"
   }

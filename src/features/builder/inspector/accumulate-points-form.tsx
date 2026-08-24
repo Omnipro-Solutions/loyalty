@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatCOP } from "@/lib/format"
+import { formatUSD } from "@/lib/format"
 import type { TierName } from "@/types/domain"
 
 import type { TierSummary } from "../canvas/queries"
@@ -26,8 +26,8 @@ type AccumulatePointsConfig = {
 }
 
 const DEFAULT_CONFIG: AccumulatePointsConfig = {
-  amountUnit: 1000,
-  exampleAmount: 50000,
+  amountUnit: 0.25,
+  exampleAmount: 12.5,
   exampleTierName: "oro",
 }
 
@@ -89,14 +89,15 @@ export function AccumulatePointsForm({
           <Input
             id="ap-unidad"
             type="number"
-            min={1}
+            min={0.01}
+            step={0.01}
             value={values.amountUnit}
             onChange={(e) =>
-              update({ amountUnit: Number(e.target.value) || 1 })
+              update({ amountUnit: Number(e.target.value) || 0.01 })
             }
           />
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
-            COP = 1 punto
+            USD = 1 punto
           </span>
         </div>
       </Field>
@@ -189,7 +190,7 @@ export function AccumulatePointsForm({
           </Select>
         </div>
         <p className="mt-2.5 text-[13px] text-foreground">
-          Compra de {formatCOP(values.exampleAmount)} × {multiplier}x nivel{" "}
+          Compra de {formatUSD(values.exampleAmount)} × {multiplier}x nivel{" "}
           {TIER_LABEL[values.exampleTierName]} ={" "}
           <span className="font-semibold">{preview.finalPoints} puntos</span>
         </p>

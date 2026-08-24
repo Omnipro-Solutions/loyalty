@@ -218,12 +218,13 @@ export async function listTiersOptions(): Promise<TierOption[]> {
 }
 
 /**
- * COP por punto — mismo tipo de supuesto de negocio que cualquier programa
+ * USD por punto — mismo tipo de supuesto de negocio que cualquier programa
  * de lealtad real (aquí no hay un valor configurable por organización
  * todavía). Alimenta "equivalen a $X" y "Pasivo acumulado" (05.3g),
  * calculados de verdad a partir de esto en vez de inventados por socio.
+ * Reescalado junto con el resto de importes COP→USD (÷4000).
  */
-export const POINT_VALUE_COP = 6.75
+export const POINT_VALUE_USD = 0.0017
 
 /** Roles de sistema, no de socio: "VIP" en 05.3g se aproxima con los dos niveles superiores — no hay un motor RFM real. */
 export function isVip(tierName: string | undefined): boolean {
@@ -327,7 +328,7 @@ export async function getLoyaltySummary(
     nextExpirationDate: nextExpiration,
     redemptionRate: accrualSum > 0 ? redemptionSum / accrualSum : null,
     accruedLiability:
-      Math.max(0, currentBalance - expiringSoon) * POINT_VALUE_COP,
+      Math.max(0, currentBalance - expiringSoon) * POINT_VALUE_USD,
     balanceSeries: balanceSeries.slice(-8),
   }
 }

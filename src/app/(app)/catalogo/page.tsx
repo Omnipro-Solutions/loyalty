@@ -18,7 +18,7 @@ import {
   listCategories,
   listProducts,
 } from "@/features/catalog/lib/queries"
-import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
+import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -74,7 +74,7 @@ export default async function CatalogPage({
         />
         <KpiCard
           label="Precio promedio"
-          value={formatCOP(kpis.averagePrice)}
+          value={formatUSD(kpis.averagePrice)}
           detail="precio de lista promedio"
         />
         <InventoryHealthCard

@@ -133,7 +133,7 @@ export async function getResumenDashboardData(): Promise<{
 
   const currency = new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "COP",
+    currency: "USD",
     maximumFractionDigits: 0,
     notation: salesNow >= 1_000_000 ? "compact" : "standard",
   })
@@ -544,7 +544,7 @@ export async function getAnaliticaDashboardData(
 
   const currency = new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "COP",
+    currency: "USD",
     maximumFractionDigits: 0,
   })
 

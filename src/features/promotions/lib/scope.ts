@@ -1,4 +1,4 @@
-import { formatCOP } from "@/lib/format"
+import { formatUSD } from "@/lib/format"
 
 import type { Condition } from "./queries"
 
@@ -40,7 +40,7 @@ export function scopeSummary(
   const cartAmount = promotion.condiciones.find(
     (c) => c.campo === "monto_carrito"
   )
-  if (cartAmount) return `Carrito ≥ ${formatCOP(cartAmount.valor)}`
+  if (cartAmount) return `Carrito ≥ ${formatUSD(cartAmount.valor)}`
 
   if (promotion.canal_aplicacion === "pos") return "Tiendas físicas"
   if (promotion.canal_aplicacion === "ecommerce") return "E-commerce"

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { KpiWidget } from "@/components/data/kpi-widget"
 import { EmptyState } from "@/components/feedback/empty-state"
 import {
-  formatCOP,
+  formatUSD,
   formatDateTime,
   formatNumber,
   formatPercent,
@@ -129,7 +129,7 @@ export default async function JourneyAnalyticsPage({
                   />
                   <KpiWidget
                     label="Ingreso"
-                    value={realRevenue !== null ? formatCOP(realRevenue) : "—"}
+                    value={realRevenue !== null ? formatUSD(realRevenue) : "—"}
                     caption={
                       realRevenue !== null
                         ? "de socios que pasaron por aquí"

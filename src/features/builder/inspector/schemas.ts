@@ -58,8 +58,8 @@ export const accumulatePointsConfigSchema = z.object({
   multiplierOverride: z.number().min(0).optional(),
   capPerTransaction: z.number().min(0).optional(),
   accumulatedCap: z.number().min(0).optional(),
-  amountUnit: z.number().min(1).default(1000),
-  exampleAmount: z.number().min(0).default(50000),
+  amountUnit: z.number().min(0.01).default(0.25),
+  exampleAmount: z.number().min(0).default(12.5),
   exampleTierName: z
     .enum(["bronce", "plata", "oro", "diamante"])
     .default("oro"),

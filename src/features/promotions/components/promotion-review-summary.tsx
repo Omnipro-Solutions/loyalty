@@ -1,4 +1,4 @@
-import { formatCOP, formatDate } from "@/lib/format"
+import { formatUSD, formatDate } from "@/lib/format"
 
 import {
   APPLY_TO_LABEL,
@@ -90,7 +90,7 @@ export function PromotionReviewSummary({
                   : condition.campo === "segmento"
                     ? (segmentNameById.get(condition.valor) ?? condition.valor)
                     : condition.campo === "monto_carrito"
-                      ? formatCOP(condition.valor)
+                      ? formatUSD(condition.valor)
                       : String(condition.valor)
               }
             />
@@ -112,12 +112,12 @@ export function PromotionReviewSummary({
               ? "—"
               : values.benefitType === "descuento_porcentual"
                 ? `${values.benefitValue} %`
-                : formatCOP(values.benefitValue)
+                : formatUSD(values.benefitValue)
           }
         />
         <SummaryRow
           label="Tope máximo"
-          value={values.maxCap ? formatCOP(values.maxCap) : "Sin tope"}
+          value={values.maxCap ? formatUSD(values.maxCap) : "Sin tope"}
         />
         <SummaryRow
           label="Aplicar sobre"
@@ -146,7 +146,7 @@ export function PromotionReviewSummary({
         />
         <SummaryRow
           label="Presupuesto asignado"
-          value={formatCOP(values.assignedBudget ?? 0)}
+          value={formatUSD(values.assignedBudget ?? 0)}
         />
       </SummaryGroup>
     </div>

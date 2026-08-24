@@ -1,5 +1,5 @@
 import { KpiWidget } from "@/components/data/kpi-widget"
-import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
+import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 
 import { getJourneysKpis } from "./queries"
 
@@ -53,7 +53,7 @@ export async function JourneysKpiRow() {
         label="Ingreso atribuido"
         value={
           kpis.attributedRevenue !== null
-            ? formatCOP(kpis.attributedRevenue)
+            ? formatUSD(kpis.attributedRevenue)
             : "—"
         }
         caption={

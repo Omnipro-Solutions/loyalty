@@ -1,5 +1,5 @@
 import {
-  formatCOP,
+  formatUSD,
   formatDate,
   formatNumber,
   formatPercent,
@@ -7,7 +7,7 @@ import {
 
 import { KpiCard } from "./kpi-card"
 import {
-  POINT_VALUE_COP,
+  POINT_VALUE_USD,
   type Member,
   type LoyaltySummary,
 } from "../lib/queries"
@@ -38,7 +38,7 @@ export function MemberLoyaltyKpis({
           label="Saldo de puntos"
           value={formatNumber(member.saldo_puntos)}
           series={summary.balanceSeries}
-          detail={`equivalen a ${formatCOP(member.saldo_puntos * POINT_VALUE_COP)}`}
+          detail={`equivalen a ${formatUSD(member.saldo_puntos * POINT_VALUE_USD)}`}
         />
         <KpiCard
           label="Por vencer"
@@ -76,7 +76,7 @@ export function MemberLoyaltyKpis({
         />
         <KpiCard
           label="Pasivo acumulado"
-          value={formatCOP(summary.accruedLiability)}
+          value={formatUSD(summary.accruedLiability)}
           series={summary.balanceSeries}
           detail="neto de puntos por vencer"
         />

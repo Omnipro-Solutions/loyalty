@@ -29,7 +29,7 @@ import type { ReactNode } from "react"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
 import {
-  formatCOP,
+  formatUSD,
   formatDate,
   formatLongDate,
   formatMonthYear,
@@ -205,7 +205,7 @@ export function MemberHero({
         icon={Receipt}
         label="Ticket promedio"
         value={
-          behavior.totalOrders > 0 ? formatCOP(behavior.averageTicket) : "—"
+          behavior.totalOrders > 0 ? formatUSD(behavior.averageTicket) : "—"
         }
       />
       <HeroField
