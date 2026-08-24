@@ -49,8 +49,12 @@ const couponBatchBaseSchema = z.object({
   discountValue: z.number().nonnegative(),
   freeProductId: z.string().uuid().optional(),
   minPurchaseAmount: z.number().nonnegative().optional(),
-  maxUsesPerCoupon: z.number().int().positive().default(1),
-  maxCouponsPerPerson: z.number().int().positive().default(1),
+  // Sin `.default(...)`: el formulario siempre los provee vía
+  // `useForm({defaultValues})` — un default de zod aquí volvería el tipo de
+  // ENTRADA (el que maneja react-hook-form) distinto del de SALIDA
+  // (el que valida el resolver), y `zodResolver` exige que coincidan.
+  maxUsesPerCoupon: z.number().int().positive(),
+  maxCouponsPerPerson: z.number().int().positive(),
   codePrefix: z.string().max(12).optional(),
   codePattern: z
     .string()
@@ -59,9 +63,9 @@ const couponBatchBaseSchema = z.object({
     .refine((v) => v.includes("N"), "El patrón necesita al menos un token N"),
   validFrom: z.string().min(1, "Elige la fecha de inicio"),
   validTo: z.string().optional(),
-  storeIds: z.array(z.string().uuid()).default([]),
-  categoryIds: z.array(z.string().uuid()).default([]),
-  deliveryChannels: z.array(z.enum(COUPON_DELIVERY_CHANNELS)).default([]),
+  storeIds: z.array(z.string().uuid()),
+  categoryIds: z.array(z.string().uuid()),
+  deliveryChannels: z.array(z.enum(COUPON_DELIVERY_CHANNELS)),
   promotionId: z.string().uuid().optional(),
 
   // Paso "Autorización" (todos los orígenes)
