@@ -78,7 +78,7 @@ export function StepRecipient({
               onClick={() => {
                 onChange(member)
                 setSearch("")
-                setResults([])
+                setRawResults([])
               }}
               className={cn(
                 "flex items-center gap-2.5 rounded-xl border border-border px-3 py-2 text-left hover:bg-accent",

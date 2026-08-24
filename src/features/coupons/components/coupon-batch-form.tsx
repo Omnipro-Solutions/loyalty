@@ -17,7 +17,6 @@ import type {
   MemberOption,
   ProductOption,
 } from "../lib/queries"
-import { stepRecap } from "../lib/recap"
 import { stepsForOrigin, type CouponStepId } from "../lib/steps"
 import { evaluateApprovalRequirement } from "../lib/thresholds"
 import { couponBatchSchema, type CouponBatchValues } from "../schemas"
@@ -127,8 +126,8 @@ export function CouponBatchForm({
   // Cast explícito: `useWatch` sin `name` infiere un tipo "deep partial"
   // (hasta los campos DENTRO de `importRows[]` quedan opcionales), distinto
   // del `Partial<CouponBatchValues>` (solo el primer nivel) que espera el
-  // resto del módulo (`stepRecap`, `StepReview`, etc.) — fricción conocida
-  // de react-hook-form v7 con arrays de objetos.
+  // resto del módulo (`StepReview`, `computeBlockers`, etc.) — fricción
+  // conocida de react-hook-form v7 con arrays de objetos.
   const values = useWatch({ control }) as Partial<CouponBatchValues>
   const origin = (values.origin ?? "manual_customer") as CouponOrigin
   const steps = useMemo(() => stepsForOrigin(origin), [origin])
@@ -150,18 +149,6 @@ export function CouponBatchForm({
     },
     onError: () => setGeneralError("No se pudo emitir la emisión."),
   })
-
-  const recap = Object.fromEntries(
-    steps.map((s) => [
-      s.id,
-      stepRecap(s.id, values, {
-        memberNameById: selectedMember
-          ? new Map([[selectedMember.id, selectedMember.name]])
-          : new Map(),
-        audienceNameById: new Map(audiences.map((a) => [a.id, a.name])),
-      }),
-    ])
-  )
 
   const approval = evaluateApprovalRequirement({
     requestedQuantity:
@@ -194,13 +181,8 @@ export function CouponBatchForm({
   }
 
   return (
-    <form className="flex w-full items-start gap-5">
-      <CouponStepper
-        steps={steps}
-        current={stepId}
-        recap={recap}
-        onStepClick={setStepId}
-      />
+    <form className="flex w-full flex-col gap-5">
+      <CouponStepper steps={steps} current={stepId} onStepClick={setStepId} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-3.5">
         {generalError && (
