@@ -722,7 +722,7 @@ grant execute on function generate_coupon_batch_chunk(uuid, integer) to authenti
 create view coupon_search
 with (security_invoker = true) as
 select
-  c.id, c.org_id, c.code, c.status, c.batch_id, c.member_id, c.created_at,
+  c.id, c.org_id, c.code, c.status, c.valid_to, c.batch_id, c.member_id, c.created_at,
   m.nombre as member_nombre, m.email as member_email,
   b.reference as batch_reference, b.name as batch_name
 from coupon c

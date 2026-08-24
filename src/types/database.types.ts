@@ -2361,6 +2361,7 @@ export type Database = {
           member_nombre: string | null
           org_id: string
           status: string
+          valid_to: string | null
         }
         Relationships: []
       }

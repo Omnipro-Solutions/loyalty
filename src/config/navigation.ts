@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Store,
   Tag,
+  Ticket,
   TrendingUp,
   Users,
   Workflow,
@@ -58,6 +59,7 @@ export const NAVIGATION: NavGroup[] = [
     title: "Comercial",
     items: [
       { label: "Promociones", href: "/promociones", icon: Tag },
+      { label: "Cupones", href: "/cupones", icon: Ticket },
       { label: "Loyalty Builder", href: "/journeys", icon: Workflow },
       { label: "Clientes", href: "/clientes", icon: Users },
       { label: "Audiencias", href: "/audiencias", icon: TrendingUp },
