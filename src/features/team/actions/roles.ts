@@ -121,7 +121,7 @@ export const updateRoleAction = teamActionClient
     }
 
     // Reemplaza la matriz completa: más simple que diffear fila a fila, y
-    // el conjunto siempre es pequeño (como mucho 9 recursos × 5 acciones).
+    // el conjunto siempre es pequeño (como mucho 10 recursos × 9 acciones).
     const validPermissions = parsedInput.permissions.filter((p) =>
       actionApplies(p.resource, p.action)
     )

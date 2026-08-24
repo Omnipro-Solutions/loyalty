@@ -59,8 +59,11 @@ from (
     ('Jefe de tienda', 'promociones', 'ver'), ('Jefe de tienda', 'promociones', 'crear'),
     ('Jefe de tienda', 'reglas', 'ver'),
     ('Jefe de tienda', 'journeys', 'ver'),
+    ('Jefe de tienda', 'cupones', 'ver'), ('Jefe de tienda', 'cupones', 'crear'),
+    ('Jefe de tienda', 'cupones', 'emitir'), ('Jefe de tienda', 'cupones', 'imprimir'),
     ('Operador de caja', 'catalogo', 'ver'),
-    ('Operador de caja', 'promociones', 'ver'), ('Operador de caja', 'promociones', 'crear')
+    ('Operador de caja', 'promociones', 'ver'), ('Operador de caja', 'promociones', 'crear'),
+    ('Operador de caja', 'cupones', 'ver'), ('Operador de caja', 'cupones', 'imprimir')
 ) as rp (nombre, recurso, accion)
 on conflict (role_id, recurso, accion) do nothing;
 

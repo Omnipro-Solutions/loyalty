@@ -22,6 +22,7 @@ export const RESOURCES = [
   "journeys",
   "equipo",
   "facturacion",
+  "cupones",
 ] as const
 export type Resource = (typeof RESOURCES)[number]
 
@@ -31,6 +32,10 @@ export const ACTIONS = [
   "editar",
   "eliminar",
   "aprobar",
+  "emitir",
+  "anular",
+  "imprimir",
+  "exportar",
 ] as const
 export type Action = (typeof ACTIONS)[number]
 
@@ -47,6 +52,7 @@ export const APPROVABLE_RESOURCES: readonly Resource[] = [
   "promociones",
   "reglas",
   "journeys",
+  "cupones",
 ]
 
 const OPERATIONAL_RESOURCES: readonly Resource[] = [
@@ -59,16 +65,36 @@ const OPERATIONAL_RESOURCES: readonly Resource[] = [
   "journeys",
 ]
 
+const COUPON_ONLY_RESOURCES: readonly Resource[] = ["cupones"]
+
+/**
+ * A qué recursos aplica cada acción. Una acción ausente del mapa aplica a
+ * todos los recursos (caso de `ver/crear/editar/eliminar`). `emitir`,
+ * `anular`, `imprimir` y `exportar` son propias del módulo de cupones — en
+ * el resto de recursos la celda queda bloqueada con candado, igual que
+ * `aprobar` ya hacía fuera de `APPROVABLE_RESOURCES`.
+ */
+const ACTION_SCOPE: Partial<Record<Action, readonly Resource[]>> = {
+  aprobar: APPROVABLE_RESOURCES,
+  emitir: COUPON_ONLY_RESOURCES,
+  anular: COUPON_ONLY_RESOURCES,
+  imprimir: COUPON_ONLY_RESOURCES,
+  exportar: COUPON_ONLY_RESOURCES,
+}
+
 /** If a resource×action combination doesn't apply, the matrix cell is disabled instead of shown unchecked. */
 export function actionApplies(resource: Resource, action: Action): boolean {
-  return action !== "aprobar" || APPROVABLE_RESOURCES.includes(resource)
+  const scope = ACTION_SCOPE[action]
+  return !scope || scope.includes(resource)
 }
 
 type Matrix = Record<Role, Partial<Record<Resource, readonly Action[]>>>
 
 const MATRIX: Matrix = {
+  // Filtrado por `actionApplies`: sin esto, "admin" afirmaría combinaciones
+  // que no existen en la matriz real (ej. `facturacion:emitir`).
   admin: Object.fromEntries(
-    RESOURCES.map((r) => [r, ACTIONS])
+    RESOURCES.map((r) => [r, ACTIONS.filter((a) => actionApplies(r, a))])
   ) as Matrix["admin"],
   gestor: {
     resumen: ["ver"],
@@ -78,6 +104,9 @@ const MATRIX: Matrix = {
     promociones: ["ver", "crear", "editar", "eliminar", "aprobar"],
     reglas: ["ver", "crear", "editar", "aprobar"],
     journeys: ["ver", "crear", "editar", "aprobar"],
+    // Sin "aprobar": el gestor es quien solicita la emisión, no quien la
+    // aprueba — dárselo recrearía el agujero que cierra la doble aprobación.
+    cupones: ["ver", "crear", "editar", "emitir", "imprimir", "exportar"],
   },
   aprobador: {
     ...Object.fromEntries(
@@ -86,10 +115,14 @@ const MATRIX: Matrix = {
     promociones: ["ver", "aprobar"],
     reglas: ["ver", "aprobar"],
     journeys: ["ver", "aprobar"],
+    cupones: ["ver", "aprobar"],
   },
-  lector: Object.fromEntries(
-    OPERATIONAL_RESOURCES.map((r) => [r, ["ver"] as const])
-  ) as Matrix["lector"],
+  lector: {
+    ...(Object.fromEntries(
+      OPERATIONAL_RESOURCES.map((r) => [r, ["ver"] as const])
+    ) as Matrix["lector"]),
+    cupones: ["ver"],
+  },
 }
 
 /**

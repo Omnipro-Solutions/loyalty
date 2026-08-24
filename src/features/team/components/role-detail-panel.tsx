@@ -34,7 +34,7 @@ import {
 
 import { updateRoleAction, duplicateRoleAction } from "../actions/roles"
 import { avatarPalette } from "../lib/avatar-palette"
-import { RESOURCE_INFO } from "../lib/labels"
+import { ACTION_LABELS, RESOURCE_INFO } from "../lib/labels"
 import type { RoleDetail } from "../lib/queries"
 
 const STORE_SCOPE_LABEL: Record<string, string> = {
@@ -264,59 +264,70 @@ export function RoleDetailPanel({
           )}
         </div>
 
-        <div className="flex items-center gap-2.5 bg-muted px-5 py-2.5">
-          <span className="flex-1 text-[10px] font-semibold tracking-[0.4px] text-muted-foreground">
-            MÓDULO
-          </span>
-          {ACTIONS.map((action) => (
-            <span
-              key={action}
-              className="w-24 shrink-0 text-center text-[10px] font-semibold tracking-[0.4px] text-muted-foreground"
-            >
-              {action.toUpperCase()}
+        {/*
+          9 acciones (antes 5, ver src/lib/permissions.ts) ya no caben en el
+          ancho fijo del panel a w-24 por columna — se baja a w-16 y se envuelve
+          todo el bloque (cabecera + filas) en un mismo overflow-x-auto para que
+          scrollee como una sola unidad; el nombre del módulo queda con ancho
+          mínimo propio en vez de flex-1 para que no se aplaste al scrollear.
+        */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
+          <div className="flex w-fit min-w-full items-center gap-2.5 bg-muted px-5 py-2.5">
+            <span className="w-[200px] shrink-0 text-[10px] font-semibold tracking-[0.4px] text-muted-foreground">
+              MÓDULO
             </span>
-          ))}
-        </div>
+            {ACTIONS.map((action) => (
+              <span
+                key={action}
+                className="w-16 shrink-0 text-center text-[10px] font-semibold tracking-[0.4px] text-muted-foreground"
+              >
+                {ACTION_LABELS[action]}
+              </span>
+            ))}
+          </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {RESOURCES.map((resource) => (
-            <div
-              key={resource}
-              className="flex items-center gap-2.5 border-t border-muted px-5 py-2.5"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-foreground">
-                  {RESOURCE_INFO[resource].label}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {RESOURCE_INFO[resource].description}
-                </p>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {RESOURCES.map((resource) => (
+              <div
+                key={resource}
+                className="flex w-fit min-w-full items-center gap-2.5 border-t border-muted px-5 py-2.5"
+              >
+                <div className="w-[200px] min-w-0 shrink-0">
+                  <p className="truncate text-[13px] font-medium text-foreground">
+                    {RESOURCE_INFO[resource].label}
+                  </p>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {RESOURCE_INFO[resource].description}
+                  </p>
+                </div>
+                {ACTIONS.map((action) => {
+                  const applies = actionApplies(resource, action)
+                  return (
+                    <div
+                      key={action}
+                      className="flex w-16 shrink-0 justify-center"
+                    >
+                      {applies ? (
+                        <Checkbox
+                          checked={
+                            permissions[`${resource}:${action}`] ?? false
+                          }
+                          disabled={readOnly}
+                          onCheckedChange={(checked) =>
+                            set(resource, action, checked === true)
+                          }
+                        />
+                      ) : (
+                        <div className="flex size-[19px] items-center justify-center rounded-md bg-muted">
+                          <Lock className="size-2.5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-              {ACTIONS.map((action) => {
-                const applies = actionApplies(resource, action)
-                return (
-                  <div
-                    key={action}
-                    className="flex w-24 shrink-0 justify-center"
-                  >
-                    {applies ? (
-                      <Checkbox
-                        checked={permissions[`${resource}:${action}`] ?? false}
-                        disabled={readOnly}
-                        onCheckedChange={(checked) =>
-                          set(resource, action, checked === true)
-                        }
-                      />
-                    ) : (
-                      <div className="flex size-[19px] items-center justify-center rounded-md bg-muted">
-                        <Lock className="size-2.5 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-3.5 bg-muted px-5 py-3.5">
