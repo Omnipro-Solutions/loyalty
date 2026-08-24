@@ -14,7 +14,18 @@ function isAppRoute(pathname: string) {
     !pathname.startsWith("/verificacion") &&
     !pathname.startsWith("/sso") &&
     !pathname.startsWith("/ds") &&
-    !pathname.startsWith("/api")
+    !pathname.startsWith("/api") &&
+    // `/auth/*` son los Route Handlers de intercambio de sesión (OAuth,
+    // recuperación de contraseña, activación de cuenta) — corren SIN
+    // sesión todavía (justo la están estableciendo), así que tratarlos como
+    // ruta de (app) los redirigiría a /login antes de que el handler llegue
+    // a ejecutarse. `restablecer-contrasena`/`activar-cuenta` son las
+    // páginas a las que esos handlers redirigen: tampoco pueden exigir
+    // `hasFullSession` (aal2) porque la sesión que traen viene recién
+    // creada por un enlace de correo, no por login + TOTP.
+    !pathname.startsWith("/auth/") &&
+    !pathname.startsWith("/restablecer-contrasena") &&
+    !pathname.startsWith("/activar-cuenta")
   )
 }
 

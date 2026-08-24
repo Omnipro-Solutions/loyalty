@@ -27,3 +27,17 @@ export const ssoLookupSchema = z.object({
 export const passwordResetSchema = z.object({
   email: z.string().email("Correo inválido"),
 })
+
+// Misma política de longitud que `loginSchema` — usado tanto al restablecer
+// contraseña (recovery) como al activar cuenta (invite): ambos flujos
+// terminan en el mismo `updateUser({ password })` sobre la sesión que deja
+// `verifyOtp` en `src/app/auth/confirm/route.ts`.
+export const setPasswordSchema = z
+  .object({
+    password: z.string().min(12, "Mínimo 12 caracteres"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  })

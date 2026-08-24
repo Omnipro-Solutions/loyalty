@@ -243,10 +243,18 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Plantillas custom: apuntan a /auth/confirm (src/app/auth/confirm/route.ts)
+# con token_hash + type en vez del {{ .ConfirmationURL }} por defecto —
+# verifyOtp por token_hash funciona igual sin importar quién complete el
+# enlace (necesario para invite: quien lo recibe no es quien lo generó, así
+# que PKCE no aplica aquí — ver el comentario en confirm/route.ts).
+[auth.email.template.invite]
+subject = "Te invitaron a Loyalty Portal"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Restablecer tu contraseña"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
