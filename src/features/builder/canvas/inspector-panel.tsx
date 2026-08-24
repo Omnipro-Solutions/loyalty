@@ -16,7 +16,11 @@ import { SimpleConfigForm } from "@/features/builder/inspector/simple-config-for
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import type { AudienceSummary, TierSummary } from "./queries"
+import type {
+  AudienceSummary,
+  CouponBatchSummary,
+  TierSummary,
+} from "./queries"
 
 const BRANCH_TYPES = new Set(["ramificacion_valor", "split_ab"])
 
@@ -29,6 +33,7 @@ export function InspectorPanel({
   node,
   tiers,
   audiences,
+  couponBatches,
   onClose,
   onDelete,
   onConfigChange,
@@ -39,6 +44,7 @@ export function InspectorPanel({
   } | null
   tiers: TierSummary[]
   audiences: AudienceSummary[]
+  couponBatches: CouponBatchSummary[]
   onClose: () => void
   onDelete: (id: string) => void
   onConfigChange: (id: string, config: Record<string, unknown>) => void
@@ -145,6 +151,10 @@ export function InspectorPanel({
                   a.estimatedCount !== null
                     ? `${a.name} (${formatNumber(a.estimatedCount)})`
                     : a.name,
+              }))}
+              couponBatches={couponBatches.map((b) => ({
+                value: b.id,
+                label: `${b.reference} · ${b.name}`,
               }))}
               onChange={update}
             />

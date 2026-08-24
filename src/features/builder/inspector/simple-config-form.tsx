@@ -37,12 +37,15 @@ export function SimpleConfigForm({
   specs,
   config,
   audiences = [],
+  couponBatches = [],
   onChange,
 }: {
   specs: FieldSpec[]
   config: Record<string, unknown>
   /** Opciones para campos `kind: "audience-select"` (audiencias reales, ver `entra_segmento`). */
   audiences?: { value: string; label: string }[]
+  /** Opciones para campos `kind: "coupon-select"` (emisiones reales, ver `emitir_cupon`). */
+  couponBatches?: { value: string; label: string }[]
   onChange: (config: Record<string, unknown>) => void
 }) {
   function set(key: string, value: unknown) {
@@ -112,7 +115,9 @@ export function SimpleConfigForm({
             ? spec.options
             : spec.kind === "audience-select"
               ? audiences
-              : null
+              : spec.kind === "coupon-select"
+                ? couponBatches
+                : null
 
         return (
           <Field
@@ -149,7 +154,9 @@ export function SimpleConfigForm({
                 }
                 onValueChange={(value) => set(spec.key, value)}
               />
-            ) : spec.kind === "select" || spec.kind === "audience-select" ? (
+            ) : spec.kind === "select" ||
+              spec.kind === "audience-select" ||
+              spec.kind === "coupon-select" ? (
               <Select
                 value={
                   typeof currentValue === "string" ? currentValue : undefined

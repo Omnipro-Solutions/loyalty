@@ -35,7 +35,12 @@ import {
   simulateWorkflowAction,
 } from "./publish-actions"
 import { InspectorPanel } from "./inspector-panel"
-import type { AudienceSummary, TierSummary, WorkflowWithGraph } from "./queries"
+import type {
+  AudienceSummary,
+  CouponBatchSummary,
+  TierSummary,
+  WorkflowWithGraph,
+} from "./queries"
 import { VersionHistoryDialog } from "./version-history-dialog"
 
 const NODE_TYPES = { builderNode: BuilderNode }
@@ -79,10 +84,12 @@ function CanvasArea({
   workflow,
   tiers,
   audiences,
+  couponBatches,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
   audiences: AudienceSummary[]
+  couponBatches: CouponBatchSummary[]
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BuilderNodeData>>(
     workflow.nodes.map(toFlowNode)
@@ -406,6 +413,7 @@ function CanvasArea({
           node={selectedNode}
           tiers={tiers}
           audiences={audiences}
+          couponBatches={couponBatches}
           onClose={() => setSelectedId(null)}
           onDelete={deleteNode}
           onConfigChange={updateNodeConfig}
@@ -425,14 +433,21 @@ export function JourneyEditor({
   workflow,
   tiers,
   audiences,
+  couponBatches,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
   audiences: AudienceSummary[]
+  couponBatches: CouponBatchSummary[]
 }) {
   return (
     <ReactFlowProvider>
-      <CanvasArea workflow={workflow} tiers={tiers} audiences={audiences} />
+      <CanvasArea
+        workflow={workflow}
+        tiers={tiers}
+        audiences={audiences}
+        couponBatches={couponBatches}
+      />
     </ReactFlowProvider>
   )
 }
