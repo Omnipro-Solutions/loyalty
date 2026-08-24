@@ -18,15 +18,23 @@ import { AuthCard } from "@/components/layout/auth-card"
 
 import { loginAction } from "../actions/login"
 import { requestPasswordResetAction } from "../actions/password-reset"
-import { loginSchema } from "../schemas"
+import { loginSchema, passwordResetSchema } from "../schemas"
 import { SsoProviderButtons } from "./sso-provider-buttons"
 
 type LoginValues = z.input<typeof loginSchema>
+type PasswordResetValues = z.input<typeof passwordResetSchema>
 
-export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
+export function LoginForm({
+  samlEnabled,
+  initialError,
+}: {
+  samlEnabled: boolean
+  initialError?: string
+}) {
   const router = useRouter()
   const [mode, setMode] = useState<"login" | "recuperar">("login")
   const [generalError, setGeneralError] = useState<string>()
+  const [linkError] = useState(initialError)
 
   const {
     register,
@@ -39,6 +47,15 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
     defaultValues: { email: "", password: "", rememberDevice: false },
   })
   const rememberDevice = useWatch({ control, name: "rememberDevice" })
+
+  const {
+    register: registerReset,
+    handleSubmit: handleResetSubmit,
+    formState: { errors: resetErrors },
+  } = useForm<PasswordResetValues>({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: { email: "" },
+  })
 
   const login = useAction(loginAction, {
     onSuccess: ({ data }) => {
@@ -74,23 +91,26 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
             description="Si el correo existe, recibirás un enlace para restablecer tu contraseña."
           />
         )}
-        <Field label="Correo corporativo" htmlFor="reset-email">
-          <Input
-            id="reset-email"
-            type="email"
-            placeholder="elena@omni.pro"
-            {...register("email")}
-          />
-        </Field>
-        <Button
-          className="w-full"
-          disabled={reset.isPending}
-          onClick={handleSubmit((values) =>
-            reset.execute({ email: values.email })
-          )}
+        <form
+          className="flex flex-col gap-2.5"
+          onSubmit={handleResetSubmit((values) => reset.execute(values))}
         >
-          Enviar enlace
-        </Button>
+          <Field
+            label="Correo corporativo"
+            htmlFor="reset-email"
+            error={resetErrors.email?.message}
+          >
+            <Input
+              id="reset-email"
+              type="email"
+              placeholder="elena@omni.pro"
+              {...registerReset("email")}
+            />
+          </Field>
+          <Button type="submit" className="w-full" disabled={reset.isPending}>
+            Enviar enlace
+          </Button>
+        </form>
         <button
           type="button"
           onClick={() => setMode("login")}
@@ -112,6 +132,14 @@ export function LoginForm({ samlEnabled }: { samlEnabled: boolean }) {
           Accede al panel de promociones de omni.
         </p>
       </div>
+
+      {linkError && !generalError && (
+        <Message
+          variant="error"
+          title="Enlace inválido"
+          description={linkError}
+        />
+      )}
 
       {generalError && (
         <Message

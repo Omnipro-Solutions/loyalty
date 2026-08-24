@@ -42,6 +42,16 @@ export const loginAction = actionClient
       }
     )
 
+    // MFA es opcional (ver comentario en src/lib/supabase/proxy.ts): si el
+    // usuario nunca enroló un factor verificado, `nextLevel` se queda igual
+    // a `currentLevel` y no hay a qué subir — no tiene sentido mandarlo a
+    // /verificacion.
+    const { data: aal } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aal?.currentLevel === aal?.nextLevel) {
+      return { ok: true as const, needsVerification: false as const }
+    }
+
     // Dispositivo ya confiado de un login anterior: si el token de la
     // cookie coincide con un registro vigente, `proxy.ts` deja pasar sin
     // pedir 2FA de nuevo (ver src/lib/supabase/proxy.ts).

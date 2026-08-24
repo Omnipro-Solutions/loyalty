@@ -12,12 +12,11 @@ import { useMemo } from "react"
 
 import { DataTable } from "@/components/data/data-table"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
-import { Badge } from "@/components/ui/badge"
-import { formatNumber } from "@/lib/format"
+import { formatEventDate, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { avatarPalette } from "../lib/avatar-palette"
-import { SEGMENT_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
+import { AJO_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
 import type { AudienceListItem, AudiencesSort } from "../lib/queries"
 import { Sparkline } from "./sparkline"
 
@@ -122,15 +121,30 @@ export function AudiencesTable({ audiences, sort, dir }: AudiencesTableProps) {
           },
         }),
         helper.display({
-          id: "tier",
-          size: 130,
-          header: () => "NIVEL",
-          cell: (info) => {
-            const tier = info.row.original.dominantTier
-            if (!tier)
-              return <span className="text-xs text-muted-foreground">—</span>
-            return <Badge variant="info">{TIER_LABEL[tier]}</Badge>
-          },
+          id: "id",
+          size: 96,
+          header: () => "ID",
+          cell: (info) => (
+            <span
+              className="font-mono text-[11px] text-secondary-foreground"
+              title={info.row.original.id}
+            >
+              #{info.row.original.id.slice(0, 8)}
+            </span>
+          ),
+        }),
+        helper.display({
+          id: "origin",
+          size: 140,
+          header: () => "ORIGEN",
+          cell: () => (
+            <div className="flex min-w-0 items-center gap-1.5">
+              <img src={AJO_ORIGIN.logo} alt="" className="size-4 shrink-0" />
+              <span className="truncate text-[13px] font-medium text-foreground">
+                {AJO_ORIGIN.label}
+              </span>
+            </div>
+          ),
         }),
         helper.display({
           id: "size",
@@ -152,21 +166,12 @@ export function AudiencesTable({ audiences, sort, dir }: AudiencesTableProps) {
           ),
         }),
         helper.display({
-          id: "journeys",
-          size: 150,
-          header: () => (
-            <div className="flex justify-end">
-              <SortableHeader
-                column="journeys"
-                label="LOYALTY RULES"
-                currentSort={sort}
-                currentDir={dir}
-              />
-            </div>
-          ),
+          id: "updated",
+          size: 118,
+          header: () => "ACTUALIZADO",
           cell: (info) => (
-            <span className="block text-right text-[13px] font-semibold text-foreground">
-              {formatNumber(info.row.original.linkedJourneys)}
+            <span className="text-xs text-muted-foreground">
+              {formatEventDate(info.row.original.updatedAt)}
             </span>
           ),
         }),

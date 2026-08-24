@@ -2,29 +2,22 @@
 
 import { Download } from "lucide-react"
 
-import { SEGMENT_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
+import { formatDateTime } from "@/lib/format"
+
+import { AJO_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
 import type { AudienceListItem } from "../lib/queries"
 
 const COLUMNS: {
   header: string
   value: (a: AudienceListItem) => string
 }[] = [
+  { header: "ID", value: (a) => a.id },
   { header: "Nombre", value: (a) => a.name },
   { header: "Código", value: (a) => a.code },
-  {
-    header: "Nivel dominante",
-    value: (a) => (a.dominantTier ? TIER_LABEL[a.dominantTier] : ""),
-  },
   { header: "Tamaño", value: (a) => String(a.size) },
-  {
-    header: "Loyalty rules vinculadas",
-    value: (a) => String(a.linkedJourneys),
-  },
+  { header: "Actualizada", value: (a) => formatDateTime(a.updatedAt) },
   { header: "Estado", value: (a) => SEGMENT_STATUS_LABEL[a.status] },
-  {
-    header: "Sincronizada con AJO",
-    value: (a) => (a.syncedWithAjo ? "Sí" : "No"),
-  },
+  { header: "Origen", value: () => AJO_ORIGIN.label },
 ]
 
 function csvCell(value: string): string {

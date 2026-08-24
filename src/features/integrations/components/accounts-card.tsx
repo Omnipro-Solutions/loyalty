@@ -1,8 +1,7 @@
 import {
   Cloud,
+  Database,
   KeyRound,
-  Megaphone,
-  MessageSquare,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react"
@@ -15,8 +14,7 @@ import { ACCOUNTS, type AccountStatus } from "../lib/accounts"
 const PROVIDER_ICON: Record<string, LucideIcon> = {
   "Microsoft Entra ID": ShieldCheck,
   "Google Cloud": Cloud,
-  Twilio: MessageSquare,
-  "Meta Business": Megaphone,
+  Salesforce: Database,
 }
 
 const STATUS_LABEL: Record<AccountStatus, string> = {

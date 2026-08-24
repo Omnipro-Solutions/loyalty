@@ -202,6 +202,37 @@ export const SOURCES: IntegrationGroup[] = [
       },
     ],
   },
+  {
+    category: "CDP",
+    integrations: [
+      {
+        id: "adobe-rtcdp",
+        name: "Adobe Real-Time CDP",
+        shortName: "Adobe RT-CDP",
+        subtitle: "Real-Time CDP",
+        logo: `${LOGOS}/adobe.svg`,
+        description:
+          "Importa perfiles unificados y segmentos de audiencia desde Adobe Real-Time CDP para enriquecer el perfil de cliente y activar reglas de lealtad.",
+        data: "Perfiles unificados · Segmentos de audiencia · Atributos de identidad",
+        method: "Adobe Experience Platform · Autenticación OAuth 2.0",
+        tags: ["Solo entrada", "Tiempo real"],
+        note: "Requiere una organización de Adobe Experience Cloud vinculada en Cuentas.",
+      },
+      {
+        id: "salesforce-cdp",
+        name: "Salesforce CDP (Data Cloud)",
+        shortName: "Salesforce CDP",
+        subtitle: "Data Cloud",
+        logo: `${LOGOS}/salesforce.svg`,
+        description:
+          "Importa perfiles y segmentos unificados desde Salesforce Data Cloud para enriquecer el perfil de cliente en Loyalty System.",
+        data: "Perfiles unificados · Segmentos de audiencia · Eventos de engagement",
+        method: "Salesforce Data Cloud API · Autenticación OAuth 2.0",
+        tags: ["Solo entrada", "Cada hora"],
+        note: "Requiere una organización de Salesforce Data Cloud vinculada en Cuentas.",
+      },
+    ],
+  },
 ]
 
 /**
@@ -304,87 +335,33 @@ export const DESTINATIONS: IntegrationGroup[] = [
     ],
   },
   {
-    category: "Publicidad y mensajería",
+    category: "CDP",
     integrations: [
       {
-        id: "meta-ads",
-        name: "Meta Ads",
-        shortName: "Meta Ads",
-        subtitle: "Publicidad",
-        logo: `${LOGOS}/meta.svg`,
+        id: "adobe-rtcdp",
+        name: "Adobe Real-Time CDP",
+        shortName: "Adobe RT-CDP",
+        subtitle: "Real-Time CDP",
+        logo: `${LOGOS}/adobe.svg`,
         description:
-          "Sincroniza audiencias de lealtad como públicos personalizados en Meta Ads para campañas de retención y lookalikes.",
-        data: "Audiencias · Identificadores hasheados",
-        method:
-          "Conversions API + Audiencias personalizadas · Autenticación OAuth 2.0",
+          "Envía audiencias y el estado de lealtad de Loyalty System a Adobe Real-Time CDP para unificar el perfil de cliente y activarlo en Adobe Experience Cloud.",
+        data: "Audiencias · Estado de nivel · Eventos de canje",
+        method: "Adobe Experience Platform · Autenticación OAuth 2.0",
+        tags: ["Solo salida", "Tiempo real"],
+        note: "Requiere una organización de Adobe Experience Cloud vinculada en Cuentas.",
+      },
+      {
+        id: "salesforce-cdp",
+        name: "Salesforce CDP (Data Cloud)",
+        shortName: "Salesforce CDP",
+        subtitle: "Data Cloud",
+        logo: `${LOGOS}/salesforce.svg`,
+        description:
+          "Publica audiencias y el estado de lealtad de Loyalty System en Salesforce Data Cloud para unificarlos con el resto de datos de cliente.",
+        data: "Audiencias · Estado de nivel · Eventos de canje",
+        method: "Salesforce Data Cloud API · Autenticación OAuth 2.0",
         tags: ["Solo salida", "Cada hora"],
-        note: "Requiere una cuenta publicitaria de Meta vinculada en Cuentas.",
-      },
-      {
-        id: "google-ads",
-        name: "Google Ads",
-        shortName: "Google Ads",
-        subtitle: "Publicidad",
-        logo: `${LOGOS}/google-ads.svg`,
-        description:
-          "Envía audiencias de clientes leales a Google Ads como listas de Customer Match para campañas de remarketing.",
-        data: "Audiencias · Identificadores hasheados",
-        method: "Google Ads API · Autenticación OAuth 2.0",
-        tags: ["Solo salida", "Diario"],
-        note: "Requiere una cuenta de Google Ads vinculada en Cuentas.",
-      },
-      {
-        id: "tiktok-ads",
-        name: "TikTok Ads",
-        shortName: "TikTok Ads",
-        subtitle: "Publicidad",
-        logo: `${LOGOS}/tiktok.svg`,
-        description:
-          "Publica audiencias de lealtad en TikTok Ads como públicos personalizados para campañas de reenganche.",
-        data: "Audiencias · Identificadores hasheados",
-        method: "TikTok Marketing API · Autenticación OAuth 2.0",
-        tags: ["Solo salida", "Diario"],
-        note: "Requiere una cuenta publicitaria de TikTok vinculada en Cuentas.",
-      },
-      {
-        id: "twilio",
-        name: "Twilio",
-        shortName: "Twilio",
-        subtitle: "Mensajería",
-        logo: `${LOGOS}/twilio.svg`,
-        description:
-          "Envía SMS transaccionales de lealtad — puntos acreditados, vencimientos, códigos de promoción — a través de Twilio.",
-        data: "Eventos de canje · Saldo de puntos · Códigos de promoción",
-        method: "Twilio Messaging API · Autenticación por Account SID/Token",
-        tags: ["Solo salida", "Tiempo real"],
-        note: "Requiere un número remitente verificado en Twilio.",
-      },
-      {
-        id: "whatsapp",
-        name: "WhatsApp Business",
-        shortName: "WhatsApp",
-        subtitle: "Mensajería",
-        logo: `${LOGOS}/whatsapp.svg`,
-        description:
-          "Notifica por WhatsApp cambios de nivel, puntos por vencer y promociones activas usando plantillas aprobadas.",
-        data: "Eventos de canje · Estado de nivel · Promociones activas",
-        method:
-          "WhatsApp Business Platform (Cloud API) · Autenticación por token de sistema",
-        tags: ["Solo salida", "Tiempo real", "Certificado"],
-        note: "Requiere una cuenta de WhatsApp Business verificada en Cuentas.",
-      },
-      {
-        id: "snowflake",
-        name: "Snowflake",
-        shortName: "Snowflake",
-        subtitle: "Data warehouse",
-        logo: `${LOGOS}/snowflake.svg`,
-        description:
-          "Replica el modelo de datos de lealtad — clientes, transacciones, puntos — en tu warehouse de Snowflake para análisis avanzado.",
-        data: "Clientes · Transacciones · Movimientos del ledger de puntos",
-        method: "Snowpipe (streaming) · Autenticación por par de llaves",
-        tags: ["Solo salida", "Tiempo real"],
-        note: "Requiere una cuenta de Snowflake y un warehouse dedicado en Cuentas.",
+        note: "Requiere una organización de Salesforce Data Cloud vinculada en Cuentas.",
       },
     ],
   },

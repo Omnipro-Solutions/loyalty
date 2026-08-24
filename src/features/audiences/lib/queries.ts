@@ -12,6 +12,7 @@ export type AudienceListItem = {
   size: number
   status: SegmentStatus
   syncedWithAjo: boolean
+  updatedAt: string
   linkedJourneys: number
   series: number[]
   positiveTrend: boolean
@@ -85,7 +86,7 @@ export async function listAudiences(
   const { data, error } = await supabase
     .from("segments")
     .select(
-      "id, nombre, codigo, nivel_dominante, conteo_estimado, estado, sincronizado_con_ajo"
+      "id, nombre, codigo, nivel_dominante, conteo_estimado, estado, sincronizado_con_ajo, actualizado_en"
     )
     .order("nombre")
   if (error) throw error
@@ -108,6 +109,7 @@ export async function listAudiences(
       size,
       status: s.estado as SegmentStatus,
       syncedWithAjo: s.sincronizado_con_ajo,
+      updatedAt: s.actualizado_en,
       linkedJourneys: linkedJourneysBySegment.get(s.id)?.size ?? 0,
       series,
       positiveTrend: last >= first,

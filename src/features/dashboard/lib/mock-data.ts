@@ -172,33 +172,146 @@ export const ENGINE_ALERTS: EngineAlert[] = [
   },
 ]
 
-export const AI_SUGGESTION_CHIPS = [
-  "Aprender",
-  "Identificar",
-  "Crear",
-  "Optimizar",
-]
+import type { AiChatScenario } from "./ai-chat"
 
-export const AI_COMPOSER_SUGGESTIONS = [
-  "Clientes por vencer puntos",
-  "Promos con ROI bajo",
-  "Simular 2x1 en Bebidas",
-]
-
-/** Conversación de ejemplo del panel de chat (02.4) — estática, sin modelo real detrás. */
-export const AI_CHAT_EXAMPLE = {
-  userQuestion: "¿Qué debería priorizar esta semana en el programa de lealtad?",
-  assistantReply: {
-    text: "El segmento En riesgo concentra el mayor impacto: 1.045 clientes sin comprar hace más de 60 días y con 640 puntos por vencer en promedio.",
-    stats: [
-      { label: "clientes", value: "1.045" },
-      { label: "recuperable", value: "30%" },
-      { label: "en riesgo", value: "$ 12,4 M" },
-    ],
-    recommendation:
-      "Recomiendo activar la regla de reactivación con 15% antes del viernes: captura la recompra y consume los puntos por vencer.",
-    sources: ["Audiencia En riesgo", "Ledger de puntos", "Journey Winback"],
+/**
+ * Escenarios del simulador de chat IA (02.4) — cada uno es una pregunta +
+ * respuesta fija que permite "hacer varias preguntas" distintas en la demo
+ * sin tener un modelo real detrás (ver `matchAiChatScenario` en `ai-chat.ts`).
+ * Las cifras están alineadas con `RISK_SEGMENTS`, `ROI_PROMOCIONAL_MOCK` y
+ * `ENGINE_ALERTS` de este mismo archivo para que la conversación sea
+ * coherente con el resto del dashboard.
+ */
+export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
+  {
+    id: "prioridad-semana",
+    question: "¿Qué debería priorizar esta semana en el programa de lealtad?",
+    keywords: ["priorizar", "prioridad", "esta semana", "que debo hacer"],
+    reply: {
+      text: "El segmento En riesgo concentra el mayor impacto: 1.045 clientes sin comprar hace más de 60 días, sin ninguna campaña activa dirigida.",
+      stats: [
+        { label: "clientes", value: "1.045" },
+        { label: "recuperable", value: "30%" },
+        { label: "en riesgo", value: "$ 12,4 M" },
+      ],
+      recommendation:
+        "Recomiendo activar la regla de reactivación con 15% antes del viernes: captura la recompra y consume los puntos por vencer.",
+      sources: ["Audiencia En riesgo", "Ledger de puntos", "Journey Winback"],
+      primaryAction: "Crear journey",
+      secondaryAction: "Ver segmento",
+      typingHint: "analizando ledger de puntos…",
+    },
   },
-  followUpQuestion: "Muéstrame el impacto en margen si aplico 15%",
-  typingHint: "analizando ledger de puntos…",
-}
+  {
+    id: "impacto-margen",
+    question: "Muéstrame el impacto en margen si aplico 15%",
+    keywords: ["margen", "15%", "descuento", "impacto"],
+    reply: {
+      text: "Aplicar 15% de descuento en la regla de reactivación reduce el margen bruto de la campaña de 42% a 35,7%, pero el volumen recuperado compensa la caída.",
+      stats: [
+        { label: "margen actual", value: "42%" },
+        { label: "margen con 15%", value: "35,7%" },
+        { label: "ROI proyectado", value: "2,6 ×" },
+      ],
+      recommendation:
+        "El ROI proyectado (2,6×) sigue por encima del mínimo de 2×: recomiendo activar la regla con el 15% antes del viernes.",
+      sources: ["Ledger de puntos", "ROI promocional", "Journey Winback"],
+      primaryAction: "Activar regla",
+      secondaryAction: "Ver detalle",
+      typingHint: "calculando margen con 15% de descuento…",
+    },
+  },
+  {
+    id: "puntos-vencer",
+    question: "Clientes por vencer puntos",
+    keywords: ["puntos", "vencer", "vencimiento", "expiran", "por vencer"],
+    reply: {
+      text: "812 clientes tienen puntos por vencer en los próximos 30 días, equivalentes a $46,2 M en valor de canje potencial.",
+      stats: [
+        { label: "clientes", value: "812" },
+        { label: "puntos en riesgo", value: "1,3 M" },
+        { label: "valor", value: "$ 46,2 M" },
+      ],
+      recommendation:
+        "Recomiendo enviar un recordatorio de vencimiento con doble puntos esta semana para incentivar el canje antes de que expiren.",
+      sources: ["Ledger de puntos", "Audiencia En riesgo"],
+      primaryAction: "Crear journey",
+      secondaryAction: "Ver segmento",
+      typingHint: "revisando vencimientos en el ledger de puntos…",
+    },
+  },
+  {
+    id: "roi-bajo",
+    question: "Promos con ROI bajo",
+    keywords: ["roi", "bajo", "promos", "promociones"],
+    reply: {
+      text: '"Combo Desayuno" tiene el ROI más bajo del programa: 1,3× frente al mínimo saludable de 2×. El descuento aplicado supera el margen incremental que genera.',
+      stats: [
+        { label: "ROI", value: "1,3 ×" },
+        { label: "margen incremental", value: "-8%" },
+        { label: "canjes/mes", value: "1.240" },
+      ],
+      recommendation:
+        'Recomiendo pausar "Combo Desayuno" o reducir el descuento del 25% al 15% para recuperar margen sin perder volumen de canje.',
+      sources: ["ROI promocional", "Catálogo de promociones"],
+      primaryAction: "Pausar promoción",
+      secondaryAction: "Ver promoción",
+      typingHint: "calculando ROI por promoción…",
+    },
+  },
+  {
+    id: "simular-2x1-bebidas",
+    question: "Simular 2x1 en Bebidas",
+    keywords: ["simular", "2x1", "bebidas", "simulacion"],
+    reply: {
+      text: 'Un 2x1 en la categoría Bebidas dirigido a "Casual Shoppers" (3.860 clientes) proyecta un incremento del 22% en frecuencia de compra durante la vigencia de la promoción.',
+      stats: [
+        { label: "alcance", value: "3.860" },
+        { label: "↑ frecuencia", value: "+22%" },
+        { label: "ROI proyectado", value: "1,9 ×" },
+      ],
+      recommendation:
+        "El ROI proyectado (1,9×) queda justo debajo del mínimo recomendado de 2×: sugiero limitarlo a 2 semanas y medir antes de extenderlo.",
+      sources: ["Catálogo de promociones", "Segmento Casual Shoppers"],
+      primaryAction: "Crear promoción",
+      secondaryAction: "Ver simulación",
+      typingHint: "simulando impacto en Casual Shoppers…",
+    },
+  },
+  {
+    id: "segmento-riesgo",
+    question: "¿Qué segmento tiene mayor riesgo de abandono?",
+    keywords: ["segmento", "riesgo", "abandono", "en riesgo", "identificar"],
+    reply: {
+      text: 'El segmento "En riesgo" (1.045 miembros, sin compra hace 60+ días) es el de mayor exposición: no recibe ninguna campaña activa dirigida.',
+      stats: [
+        { label: "miembros", value: "1.045" },
+        { label: "valor recuperable", value: "$ 187 K" },
+        { label: "confianza", value: "Alta" },
+      ],
+      recommendation:
+        'Recomiendo activar "Bienvenida nuevos socios" con 15% de incentivo antes de que este segmento pase a Inactivos.',
+      sources: ["Audiencia En riesgo", "Insight del motor"],
+      primaryAction: "Crear journey",
+      secondaryAction: "Ver segmento",
+      typingHint: "comparando segmentos por riesgo…",
+    },
+  },
+]
+
+export const AI_CHAT_DEFAULT_SCENARIO_ID = "prioridad-semana"
+
+/** Chips del hero (Figma "AI Hero") — cada categoría dispara una pregunta representativa. */
+export const AI_SUGGESTION_CHIPS: { label: string; scenarioId: string }[] = [
+  { label: "Aprender", scenarioId: "prioridad-semana" },
+  { label: "Identificar", scenarioId: "segmento-riesgo" },
+  { label: "Crear", scenarioId: "simular-2x1-bebidas" },
+  { label: "Optimizar", scenarioId: "roi-bajo" },
+]
+
+/** Sugerencias del composer del panel de chat — ya son preguntas reales de `AI_CHAT_SCENARIOS`. */
+export const AI_COMPOSER_SUGGESTION_IDS = [
+  "puntos-vencer",
+  "roi-bajo",
+  "simular-2x1-bebidas",
+]

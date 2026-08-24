@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   ArrowUp,
@@ -14,21 +15,105 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { AI_CHAT_EXAMPLE, AI_COMPOSER_SUGGESTIONS } from "../lib/mock-data"
+import {
+  AI_CHAT_FALLBACK_REPLY,
+  getAiChatScenario,
+  matchAiChatScenario,
+  type AiChatReply,
+} from "../lib/ai-chat"
+import { AI_CHAT_SCENARIOS, AI_COMPOSER_SUGGESTION_IDS } from "../lib/mock-data"
+
+export type AiChatAskRequest = { question: string; token: number }
 
 type AiChatPanelProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Cambiar `token` inicia una conversación nueva con `question`. */
+  askRequest: AiChatAskRequest | null
 }
 
+type ChatEntry =
+  | { id: string; role: "user"; text: string }
+  | { id: string; role: "assistant"; reply: AiChatReply }
+
+const TYPING_DELAY_MS = 1100
+
 /**
- * Figma "Panel · Chat IA" (1057:37, estado abierto en 02.4). Conversación de
- * ejemplo fija — no hay modelo real detrás todavía (ver `mock-data.ts`), por
- * eso el composer no envía nada: es una muestra de cómo se vería el
- * copiloto, no una integración funcional.
+ * Figma "Panel · Chat IA" (1057:37, estado abierto en 02.4). Sigue sin haber
+ * un modelo real detrás (ver `matchAiChatScenario` en `lib/ai-chat.ts`): el
+ * composer y las sugerencias buscan la pregunta en `AI_CHAT_SCENARIOS` y
+ * "simulan" un breve retraso antes de mostrar la respuesta fija.
  */
-export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
-  const { assistantReply } = AI_CHAT_EXAMPLE
+export function AiChatPanel({
+  open,
+  onOpenChange,
+  askRequest,
+}: AiChatPanelProps) {
+  const [entries, setEntries] = useState<ChatEntry[]>([])
+  const [pendingHint, setPendingHint] = useState<string | null>(null)
+  const [composerValue, setComposerValue] = useState("")
+  const nextId = useRef(0)
+  const lastToken = useRef(0)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [entries, pendingHint])
+
+  function askQuestion(question: string) {
+    const trimmed = question.trim()
+    if (!trimmed) return
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
+    const scenario = matchAiChatScenario(trimmed, AI_CHAT_SCENARIOS)
+    const reply = scenario?.reply ?? AI_CHAT_FALLBACK_REPLY
+
+    nextId.current += 1
+    setEntries((prev) => [
+      ...prev,
+      { id: `msg-${nextId.current}`, role: "user", text: trimmed },
+    ])
+    setPendingHint(reply.typingHint)
+
+    timeoutRef.current = setTimeout(() => {
+      nextId.current += 1
+      setEntries((prev) => [
+        ...prev,
+        { id: `msg-${nextId.current}`, role: "assistant", reply },
+      ])
+      setPendingHint(null)
+      timeoutRef.current = null
+    }, TYPING_DELAY_MS)
+  }
+
+  useEffect(() => {
+    if (!askRequest || askRequest.token === lastToken.current) return
+    lastToken.current = askRequest.token
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    setEntries([])
+    setPendingHint(null)
+    askQuestion(askRequest.question)
+  }, [askRequest])
+
+  function handleComposerSubmit() {
+    if (!composerValue.trim()) return
+    askQuestion(composerValue)
+    setComposerValue("")
+  }
+
+  function handleReset() {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    setEntries([])
+    setPendingHint(null)
+    setComposerValue("")
+  }
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -56,6 +141,7 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
             </div>
             <button
               type="button"
+              onClick={handleReset}
               className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
               aria-label="Nueva conversación"
             >
@@ -77,7 +163,10 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
           </div>
 
           {/* Conversación */}
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-neutral-50 px-5 py-[18px]">
+          <div
+            ref={scrollRef}
+            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-neutral-50 px-5 py-[18px]"
+          >
             <div className="flex items-center gap-2.5">
               <div className="h-px flex-1 bg-border" />
               <span className="text-[10px] leading-[14px] font-medium whitespace-nowrap text-muted-foreground">
@@ -86,128 +175,142 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            <div className="flex justify-end">
-              <div className="max-w-[280px] rounded-tl-2xl rounded-tr-2xl rounded-br-md rounded-bl-2xl bg-primary px-3.5 py-2.5">
-                <p className="text-[13px] leading-[19px] text-primary-foreground">
-                  {AI_CHAT_EXAMPLE.userQuestion}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center gap-2">
-                <div
-                  className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px]"
-                  style={{ backgroundImage: "var(--gradient-ai-avatar)" }}
-                >
-                  <Sparkles className="size-3 text-white" />
+            {entries.map((entry) =>
+              entry.role === "user" ? (
+                <div key={entry.id} className="flex justify-end">
+                  <div className="max-w-[280px] rounded-tl-2xl rounded-tr-2xl rounded-br-md rounded-bl-2xl bg-primary px-3.5 py-2.5">
+                    <p className="text-[13px] leading-[19px] text-primary-foreground">
+                      {entry.text}
+                    </p>
+                  </div>
                 </div>
-                <p className="flex-1 text-xs leading-[17px] font-semibold text-foreground">
-                  Asistente
-                </p>
-                <p className="text-[10px] leading-[14px] text-muted-foreground">
-                  09:14
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 rounded-tl-md rounded-tr-2xl rounded-br-2xl rounded-bl-2xl border border-border bg-background px-3.5 py-3">
-                <p className="text-[13px] leading-[19px] text-foreground">
-                  {assistantReply.text}
-                </p>
-                <div className="flex items-start gap-2 rounded-[10px] bg-neutral-50 p-1">
-                  {assistantReply.stats.map((stat) => (
+              ) : (
+                <div key={entry.id} className="flex flex-col gap-2.5">
+                  <div className="flex items-center gap-2">
                     <div
-                      key={stat.label}
-                      className="flex flex-1 flex-col gap-px rounded-lg px-2.5 py-2"
+                      className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px]"
+                      style={{ backgroundImage: "var(--gradient-ai-avatar)" }}
                     >
-                      <p className="text-sm leading-[18px] font-bold tracking-[-0.3px] text-foreground">
-                        {stat.value}
-                      </p>
-                      <p className="text-[9px] leading-3 text-muted-foreground">
-                        {stat.label}
-                      </p>
+                      <Sparkles className="size-3 text-white" />
                     </div>
-                  ))}
-                </div>
-                <p className="text-[13px] leading-[19px] text-secondary-foreground">
-                  {assistantReply.recommendation}
-                </p>
-                <div className="flex flex-wrap items-start gap-1.5">
-                  <span className="text-[10px] leading-[14px] whitespace-nowrap text-muted-foreground">
-                    Fuentes:
-                  </span>
-                  {assistantReply.sources.map((source) => (
-                    <span
-                      key={source}
-                      className="rounded-full bg-brand-subtle px-2 py-0.5 text-[9px] leading-[13px] font-medium whitespace-nowrap text-primary-800"
-                    >
-                      {source}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-start gap-2">
-                  <Button className="h-auto flex-1 rounded-[9px] px-3.5 py-2 text-[11px] font-semibold">
-                    Crear journey
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-auto flex-1 rounded-[9px] px-3.5 py-2 text-[11px] font-medium text-secondary-foreground"
-                  >
-                    Ver segmento
-                  </Button>
-                </div>
-              </div>
+                    <p className="flex-1 text-xs leading-[17px] font-semibold text-foreground">
+                      Asistente
+                    </p>
+                    <p className="text-[10px] leading-[14px] text-muted-foreground">
+                      Ahora
+                    </p>
+                  </div>
 
-              <div className="flex items-center gap-2.5 pl-0.5">
-                <p className="flex-1 text-[10px] leading-[14px] text-muted-foreground">
-                  ¿Te sirvió esta respuesta?
-                </p>
-                <ThumbsUp className="size-[13px] text-muted-foreground" />
-                <ThumbsDown className="size-[13px] text-muted-foreground" />
-                <Copy className="size-[13px] text-muted-foreground" />
-              </div>
-            </div>
+                  <div className="flex flex-col gap-3 rounded-tl-md rounded-tr-2xl rounded-br-2xl rounded-bl-2xl border border-border bg-background px-3.5 py-3">
+                    <p className="text-[13px] leading-[19px] text-foreground">
+                      {entry.reply.text}
+                    </p>
+                    {entry.reply.stats.length > 0 && (
+                      <div className="flex items-start gap-2 rounded-[10px] bg-neutral-50 p-1">
+                        {entry.reply.stats.map((stat) => (
+                          <div
+                            key={stat.label}
+                            className="flex flex-1 flex-col gap-px rounded-lg px-2.5 py-2"
+                          >
+                            <p className="text-sm leading-[18px] font-bold tracking-[-0.3px] text-foreground">
+                              {stat.value}
+                            </p>
+                            <p className="text-[9px] leading-3 text-muted-foreground">
+                              {stat.label}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[13px] leading-[19px] text-secondary-foreground">
+                      {entry.reply.recommendation}
+                    </p>
+                    {entry.reply.sources.length > 0 && (
+                      <div className="flex flex-wrap items-start gap-1.5">
+                        <span className="text-[10px] leading-[14px] whitespace-nowrap text-muted-foreground">
+                          Fuentes:
+                        </span>
+                        {entry.reply.sources.map((source) => (
+                          <span
+                            key={source}
+                            className="rounded-full bg-brand-subtle px-2 py-0.5 text-[9px] leading-[13px] font-medium whitespace-nowrap text-primary-800"
+                          >
+                            {source}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2">
+                      <Button className="h-auto flex-1 rounded-[9px] px-3.5 py-2 text-[11px] font-semibold">
+                        {entry.reply.primaryAction}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto flex-1 rounded-[9px] px-3.5 py-2 text-[11px] font-medium text-secondary-foreground"
+                      >
+                        {entry.reply.secondaryAction}
+                      </Button>
+                    </div>
+                  </div>
 
-            <div className="flex justify-end">
-              <div className="max-w-[268px] rounded-tl-2xl rounded-tr-2xl rounded-br-md rounded-bl-2xl bg-primary px-3.5 py-2.5">
-                <p className="text-[13px] leading-[19px] text-primary-foreground">
-                  {AI_CHAT_EXAMPLE.followUpQuestion}
-                </p>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2.5 pl-0.5">
+                    <p className="flex-1 text-[10px] leading-[14px] text-muted-foreground">
+                      ¿Te sirvió esta respuesta?
+                    </p>
+                    <ThumbsUp className="size-[13px] text-muted-foreground" />
+                    <ThumbsDown className="size-[13px] text-muted-foreground" />
+                    <Copy className="size-[13px] text-muted-foreground" />
+                  </div>
+                </div>
+              )
+            )}
 
-            <div className="flex w-fit items-center gap-2 rounded-tl-md rounded-tr-2xl rounded-br-2xl rounded-bl-2xl border border-border bg-background py-3 pr-4 pl-3.5">
-              <span className="flex gap-1">
-                <span className="size-[7px] animate-pulse rounded-full bg-primary" />
-                <span className="size-[7px] animate-pulse rounded-full bg-border [animation-delay:150ms]" />
-                <span className="size-[7px] animate-pulse rounded-full bg-border [animation-delay:300ms]" />
-              </span>
-              <span className="text-[11px] leading-[15px] whitespace-nowrap text-muted-foreground">
-                {AI_CHAT_EXAMPLE.typingHint}
-              </span>
-            </div>
+            {pendingHint && (
+              <div className="flex w-fit items-center gap-2 rounded-tl-md rounded-tr-2xl rounded-br-2xl rounded-bl-2xl border border-border bg-background py-3 pr-4 pl-3.5">
+                <span className="flex gap-1">
+                  <span className="size-[7px] animate-pulse rounded-full bg-primary" />
+                  <span className="size-[7px] animate-pulse rounded-full bg-border [animation-delay:150ms]" />
+                  <span className="size-[7px] animate-pulse rounded-full bg-border [animation-delay:300ms]" />
+                </span>
+                <span className="text-[11px] leading-[15px] whitespace-nowrap text-muted-foreground">
+                  {pendingHint}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Composer */}
           <div className="flex shrink-0 flex-col gap-2.5 border-t border-muted px-5 pt-3.5 pb-4">
             <div className="flex flex-wrap gap-1.5">
-              {AI_COMPOSER_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className="flex items-center gap-1.5 rounded-full border border-border bg-background px-[11px] py-1.5"
-                >
-                  <Sparkles className="size-[11px] text-primary" />
-                  <span className="text-[11px] leading-[15px] font-medium whitespace-nowrap text-secondary-foreground">
-                    {suggestion}
-                  </span>
-                </button>
-              ))}
+              {AI_COMPOSER_SUGGESTION_IDS.map((scenarioId) => {
+                const scenario = getAiChatScenario(
+                  AI_CHAT_SCENARIOS,
+                  scenarioId
+                )
+                return (
+                  <button
+                    key={scenario.id}
+                    type="button"
+                    onClick={() => askQuestion(scenario.question)}
+                    className="flex items-center gap-1.5 rounded-full border border-border bg-background px-[11px] py-1.5"
+                  >
+                    <Sparkles className="size-[11px] text-primary" />
+                    <span className="text-[11px] leading-[15px] font-medium whitespace-nowrap text-secondary-foreground">
+                      {scenario.question}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
 
             <div className="flex flex-col gap-2.5 rounded-2xl border-[1.5px] border-primary px-3.5 pt-3 pb-2.5 shadow-[0px_4px_14px_-4px_rgba(79,69,229,0.1)]">
               <input
                 type="text"
+                value={composerValue}
+                onChange={(event) => setComposerValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleComposerSubmit()
+                }}
                 placeholder="Pregunta sobre clientes, puntos, promociones o reglas…"
                 className="w-full text-[13px] leading-[19px] text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
@@ -228,7 +331,9 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
                 </button>
                 <button
                   type="button"
-                  className="flex size-[34px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0px_4px_10px_-2px_rgba(79,69,229,0.35)]"
+                  onClick={handleComposerSubmit}
+                  disabled={!composerValue.trim()}
+                  className="flex size-[34px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0px_4px_10px_-2px_rgba(79,69,229,0.35)] disabled:opacity-40"
                   aria-label="Enviar"
                 >
                   <ArrowUp className="size-[15px]" />

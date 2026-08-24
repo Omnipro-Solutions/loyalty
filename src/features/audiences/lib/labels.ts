@@ -18,3 +18,17 @@ export const MEMBER_STATUS_LABEL: Record<MemberStatus, string> = {
   inactivo: "Inactivo",
   suspendido: "Suspendido",
 }
+
+/**
+ * Toda audiencia de este demo se muestra con el mismo origen (columna
+ * ORIGEN del listado y export CSV) — de ahí que sea un valor fijo y no un
+ * lookup por id de integración. `segments.sincronizado_con_ajo` sigue
+ * siendo el flag real de sincronización individual (ver `AudienceHero` y
+ * `syncAudienceAction`), pero es independiente de este badge de origen.
+ * Logo duplicado de `features/integrations/lib/catalog.ts` (`ajo`) por
+ * aislamiento entre features.
+ */
+export const AJO_ORIGIN = {
+  label: "AJO · Adobe",
+  logo: "/integraciones/logos/adobe.svg",
+}

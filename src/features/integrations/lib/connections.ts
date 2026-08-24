@@ -46,20 +46,12 @@ export const ACTIVE_CONNECTIONS: ActiveConnection[] = [
     frequency: "Cada 6 h",
   },
   {
-    integrationId: "meta-ads",
+    integrationId: "salesforce-cdp",
     direction: "destino",
     status: "con_error",
     lastSyncedAt: "Hace 2 días",
     frequency: "Cada hora",
     detail:
-      "Token de acceso expirado — renueva la cuenta de Meta Business en Cuentas.",
-  },
-  {
-    integrationId: "whatsapp",
-    direction: "destino",
-    status: "pausada",
-    lastSyncedAt: "Hace 5 días",
-    frequency: "Tiempo real",
-    detail: "Pausada manualmente.",
+      "Token de acceso expirado — renueva la organización de Salesforce en Cuentas.",
   },
 ]
