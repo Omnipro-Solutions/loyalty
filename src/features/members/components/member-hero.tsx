@@ -28,7 +28,6 @@ import type { ReactNode } from "react"
 
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   formatCOP,
   formatDate,
@@ -38,8 +37,10 @@ import {
   formatRelativeTime,
 } from "@/lib/format"
 
+import { ApplyPointsRuleDialog } from "./apply-points-rule-dialog"
 import { CopyButton } from "./copy-button"
 import { HeroMoreAttributes } from "./hero-more-attributes"
+import { SendPromotionDialog } from "./send-promotion-dialog"
 import { avatarPalette } from "../lib/avatar-palette"
 import {
   ACQUISITION_CHANNEL_LABEL,
@@ -51,12 +52,14 @@ import {
   SALES_CHANNEL_LABEL,
   TIER_LABEL,
 } from "../lib/labels"
+import type { MemberActionPermissions } from "../lib/permissions"
 import {
   calculateCompleteness,
   isAtRiskOfTierDowngrade,
   isVip,
   formatTenure,
   getQualificationPeriod,
+  type AssignablePromotion,
   type Member,
   type PurchaseBehavior,
   type RfmProfile,
@@ -109,19 +112,32 @@ type MemberHeroProps = {
   member: Member
   behavior: PurchaseBehavior
   rfm: RfmProfile | null
+  promotionsForAssignment: AssignablePromotion[]
+  permissions: MemberActionPermissions
 }
 
 /**
  * Figma "Hero" (1142:4595) pixel-perfect: identidad + acciones, luego
  * IDENTIDAD / RELACIÓN CON LA MARCA / PERFIL COMERCIAL, y la barra
  * "Ver N atributos más" del pie. "Enviar promoción"/"Aplicar regla" son los
- * 2 botones visibles del Figma — sin acción real (mismo criterio que el
- * "…" sin `onClick` de `PromotionsTable`): este proyecto no tiene motor de
- * mensajería ni de aplicación manual de reglas. Sin opción de editar cliente
- * en esta pantalla (decisión de producto) — `/clientes/[id]/editar` queda
- * sin entrada desde aquí.
+ * 2 botones visibles del Figma — ninguno "envía" ni "aplica" nada en el
+ * sentido literal (este proyecto no tiene motor de mensajería ni de
+ * reglas real, `/reglas` es un placeholder de Fase 5): son una asignación
+ * manual de promoción (`SendPromotionDialog`) y un ajuste manual de puntos
+ * (`ApplyPointsRuleDialog`), los únicos alcances que se apoyan en
+ * infraestructura real (`member_promociones`, `points_ledger`). Cada uno
+ * se oculta si el rol del usuario no tiene el permiso correspondiente —
+ * nunca se abre un diálogo solo para mostrar "no tienes permiso". Sin
+ * opción de editar cliente en esta pantalla (decisión de producto) —
+ * `/clientes/[id]/editar` queda sin entrada desde aquí.
  */
-export function MemberHero({ member, behavior, rfm }: MemberHeroProps) {
+export function MemberHero({
+  member,
+  behavior,
+  rfm,
+  promotionsForAssignment,
+  permissions,
+}: MemberHeroProps) {
   const fullName = `${member.nombre} ${member.apellido}`.trim()
   const palette = avatarPalette(member.id)
   const completeness = calculateCompleteness(member)
@@ -241,10 +257,18 @@ export function MemberHero({ member, behavior, rfm }: MemberHeroProps) {
               Calificación cierra 31 dic · {daysRemaining} días
             </p>
           </div>
-          <Button variant="outline" size="sm">
-            Enviar promoción
-          </Button>
-          <Button size="sm">Aplicar regla</Button>
+          {permissions.canAssignPromotion && (
+            <SendPromotionDialog
+              memberId={member.id}
+              promotions={promotionsForAssignment}
+            />
+          )}
+          {permissions.canApplyPointsRule && (
+            <ApplyPointsRuleDialog
+              memberId={member.id}
+              currentBalance={member.saldo_puntos}
+            />
+          )}
         </div>
       </div>
 

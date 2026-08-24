@@ -87,6 +87,9 @@ type MemberPromotionsCardProps = {
  * segmento real — aquí solo se arma el texto/badge/countdown a partir de
  * eso y de `behavior` (ticket medio, categoría dominante). No se verifica
  * `usos_por_cliente`: no existe tabla de canjes por socio en este proyecto.
+ * `assignedManually` marca las que vienen de `member_promociones`
+ * ("Enviar promoción" del Hero) en vez de la elegibilidad por
+ * segmento/categoría de arriba.
  */
 export function MemberPromotionsCard({
   promotions,
@@ -182,6 +185,11 @@ export function MemberPromotionsCard({
                       >
                         {countdownLabel(promotion)}
                       </span>
+                      {promotion.assignedManually && (
+                        <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-medium whitespace-nowrap text-accent-foreground">
+                          Asignada manualmente
+                        </span>
+                      )}
                     </div>
                   </div>
                   {budgetPct !== null && (

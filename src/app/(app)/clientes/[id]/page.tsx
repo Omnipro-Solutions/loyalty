@@ -10,6 +10,7 @@ import { MemberLoyaltyKpis } from "@/features/members/components/member-loyalty-
 import { MemberPromotionsCard } from "@/features/members/components/member-promotions-card"
 import { MemberRedemptionsCard } from "@/features/members/components/member-redemptions-card"
 import { MemberLoyaltyCard } from "@/features/members/components/member-loyalty-card"
+import { getMemberActionPermissions } from "@/features/members/lib/permissions"
 import {
   getMemberById,
   getPurchaseBehavior,
@@ -22,6 +23,7 @@ import {
   listMemberAudiences,
   listMemberConsents,
   listMemberRedemptions,
+  listPromotionsForManualAssignment,
 } from "@/features/members/lib/queries"
 
 /**
@@ -52,6 +54,8 @@ export default async function MemberDetailPage({
     memberOrders,
     rfm,
     audiences,
+    promotionsForAssignment,
+    permissions,
   ] = await Promise.all([
     listMemberRedemptions(id),
     getLoyaltySummary(id, member.saldo_puntos),
@@ -60,6 +64,8 @@ export default async function MemberDetailPage({
     getMemberOrders(id),
     getRfmProfile(id),
     listMemberAudiences(id),
+    listPromotionsForManualAssignment(id),
+    getMemberActionPermissions(),
   ])
 
   // Las tres se derivan de la misma `memberOrders` (un solo fetch a `pedidos`).
@@ -80,7 +86,13 @@ export default async function MemberDetailPage({
 
       <div className="flex items-stretch gap-3.5">
         <div className="min-w-0 flex-1">
-          <MemberHero member={member} behavior={behavior} rfm={rfm} />
+          <MemberHero
+            member={member}
+            behavior={behavior}
+            rfm={rfm}
+            promotionsForAssignment={promotionsForAssignment}
+            permissions={permissions}
+          />
         </div>
         <div className="w-[340px] shrink-0">
           <MemberLoyaltyCard member={member} />

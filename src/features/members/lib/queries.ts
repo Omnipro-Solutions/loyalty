@@ -836,6 +836,17 @@ export type MemberPromotionRow = {
   presupuestoAsignado: number
   presupuestoConsumido: number
   condition: MemberPromotionCondition
+  /** Viene de `member_promociones` — un gestor la habilitó a mano ("Enviar promoción" del Hero), no de la elegibilidad por segmento/categoría de abajo. */
+  assignedManually: boolean
+}
+
+/** Para el picker de "Enviar promoción": promociones activas que un gestor puede asignar a mano, salteando la elegibilidad por segmento/categoría (ese es el punto del override). */
+export type AssignablePromotion = {
+  id: string
+  nombre: string
+  codigo: string
+  tipo: PromotionType
+  yaAsignada: boolean
 }
 
 /** Duplicado de `features/promotions/lib/status.ts` por aislamiento entre features (CLAUDE.md §2) — mismo cálculo, solo los dos estados que le importan a esta tarjeta. */
@@ -927,6 +938,15 @@ export async function listActivePromotionsForMember(
     ? await getPurchasedRootCategoryIds(memberOrders)
     : new Set<string>()
 
+  const { data: assignedRows, error: assignedError } = await supabase
+    .from("member_promociones")
+    .select("promocion_id")
+    .eq("member_id", memberId)
+  if (assignedError) throw assignedError
+  const manuallyAssignedIds = new Set(
+    (assignedRows ?? []).map((r) => r.promocion_id)
+  )
+
   const rows: MemberPromotionRow[] = []
   for (const { row, condiciones, status } of candidates) {
     const segmentCondition = condiciones.find((c) => c.campo === "segmento")
@@ -966,8 +986,47 @@ export async function listActivePromotionsForMember(
       presupuestoAsignado: row.presupuesto_asignado,
       presupuestoConsumido: row.presupuesto_consumido,
       condition,
+      assignedManually: manuallyAssignedIds.has(row.id),
     })
   }
 
   return rows
+}
+
+/**
+ * Picker de "Enviar promoción" (Hero, 05.3g): a diferencia de
+ * `listActivePromotionsForMember`, no filtra por elegibilidad de
+ * segmento/categoría — un gestor puede asignar cualquier promoción activa a
+ * mano, ese es el punto del override. Solo marca cuáles ya están asignadas
+ * (vía `member_promociones`) para deshabilitarlas en el picker.
+ */
+export async function listPromotionsForManualAssignment(
+  memberId: string
+): Promise<AssignablePromotion[]> {
+  const supabase = await createClient()
+  const [
+    { data: promotions, error: promotionsError },
+    { data: assigned, error: assignedError },
+  ] = await Promise.all([
+    supabase
+      .from("promociones")
+      .select("id, nombre, codigo, tipo")
+      .eq("estado_publicacion", "activa")
+      .order("nombre"),
+    supabase
+      .from("member_promociones")
+      .select("promocion_id")
+      .eq("member_id", memberId),
+  ])
+  if (promotionsError) throw promotionsError
+  if (assignedError) throw assignedError
+
+  const assignedIds = new Set((assigned ?? []).map((r) => r.promocion_id))
+  return (promotions ?? []).map((p) => ({
+    id: p.id,
+    nombre: p.nombre,
+    codigo: p.codigo,
+    tipo: p.tipo as PromotionType,
+    yaAsignada: assignedIds.has(p.id),
+  }))
 }

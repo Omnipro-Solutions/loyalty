@@ -36,3 +36,22 @@ export type MemberValues = z.infer<typeof memberSchema>
 export const updateMemberSchema = memberSchema.extend({
   id: z.string().uuid(),
 })
+
+/** "Enviar promoción" del Hero — asignación manual, no un canje real (ver `member_promociones`). */
+export const assignPromotionSchema = z.object({
+  memberId: z.string().uuid(),
+  promotionId: z.string().uuid(),
+  note: z.string().max(280).optional(),
+})
+
+export type AssignPromotionValues = z.infer<typeof assignPromotionSchema>
+
+/** "Aplicar regla" del Hero — ajuste manual de puntos (único alcance real hoy, ver plan de la tarea). */
+export const pointsAdjustmentSchema = z.object({
+  memberId: z.string().uuid(),
+  direction: z.enum(["otorgar", "restar"]),
+  amount: z.number().int().positive(),
+  reason: z.string().min(1, "Elige un motivo").max(120),
+})
+
+export type PointsAdjustmentValues = z.infer<typeof pointsAdjustmentSchema>

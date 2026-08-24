@@ -322,6 +322,65 @@ export type Database = {
           },
         ]
       }
+      member_promociones: {
+        Row: {
+          asignado_en: string
+          asignado_por: string | null
+          id: string
+          member_id: string
+          nota: string | null
+          org_id: string
+          promocion_id: string
+        }
+        Insert: {
+          asignado_en?: string
+          asignado_por?: string | null
+          id?: string
+          member_id: string
+          nota?: string | null
+          org_id: string
+          promocion_id: string
+        }
+        Update: {
+          asignado_en?: string
+          asignado_por?: string | null
+          id?: string
+          member_id?: string
+          nota?: string | null
+          org_id?: string
+          promocion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_promociones_asignado_por_fkey"
+            columns: ["asignado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_promociones_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_promociones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_promociones_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           actualizado_en: string
@@ -601,6 +660,7 @@ export type Database = {
       }
       points_ledger: {
         Row: {
+          aplicado_por: string | null
           canal: string | null
           creado_en: string
           expira_en: string | null
@@ -613,6 +673,7 @@ export type Database = {
           workflow_run_id: string | null
         }
         Insert: {
+          aplicado_por?: string | null
           canal?: string | null
           creado_en?: string
           expira_en?: string | null
@@ -625,6 +686,7 @@ export type Database = {
           workflow_run_id?: string | null
         }
         Update: {
+          aplicado_por?: string | null
           canal?: string | null
           creado_en?: string
           expira_en?: string | null
@@ -637,6 +699,13 @@ export type Database = {
           workflow_run_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "points_ledger_aplicado_por_fkey"
+            columns: ["aplicado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "points_ledger_member_id_fkey"
             columns: ["member_id"]
