@@ -122,7 +122,9 @@ export function InviteUserDialog({ roles, stores }: InviteUserDialogProps) {
               onValueChange={(v) => setValue("roleId", v ?? "")}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona un rol" />
+                <SelectValue placeholder="Selecciona un rol">
+                  {(v: string) => roles.find((r) => r.id === v)?.nombre ?? v}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {roles.map((r) => (
@@ -140,7 +142,9 @@ export function InviteUserDialog({ roles, stores }: InviteUserDialogProps) {
                 onValueChange={(v) => setValue("storeId", v ?? undefined)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una tienda" />
+                  <SelectValue placeholder="Selecciona una tienda">
+                    {(v: string) => stores.find((s) => s.id === v)?.nombre ?? v}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {stores.map((s) => (

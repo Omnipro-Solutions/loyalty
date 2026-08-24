@@ -1,4 +1,5 @@
-import { Gem, QrCode } from "lucide-react"
+import { Gem } from "lucide-react"
+import QRCode from "qrcode"
 import type { ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -34,17 +35,35 @@ type MemberLoyaltyCardProps = { member: Member }
 /**
  * Figma "Card · Tarjeta de lealtad" (1171:6) pixel-perfect, salvo el QR:
  * el Figma implica un token que rota cada 60s (lector de POS real) — no
- * existe esa infraestructura, así que el recuadro es un ícono decorativo,
- * no un código escaneable de verdad.
+ * existe esa infraestructura, así que el QR codifica el `codigo_socio` de
+ * forma estática (identifica al socio, pero no expira ni rota).
+ *
+ * El degradado usa `--gradient-loyalty-card` (hex fijos en globals.css), no
+ * las clases `from-primary-900/via-primary-700/to-primary`: esos tokens se
+ * invierten en `.dark` (ahí sirven de tinte claro para texto sobre fondo
+ * oscuro) y dejaban la card lavanda y deslavada — una tarjeta física no
+ * debe cambiar de "material" con el tema de la app.
  */
-export function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
+export async function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
   const { endDate } = getQualificationPeriod()
   const validityLabel = `${String(endDate.getMonth() + 1).padStart(2, "0")}/${endDate.getFullYear()}`
   const status = member.estado_cuenta as keyof typeof STATUS_BADGE_VARIANT
+  // Tinta del QR fija en negro/blanco puro (no tokens de tema): es una zona
+  // impresa real de la tarjeta — debe seguir siendo escaneable sin importar
+  // claro/oscuro, igual que el panel blanco que la contiene.
+  const qrSvg = await QRCode.toString(member.codigo_socio, {
+    type: "svg",
+    margin: 1,
+    width: 100,
+    color: { dark: "#000000", light: "#ffffff" },
+  })
 
   return (
     <div className="flex size-full flex-col items-center gap-3.5 rounded-[20px] bg-background p-[18px] shadow-form-section">
-      <div className="flex w-full flex-col gap-3 rounded-[20px] bg-gradient-to-br from-primary-900 via-primary-700 to-primary p-4 shadow-lg">
+      <div
+        className="flex w-full flex-col gap-3 rounded-[20px] p-4 shadow-lg"
+        style={{ backgroundImage: "var(--gradient-loyalty-card)" }}
+      >
         <div className="flex w-full items-center gap-2.5">
           <div className="min-w-0 flex-1">
             <p className="text-[13px] leading-[18px] font-semibold text-white">
@@ -98,10 +117,12 @@ export function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
         </div>
 
         <div className="flex w-full flex-col items-center gap-2 rounded-[14px] bg-white px-3.5 py-3">
-          <div className="flex size-[100px] items-center justify-center rounded-[10px] bg-muted">
-            <QrCode className="size-10 text-muted-foreground" />
-          </div>
-          <p className="font-mono text-[11px] tracking-[0.44px] text-foreground">
+          <div
+            className="size-[100px] [&_svg]:size-full"
+            aria-label={`Código QR del socio ${member.codigo_socio}`}
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+          />
+          <p className="font-mono text-[11px] tracking-[0.44px] text-black">
             {cardNumber(member.codigo_socio)}
           </p>
         </div>
@@ -110,43 +131,45 @@ export function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
         </p>
       </div>
 
-      <div className="h-px w-full bg-border" />
-      <p className="w-full text-xs font-semibold text-foreground">
-        Estado de la tarjeta
-      </p>
-      <div className="flex w-full flex-col gap-2.5">
-        <StatusRow
-          label="Actualización del pase"
-          value={
-            <Badge variant={STATUS_BADGE_VARIANT[status]}>
-              {MEMBER_STATUS_LABEL[status]}
-            </Badge>
-          }
-        />
-        <StatusRow
-          label="Número de tarjeta"
-          value={
-            <span className="font-mono text-[10px] text-secondary-foreground">
-              {cardNumber(member.codigo_socio)}
-            </span>
-          }
-        />
-        <StatusRow
-          label="Último escaneo"
-          value={
-            <span className="text-[11px] font-medium text-muted-foreground">
-              Sin registros
-            </span>
-          }
-        />
-        <StatusRow
-          label="Sucursal habitual"
-          value={
-            <span className="truncate text-[11px] font-medium text-foreground">
-              {member.enrollmentStore?.nombre ?? "—"}
-            </span>
-          }
-        />
+      <div className="flex w-full flex-1 flex-col justify-end gap-3.5">
+        <div className="h-px w-full bg-border" />
+        <p className="w-full text-xs font-semibold text-foreground">
+          Estado de la tarjeta
+        </p>
+        <div className="flex w-full flex-col gap-2.5">
+          <StatusRow
+            label="Actualización del pase"
+            value={
+              <Badge variant={STATUS_BADGE_VARIANT[status]}>
+                {MEMBER_STATUS_LABEL[status]}
+              </Badge>
+            }
+          />
+          <StatusRow
+            label="Número de tarjeta"
+            value={
+              <span className="font-mono text-[10px] text-secondary-foreground">
+                {cardNumber(member.codigo_socio)}
+              </span>
+            }
+          />
+          <StatusRow
+            label="Último escaneo"
+            value={
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Sin registros
+              </span>
+            }
+          />
+          <StatusRow
+            label="Sucursal habitual"
+            value={
+              <span className="truncate text-[11px] font-medium text-foreground">
+                {member.enrollmentStore?.nombre ?? "—"}
+              </span>
+            }
+          />
+        </div>
       </div>
     </div>
   )

@@ -533,22 +533,95 @@ on conflict (segment_id, fecha) do nothing;
 -- Muestra de socios reales para el detalle de audiencias (11.2, tabla de
 -- miembros). Nombres nuevos, no se reciclan los 8 de 05 — son perfiles
 -- adicionales del programa, no los mismos socios bajo otra audiencia.
+-- Perfil completo (no solo nombre/tier/email) para este cohorte — antes
+-- llegaban con 2 de 13 atributos opcionales (`calculateCompleteness`), muy
+-- por debajo de los 8 socios de 05 sin ninguna razón de negocio para la
+-- diferencia. Mismas columnas y estilo que el insert de `members` de arriba.
 with org as (select id from organizations where slug = 'omni'),
 tier_ids as (select nombre, id from tiers where org_id = (select id from org))
-insert into members (org_id, nombre, apellido, email, tier_id, saldo_puntos, fecha_alta, estado_cuenta, consentimiento_marketing, canal_adquisicion)
+insert into members (
+  org_id, nombre, apellido, email, tier_id, saldo_puntos, fecha_alta,
+  tipo_documento, numero_documento, telefono, fecha_nacimiento, genero,
+  provincia, estado_civil, preferencia_compra, tiene_hijos, tiene_mascotas,
+  consentimiento_marketing, canal_adquisicion, estado_cuenta
+)
 select
   (select id from org), m.nombre, m.apellido, m.email,
-  (select id from tier_ids where tier_ids.nombre = m.tier), m.saldo_puntos,
-  now() - (m.dias_antiguedad || ' days')::interval, m.estado_cuenta, true, 'app'
+  (select id from tier_ids where tier_ids.nombre = m.tier),
+  m.saldo_puntos, now() - (m.dias_antiguedad || ' days')::interval,
+  m.tipo_documento, m.numero_documento, m.telefono, m.fecha_nacimiento::date,
+  m.genero, m.provincia, m.estado_civil, m.preferencia_compra, m.tiene_hijos,
+  m.tiene_mascotas, m.consentimiento_marketing, m.canal_adquisicion, m.estado_cuenta
 from (
   values
-    ('María', 'González', 'maria.gonzalez@mail.com', 'oro', 4820, 11, 'activo'),
-    ('Jorge', 'Ramírez', 'jorge.ramirez@mail.com', 'oro', 3910, 13, 'activo'),
-    ('Lucía', 'Pérez', 'lucia.perez@mail.com', 'plata', 2340, 14, 'activo'),
-    ('Diego', 'Salinas', 'diego.salinas@mail.com', 'plata', 2105, 16, 'activo'),
-    ('Camila', 'Flores', 'camila.flores@mail.com', 'bronce', 980, 18, 'inactivo')
-) as m (nombre, apellido, email, tier, saldo_puntos, dias_antiguedad, estado_cuenta)
-on conflict (org_id, email) do nothing;
+    -- Lucía nace en agosto a propósito: es la única de este cohorte en
+    -- `seg_birthday` (ver `segment_members` más abajo) — antes tenía
+    -- `fecha_nacimiento` nula, contradiciendo su propia audiencia.
+    ('María', 'González', 'maria.gonzalez@mail.com', 'oro', 4820, 11, 'cc', '1074456123', '+57 305 555 0789', '1987-04-22', 'femenino', 'Risaralda', 'casado', 'Dermocosmética', true, true, true, 'pos', 'activo'),
+    ('Jorge', 'Ramírez', 'jorge.ramirez@mail.com', 'oro', 3910, 13, 'cc', '1085567234', '+57 311 555 0812', '1991-09-08', 'masculino', 'Bolívar', 'soltero', 'Antihistamínicos', false, true, true, 'ecommerce', 'activo'),
+    ('Lucía', 'Pérez', 'lucia.perez@mail.com', 'plata', 2340, 14, 'cc', '1096678345', '+57 317 555 0834', '1994-08-15', 'femenino', 'Tolima', 'union_libre', 'Cuidado bucal', false, false, false, 'referido', 'activo'),
+    ('Diego', 'Salinas', 'diego.salinas@mail.com', 'plata', 2105, 16, 'cc', '1107789456', '+57 304 555 0856', '1996-01-30', 'masculino', 'Caldas', 'soltero', 'Primeros auxilios', true, false, true, 'campana', 'activo'),
+    ('Camila', 'Flores', 'camila.flores@mail.com', 'bronce', 980, 18, 'cc', '1118890567', '+57 313 555 0878', '1999-06-11', 'femenino', 'Nariño', 'divorciado', 'Respiratorio', false, true, false, 'app', 'inactivo')
+) as m (
+  nombre, apellido, email, tier, saldo_puntos, dias_antiguedad, tipo_documento,
+  numero_documento, telefono, fecha_nacimiento, genero, provincia, estado_civil,
+  preferencia_compra, tiene_hijos, tiene_mascotas, consentimiento_marketing,
+  canal_adquisicion, estado_cuenta
+)
+-- `do update` (no `do nothing`): estos 5 ya existían en cualquier entorno
+-- sembrado antes de este enriquecimiento, con solo nombre/tier/email — sin
+-- esto, reintentar el seed nunca les habría llenado los atributos nuevos.
+on conflict (org_id, email) do update set
+  tipo_documento = excluded.tipo_documento,
+  numero_documento = excluded.numero_documento,
+  telefono = excluded.telefono,
+  fecha_nacimiento = excluded.fecha_nacimiento,
+  genero = excluded.genero,
+  provincia = excluded.provincia,
+  estado_civil = excluded.estado_civil,
+  preferencia_compra = excluded.preferencia_compra,
+  tiene_hijos = excluded.tiene_hijos,
+  tiene_mascotas = excluded.tiene_mascotas,
+  canal_adquisicion = excluded.canal_adquisicion;
+
+-- Consentimientos de este cohorte: el cross-join que siembra
+-- `member_consentimientos` para el resto de socios ya había corrido cuando
+-- estos 5 todavía no existían, así que se quedaban con 0 registros — mismo
+-- criterio derivado de `consentimiento_marketing` que ese bloque original.
+with org as (select id from organizations where slug = 'omni')
+insert into member_consentimientos (org_id, member_id, canal, otorgado, fuente, actualizado_en)
+select
+  (select id from org), m.id, c.canal,
+  m.consentimiento_marketing and c.canal in ('email', 'push', 'personalizacion'),
+  case when m.consentimiento_marketing then 'web' end,
+  m.creado_en
+from members m
+cross join (
+  values ('email'), ('sms'), ('push'), ('whatsapp'), ('personalizacion'), ('socios_comerciales')
+) as c (canal)
+where m.org_id = (select id from org)
+  and m.email in (
+    'maria.gonzalez@mail.com', 'jorge.ramirez@mail.com', 'lucia.perez@mail.com',
+    'diego.salinas@mail.com', 'camila.flores@mail.com'
+  )
+on conflict (member_id, canal) do nothing;
+
+-- Tienda de inscripción de este cohorte (mismo criterio que el `update` de
+-- 05.3g "Tienda" más arriba) — tiene que ir después de este insert, no se
+-- puede reusar aquel bloque porque ya corrió antes de que estos 5 socios
+-- existieran. Flores se deja sin tienda a propósito (sigue "inactivo").
+with org as (select id from organizations where slug = 'omni'),
+tienda_ids as (select codigo_tienda, id from tiendas where org_id = (select id from org))
+update members m
+set tienda_inscripcion_id = (select id from tienda_ids where tienda_ids.codigo_tienda = t.codigo)
+from (
+  values
+    ('maria.gonzalez@mail.com', 'ST-0143'),
+    ('jorge.ramirez@mail.com', 'ST-0181'),
+    ('lucia.perez@mail.com', 'ST-0158'),
+    ('diego.salinas@mail.com', 'ST-0142')
+) as t (email, codigo)
+where m.org_id = (select id from org) and m.email = t.email and m.tienda_inscripcion_id is null;
 
 -- Reparte la muestra sobre varias audiencias: "Compradores frecuentes" usa
 -- exactamente los 5 socios del Figma 11.2; el resto reutiliza también
@@ -764,3 +837,643 @@ from (
     ('PED-20050', 'FAR-71042', 1)
 ) as i (numero_pedido, sku, cantidad)
 on conflict (pedido_id, producto_id) do nothing;
+
+-- Datos de ejemplo para "02 · Dashboard" (`/resumen`, `/analitica`) como
+-- migración (no solo `seed.sql`), mismo motivo que
+-- 20260823152000_audiencias_datos_demo.sql: `supabase db push --include-seed`
+-- contra este proyecto remoto no deja las filas de `seed.sql` insertadas —
+-- el camino fiable es `db push` de migraciones. `seed.sql` conserva este
+-- bloque igual, palabra por palabra, para que `supabase db reset` (entorno
+-- local) siga sembrando lo mismo sin depender de esta migración.
+
+-- El seed de 05.3g solo tenía 4 canjes puntuales (dos por socio Diamante,
+-- para las cards de perfil) y 31 pedidos en ~200 días — insuficiente para
+-- series de 12 meses en un dashboard ("Canjes por mes", "Atribución de
+-- canjes", "Tasa de canje por canal"). Este bloque añade canjes reales
+-- (`points_ledger.tipo = 'canje'`) repartidos en los últimos 12 meses entre
+-- los 7 socios con actividad de 05.3g (Felipe se deja sin canjes a
+-- propósito, sigue "suspendido" en el seed original). Cifras y fechas fijas
+-- (no `generate_series`/`random()`) para que el resultado sea inspeccionable
+-- a simple vista y estable entre corridas del seed.
+with org as (select id from organizations where slug = 'omni'),
+socio as (select email, id from members where org_id = (select id from org))
+insert into points_ledger (org_id, member_id, tipo, puntos, origen, canal, creado_en)
+select
+  (select id from org),
+  (select id from socio where socio.email = c.email),
+  'canje',
+  c.puntos,
+  c.origen,
+  c.canal,
+  now() - (c.dias_atras || ' days')::interval
+from (
+  values
+    ('daniela.cardenas@example.com', 'pos', -622, 'Canje 2x1 categoría #01', 14),
+    ('sofia.ramirez@example.com', 'app', -2533, 'Canje 2x1 categoría #02', 17),
+    ('daniela.cardenas@example.com', 'app', -2290, 'Canje 2x1 categoría #03', 34),
+    ('valentina.rios@example.com', 'pos', -1233, 'Canje producto gratis #01', 40),
+    ('sofia.ramirez@example.com', 'app', -2028, 'Canje cupón bienvenida #01', 57),
+    ('sofia.ramirez@example.com', 'pos', -683, 'Canje descuento VIP #01', 62),
+    ('julian.restrepo@example.com', 'ecommerce', -2080, 'Canje envío gratis #01', 62),
+    ('daniela.cardenas@example.com', 'app', -815, 'Canje envío gratis #02', 62),
+    ('julian.restrepo@example.com', 'ecommerce', -313, 'Canje producto gratis #02', 63),
+    ('sofia.ramirez@example.com', 'pos', -2369, 'Canje cupón bienvenida #02', 76),
+    ('camilo.torres@example.com', 'ecommerce', -718, 'Canje 2x1 categoría #04', 84),
+    ('andres.gomez@example.com', 'app', -1199, 'Canje puntos por premio #01', 88),
+    ('valentina.rios@example.com', 'pos', -1253, 'Canje 2x1 categoría #05', 103),
+    ('camilo.torres@example.com', 'ecommerce', -696, 'Canje puntos por premio #02', 115),
+    ('sofia.ramirez@example.com', 'app', -1114, 'Canje recompra #01', 119),
+    ('daniela.cardenas@example.com', 'app', -2246, 'Canje recompra #02', 127),
+    ('sofia.ramirez@example.com', 'ecommerce', -1202, 'Canje referido #01', 130),
+    ('andres.gomez@example.com', 'pos', -1238, 'Canje cupón bienvenida #03', 130),
+    ('mariana.ocampo@example.com', 'ecommerce', -1198, 'Canje envío gratis #03', 139),
+    ('julian.restrepo@example.com', 'app', -1031, 'Canje recompra #03', 141),
+    ('andres.gomez@example.com', 'ecommerce', -1943, 'Canje producto gratis #03', 143),
+    ('sofia.ramirez@example.com', 'app', -1439, 'Canje cupón bienvenida #04', 145),
+    ('camilo.torres@example.com', 'ecommerce', -1383, 'Canje cupón bienvenida #05', 147),
+    ('valentina.rios@example.com', 'ecommerce', -1438, 'Canje referido #02', 155),
+    ('daniela.cardenas@example.com', 'pos', -1385, 'Canje recompra #04', 162),
+    ('camilo.torres@example.com', 'app', -2181, 'Canje recompra #05', 179),
+    ('julian.restrepo@example.com', 'pos', -1522, 'Canje recompra #06', 179),
+    ('valentina.rios@example.com', 'app', -1794, 'Canje envío gratis #04', 190),
+    ('daniela.cardenas@example.com', 'app', -2033, 'Canje descuento VIP #02', 190),
+    ('andres.gomez@example.com', 'pos', -1164, 'Canje puntos por premio #04', 199),
+    ('mariana.ocampo@example.com', 'app', -2321, 'Canje 2x1 categoría #06', 209),
+    ('camilo.torres@example.com', 'pos', -1850, 'Canje 2x1 categoría #07', 221),
+    ('mariana.ocampo@example.com', 'pos', -749, 'Canje envío gratis #05', 224),
+    ('andres.gomez@example.com', 'pos', -2344, 'Canje cumpleaños #01', 241),
+    ('julian.restrepo@example.com', 'app', -1114, 'Canje envío gratis #06', 279),
+    ('mariana.ocampo@example.com', 'app', -955, 'Canje cumpleaños #02', 280),
+    ('mariana.ocampo@example.com', 'app', -560, 'Canje cumpleaños #03', 292),
+    ('valentina.rios@example.com', 'ecommerce', -1755, 'Canje descuento VIP #03', 300),
+    ('mariana.ocampo@example.com', 'ecommerce', -2217, 'Canje recompra #07', 303),
+    ('mariana.ocampo@example.com', 'ecommerce', -2566, 'Canje cupón bienvenida #06', 304),
+    ('valentina.rios@example.com', 'app', -1393, 'Canje 2x1 categoría #08', 321),
+    ('valentina.rios@example.com', 'app', -1000, 'Canje recompra #08', 326),
+    ('andres.gomez@example.com', 'app', -2179, 'Canje envío gratis #07', 332),
+    ('julian.restrepo@example.com', 'ecommerce', -961, 'Canje recompra #09', 333),
+    ('julian.restrepo@example.com', 'app', -302, 'Canje puntos por premio #05', 354),
+    ('andres.gomez@example.com', 'ecommerce', -871, 'Canje descuento VIP #04', 357)
+) as c (email, canal, puntos, origen, dias_atras)
+where exists (select 1 from socio where socio.email = c.email)
+  and not exists (
+    select 1 from points_ledger pl
+    where pl.member_id = (select id from socio where socio.email = c.email)
+      and pl.origen = c.origen
+  );
+
+-- Más pedidos (05.3g solo cubría ~200 días) para extender "Miembros activos
+-- y ventas" (Resumen) a los 12 meses completos.
+with org as (select id from organizations where slug = 'omni'),
+miembro_ids as (select email, id from members where org_id = (select id from org)),
+tienda_ids as (select codigo_tienda, id from tiendas where org_id = (select id from org))
+insert into pedidos (org_id, member_id, tienda_id, canal, numero_pedido, estado, creado_en)
+select
+  (select id from org),
+  (select id from miembro_ids where miembro_ids.email = p.email),
+  (select id from tienda_ids where tienda_ids.codigo_tienda = p.tienda_codigo),
+  p.canal, p.numero_pedido, 'completado', now() - (p.dias_atras || ' days')::interval
+from (
+  values
+    ('camilo.torres@example.com', 'ST-0142', 'pos', 'PED-DEMO-005', 219),
+    ('mariana.ocampo@example.com', 'ST-0158', 'pos', 'PED-DEMO-014', 221),
+    ('sofia.ramirez@example.com', 'ST-0142', 'app', 'PED-DEMO-001', 222),
+    ('andres.gomez@example.com', 'ST-0151', 'app', 'PED-DEMO-011', 225),
+    ('sofia.ramirez@example.com', 'ST-0142', 'pos', 'PED-DEMO-002', 228),
+    ('valentina.rios@example.com', 'ST-0143', 'ecommerce', 'PED-DEMO-008', 233),
+    ('daniela.cardenas@example.com', 'ST-0142', 'app', 'PED-DEMO-020', 236),
+    ('julian.restrepo@example.com', 'ST-0163', 'ecommerce', 'PED-DEMO-017', 240),
+    ('sofia.ramirez@example.com', 'ST-0142', 'ecommerce', 'PED-DEMO-003', 248),
+    ('camilo.torres@example.com', 'ST-0142', 'ecommerce', 'PED-DEMO-006', 264),
+    ('mariana.ocampo@example.com', 'ST-0158', 'ecommerce', 'PED-DEMO-015', 266),
+    ('andres.gomez@example.com', 'ST-0151', 'app', 'PED-DEMO-012', 267),
+    ('valentina.rios@example.com', 'ST-0143', 'pos', 'PED-DEMO-009', 271),
+    ('sofia.ramirez@example.com', 'ST-0142', 'app', 'PED-DEMO-004', 311),
+    ('camilo.torres@example.com', 'ST-0142', 'ecommerce', 'PED-DEMO-007', 339),
+    ('julian.restrepo@example.com', 'ST-0163', 'app', 'PED-DEMO-018', 348),
+    ('valentina.rios@example.com', 'ST-0143', 'app', 'PED-DEMO-010', 351),
+    ('mariana.ocampo@example.com', 'ST-0158', 'ecommerce', 'PED-DEMO-016', 352),
+    ('julian.restrepo@example.com', 'ST-0163', 'app', 'PED-DEMO-019', 356),
+    ('daniela.cardenas@example.com', 'ST-0142', 'pos', 'PED-DEMO-021', 356),
+    ('daniela.cardenas@example.com', 'ST-0142', 'ecommerce', 'PED-DEMO-022', 358),
+    ('andres.gomez@example.com', 'ST-0151', 'ecommerce', 'PED-DEMO-013', 359)
+) as p (email, tienda_codigo, canal, numero_pedido, dias_atras)
+on conflict (org_id, numero_pedido) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+pedido_ids as (select numero_pedido, id from pedidos where org_id = (select id from org)),
+producto_ids as (
+  select sku, id, precio, costo_unitario from productos where org_id = (select id from org)
+)
+insert into pedido_items (pedido_id, producto_id, cantidad, precio_unitario, costo_unitario)
+select
+  (select id from pedido_ids where pedido_ids.numero_pedido = i.numero_pedido),
+  (select id from producto_ids where producto_ids.sku = i.sku),
+  i.cantidad,
+  (select precio from producto_ids where producto_ids.sku = i.sku),
+  coalesce((select costo_unitario from producto_ids where producto_ids.sku = i.sku), 0)
+from (
+  values
+    ('PED-DEMO-001', 'FAR-71600', 2),
+    ('PED-DEMO-002', 'FAR-70933', 2),
+    ('PED-DEMO-002', 'FAR-70422', 1),
+    ('PED-DEMO-003', 'FAR-71600', 1),
+    ('PED-DEMO-004', 'FAR-70422', 1),
+    ('PED-DEMO-005', 'FAR-71455', 1),
+    ('PED-DEMO-005', 'FAR-71042', 1),
+    ('PED-DEMO-006', 'FAR-70422', 1),
+    ('PED-DEMO-006', 'FAR-70241', 1),
+    ('PED-DEMO-007', 'FAR-70241', 2),
+    ('PED-DEMO-008', 'FAR-71600', 1),
+    ('PED-DEMO-009', 'FAR-71042', 1),
+    ('PED-DEMO-009', 'FAR-71305', 2),
+    ('PED-DEMO-010', 'FAR-70422', 2),
+    ('PED-DEMO-011', 'FAR-71105', 1),
+    ('PED-DEMO-011', 'FAR-70933', 1),
+    ('PED-DEMO-012', 'FAR-71042', 1),
+    ('PED-DEMO-013', 'FAR-70422', 1),
+    ('PED-DEMO-014', 'FAR-70517', 1),
+    ('PED-DEMO-015', 'FAR-70422', 1),
+    ('PED-DEMO-016', 'FAR-70241', 1),
+    ('PED-DEMO-016', 'FAR-70517', 1),
+    ('PED-DEMO-017', 'FAR-71455', 2),
+    ('PED-DEMO-018', 'FAR-70422', 1),
+    ('PED-DEMO-019', 'FAR-71105', 1),
+    ('PED-DEMO-019', 'FAR-70819', 1),
+    ('PED-DEMO-020', 'FAR-70241', 2),
+    ('PED-DEMO-021', 'FAR-70602', 1),
+    ('PED-DEMO-022', 'FAR-70517', 1),
+    ('PED-DEMO-022', 'FAR-70241', 2)
+) as i (numero_pedido, sku, cantidad)
+on conflict (pedido_id, producto_id) do nothing;
+
+-- 100 socios adicionales para que "05 · Clientes" tenga un dataset de
+-- tamaño real (paginación, filtros, KPIs) — antes solo había 13 en total.
+-- Generados de forma determinista (`hashtext`/módulo sobre el índice, nunca
+-- `random()`) para que el seed sea reproducible entre corridas — mismo
+-- criterio que `segment_size_history`
+-- (20260823152000_audiencias_datos_demo.sql). Perfil con variación
+-- realista: no todos los campos opcionales quedan llenos (mismo espíritu
+-- que Cárdenas/Herrera en el cohorte original) — la mayoría sí, una
+-- fracción se queda con algún campo en null, para que "Perfil completo" no
+-- sea un 100% plano y aburrido.
+--
+-- Como migración además de `seed.sql`, mismo motivo que
+-- 20260823152000_audiencias_datos_demo.sql: `supabase db push
+-- --include-seed` contra este proyecto remoto no deja las filas de
+-- `seed.sql` insertadas — el camino fiable es `db push` de migraciones.
+-- `seed.sql` conserva este bloque igual, palabra por palabra.
+--
+-- `numero_documento` usa el rango 2000000001-2000000100 a propósito: no
+-- colisiona con ningún documento sembrado antes (todos por debajo de
+-- 1200000000) y sirve como marcador para el `update` de tienda de más
+-- abajo, que solo debe tocar a este lote nuevo.
+with org as (select id from organizations where slug = 'omni'),
+tier_ids as (select nombre, id from tiers where org_id = (select id from org)),
+gen as (
+  select
+    i,
+    (i % 2 = 0) as es_masculino,
+    case
+      when i % 100 < 45 then 'bronce'
+      when i % 100 < 75 then 'plata'
+      when i % 100 < 93 then 'oro'
+      else 'diamante'
+    end as tier,
+    abs(hashtext('pts|' || i)) as h_puntos,
+    abs(hashtext('alta|' || i)) as h_alta,
+    abs(hashtext('tel|' || i)) as h_tel,
+    abs(hashtext('nac|' || i)) as h_nacimiento,
+    abs(hashtext('hijos|' || i)) as h_hijos,
+    abs(hashtext('mascotas|' || i)) as h_mascotas,
+    abs(hashtext('consent|' || i)) as h_consent
+  from generate_series(1, 100) as i
+),
+nombres_m as (
+  select array[
+    'Juan','Carlos','Luis','Andrés','Miguel','José','David','Daniel','Sergio','Óscar',
+    'Alejandro','Fernando','Ricardo','Iván','Diego','Cristian','Mauricio','Esteban','Nicolás','Rodrigo'
+  ] as arr
+),
+nombres_f as (
+  select array[
+    'Laura','Ana','Paula','Valeria','Carolina','Andrea','Natalia','Alejandra','Camila','Isabella',
+    'Manuela','Gabriela','Juliana','Claudia','Marcela','Adriana','Catalina','Vanessa','Lorena','Ximena'
+  ] as arr
+),
+apellidos as (
+  select array[
+    'Rodríguez','Gómez','Martínez','López','García','Hernández','Sánchez','Ramírez','Torres','Díaz',
+    'Vargas','Castro','Ortiz','Rojas','Moreno','Muñoz','Suárez','Rincón','Molina','Cárdenas',
+    'Peña','Reyes','Guerrero','Mejía','Cortés','Cáceres','Beltrán','Aguilar','Osorio','Franco'
+  ] as arr
+),
+provincias as (
+  select array[
+    'Antioquia','Cundinamarca','Valle del Cauca','Atlántico','Santander','Bolívar','Risaralda',
+    'Tolima','Caldas','Nariño','Boyacá','Huila','Meta','Quindío','Norte de Santander'
+  ] as arr
+),
+estados_civiles as (
+  select array['soltero','casado','union_libre','divorciado','viudo'] as arr
+),
+canales as (
+  select array['pos','ecommerce','app','referido','campana','otro'] as arr
+),
+preferencias as (
+  select array[
+    'Analgésicos','Vitaminas','Respiratorio','Dermocosmética','Cuidado personal',
+    'Antihistamínicos','Gastrointestinal','Cuidado bucal','Primeros auxilios'
+  ] as arr
+),
+socios as (
+  select
+    g.i,
+    g.tier,
+    g.h_puntos, g.h_alta, g.h_tel, g.h_nacimiento, g.h_hijos, g.h_mascotas, g.h_consent,
+    case when g.es_masculino then 'masculino' else 'femenino' end as genero_base,
+    case when g.es_masculino then (select arr from nombres_m)[1 + g.i % 20]
+         else (select arr from nombres_f)[1 + g.i % 20] end as nombre,
+    (select arr from apellidos)[1 + (g.i * 7) % 30] as apellido,
+    (select arr from provincias)[1 + (g.i * 7) % 15] as provincia,
+    (select arr from estados_civiles)[1 + (g.i * 3) % 5] as estado_civil,
+    (select arr from canales)[1 + (g.i * 13) % 6] as canal_adquisicion,
+    (select arr from preferencias)[1 + (g.i * 11) % 9] as preferencia_compra
+  from gen g
+)
+insert into members (
+  org_id, nombre, apellido, email, tier_id, saldo_puntos, fecha_alta,
+  tipo_documento, numero_documento, telefono, fecha_nacimiento, genero,
+  provincia, estado_civil, preferencia_compra, tiene_hijos, tiene_mascotas,
+  consentimiento_marketing, canal_adquisicion, estado_cuenta
+)
+select
+  (select id from org),
+  s.nombre,
+  s.apellido,
+  lower(translate(s.nombre, 'áéíóúñ', 'aeioun')) || '.' ||
+    lower(translate(s.apellido, 'áéíóúñ', 'aeioun')) || s.i || '@example.com',
+  (select id from tier_ids where tier_ids.nombre = s.tier),
+  case s.tier
+    when 'bronce' then 200 + s.h_puntos % 1300
+    when 'plata' then 1500 + s.h_puntos % 2500
+    when 'oro' then 4000 + s.h_puntos % 5000
+    else 9000 + s.h_puntos % 11000
+  end,
+  now() - ((s.h_alta % 700) || ' days')::interval,
+  case when s.i % 23 = 0 then null else 'cc' end,
+  case when s.i % 23 = 0 then null else (2000000000 + s.i)::text end,
+  case when s.i % 11 = 0 then null
+       else '+57 3' || (10 + s.h_tel % 90) || ' 555 ' || lpad((1000 + s.i)::text, 4, '0')
+  end,
+  case when s.i % 13 = 0 then null
+       else (date '1970-01-01' + (s.h_nacimiento % 12800) * interval '1 day')::date
+  end,
+  case when s.i % 17 = 0 then null else s.genero_base end,
+  s.provincia,
+  case when s.i % 9 = 0 then null else s.estado_civil end,
+  case when s.i % 7 = 0 then null else s.preferencia_compra end,
+  case when s.i % 5 = 0 then null else (s.h_hijos % 2 = 0) end,
+  case when s.i % 6 = 0 then null else (s.h_mascotas % 2 = 0) end,
+  (s.h_consent % 10) < 7,
+  s.canal_adquisicion,
+  case
+    when s.i % 20 = 0 then 'suspendido'
+    when s.i % 8 = 0 then 'inactivo'
+    else 'activo'
+  end
+from socios s
+on conflict (org_id, email) do nothing;
+
+-- Consentimientos del lote nuevo: mismo criterio derivado de
+-- `consentimiento_marketing` que ya usa el resto del seed. Alcance real
+-- (no una lista de emails a mano): cualquier socio que todavía no tenga
+-- ningún canal registrado — cubre este lote de 100 sin tocar a los 13 que
+-- ya lo tienen.
+with org as (select id from organizations where slug = 'omni')
+insert into member_consentimientos (org_id, member_id, canal, otorgado, fuente, actualizado_en)
+select
+  (select id from org), m.id, c.canal,
+  m.consentimiento_marketing and c.canal in ('email', 'push', 'personalizacion'),
+  case when m.consentimiento_marketing then 'web' end,
+  m.creado_en
+from members m
+cross join (
+  values ('email'), ('sms'), ('push'), ('whatsapp'), ('personalizacion'), ('socios_comerciales')
+) as c (canal)
+where m.org_id = (select id from org)
+  and not exists (select 1 from member_consentimientos mc where mc.member_id = m.id)
+on conflict (member_id, canal) do nothing;
+
+-- Tienda de inscripción para ~70% del lote nuevo (el resto queda sin
+-- tienda, como socios de e-commerce puro). Acotado por el rango de
+-- `numero_documento` de este lote para no tocar los 13 socios anteriores
+-- (algunos de ellos, como Camila Flores, se dejan sin tienda a propósito
+-- en su propia migración).
+with org as (select id from organizations where slug = 'omni'),
+tiendas_arr as (
+  select array_agg(id order by codigo_tienda) as arr
+  from tiendas where org_id = (select id from org)
+)
+update members m
+set tienda_inscripcion_id = (select arr from tiendas_arr)[1 + (abs(hashtext(m.email)) % 8)]
+where m.org_id = (select id from org)
+  and m.numero_documento is not null
+  and m.numero_documento::bigint between 2000000001 and 2000000100
+  and abs(hashtext(m.email || 'tienda')) % 10 < 7;
+
+-- Corrige el saldo negativo de 5 socios (Valentina, Andrés, Mariana,
+-- Julián, Daniela) causado por 20260823170000_dashboard_datos_demo.sql:
+-- esa migración les agregó canjes (`points_ledger.tipo = 'canje'`) sin que
+-- existiera ninguna acumulación previa que los respaldara. A diferencia de
+-- Sofía/Camilo (que arrancan en 0 y se construyen 100% desde el ledger,
+-- ver 20260822205659_socios_niveles_ledger.sql), estos 5 socios tenían su
+-- saldo sembrado como un valor fijo directo en `members.saldo_puntos`
+-- (nunca pensados como "derivados del ledger") — los canjes nuevos los
+-- mandaron a negativo sin ningún respaldo real.
+--
+-- No se borra ni edita ninguna fila existente (el ledger es append-only,
+-- cada canje ya sembrado sigue siendo un movimiento real para las
+-- gráficas del dashboard). Se agrega un `ajuste` por socio, fechado antes
+-- de su primer movimiento real, que representa el saldo migrado antes de
+-- que este ledger empezara a registrar canjes — el monto deja a cada
+-- socio exactamente en su saldo original de seed (05.3g) una vez sumado
+-- todo el ledger.
+with org as (select id from organizations where slug = 'omni'),
+socios as (
+  select email, id from members where org_id = (select id from org)
+)
+insert into points_ledger (org_id, member_id, tipo, puntos, origen, canal, creado_en)
+select
+  (select id from org),
+  (select id from socios where socios.email = v.email),
+  'ajuste',
+  v.monto,
+  'Migración de saldo histórico previo al ledger',
+  null,
+  (
+    select min(pl.creado_en) from points_ledger pl
+    where pl.member_id = (select id from socios where socios.email = v.email)
+  ) - interval '30 days'
+from (
+  values
+    ('valentina.rios@example.com', 18626),
+    ('andres.gomez@example.com', 18168),
+    ('mariana.ocampo@example.com', 14016),
+    ('julian.restrepo@example.com', 9903),
+    ('daniela.cardenas@example.com', 10181)
+) as v (email, monto)
+where exists (select 1 from socios where socios.email = v.email)
+  and not exists (
+    select 1 from points_ledger pl
+    where pl.member_id = (select id from socios where socios.email = v.email)
+      and pl.origen = 'Migración de saldo histórico previo al ledger'
+  );
+
+-- El trigger `points_ledger_apply_after_insert` suma el ajuste sobre el
+-- valor QUE YA ESTABA en `saldo_puntos` (el saldo fijo original más los
+-- canjes rotos) — sin este `update` directo quedaría duplicando el saldo
+-- original en vez de solo corregirlo.
+with org as (select id from organizations where slug = 'omni')
+update members m
+set saldo_puntos = v.saldo_final
+from (
+  values
+    ('valentina.rios@example.com', 8760),
+    ('andres.gomez@example.com', 7230),
+    ('mariana.ocampo@example.com', 3450),
+    ('julian.restrepo@example.com', 2680),
+    ('daniela.cardenas@example.com', 890)
+) as v (email, saldo_final)
+where m.org_id = (select id from org) and m.email = v.email;
+
+-- Datos de demo para que los filtros de "/analitica" (rango de fechas,
+-- comparación, segmento) tengan algo real que mostrar en cualquier
+-- combinación — mismo motivo de las migraciones `*_demo.sql` anteriores:
+-- `supabase db push --include-seed` contra el proyecto remoto no deja
+-- sembrado `seed.sql`, así que este bloque se replica ahí palabra por
+-- palabra al final del archivo.
+--
+-- Tres problemas que resuelve, en orden:
+--
+-- 1. `productos.costo_unitario` sólo se rellenaba en `seed.sql` (línea
+--    ~731), ninguna migración lo hacía — `20260823150000_pedidos.sql` sólo
+--    añade la columna (default null). Cualquier proyecto provisto sólo con
+--    `db push` de migraciones (el camino que las propias migraciones de este
+--    dashboard llaman "el fiable") tenía `costo_total` en 0 para TODOS los
+--    pedidos, y el nuevo KPI "Ticket promedio" (que reporta ventas reales,
+--    no margen) no lo necesita, pero cualquier cálculo de margen futuro sí
+--    — se corrige de una vez, con el mismo `where costo_unitario is null`
+--    que ya usa `seed.sql`, así que no pisa nada si `seed.sql` ya corrió.
+--
+-- 2. El rango "7D" del filtro de Analítica siempre salía vacío: el pedido y
+--    el canje más antiguos eran de hace 8 y 6 días. Se añade actividad
+--    reciente (1-6 días atrás) para un grupo de socios.
+--
+-- 3. De los 24 segmentos de audiencias, 17 no tenían ninguna fila en
+--    `segment_members`, y 2 de los 7 que sí tenían (`seg_freq_2026`,
+--    `seg_new_30d`) sólo incluían al cohorte `@mail.com`, que no tiene ni un
+--    pedido ni un canje — seleccionar cualquiera de esos 19 segmentos en el
+--    filtro dejaba las 3 gráficas y los 5 KPIs reales completamente vacíos.
+--    Se resuelve sembrando un "cohorte activo" (~38 de los 100 socios de
+--    `20260823190000_clientes_lote_demo.sql`, elegido de forma determinista
+--    con `hashtext`, nunca `random()`) con pedidos y canjes reales
+--    repartidos en los últimos 12 meses, y asignando ese cohorte a los 19
+--    segmentos que lo necesitaban.
+--
+-- El cohorte activo recibe primero un `acumulacion` de 6.000 puntos fechado
+-- 370 días atrás (antes que cualquier canje nuevo) para que los canjes no
+-- manden a nadie a saldo negativo — la migración anterior
+-- (`20260823200000_corrige_saldo_negativo.sql`) tuvo que arreglar
+-- exactamente ese error para otro lote de canjes, no se repite aquí: el
+-- trigger `points_ledger_apply_after_insert` aplica cada fila en el orden en
+-- que se inserta (no por `creado_en`), así que basta con que el `insert` de
+-- la acumulación esté antes que el de los canjes en este archivo.
+
+-- === 1. costo_unitario de los 16 SKUs usados por pedido_items de demo ===
+with org as (select id from organizations where slug = 'omni')
+update productos p
+set costo_unitario = c.costo
+from (
+  values
+    ('FAR-70241', 3800), ('FAR-70388', 6300), ('FAR-70422', 15700),
+    ('FAR-70517', 9800), ('FAR-70602', 18100), ('FAR-70819', 29900),
+    ('FAR-70933', 5250), ('FAR-71042', 2860), ('FAR-71105', 5390),
+    ('FAR-71230', 7810), ('FAR-71305', 3660), ('FAR-71390', 5340),
+    ('FAR-71455', 21945), ('FAR-71520', 11715), ('FAR-71600', 14880),
+    ('FAR-71675', 6930)
+) as c (sku, costo)
+where p.org_id = (select id from org) and p.sku = c.sku and p.costo_unitario is null;
+
+-- === 2. Acumulación base del cohorte activo (~38 de los 100 socios del lote demo) ===
+with org as (select id from organizations where slug = 'omni'),
+activos as (
+  select id, email from members m
+  where m.org_id = (select id from org)
+    and m.numero_documento is not null
+    and m.numero_documento::bigint between 2000000001 and 2000000100
+    and abs(hashtext(m.email)) % 5 < 2
+)
+insert into points_ledger (org_id, member_id, tipo, puntos, origen, canal, creado_en)
+select
+  (select id from org), a.id, 'acumulacion', 6000,
+  'Saldo base — actividad demo filtros de Analítica', 'pos',
+  now() - interval '370 days'
+from activos a
+where not exists (
+  select 1 from points_ledger pl
+  where pl.member_id = a.id
+    and pl.origen = 'Saldo base — actividad demo filtros de Analítica'
+);
+
+-- === 3. Canjes del cohorte activo: 3 por socio, uno de ellos en 1-6 días (cubre 7D) ===
+with org as (select id from organizations where slug = 'omni'),
+activos as (
+  select id, email, row_number() over (order by email) as rn
+  from members m
+  where m.org_id = (select id from org)
+    and m.numero_documento is not null
+    and m.numero_documento::bigint between 2000000001 and 2000000100
+    and abs(hashtext(m.email)) % 5 < 2
+),
+canales as (select array['pos', 'ecommerce', 'app'] as arr),
+slots as (select generate_series(0, 2) as k)
+insert into points_ledger (org_id, member_id, tipo, puntos, origen, canal, creado_en)
+select
+  (select id from org),
+  a.id,
+  'canje',
+  -(100 + (abs(hashtext(a.email || 'pts' || s.k)) % 400)),
+  'Canje demo filtros Analítica #' || a.rn || '-' || s.k,
+  (select arr from canales)[1 + (abs(hashtext(a.email || 'canal' || s.k)) % 3)],
+  now() - (
+    case s.k
+      when 0 then 1 + abs(hashtext(a.email || 'd0')) % 6
+      when 1 then 20 + abs(hashtext(a.email || 'd1')) % 60
+      else 90 + abs(hashtext(a.email || 'd2')) % 260
+    end || ' days'
+  )::interval
+from activos a
+cross join slots s
+where not exists (
+  select 1 from points_ledger pl
+  where pl.member_id = a.id
+    and pl.origen = 'Canje demo filtros Analítica #' || a.rn || '-' || s.k
+);
+
+-- === 4. Pedidos del cohorte activo: 2 por socio, uno de ellos en 1-6 días ===
+with org as (select id from organizations where slug = 'omni'),
+activos as (
+  select id, email, row_number() over (order by email) as rn
+  from members m
+  where m.org_id = (select id from org)
+    and m.numero_documento is not null
+    and m.numero_documento::bigint between 2000000001 and 2000000100
+    and abs(hashtext(m.email)) % 5 < 2
+),
+tiendas_arr as (
+  select array_agg(id order by codigo_tienda) as arr
+  from tiendas where org_id = (select id from org)
+),
+canales as (select array['pos', 'ecommerce', 'app'] as arr),
+slots as (select generate_series(0, 1) as k)
+insert into pedidos (org_id, member_id, tienda_id, canal, numero_pedido, estado, creado_en)
+select
+  (select id from org),
+  a.id,
+  (select arr from tiendas_arr)[1 + (abs(hashtext(a.email || 'tienda')) % 8)],
+  (select arr from canales)[1 + (abs(hashtext(a.email || 'canalp' || s.k)) % 3)],
+  'PED-FILTROS-' || lpad(a.rn::text, 3, '0') || '-' || s.k,
+  'completado',
+  now() - (
+    case s.k
+      when 0 then 1 + abs(hashtext(a.email || 'pd0')) % 6
+      else 30 + abs(hashtext(a.email || 'pd1')) % 300
+    end || ' days'
+  )::interval
+from activos a
+cross join slots s
+on conflict (org_id, numero_pedido) do nothing;
+
+-- === 5. Un ítem por pedido nuevo, de los mismos 16 SKUs de arriba (con costo ya poblado) ===
+with org as (select id from organizations where slug = 'omni'),
+pedido_ids as (
+  select id, numero_pedido from pedidos
+  where org_id = (select id from org) and numero_pedido like 'PED-FILTROS-%'
+),
+producto_ids as (
+  select sku, id, precio, costo_unitario from productos
+  where org_id = (select id from org)
+    and sku in (
+      'FAR-70241', 'FAR-70388', 'FAR-70422', 'FAR-70517', 'FAR-70602', 'FAR-70819',
+      'FAR-70933', 'FAR-71042', 'FAR-71105', 'FAR-71230', 'FAR-71305', 'FAR-71390',
+      'FAR-71455', 'FAR-71520', 'FAR-71600', 'FAR-71675'
+    )
+),
+sku_arr as (select array_agg(sku order by sku) as arr from producto_ids)
+insert into pedido_items (pedido_id, producto_id, cantidad, precio_unitario, costo_unitario)
+select
+  p.id,
+  prod.id,
+  1 + abs(hashtext(p.numero_pedido || 'qty')) % 2,
+  prod.precio,
+  coalesce(prod.costo_unitario, 0)
+from pedido_ids p
+join producto_ids prod
+  on prod.sku = (select arr from sku_arr)[1 + (abs(hashtext(p.numero_pedido)) % 16)]
+on conflict (pedido_id, producto_id) do nothing;
+
+-- === 6. Cohorte activo → los 17 segmentos sin ningún miembro ===
+-- `((rn + srn) % 17) < 3` reparte cada socio activo en ~3 de los 17
+-- segmentos y garantiza mínimo 6-9 socios por segmento (40 valores de `rn`
+-- repartidos en 17 residuos, cada uno con 2-3 ocurrencias) — determinista,
+-- sin `random()`.
+with org as (select id from organizations where slug = 'omni'),
+activos as (
+  select id, email, row_number() over (order by email) as rn
+  from members m
+  where m.org_id = (select id from org)
+    and m.numero_documento is not null
+    and m.numero_documento::bigint between 2000000001 and 2000000100
+    and abs(hashtext(m.email)) % 5 < 2
+),
+segmentos_vacios as (
+  select id, codigo, row_number() over (order by codigo) as srn
+  from segments
+  where org_id = (select id from org)
+    and codigo in (
+      'seg_cart_abandon_7d', 'seg_multi_categoria', 'seg_solo_app', 'seg_solo_pos',
+      'seg_sin_compra_6m', 'seg_alta_frecuencia_farmacia', 'seg_birthday_7d', 'seg_referidos',
+      'seg_consent_marketing', 'seg_sin_consent', 'seg_dermo', 'seg_vitaminas',
+      'seg_region_antioquia', 'seg_region_cdmx', 'seg_alto_ticket', 'seg_riesgo_bajar_nivel',
+      'seg_canal_campana'
+    )
+)
+insert into segment_members (org_id, segment_id, member_id)
+select (select id from org), sv.id, a.id
+from segmentos_vacios sv
+cross join activos a
+where (a.rn + sv.srn) % 17 < 3
+on conflict (segment_id, member_id) do nothing;
+
+-- === 7. Refuerzo de los 2 segmentos que ya tenían miembros, pero ninguno con actividad real ===
+with org as (select id from organizations where slug = 'omni'),
+activos as (
+  select id, row_number() over (order by email) as rn
+  from members m
+  where m.org_id = (select id from org)
+    and m.numero_documento is not null
+    and m.numero_documento::bigint between 2000000001 and 2000000100
+    and abs(hashtext(m.email)) % 5 < 2
+),
+segmentos_reforzar as (
+  select id from segments
+  where org_id = (select id from org)
+    and codigo in ('seg_freq_2026', 'seg_new_30d')
+)
+insert into segment_members (org_id, segment_id, member_id)
+select (select id from org), sr.id, a.id
+from segmentos_reforzar sr
+cross join activos a
+where a.rn % 10 < 3
+on conflict (segment_id, member_id) do nothing;

@@ -33,7 +33,7 @@ export default async function IntegrationsPage({
           groups={SOURCES}
           initialSelectionId="cjo"
           title="Integraciones"
-          description="Conecta los sistemas que alimentan a Etteer y define a dónde enviar audiencias, eventos y resultados."
+          description="Conecta los sistemas que alimentan a Loyalty System y define a dónde enviar audiencias, eventos y resultados."
           searchLabel="Buscar integración…"
           totalLabel="orígenes"
           allLabel="Todos los orígenes"
@@ -47,7 +47,7 @@ export default async function IntegrationsPage({
           groups={DESTINATIONS}
           initialSelectionId="power-bi"
           title="Integraciones"
-          description="Elige a dónde enviar audiencias, eventos de lealtad y resultados de campaña desde Etteer."
+          description="Elige a dónde enviar audiencias, eventos de lealtad y resultados de campaña desde Loyalty System."
           searchLabel="Buscar destino…"
           totalLabel="destinos"
           allLabel="Todos los destinos"

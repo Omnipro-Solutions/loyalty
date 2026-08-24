@@ -1,31 +1,23 @@
-import { Users } from "lucide-react"
-
-import { EmptyState } from "@/components/feedback/empty-state"
-import { formatNumber } from "@/lib/format"
+import type { ReactNode } from "react"
 
 import { MembersFiltersBar } from "./members-filters-bar"
-import { MembersPagination } from "./members-pagination"
-import { MembersTable } from "./members-table"
-import { MEMBERS_PAGE_SIZE } from "../lib/queries"
-import type { Member, TierOption } from "../lib/queries"
+import type { TierOption } from "../lib/queries"
 
 type MembersCardProps = {
-  members: Member[]
-  total: number
   tiers: TierOption[]
-  hasFiltersApplied: boolean
+  /** Pill de conteo — su propio `<Suspense>`, misma promesa que `children`. */
+  count: ReactNode
+  /** Tabla + paginación, o `EmptyState` — va dentro de un `<Suspense>` con key. */
+  children: ReactNode
 }
 
-/** Figma "05.1 · Clientes · listado" (704:3012): título + conteo + filtros arriba, tabla, paginación. */
-export function MembersCard({
-  members,
-  total,
-  tiers,
-  hasFiltersApplied,
-}: MembersCardProps) {
-  const noMembersYet = total === 0 && !hasFiltersApplied
-  const noFilterResults = total === 0 && hasFiltersApplied
-
+/**
+ * Figma "05.1 · Clientes · listado" (704:3012): título + conteo + filtros
+ * arriba, tabla, paginación. Shell del card: la barra de filtros vive fuera
+ * de cualquier `<Suspense>` con key a propósito — remontarla borraría el
+ * texto del buscador y el foco (ver `MembersFiltersBar`).
+ */
+export function MembersCard({ tiers, count, children }: MembersCardProps) {
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
       <div className="flex items-center gap-2.5 px-[22px] py-4">
@@ -34,36 +26,13 @@ export function MembersCard({
             <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
               Clientes
             </p>
-            <span className="rounded-full bg-muted px-[9px] py-0.5 text-[11px] font-semibold text-secondary-foreground">
-              {formatNumber(total)}
-            </span>
+            {count}
           </div>
         </div>
         <MembersFiltersBar tiers={tiers} />
       </div>
 
-      {noMembersYet ? (
-        <div className="px-[22px] pb-6">
-          <EmptyState
-            icon={Users}
-            title="Todavía no hay clientes"
-            description="Los clientes aparecerán aquí cuando se inscriban en el programa de lealtad."
-          />
-        </div>
-      ) : noFilterResults ? (
-        <div className="px-[22px] pb-6">
-          <EmptyState
-            icon={Users}
-            title="Sin resultados"
-            description="Ningún cliente coincide con la búsqueda o el filtro aplicado."
-          />
-        </div>
-      ) : (
-        <>
-          <MembersTable members={members} />
-          <MembersPagination total={total} pageSize={MEMBERS_PAGE_SIZE} />
-        </>
-      )}
+      {children}
     </div>
   )
 }

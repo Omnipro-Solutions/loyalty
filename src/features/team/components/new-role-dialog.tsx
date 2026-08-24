@@ -147,7 +147,9 @@ export function NewRoleDialog() {
               }
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {(v: CreateRoleFormValues["baseRole"]) => BASE_ROLE_LABELS[v]}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {ROLES.map((r) => (
@@ -170,7 +172,11 @@ export function NewRoleDialog() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(v: CreateRoleFormValues["storeScope"]) =>
+                      STORE_SCOPE_LABEL[v]
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {STORE_SCOPES.map((a) => (
@@ -192,7 +198,11 @@ export function NewRoleDialog() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(v: CreateRoleFormValues["channelScope"]) =>
+                      CHANNEL_SCOPE_LABEL[v]
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {CHANNEL_SCOPES.map((c) => (

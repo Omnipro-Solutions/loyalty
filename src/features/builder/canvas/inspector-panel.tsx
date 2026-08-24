@@ -11,9 +11,10 @@ import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
 import { SimpleConfigForm } from "@/features/builder/inspector/simple-config-form"
+import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-import type { TierSummary } from "./queries"
+import type { AudienceSummary, TierSummary } from "./queries"
 
 const BRANCH_TYPES = new Set(["ramificacion_valor", "split_ab"])
 
@@ -25,6 +26,7 @@ function tabsFor(tipo: string): readonly string[] {
 export function InspectorPanel({
   node,
   tiers,
+  audiences,
   onClose,
   onDelete,
   onConfigChange,
@@ -34,6 +36,7 @@ export function InspectorPanel({
     data: { tipo: string; etiqueta: string; config: Record<string, unknown> }
   } | null
   tiers: TierSummary[]
+  audiences: AudienceSummary[]
   onClose: () => void
   onDelete: (id: string) => void
   onConfigChange: (id: string, config: Record<string, unknown>) => void
@@ -128,6 +131,13 @@ export function InspectorPanel({
                 []
               }
               config={node.data.config}
+              audiences={audiences.map((a) => ({
+                value: a.id,
+                label:
+                  a.estimatedCount !== null
+                    ? `${a.name} (${formatNumber(a.estimatedCount)})`
+                    : a.name,
+              }))}
               onChange={update}
             />
           ))}

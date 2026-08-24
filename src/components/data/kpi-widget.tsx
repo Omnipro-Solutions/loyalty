@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { ArrowDown, ArrowUp } from "lucide-react"
 
+import { Sparkline } from "@/components/data/sparkline"
 import { cn } from "@/lib/utils"
 
 type KpiWidgetProps = {
@@ -10,17 +11,18 @@ type KpiWidgetProps = {
   delta?: string
   /** Context text next to the delta, or alone (e.g. "No live tracking yet"). */
   caption?: string
+  /** Series for the trailing sparkline (731:403) — omit where there's no real time series backing it yet. */
+  trend?: number[]
 }
 
-/**
- * Figma "Widget / KPI · sparkline" (731:399): white card with a label, a
- * large value and a variation pill. The Figma also draws a sparkline next
- * to the value — deliberately omitted here: this card doesn't fake a time
- * series that doesn't exist (there's no historical tracking for these
- * metrics yet). When it exists, a `trend` prop gets added without changing
- * this API's shape.
- */
-export function KpiWidget({ label, value, delta, caption }: KpiWidgetProps) {
+/** Figma "Widget / KPI · sparkline" (731:399): white card with a label, a large value, an optional trailing sparkline and a variation pill. */
+export function KpiWidget({
+  label,
+  value,
+  delta,
+  caption,
+  trend,
+}: KpiWidgetProps) {
   const isNegative = delta?.trim().startsWith("-") ?? false
 
   return (
@@ -28,9 +30,14 @@ export function KpiWidget({ label, value, delta, caption }: KpiWidgetProps) {
       <p className="text-[11px] leading-[15px] font-medium text-muted-foreground">
         {label}
       </p>
-      <p className="text-[22px] leading-7 font-semibold text-foreground">
-        {value}
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="flex-1 text-2xl leading-[30px] font-bold tracking-[-0.6px] text-foreground">
+          {value}
+        </p>
+        {trend && (
+          <Sparkline values={trend} className="h-6 w-[62px] shrink-0" />
+        )}
+      </div>
       {(delta || caption) && (
         <div className="flex items-center gap-1.5">
           {delta && (

@@ -1,6 +1,9 @@
+import { Suspense } from "react"
+
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
 import { RoutePlaceholder } from "@/components/layout/route-placeholder"
+import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import {
   TeamTabsNav,
   type TeamTab,
@@ -9,6 +12,11 @@ import { InvitationsTable } from "@/features/team/components/invitations-table"
 import { RoleDetailPanel } from "@/features/team/components/role-detail-panel"
 import { RolesList } from "@/features/team/components/roles-list"
 import { UsersCard } from "@/features/team/components/users-card"
+import {
+  CountPillSkeleton,
+  UsersCount,
+} from "@/features/team/components/users-count"
+import { UsersTableSection } from "@/features/team/components/users-table-section"
 import {
   getTeamKpis,
   getProfileWithPermissions,
@@ -20,6 +28,20 @@ import {
   hasPermission,
 } from "@/features/team/lib/queries"
 import { formatNumber } from "@/lib/format"
+import { cn } from "@/lib/utils"
+
+/** Igual al `size` de cada `ColumnDef` en `users-table.tsx`. */
+const USERS_TABLE_COLUMNS = [null, 150, 150, 110, 120, 90]
+
+/**
+ * Topbar (68px) + padding vertical de `AppPage` (24px arriba + 24px abajo) +
+ * `TeamTabsNav` (47px) + el `gap-5` de `AppPage` entre tabs y contenido
+ * (20px) = 183px. La pestaña "Roles" es el único listado con panel
+ * maestro-detalle (lista de roles + matriz de permisos): en vez de crecer
+ * con la página como el resto de tablas, mantiene su propio scroll interno
+ * acotado al alto restante del viewport.
+ */
+const ROLES_PANEL_HEIGHT = "h-[calc(100vh-183px)]"
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -80,12 +102,20 @@ async function UsersTabContent({
   const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
   const page = Number(firstValue(params.page) ?? "1")
 
-  const [{ users, total }, kpis, roles, stores] = await Promise.all([
-    listUsers({ search, roleId, status, page }),
+  // No dependen de los filtros — se quedan esperados aquí.
+  const [kpis, roles, stores] = await Promise.all([
     getTeamKpis(),
     listRoles(),
     listStoreOptions(),
   ])
+
+  // Sin `await`: una sola consulta a `listUsers`, compartida entre el pill
+  // de conteo y la tabla.
+  const usersPromise = listUsers({ search, roleId, status, page })
+
+  // `q` queda fuera de la key a propósito — ya tiene debounce (ver
+  // `UsersFiltersBar`, mismo patrón que `MembersFiltersBar`).
+  const dataKey = `${roleId ?? ""}|${status ?? ""}|${page}`
 
   return (
     <>
@@ -120,15 +150,29 @@ async function UsersTabContent({
         />
       </div>
       <UsersCard
-        users={users}
-        total={total}
         activeUsers={kpis.activeUsers}
         pendingInvitations={kpis.pendingInvitations}
         roles={roles}
         stores={stores}
         canManage={canManage}
-        hasAppliedFilters={!!(search || roleId || status)}
-      />
+        count={
+          <Suspense key={dataKey} fallback={<CountPillSkeleton />}>
+            <UsersCount usersPromise={usersPromise} />
+          </Suspense>
+        }
+      >
+        <Suspense
+          key={dataKey}
+          fallback={
+            <TableSkeleton columns={USERS_TABLE_COLUMNS} paginationRow />
+          }
+        >
+          <UsersTableSection
+            usersPromise={usersPromise}
+            hasFiltersApplied={!!(search || roleId || status)}
+          />
+        </Suspense>
+      </UsersCard>
     </>
   )
 }
@@ -145,7 +189,12 @@ async function RolesTabContent({
 
   if (!selectedRoleId) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-2xl bg-background shadow-form-section",
+          ROLES_PANEL_HEIGHT
+        )}
+      >
         <p className="py-16 text-sm text-muted-foreground">
           Todavía no hay roles configurados.
         </p>
@@ -156,7 +205,12 @@ async function RolesTabContent({
   const roleDetail = await getRoleDetail(selectedRoleId)
   if (!roleDetail) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-2xl bg-background shadow-form-section",
+          ROLES_PANEL_HEIGHT
+        )}
+      >
         <p className="py-16 text-sm text-muted-foreground">
           No se encontró el rol seleccionado.
         </p>
@@ -165,7 +219,7 @@ async function RolesTabContent({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 items-start gap-3.5">
+    <div className={cn("flex items-start gap-3.5", ROLES_PANEL_HEIGHT)}>
       <RolesList
         roles={roles}
         selectedRoleId={selectedRoleId}

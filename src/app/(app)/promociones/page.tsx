@@ -1,10 +1,15 @@
 import { Plus } from "lucide-react"
 import Link from "next/link"
+import { Suspense } from "react"
 
 import { AppPage } from "@/components/layout/app-page"
+import { Skeleton } from "@/components/feedback/skeleton"
+import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { formatCOP } from "@/lib/format"
 import { PromoKpiCard } from "@/features/promotions/components/promo-kpi-card"
 import { PromotionsCard } from "@/features/promotions/components/promotions-card"
+import { PromotionsExportSection } from "@/features/promotions/components/promotions-export-section"
+import { PromotionsTableSection } from "@/features/promotions/components/promotions-table-section"
 import {
   PROMOTIONS_PAGE_SIZE,
   getFeaturedPromotions,
@@ -19,6 +24,9 @@ function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
+/** Igual al `size` de cada `ColumnDef` en `promotions-table.tsx`. */
+const PROMOTIONS_TABLE_COLUMNS = [240, 130, 90, 130, 88, 120, 110, 56]
+
 /** Figma "06.1 · Promociones · listado" (630:428). */
 export default async function PromotionsPage({
   searchParams,
@@ -30,24 +38,31 @@ export default async function PromotionsPage({
   const channel = firstValue(params.canal)
   const page = Number(firstValue(params.page) ?? "1")
 
-  const [
-    { promotions, total },
-    featured,
-    summary,
-    totalStores,
-    categories,
-    segments,
-  ] = await Promise.all([
-    listPromotions({ search, publicationStatus, channel, page }),
-    getFeaturedPromotions(3),
-    getPromotionsSummary(),
-    getTotalStores(),
-    listConditionCategories(),
-    listConditionSegments(),
-  ])
+  // No dependen de los filtros de la tabla — se quedan esperados aquí.
+  const [featured, summary, totalStores, categories, segments] =
+    await Promise.all([
+      getFeaturedPromotions(3),
+      getPromotionsSummary(),
+      getTotalStores(),
+      listConditionCategories(),
+      listConditionSegments(),
+    ])
 
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
   const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
+
+  // Sin `await`: la comparten `PromotionsExportSection` (botón de exportar,
+  // sin key — solo espera) y `PromotionsTableSection` (con key).
+  const promotionsPromise = listPromotions({
+    search,
+    publicationStatus,
+    channel,
+    page,
+  })
+
+  // El texto de búsqueda queda fuera de la key a propósito (debounce de
+  // 300ms) — sí remonta al cambiar estado/canal/página.
+  const dataKey = `${publicationStatus ?? ""}|${channel ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
@@ -79,14 +94,33 @@ export default async function PromotionsPage({
       )}
 
       <PromotionsCard
-        promotions={promotions}
-        total={total}
-        pageSize={PROMOTIONS_PAGE_SIZE}
         summary={summary}
-        totalStores={totalStores}
-        categoryNameById={categoryNameById}
-        segmentNameById={segmentNameById}
-      />
+        exportButton={
+          <Suspense fallback={<Skeleton className="h-9 w-24 rounded-[10px]" />}>
+            <PromotionsExportSection promotionsPromise={promotionsPromise} />
+          </Suspense>
+        }
+      >
+        <Suspense
+          key={dataKey}
+          fallback={
+            <TableSkeleton
+              columns={PROMOTIONS_TABLE_COLUMNS}
+              leadingAvatar={false}
+              headerClassName="bg-neutral-50"
+              paginationRow
+            />
+          }
+        >
+          <PromotionsTableSection
+            promotionsPromise={promotionsPromise}
+            pageSize={PROMOTIONS_PAGE_SIZE}
+            totalStores={totalStores}
+            categoryNameById={categoryNameById}
+            segmentNameById={segmentNameById}
+          />
+        </Suspense>
+      </PromotionsCard>
     </AppPage>
   )
 }

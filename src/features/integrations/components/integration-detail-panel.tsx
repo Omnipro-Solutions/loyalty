@@ -21,9 +21,9 @@ export function IntegrationDetailPanel({
   return (
     <div className="flex w-[292px] shrink-0 flex-col rounded-2xl bg-background pb-[18px] shadow-form-section">
       <div className="flex items-center gap-2.5 py-4 pr-3.5 pl-4">
-        <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] border border-muted bg-background">
-          {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 24px, no vale next/image. */}
-          <img src={integration.logo} alt="" className="size-6" />
+        <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] border border-muted bg-background">
+          {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 28px, no vale next/image. */}
+          <img src={integration.logo} alt="" className="size-7" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">
@@ -37,21 +37,27 @@ export function IntegrationDetailPanel({
           type="button"
           onClick={onClose}
           aria-label="Cerrar"
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground transition-colors hover:text-foreground"
         >
           <X className="size-3.5" />
         </button>
       </div>
 
       <div className="flex flex-col gap-1 px-3 pb-3">
-        <div className="flex items-center gap-2.5 rounded-lg p-2 opacity-45">
+        <div
+          className="flex items-center gap-2.5 rounded-lg p-2 opacity-45"
+          title="Disponible en una próxima fase"
+        >
           <Settings2 className="size-[15px] text-secondary-foreground" />
           <span className="flex-1 text-xs font-medium text-secondary-foreground">
             Configurar
           </span>
           <Info className="size-3.5 text-secondary-foreground" />
         </div>
-        <div className="flex items-center gap-2.5 rounded-lg p-2 opacity-45">
+        <div
+          className="flex items-center gap-2.5 rounded-lg p-2 opacity-45"
+          title="Disponible en una próxima fase"
+        >
           <FileText className="size-[15px] text-secondary-foreground" />
           <span className="flex-1 text-xs font-medium text-secondary-foreground">
             Ver documentación

@@ -1,39 +1,54 @@
 import {
+  Award,
   Baby,
   Calendar,
+  CalendarClock,
   Clock,
   Hash,
   Heart,
+  History,
   IdCard,
   Languages,
-  type LucideIcon,
   Mail,
   Map,
   Megaphone,
   PawPrint,
-  Pencil,
   Phone,
+  Receipt,
+  Repeat,
   ShieldCheck,
   ShoppingBag,
+  Smartphone,
   Store,
+  Tag,
+  type LucideIcon,
   User,
 } from "lucide-react"
-import Link from "next/link"
 import type { ReactNode } from "react"
 
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { formatLongDate, formatMonthYear, formatPercent } from "@/lib/format"
+import {
+  formatCOP,
+  formatDate,
+  formatLongDate,
+  formatMonthYear,
+  formatPercent,
+  formatRelativeTime,
+} from "@/lib/format"
 
 import { CopyButton } from "./copy-button"
+import { HeroMoreAttributes } from "./hero-more-attributes"
 import { avatarPalette } from "../lib/avatar-palette"
 import {
   ACQUISITION_CHANNEL_LABEL,
   DOCUMENT_TYPE_SHORT_LABEL,
-  MARITAL_STATUS_LABEL,
+  GENDER_LABEL,
   LANGUAGE_LABEL,
+  MARITAL_STATUS_LABEL,
   MEMBER_STATUS_LABEL,
+  SALES_CHANNEL_LABEL,
   TIER_LABEL,
 } from "../lib/labels"
 import {
@@ -43,6 +58,8 @@ import {
   formatTenure,
   getQualificationPeriod,
   type Member,
+  type PurchaseBehavior,
+  type RfmProfile,
 } from "../lib/queries"
 
 function dash(value: string | null | undefined): string {
@@ -88,16 +105,23 @@ function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
-type MemberHeroProps = { member: Member }
+type MemberHeroProps = {
+  member: Member
+  behavior: PurchaseBehavior
+  rfm: RfmProfile | null
+}
 
 /**
  * Figma "Hero" (1142:4595) pixel-perfect: identidad + acciones, luego
- * IDENTIDAD / RELACIÓN CON LA MARCA / PERFIL COMERCIAL. Las dos últimas
- * secciones reemplazan el contenido de ejemplo del Figma (Segmento RFM,
- * frecuencia de compra, etc. — necesitan pedidos) por los atributos reales
- * del socio que sí existen en `members`.
+ * IDENTIDAD / RELACIÓN CON LA MARCA / PERFIL COMERCIAL, y la barra
+ * "Ver N atributos más" del pie. "Enviar promoción"/"Aplicar regla" son los
+ * 2 botones visibles del Figma — sin acción real (mismo criterio que el
+ * "…" sin `onClick` de `PromotionsTable`): este proyecto no tiene motor de
+ * mensajería ni de aplicación manual de reglas. Sin opción de editar cliente
+ * en esta pantalla (decisión de producto) — `/clientes/[id]/editar` queda
+ * sin entrada desde aquí.
  */
-export function MemberHero({ member }: MemberHeroProps) {
+export function MemberHero({ member, behavior, rfm }: MemberHeroProps) {
   const fullName = `${member.nombre} ${member.apellido}`.trim()
   const palette = avatarPalette(member.id)
   const completeness = calculateCompleteness(member)
@@ -107,6 +131,84 @@ export function MemberHero({ member }: MemberHeroProps) {
   const document = member.numero_documento
     ? `${member.tipo_documento ? `${DOCUMENT_TYPE_SHORT_LABEL[member.tipo_documento as keyof typeof DOCUMENT_TYPE_SHORT_LABEL]} ` : ""}${member.numero_documento}`
     : "—"
+
+  const moreAttributeFields = (
+    <>
+      <HeroField
+        icon={Heart}
+        label="Estado civil"
+        value={
+          member.estado_civil
+            ? MARITAL_STATUS_LABEL[
+                member.estado_civil as keyof typeof MARITAL_STATUS_LABEL
+              ]
+            : "—"
+        }
+      />
+      <HeroField
+        icon={User}
+        label="Género"
+        value={
+          member.genero
+            ? GENDER_LABEL[member.genero as keyof typeof GENDER_LABEL]
+            : "—"
+        }
+      />
+      <HeroField
+        icon={ShoppingBag}
+        label="Preferencia de compra"
+        value={dash(member.preferencia_compra)}
+      />
+      <HeroField icon={Baby} label="Hijos" value={yesNo(member.tiene_hijos)} />
+      <HeroField
+        icon={PawPrint}
+        label="Mascotas"
+        value={yesNo(member.tiene_mascotas)}
+      />
+      <HeroField
+        icon={Mail}
+        label="Consentimiento de marketing"
+        value={member.consentimiento_marketing ? "Otorgado" : "No otorgado"}
+      />
+      <HeroField
+        icon={ShieldCheck}
+        label="Estado de cuenta"
+        value={
+          MEMBER_STATUS_LABEL[
+            member.estado_cuenta as keyof typeof MEMBER_STATUS_LABEL
+          ]
+        }
+      />
+      <HeroField
+        icon={Store}
+        label="Tienda habitual"
+        value={behavior.usualStore ? behavior.usualStore.name : "—"}
+      />
+      <HeroField
+        icon={Receipt}
+        label="Ticket promedio"
+        value={
+          behavior.totalOrders > 0 ? formatCOP(behavior.averageTicket) : "—"
+        }
+      />
+      <HeroField
+        icon={History}
+        label="Última compra"
+        value={
+          behavior.lastPurchase
+            ? formatRelativeTime(behavior.lastPurchase)
+            : "—"
+        }
+      />
+      <HeroField
+        icon={CalendarClock}
+        label="Próxima estimada"
+        value={
+          behavior.nextEstimated ? formatDate(behavior.nextEstimated) : "—"
+        }
+      />
+    </>
+  )
 
   return (
     <div className="flex size-full flex-col justify-between gap-3.5 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
@@ -139,13 +241,10 @@ export function MemberHero({ member }: MemberHeroProps) {
               Calificación cierra 31 dic · {daysRemaining} días
             </p>
           </div>
-          <Button
-            nativeButton={false}
-            render={<Link href={`/clientes/${member.id}/editar`} />}
-          >
-            <Pencil className="size-3.5" />
-            Editar cliente
+          <Button variant="outline" size="sm">
+            Enviar promoción
           </Button>
+          <Button size="sm">Aplicar regla</Button>
         </div>
       </div>
 
@@ -210,19 +309,20 @@ export function MemberHero({ member }: MemberHeroProps) {
             value={formatTenure(member.fecha_alta)}
           />
           <HeroField
-            icon={Megaphone}
-            label="Canal de adquisición"
+            icon={Smartphone}
+            label="Canal preferido"
             value={
-              member.canal_adquisicion
-                ? ACQUISITION_CHANNEL_LABEL[
-                    member.canal_adquisicion as keyof typeof ACQUISITION_CHANNEL_LABEL
-                  ]
+              behavior.preferredChannel
+                ? (SALES_CHANNEL_LABEL[
+                    behavior.preferredChannel
+                      .channel as keyof typeof SALES_CHANNEL_LABEL
+                  ] ?? behavior.preferredChannel.channel)
                 : "—"
             }
           />
           <HeroField
             icon={Languages}
-            label="Language"
+            label="Idioma"
             value={LANGUAGE_LABEL[member.idioma as keyof typeof LANGUAGE_LABEL]}
           />
           <HeroField
@@ -237,47 +337,58 @@ export function MemberHero({ member }: MemberHeroProps) {
         <SectionTitle>Perfil comercial</SectionTitle>
         <div className="grid w-full grid-cols-2 gap-x-3 gap-y-3.5 md:grid-cols-3">
           <HeroField
-            icon={Heart}
-            label="Estado civil"
+            icon={Award}
+            label="Segmento RFM"
+            value={rfm ? `${rfm.label} · ${rfm.scores.join("-")}` : "—"}
+          />
+          <HeroField
+            icon={Tag}
+            label="Etiquetas"
             value={
-              member.estado_civil
-                ? MARITAL_STATUS_LABEL[
-                    member.estado_civil as keyof typeof MARITAL_STATUS_LABEL
+              behavior.topCategoryNames.length > 0
+                ? behavior.topCategoryNames.join(" · ")
+                : "—"
+            }
+          />
+          <HeroField
+            icon={Megaphone}
+            label="Origen de captación"
+            value={
+              member.canal_adquisicion
+                ? ACQUISITION_CHANNEL_LABEL[
+                    member.canal_adquisicion as keyof typeof ACQUISITION_CHANNEL_LABEL
                   ]
                 : "—"
             }
           />
           <HeroField
-            icon={ShoppingBag}
-            label="Preferencia de compra"
-            value={dash(member.preferencia_compra)}
-          />
-          <HeroField
-            icon={Baby}
-            label="Hijos"
-            value={yesNo(member.tiene_hijos)}
-          />
-          <HeroField
-            icon={PawPrint}
-            label="Mascotas"
-            value={yesNo(member.tiene_mascotas)}
-          />
-          <HeroField
-            icon={Mail}
-            label="Consentimiento de marketing"
-            value={member.consentimiento_marketing ? "Otorgado" : "No otorgado"}
-          />
-          <HeroField
-            icon={ShieldCheck}
-            label="Estado de cuenta"
+            icon={Repeat}
+            label="Frecuencia"
             value={
-              MEMBER_STATUS_LABEL[
-                member.estado_cuenta as keyof typeof MEMBER_STATUS_LABEL
-              ]
+              behavior.monthlyFrequency
+                ? `${behavior.monthlyFrequency.toFixed(1)} compras / mes`
+                : "—"
             }
           />
+          <HeroField
+            icon={Tag}
+            label="Categoría dominante"
+            value={
+              behavior.dominantCategory
+                ? `${behavior.dominantCategory.name} · ${formatPercent(behavior.dominantCategory.percentage)} del gasto`
+                : "—"
+            }
+          />
+          {/* No hay tabla de campañas/journeys por socio en este proyecto
+              (`workflow_runs`/`coupons` no se usan) — la única pista real
+              (`points_ledger.origen` en texto libre) solo existe para 2 de
+              13 socios y solo matchea por similitud de string, no por FK.
+              Encadenar eso sería inventar una relación; se deja honesto. */}
+          <HeroField icon={CalendarClock} label="Última campaña" value="—" />
         </div>
       </div>
+
+      <HeroMoreAttributes count={11} fields={moreAttributeFields} />
     </div>
   )
 }

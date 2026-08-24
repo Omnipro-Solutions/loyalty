@@ -88,7 +88,10 @@ export function MemberRedemptionsCard({ entries }: MemberRedemptionsCardProps) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-3 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
+    <div
+      id="log-de-redenciones"
+      className="flex h-full w-full scroll-mt-6 flex-col gap-3 rounded-[20px] bg-background px-5 py-4 shadow-form-section"
+    >
       <div className="flex items-center gap-2.5">
         <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-avatar-amber-bg">
           <History className="size-3.5 text-avatar-amber-fg" />

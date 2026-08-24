@@ -35,7 +35,7 @@ export const SOURCES: IntegrationGroup[] = [
         subtitle: "Adobe Journey Optimizer",
         logo: `${LOGOS}/adobe.svg`,
         description:
-          "Envía eventos de lealtad y transacciones de Etteer a Adobe Journey Optimizer para disparar journeys cross-canal desde un mismo perfil de cliente.",
+          "Envía eventos de lealtad y transacciones de Loyalty System a Adobe Journey Optimizer para disparar journeys cross-canal desde un mismo perfil de cliente.",
         data: "Perfiles unificados · Eventos de transacción · Saldo de puntos · Preferencias de canal",
         method:
           "API REST + Adobe Experience Platform · Autenticación OAuth 2.0",
@@ -49,7 +49,7 @@ export const SOURCES: IntegrationGroup[] = [
         subtitle: "Customer Journey Orchestration",
         logo: `${LOGOS}/cjo.svg`,
         description:
-          "Sincroniza perfiles, eventos de compra y estado de lealtad entre Etteer y CJO para orquestar recorridos en tiempo real desde un solo lugar.",
+          "Sincroniza perfiles, eventos de compra y estado de lealtad entre Loyalty System y CJO para orquestar recorridos en tiempo real desde un solo lugar.",
         data: "Perfiles unificados · Eventos de transacción · Saldo de puntos · Estado de nivel · Consentimientos",
         method: "API REST + streaming de eventos · Autenticación OAuth 2.0",
         tags: ["Bidireccional", "Tiempo real", "Certificado"],
@@ -130,7 +130,7 @@ export const SOURCES: IntegrationGroup[] = [
         data: "Pedidos · Clientes · Catálogo de productos",
         method: "Webhooks + Shopify Admin API · Autenticación OAuth 2.0",
         tags: ["Bidireccional", "Tiempo real", "Certificado"],
-        note: "Requiere instalar la app de Etteer desde la Shopify App Store.",
+        note: "Requiere instalar la app de Loyalty System desde la Shopify App Store.",
       },
       {
         id: "vtex",
@@ -157,7 +157,7 @@ export const SOURCES: IntegrationGroup[] = [
         method:
           "REST API + módulo de extensión · Autenticación por token de integración",
         tags: ["Bidireccional", "Cada hora"],
-        note: "Requiere instalar el módulo de extensión de Etteer en la tienda.",
+        note: "Requiere instalar el módulo de extensión de Loyalty System en la tienda.",
       },
       {
         id: "square",
@@ -236,7 +236,7 @@ export const DESTINATIONS: IntegrationGroup[] = [
         subtitle: "Customer Journey Orchestration",
         logo: `${LOGOS}/cjo.svg`,
         description:
-          "Publica audiencias y disparadores de journeys de Etteer en CJO para orquestar el siguiente mejor paso de cada cliente.",
+          "Publica audiencias y disparadores de journeys de Loyalty System en CJO para orquestar el siguiente mejor paso de cada cliente.",
         data: "Audiencias · Disparadores de journey · Estado de nivel",
         method: "API REST + streaming de eventos · Autenticación OAuth 2.0",
         tags: ["Bidireccional", "Tiempo real", "Certificado"],

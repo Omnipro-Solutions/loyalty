@@ -16,6 +16,27 @@ export async function listTiers(): Promise<TierSummary[]> {
   }))
 }
 
+export type AudienceSummary = {
+  id: string
+  name: string
+  estimatedCount: number | null
+}
+
+/** Audiencias reales de 11 · Audiencias (`segments`), para el selector "Audiencia" del bloque "Entra al segmento" — duplicado de `features/audiences` por aislamiento entre features (ver CLAUDE.md §2). */
+export async function listAudiences(): Promise<AudienceSummary[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("segments")
+    .select("id, nombre, conteo_estimado")
+    .order("nombre")
+  if (error) throw error
+  return (data ?? []).map((s) => ({
+    id: s.id,
+    name: s.nombre,
+    estimatedCount: s.conteo_estimado,
+  }))
+}
+
 export type WorkflowListItem = {
   id: string
   nombre: string

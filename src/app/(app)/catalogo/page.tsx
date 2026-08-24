@@ -1,7 +1,17 @@
+import { Suspense } from "react"
+
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
+import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { InventoryHealthCard } from "@/features/catalog/components/inventory-health-card"
 import { ProductsCard } from "@/features/catalog/components/products-card"
+import {
+  CountPillSkeleton,
+  ExportButtonSkeleton,
+  ProductsCount,
+  ProductsExportSlot,
+} from "@/features/catalog/components/products-count"
+import { ProductsTableSection } from "@/features/catalog/components/products-table-section"
 import {
   CATALOG_PAGE_SIZE,
   getCatalogKpis,
@@ -19,6 +29,9 @@ function allValues(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : [value]
 }
 
+/** Igual al `size` de cada `ColumnDef` en `products-table.tsx` (columna 0 es un checkbox, no un avatar). */
+const PRODUCTS_TABLE_COLUMNS = [44, 260, 96, 130, 100, 140, 90, 100, 56]
+
 /** Figma "03.1 · Catálogo · listado" (626:198). */
 export default async function CatalogPage({
   searchParams,
@@ -29,11 +42,20 @@ export default async function CatalogPage({
   const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
   const page = Number(firstValue(params.page) ?? "1")
 
-  const [categories, { products, total }, kpis] = await Promise.all([
+  // No dependen de los filtros — se quedan esperadas aquí.
+  const [categories, kpis] = await Promise.all([
     listCategories(),
-    listProducts({ search, categoryIds, status, page }),
     getCatalogKpis(),
   ])
+
+  // Sin `await`: pill, botón de exportar y tabla comparten esta promesa —
+  // una sola consulta a `listProducts`.
+  const productsPromise = listProducts({ search, categoryIds, status, page })
+
+  // `q` queda fuera de la key (ya tiene debounce, ver `/clientes`).
+  // `categoria` es multivalor — se ordena antes de unir para que reordenar
+  // el mismo conjunto no dispare un remount falso.
+  const dataKey = `${[...categoryIds].sort().join(",")}|${status ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Productos" title="Catálogo de productos">
@@ -61,12 +83,35 @@ export default async function CatalogPage({
         />
       </div>
       <ProductsCard
-        products={products}
         categories={categories}
-        total={total}
-        pageSize={CATALOG_PAGE_SIZE}
         categoryIds={categoryIds}
-      />
+        count={
+          <Suspense key={dataKey} fallback={<CountPillSkeleton />}>
+            <ProductsCount productsPromise={productsPromise} />
+          </Suspense>
+        }
+        exportSlot={
+          <Suspense fallback={<ExportButtonSkeleton />}>
+            <ProductsExportSlot productsPromise={productsPromise} />
+          </Suspense>
+        }
+      >
+        <Suspense
+          key={dataKey}
+          fallback={
+            <TableSkeleton
+              columns={PRODUCTS_TABLE_COLUMNS}
+              leadingAvatar={false}
+              paginationRow
+            />
+          }
+        >
+          <ProductsTableSection
+            productsPromise={productsPromise}
+            pageSize={CATALOG_PAGE_SIZE}
+          />
+        </Suspense>
+      </ProductsCard>
     </AppPage>
   )
 }

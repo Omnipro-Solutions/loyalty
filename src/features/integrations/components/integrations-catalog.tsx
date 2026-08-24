@@ -9,6 +9,7 @@ import { FilterSearch } from "@/components/filters/search"
 import { Button } from "@/components/ui/button"
 
 import type { IntegrationGroup } from "../lib/catalog"
+import { ACTIVE_CONNECTIONS, type ConnectionStatus } from "../lib/connections"
 import { IntegrationCard } from "./integration-card"
 import { IntegrationDetailPanel } from "./integration-detail-panel"
 import { IntegrationsRail } from "./integrations-rail"
@@ -30,7 +31,10 @@ type IntegrationsCatalogProps = {
  * Orquesta el "12.1/12.2 · Integraciones" completo (encabezado, rail de
  * categorías, grilla y panel de detalle) — sin backend detrás: es el
  * catálogo de la Fase 1, por eso "Configurar" y las acciones del
- * encabezado quedan deshabilitadas, igual que en el Figma.
+ * encabezado quedan deshabilitadas, igual que en el Figma. La tarjeta y
+ * "Mis conexiones" sí reflejan `ACTIVE_CONNECTIONS` en tiempo real (estado
+ * en vez de "Configurar", grilla filtrada) para no prometer un estado de
+ * conexión que la demo no tiene.
  */
 export function IntegrationsCatalog({
   direction,
@@ -77,9 +81,36 @@ export function IntegrationsCatalog({
       .filter((group) => group.integrations.length > 0)
   }, [groups, activeCategory, query])
 
+  const connectedStatusById = useMemo(() => {
+    const map = new Map<string, ConnectionStatus>()
+    for (const connection of ACTIVE_CONNECTIONS) {
+      if (connection.direction === direction) {
+        map.set(connection.integrationId, connection.status)
+      }
+    }
+    return map
+  }, [direction])
+  const hasConnections = connectedStatusById.size > 0
+
+  const visibleGroups = useMemo(() => {
+    if (mode === "todas") return filteredGroups
+    return filteredGroups
+      .map((group) => ({
+        ...group,
+        integrations: group.integrations.filter((integration) =>
+          connectedStatusById.has(integration.id)
+        ),
+      }))
+      .filter((group) => group.integrations.length > 0)
+  }, [filteredGroups, mode, connectedStatusById])
+  const visibleTotal = mode === "mias" ? connectedStatusById.size : total
+
   const selected =
     allIntegrations.find((integration) => integration.id === selectionId) ??
     null
+  const showDetailPanel =
+    selected !== null &&
+    (mode === "todas" || connectedStatusById.has(selected.id))
 
   return (
     <div className="flex w-full flex-1 flex-col gap-4">
@@ -99,7 +130,7 @@ export function IntegrationsCatalog({
           >
             {secondaryActionLabel}
           </Button>
-          <Button size="sm" disabled>
+          <Button size="sm" disabled title="Disponible en una próxima fase">
             {primaryActionLabel}
           </Button>
         </div>
@@ -115,7 +146,7 @@ export function IntegrationsCatalog({
           onCategoryChange={setActiveCategory}
         />
 
-        {mode === "mias" ? (
+        {mode === "mias" && !hasConnections ? (
           <div className="flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
             <EmptyState
               icon={PlugZap}
@@ -133,18 +164,20 @@ export function IntegrationsCatalog({
                 className="w-full rounded-[10px]"
               />
               <p className="shrink-0 text-[11px] font-medium whitespace-nowrap text-muted-foreground">
-                {total} {totalLabel}
+                {visibleTotal} {mode === "mias" ? "conectados" : totalLabel}
               </p>
             </div>
 
-            {filteredGroups.length === 0 ? (
+            {visibleGroups.length === 0 ? (
               <div className="flex flex-1 items-center justify-center rounded-2xl bg-background shadow-form-section">
                 <p className="py-16 text-sm text-muted-foreground">
-                  Ninguna integración coincide con la búsqueda.
+                  {mode === "mias"
+                    ? "Ninguna conexión coincide con la búsqueda."
+                    : "Ninguna integración coincide con la búsqueda."}
                 </p>
               </div>
             ) : (
-              filteredGroups.map((group) => (
+              visibleGroups.map((group) => (
                 <div
                   key={group.category}
                   className="flex w-full flex-col gap-2.5"
@@ -155,9 +188,13 @@ export function IntegrationsCatalog({
                     </p>
                     <p className="text-[10.5px] whitespace-nowrap text-muted-foreground">
                       {group.integrations.length}{" "}
-                      {group.integrations.length === 1
-                        ? "disponible"
-                        : "disponibles"}
+                      {mode === "mias"
+                        ? group.integrations.length === 1
+                          ? "conectada"
+                          : "conectadas"
+                        : group.integrations.length === 1
+                          ? "disponible"
+                          : "disponibles"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -167,6 +204,7 @@ export function IntegrationsCatalog({
                         integration={integration}
                         selected={integration.id === selectionId}
                         onSelect={() => setSelectionId(integration.id)}
+                        status={connectedStatusById.get(integration.id)}
                       />
                     ))}
                   </div>
@@ -176,7 +214,7 @@ export function IntegrationsCatalog({
           </div>
         )}
 
-        {mode === "todas" && selected && (
+        {showDetailPanel && selected && (
           <IntegrationDetailPanel
             integration={selected}
             category={

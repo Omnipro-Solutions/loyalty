@@ -64,7 +64,13 @@ export function AccountsCard() {
                 </p>
               )}
             </div>
-            <Button variant="outline" size="sm" disabled className="shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="shrink-0"
+              title="Disponible en una próxima fase"
+            >
               {account.status === "requiere_atencion"
                 ? "Renovar acceso"
                 : "Gestionar"}

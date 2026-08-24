@@ -18,6 +18,8 @@ const COMPONENTS = {
   switch: "624:441",
   tabs: "1088:4445",
   "catalog-product-history": "1218:4026",
+  "dashboard-ai-hero": "1027:4267",
+  "loading-state": "665:1597",
 } as const
 
 test.describe("pixel-perfect", () => {
@@ -88,6 +90,36 @@ test.describe("pixel-perfect · 01 Acceso", () => {
  *   analítica que no existen todavía — eso es de "Simular"/"Publicar",
  *   fuera del alcance de este fork), solo la tabla con columnas que sí
  *   tienen datos reales (journey, estado, nodos, autor, actualizado).
+ */
+
+/**
+ * Mapa componente → nodeId para "02 · Dashboard" (`/resumen`, `/analitica`,
+ * secciones 639:1585 y 1025:4123). Misma razón que 08/09/11 abajo para no
+ * automatizarlas: `proxy.ts` exige sesión real. Construidas directamente
+ * desde `get_design_context` (no desde un bucle de captura/comparación
+ * manual) — pendiente verificación visual 1:1 contra Figma con un usuario
+ * real:
+ * - `/resumen` (nodeId `1025:4123`, "02.3 · Dashboard · IA") — pantalla que
+ *   se muestra al iniciar sesión. Hero con prompt de IA que abre
+ *   `AiChatPanel` (nodeId `1057:37`, estado "02.4") con una conversación de
+ *   ejemplo fija — no hay modelo real detrás todavía, a propósito. Los KPIs
+ *   y la tendencia SÍ salen de datos reales (`pedidos`/`members`/
+ *   `promociones`, ver `features/dashboard/lib/queries.ts`); tabla de
+ *   riesgo, insight del motor y top de campañas siguen de ejemplo
+ *   (`features/dashboard/lib/mock-data.ts`) — no hay lógica real de
+ *   "riesgo" ni un modelo de IA detrás. Sin filtros propios.
+ * - `/analitica` (nodeId `639:1585`, "02.1 · Dashboard · denso") — segundo
+ *   dashboard, alcanzable desde el menú ("Principal › Analítica"). La barra
+ *   de filtros es real de punta a punta: rango rápido, rango de fechas
+ *   (picker), comparación y segmento actualizan la URL y 5 de los 6 KPIs
+ *   densos + las 3 gráficas (canjes por bucket, atribución por canal,
+ *   tendencia) vuelven a consultar `pedidos`/`points_ledger`/`members`
+ *   filtrados por esa ventana (ver `features/dashboard/lib/queries.ts`). Sin
+ *   control de "Tienda" — `points_ledger` no tiene `tienda_id`. El KPI "ROI
+ *   promocional", la meta trimestral (`KpiFeaturedWidget`) y las alertas del
+ *   motor (`EngineAlertsWidget`) siguen de ejemplo y no responden a los
+ *   filtros — no hay tracking de descuento, meta configurable ni motor de
+ *   alertas real en el schema. "Exportar reporte" sigue sin implementar.
  */
 
 /**

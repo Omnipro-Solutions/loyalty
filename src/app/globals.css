@@ -52,6 +52,7 @@
   --color-brand: var(--brand);
   --color-brand-subtle: var(--brand-subtle);
   --color-brand-accent: var(--brand-accent);
+  --color-shell-background: var(--shell-background);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-success-bg: var(--success-bg);
@@ -64,6 +65,8 @@
   --color-data-amber: var(--data-amber);
   --color-data-navy: var(--data-navy);
   --color-data-violet: var(--data-violet);
+  --color-data-gold: var(--data-gold);
+  --color-promo-subtle: var(--promo-subtle);
   --color-avatar-coral-bg: var(--avatar-coral-bg);
   --color-avatar-coral-fg: var(--avatar-coral-fg);
   --color-avatar-indigo-bg: var(--avatar-indigo-bg);
@@ -88,6 +91,7 @@
   --shadow-action-bar: var(--shadow-action-bar);
   --shadow-segmented-active: var(--shadow-segmented-active);
   --shadow-auth-card: var(--shadow-auth-card);
+  --shadow-kpi-featured: var(--shadow-kpi-featured);
 }
 
 /*
@@ -135,6 +139,8 @@
   --shadow-segmented-active: 0px 1px 3px 0px rgba(48, 41, 140, 0.1);
   /* Card "01.x · Acceso" (634:792 y análogos) */
   --shadow-auth-card: 0px 8px 24px -6px rgba(13, 18, 23, 0.08);
+  /* Widget / KPI · destacado (731:412) */
+  --shadow-kpi-featured: 0px 10px 24px -6px rgba(79, 69, 229, 0.28);
 
   /* Brand scale */
   --brand: #4f46e5;
@@ -158,6 +164,26 @@
   --primary-700: #322a9e;
   --primary-800: #2b2489;
   --primary-900: #1b1760;
+  /* Degradado fijo de la Card de lealtad (Figma 1171:6): mismos tonos que
+     primary-900/700/primary en claro, pero como hex fijos — esos tokens se
+     INVIERTEN en `.dark` (ahí primary-900 pasa a ser el tinte claro para
+     texto/ícono sobre fondo oscuro, no el extremo oscuro de un degradado),
+     así que reusarlos aquí deslavaba la card en oscuro. Solo se declara en
+     :root a propósito — sin entrada en `.dark` — para que no cambie con el
+     tema, igual que el logo de Microsoft no cambia de colores. */
+  --gradient-loyalty-card: linear-gradient(
+    to bottom right,
+    #1b1760,
+    #322a9e,
+    #4f46e5
+  );
+  /* Fondo de lienzo de AppShell/AppPage (Figma 624:616): en claro reutiliza
+     brand-subtle (misma lavanda #eef0fe que separa el lienzo de las cards
+     blancas). En oscuro NO puede reutilizar brand-subtle — ahí ese token es
+     el acento saturado de hover/selección (#2b2489), y usarlo como lienzo
+     completo empapa toda la pantalla de índigo en vez de leer como fondo
+     neutro. Ver `.dark` más abajo. */
+  --shell-background: var(--brand-subtle);
 
   /* Semantic */
   --success: #16a34a;
@@ -174,11 +200,29 @@
   --data-amber: #f59e0b;
   --data-navy: #1c2b3f;
   --data-violet: #9b63f1;
+  /* Widget / KPI · destacado, barra de progreso (731:419) — único uso, no es
+     parte de la paleta categórica de charts. */
+  --data-gold: #f2e14c;
   --chart-1: var(--data-indigo);
   --chart-2: var(--data-coral);
   --chart-3: var(--data-teal);
   --chart-4: var(--data-amber);
   --chart-5: var(--data-navy);
+  /* KPI · Canjes de promoción / KPI · ROI promocional (646:1517, 646:1524) */
+  --promo-subtle: #fdf3f7;
+  /* Dashboard IA (1027:4267) — degradado primary-100 → background. Chat IA
+     (1094:4678, 1094:4708) — degradado primary-800 → brand-violet. Ambos se
+     recalculan solos en `.dark` porque referencian tokens ya redefinidos ahí. */
+  --gradient-ai-hero: linear-gradient(
+    13.4deg,
+    var(--primary-100) 21.4%,
+    var(--background) 92.9%
+  );
+  --gradient-ai-avatar: linear-gradient(
+    127deg,
+    var(--primary-800) 0%,
+    var(--brand-violet) 71.4%
+  );
 
   /* Avatars */
   --avatar-coral-bg: #fde7ef;
@@ -238,6 +282,7 @@
   --shadow-action-bar: 0px -2px 14px -4px rgba(0, 0, 0, 0.45);
   --shadow-segmented-active: 0px 1px 3px 0px rgba(0, 0, 0, 0.4);
   --shadow-auth-card: 0px 8px 24px -6px rgba(0, 0, 0, 0.4);
+  --shadow-kpi-featured: 0px 10px 24px -6px rgba(0, 0, 0, 0.45);
 
   --brand: #6e68e8;
   --brand-subtle: #2b2489;
@@ -256,6 +301,17 @@
   --primary-700: #9a9bf0;
   --primary-800: #c7c9f9;
   --primary-900: #e0e1fc;
+  /* Lienzo neutro, no el acento índigo de brand-subtle — ver comentario en
+     :root. NO puede ser var(--background): casi todo componente "card" del
+     código (KpiWidget, ProductsCard, MemberHero...) se pinta con
+     `bg-background` + `shadow-form-section` (nunca `bg-card`, que no se usa
+     fuera de shadcn/ui) — es el idioma de elevación real de la app. Si el
+     lienzo comparte ese mismo valor, la card y el fondo quedan idénticos y
+     solo la sombra (rgba negro) intenta separarlos, invisible sobre un
+     fondo ya oscuro. Un tono más oscuro que --background mantiene la
+     jerarquía "lienzo < superficie" que en claro dan brand-subtle (#eef0fe)
+     vs. background (#ffffff). */
+  --shell-background: #0b0a09;
 
   --success: #4ade80;
   --success-foreground: #052e13;
@@ -270,11 +326,13 @@
   --data-amber: #f59e0b;
   --data-navy: #94a3b8;
   --data-violet: #b088f7;
+  --data-gold: #f2e14c;
   --chart-1: var(--data-indigo);
   --chart-2: var(--data-coral);
   --chart-3: var(--data-teal);
   --chart-4: var(--data-amber);
   --chart-5: var(--data-navy);
+  --promo-subtle: #3a1f2a;
 
   --avatar-coral-bg: #4a1027;
   --avatar-coral-fg: #fbc7db;

@@ -13,19 +13,11 @@ import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { findIntegration } from "../lib/catalog"
-import { ACTIVE_CONNECTIONS, type ConnectionStatus } from "../lib/connections"
-
-const STATUS_LABEL: Record<ConnectionStatus, string> = {
-  activa: "Activa",
-  con_error: "Con error",
-  pausada: "Pausada",
-}
-
-const STATUS_DOT: Record<ConnectionStatus, string> = {
-  activa: "bg-success",
-  con_error: "bg-destructive",
-  pausada: "bg-warning",
-}
+import {
+  ACTIVE_CONNECTIONS,
+  CONNECTION_STATUS_DOT,
+  CONNECTION_STATUS_LABEL,
+} from "../lib/connections"
 
 /**
  * Sin equivalente en Figma — "12 · Integraciones" (1261:3974) no dibuja
@@ -89,9 +81,9 @@ export function ActiveConnectionsCard() {
                 >
                   <TableCell>
                     <div className="flex items-center gap-2.5">
-                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-muted bg-background">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 16px, no vale next/image. */}
-                        <img src={integration.logo} alt="" className="size-4" />
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-muted bg-background">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 20px, no vale next/image. */}
+                        <img src={integration.logo} alt="" className="size-5" />
                       </div>
                       <span className="font-medium text-foreground">
                         {integration.name}
@@ -108,11 +100,11 @@ export function ActiveConnectionsCard() {
                       <span
                         className={cn(
                           "size-[7px] rounded-full",
-                          STATUS_DOT[connection.status]
+                          CONNECTION_STATUS_DOT[connection.status]
                         )}
                       />
                       <span className="text-[11px] font-medium">
-                        {STATUS_LABEL[connection.status]}
+                        {CONNECTION_STATUS_LABEL[connection.status]}
                       </span>
                     </div>
                   </TableCell>
@@ -123,7 +115,12 @@ export function ActiveConnectionsCard() {
                     {connection.frequency}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" disabled>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled
+                      title="Disponible en una próxima fase"
+                    >
                       {connection.status === "pausada" ? "Reanudar" : "Pausar"}
                     </Button>
                   </TableCell>

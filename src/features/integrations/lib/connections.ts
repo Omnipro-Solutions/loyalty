@@ -10,6 +10,18 @@ export type ActiveConnection = {
   detail?: string
 }
 
+export const CONNECTION_STATUS_LABEL: Record<ConnectionStatus, string> = {
+  activa: "Activa",
+  con_error: "Con error",
+  pausada: "Pausada",
+}
+
+export const CONNECTION_STATUS_DOT: Record<ConnectionStatus, string> = {
+  activa: "bg-success",
+  con_error: "bg-destructive",
+  pausada: "bg-warning",
+}
+
 /** Sin equivalente en Figma — "12 · Integraciones" (1261:3974) no dibuja esta pestaña. */
 export const ACTIVE_CONNECTIONS: ActiveConnection[] = [
   {

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
+import type { PromotionType } from "@/types/domain"
 
 export type TierOption = Pick<
   Database["public"]["Tables"]["tiers"]["Row"],
@@ -393,6 +394,8 @@ export type PurchaseBehavior = {
   averageTicket: number
   ticketTrend: number | null
   dominantCategory: { name: string; percentage: number } | null
+  /** Top 2 categorías por gasto, sin "Sin categoría" — real, mismo cálculo que `dominantCategory` (05.3g hero "Etiquetas"). */
+  topCategoryNames: string[]
   lastPurchase: string | null
   nextEstimated: string | null
 }
@@ -413,6 +416,7 @@ export async function getPurchaseBehavior(
       averageTicket: 0,
       ticketTrend: null,
       dominantCategory: null,
+      topCategoryNames: [],
       lastPurchase: null,
       nextEstimated: null,
     }
@@ -477,6 +481,7 @@ export async function getPurchaseBehavior(
   if (itemsError) throw itemsError
 
   let dominantCategory: PurchaseBehavior["dominantCategory"] = null
+  let topCategoryNames: string[] = []
   const productIds = [...new Set((items ?? []).map((i) => i.producto_id))]
   if (productIds.length > 0) {
     const { data: categories, error: categoriesError } = await supabase
@@ -501,15 +506,20 @@ export async function getPurchaseBehavior(
         (spendByCategory.get(category) ?? 0) + item.subtotal
       )
     }
-    const topCategory = [...spendByCategory.entries()].sort(
+    const rankedCategories = [...spendByCategory.entries()].sort(
       (a, b) => b[1] - a[1]
-    )[0]
+    )
+    const topCategory = rankedCategories[0]
     if (topCategory && totalAmount > 0) {
       dominantCategory = {
         name: topCategory[0],
         percentage: topCategory[1] / totalAmount,
       }
     }
+    topCategoryNames = rankedCategories
+      .map(([name]) => name)
+      .filter((name) => name !== "Sin categoría")
+      .slice(0, 2)
   }
 
   const lastPurchase = orders[orders.length - 1].creado_en
@@ -535,6 +545,7 @@ export async function getPurchaseBehavior(
     averageTicket,
     ticketTrend,
     dominantCategory,
+    topCategoryNames,
     lastPurchase,
     nextEstimated,
   }
@@ -632,4 +643,331 @@ export async function getCommercialValue(
     churnRiskDelta,
     monthlySeries,
   }
+}
+
+export type RfmProfile = {
+  label: string
+  /** [recencia, frecuencia, monetario], 1-5 — "Campeón · 5-5-4" (05.3g hero). */
+  scores: [number, number, number]
+}
+
+const RFM_LABEL_BANDS: { min: number; label: string }[] = [
+  { min: 4.5, label: "Campeón" },
+  { min: 3.5, label: "Cliente leal" },
+  { min: 2.5, label: "En desarrollo" },
+  { min: 1.5, label: "En riesgo" },
+  { min: 0, label: "Hibernando" },
+]
+
+function rfmRank(value: number, allValues: number[]): number {
+  const sorted = [...allValues].sort((a, b) => a - b)
+  const position = sorted.filter((v) => v <= value).length
+  return Math.max(1, Math.min(5, Math.ceil((position / sorted.length) * 5)))
+}
+
+/**
+ * "Segmento RFM" (05.3g hero "PERFIL COMERCIAL") real: recency/frequency/
+ * monetary de `pedidos` completados de TODA la organización, puntuados 1-5
+ * por ranking relativo entre los socios que sí tienen pedidos — no hay un
+ * modelo de scoring importado en este proyecto, mismo espíritu que
+ * "Riesgo de fuga"/"Valor previsto 12m" en `getCommercialValue`. Con pocos
+ * socios con historial, el "quintil" es aproximado, no estadísticamente
+ * puro — pero es un ranking real, no un número inventado por socio.
+ * `null` si el socio no tiene ningún pedido completado.
+ */
+export async function getRfmProfile(
+  memberId: string
+): Promise<RfmProfile | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("member_id, total, creado_en")
+    .eq("estado", "completado")
+  if (error) throw error
+
+  const byMember = new Map<
+    string,
+    { count: number; total: number; lastOrderMs: number }
+  >()
+  for (const row of data ?? []) {
+    const current = byMember.get(row.member_id) ?? {
+      count: 0,
+      total: 0,
+      lastOrderMs: 0,
+    }
+    current.count += 1
+    current.total += row.total
+    current.lastOrderMs = Math.max(
+      current.lastOrderMs,
+      new Date(row.creado_en).getTime()
+    )
+    byMember.set(row.member_id, current)
+  }
+
+  const target = byMember.get(memberId)
+  if (!target) return null
+
+  const all = [...byMember.values()]
+  const recencyScore = rfmRank(
+    target.lastOrderMs,
+    all.map((m) => m.lastOrderMs)
+  )
+  const frequencyScore = rfmRank(
+    target.count,
+    all.map((m) => m.count)
+  )
+  const monetaryScore = rfmRank(
+    target.total,
+    all.map((m) => m.total)
+  )
+
+  const average = (recencyScore + frequencyScore + monetaryScore) / 3
+  const label =
+    RFM_LABEL_BANDS.find((band) => average >= band.min)?.label ?? "Hibernando"
+
+  return { label, scores: [recencyScore, frequencyScore, monetaryScore] }
+}
+
+export type MemberAudienceRow = {
+  id: string
+  nombre: string
+  codigo: string
+  conteoEstimado: number | null
+  estado: string
+  sincronizadoConAjo: boolean
+  actualizadaEn: string
+}
+
+/**
+ * "Card · Audiencias activas" (1125:4791) real: `segment_members` es una
+ * muestra curada de quién cumple hoy la condición de cada segmento (no el
+ * universo completo — ver comentario de la tabla en la migración), pero la
+ * fila en sí es verídica: si el socio aparece aquí, SÍ está en esa
+ * audiencia. No hay columna "origen" en `segments` (Figma la muestra como
+ * "POS Centro"/"Modelo IA"/etc., sin respaldo real) — se usa
+ * `sincronizado_con_ajo` como proxy real de origen (AJO vs. manual).
+ */
+export async function listMemberAudiences(
+  memberId: string
+): Promise<MemberAudienceRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("segment_members")
+    .select(
+      "segment:segments(id, nombre, codigo, conteo_estimado, estado, sincronizado_con_ajo, ultima_sincronizacion_en, actualizado_en)"
+    )
+    .eq("member_id", memberId)
+  if (error) throw error
+
+  return (data ?? [])
+    .map((row) => row.segment)
+    .filter((s): s is NonNullable<typeof s> => s !== null)
+    .map((s) => ({
+      id: s.id,
+      nombre: s.nombre,
+      codigo: s.codigo,
+      conteoEstimado: s.conteo_estimado,
+      estado: s.estado,
+      sincronizadoConAjo: s.sincronizado_con_ajo,
+      actualizadaEn: s.ultima_sincronizacion_en ?? s.actualizado_en,
+    }))
+    .sort((a, b) => b.actualizadaEn.localeCompare(a.actualizadaEn))
+}
+
+/** Ids de categoría raíz que el socio ha comprado — resuelve un nivel de `categorias.parent_id`, para el match honesto de condiciones de categoría en promociones (sin inventar el vínculo si no hay compra real en esa categoría). */
+async function getPurchasedRootCategoryIds(
+  memberOrders: MemberOrder[]
+): Promise<Set<string>> {
+  const completedIds = memberOrders
+    .filter((o) => o.estado === "completado")
+    .map((o) => o.id)
+  if (completedIds.length === 0) return new Set()
+
+  const supabase = await createClient()
+  const { data: items, error: itemsError } = await supabase
+    .from("pedido_items")
+    .select("producto_id")
+    .in("pedido_id", completedIds)
+  if (itemsError) throw itemsError
+
+  const productIds = [...new Set((items ?? []).map((i) => i.producto_id))]
+  if (productIds.length === 0) return new Set()
+
+  const { data: categories, error: categoriesError } = await supabase
+    .from("producto_categorias")
+    .select("categorias(id, parent_id)")
+    .eq("es_principal", true)
+    .in("producto_id", productIds)
+  if (categoriesError) throw categoriesError
+
+  const roots = new Set<string>()
+  for (const row of categories ?? []) {
+    const categoria = row.categorias as {
+      id: string
+      parent_id: string | null
+    } | null
+    if (categoria) roots.add(categoria.parent_id ?? categoria.id)
+  }
+  return roots
+}
+
+type PromotionCondition =
+  | { campo: "categoria"; valor: string[] }
+  | { campo: "tienda"; valor: string }
+  | { campo: "segmento"; valor: string }
+  | { campo: "monto_carrito"; valor: number }
+
+export type MemberPromotionCondition =
+  | { campo: "segmento" }
+  | { campo: "categoria"; matchesPurchaseHistory: boolean }
+  | { campo: "monto_carrito"; threshold: number }
+  | { campo: "tienda"; valor: string }
+  | null
+
+export type MemberPromotionRow = {
+  id: string
+  nombre: string
+  codigo: string
+  tipo: PromotionType
+  canalAplicacion: string
+  status: "activa" | "programada"
+  vigenteDesde: string
+  vigenteHasta: string | null
+  presupuestoAsignado: number
+  presupuestoConsumido: number
+  condition: MemberPromotionCondition
+}
+
+/** Duplicado de `features/promotions/lib/status.ts` por aislamiento entre features (CLAUDE.md §2) — mismo cálculo, solo los dos estados que le importan a esta tarjeta. */
+function promotionValidity(promotion: {
+  estado_publicacion: string
+  vigente_desde: string
+  vigente_hasta: string | null
+}): "borrador" | "programada" | "activa" | "finalizada" {
+  const dateOnly = (value: string | Date) => {
+    const d = typeof value === "string" ? new Date(value) : value
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  }
+  if (promotion.estado_publicacion === "borrador") return "borrador"
+  const today = dateOnly(new Date())
+  const start = dateOnly(promotion.vigente_desde)
+  const end = promotion.vigente_hasta ? dateOnly(promotion.vigente_hasta) : null
+  if (start > today) return "programada"
+  if (end !== null && end < today) return "finalizada"
+  return "activa"
+}
+
+/**
+ * "Card · Promociones activas" (1125:4724) real, con matices documentados
+ * en el plan de esta tarea:
+ * - Filtra por vigencia real (`promotionValidity`, duplicado de
+ *   `promotions/lib/status.ts`) a activa/programada.
+ * - La condición `segmento` SÍ excluye de verdad si el socio no está en
+ *   `segment_members` para ese segmento. El seed tiene un bug conocido
+ *   (`PROMO-VIP-15` guarda el string `'VIP'` en vez de un id de segmento,
+ *   igual que el tipo `Condition` de `features/promotions` esperaría) — se
+ *   resuelve por id y, si falla, por `nombre` conteniendo el valor, mismo
+ *   criterio defensivo que ya usan `scope.ts`/`promotion-summary-card.tsx`
+ *   en el propio módulo de Promociones.
+ * - Las condiciones de categoría/carrito NO excluyen — son informativas
+ *   (el propio Figma trata "Envío gratis" como "Disponible" con el ticket
+ *   medio por debajo del umbral). Se anota si el historial real de compra
+ *   coincide, sin inventar el dato si el socio no tiene pedidos.
+ * - `usos_por_cliente` no se verifica: no existe tabla de canjes por socio.
+ */
+export async function listActivePromotionsForMember(
+  memberId: string,
+  memberOrders: MemberOrder[]
+): Promise<MemberPromotionRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("promociones").select("*")
+  if (error) throw error
+
+  const candidates = (data ?? [])
+    .map((row) => ({
+      row,
+      condiciones: (row.condiciones ?? []) as PromotionCondition[],
+      status: promotionValidity(row),
+    }))
+    .filter(
+      (c): c is typeof c & { status: "activa" | "programada" } =>
+        c.status === "activa" || c.status === "programada"
+    )
+  if (candidates.length === 0) return []
+
+  const hasSegmentCondition = candidates.some((c) =>
+    c.condiciones.some((cond) => cond.campo === "segmento")
+  )
+  let memberSegmentIds = new Set<string>()
+  let memberSegmentNames: string[] = []
+  if (hasSegmentCondition) {
+    const { data: segRows, error: segError } = await supabase
+      .from("segment_members")
+      .select("segment_id, segment:segments(nombre)")
+      .eq("member_id", memberId)
+    if (segError) throw segError
+    memberSegmentIds = new Set((segRows ?? []).map((r) => r.segment_id))
+    memberSegmentNames = (segRows ?? [])
+      .map((r) => r.segment?.nombre)
+      .filter((n): n is string => !!n)
+  }
+
+  const memberMatchesSegment = (segmentValue: string): boolean => {
+    if (memberSegmentIds.has(segmentValue)) return true
+    const needle = segmentValue.toLowerCase()
+    return memberSegmentNames.some((name) =>
+      name.toLowerCase().includes(needle)
+    )
+  }
+
+  const hasCategoryCondition = candidates.some((c) =>
+    c.condiciones.some((cond) => cond.campo === "categoria")
+  )
+  const purchasedRootCategoryIds = hasCategoryCondition
+    ? await getPurchasedRootCategoryIds(memberOrders)
+    : new Set<string>()
+
+  const rows: MemberPromotionRow[] = []
+  for (const { row, condiciones, status } of candidates) {
+    const segmentCondition = condiciones.find((c) => c.campo === "segmento")
+    if (segmentCondition && !memberMatchesSegment(segmentCondition.valor)) {
+      continue
+    }
+
+    const categoryCondition = condiciones.find((c) => c.campo === "categoria")
+    const cartCondition = condiciones.find((c) => c.campo === "monto_carrito")
+    const storeCondition = condiciones.find((c) => c.campo === "tienda")
+
+    let condition: MemberPromotionCondition = null
+    if (segmentCondition) {
+      condition = { campo: "segmento" }
+    } else if (categoryCondition) {
+      condition = {
+        campo: "categoria",
+        matchesPurchaseHistory: categoryCondition.valor.some((id) =>
+          purchasedRootCategoryIds.has(id)
+        ),
+      }
+    } else if (cartCondition) {
+      condition = { campo: "monto_carrito", threshold: cartCondition.valor }
+    } else if (storeCondition) {
+      condition = { campo: "tienda", valor: storeCondition.valor }
+    }
+
+    rows.push({
+      id: row.id,
+      nombre: row.nombre,
+      codigo: row.codigo,
+      tipo: row.tipo as PromotionType,
+      canalAplicacion: row.canal_aplicacion,
+      status,
+      vigenteDesde: row.vigente_desde,
+      vigenteHasta: row.vigente_hasta,
+      presupuestoAsignado: row.presupuesto_asignado,
+      presupuestoConsumido: row.presupuesto_consumido,
+      condition,
+    })
+  }
+
+  return rows
 }

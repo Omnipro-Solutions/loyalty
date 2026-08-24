@@ -26,6 +26,13 @@ export type FieldSpec =
       hint?: string
       required?: boolean
     }
+  | {
+      key: string
+      label: string
+      kind: "audience-select"
+      hint?: string
+      required?: boolean
+    }
   | { key: string; label: string; kind: "currency"; required?: boolean }
   | {
       key: string
@@ -53,8 +60,12 @@ const TIER_OPTIONS = [
  * event, schedule, mapping) se resuelven al control más cercano ya
  * existente (select con opciones cerradas razonables, number con sufijo,
  * o text libre para referencias a catálogos que este proyecto todavía no
- * modela — promociones/plantillas/reglas/audiencias como entidades reales
- * es trabajo de Fase 5, no de este inspector).
+ * modela — promociones/plantillas/reglas como entidades reales es trabajo
+ * de Fase 5, no de este inspector). La excepción es `audiencia_id`
+ * (`entra_segmento`): las audiencias sí existen como entidad real
+ * (`segments`, ver 11 · Audiencias), así que ese campo usa `kind:
+ * "audience-select"` — opciones cargadas desde la base, no una lista
+ * cerrada en este archivo.
  *
  * `acumular_puntos` y `condicion_multiple` tienen su propio componente
  * dedicado (no están aquí). `ramificacion_valor`/`split_ab` sí están aquí
@@ -113,9 +124,8 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
       {
         key: "audiencia_id",
         label: "Audiencia",
-        kind: "text",
+        kind: "audience-select",
         required: true,
-        placeholder: "ID o nombre de la audiencia",
       },
       {
         key: "modo",

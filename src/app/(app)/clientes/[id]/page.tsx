@@ -3,7 +3,6 @@ import { notFound } from "next/navigation"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { MemberAudiencesCard } from "@/features/members/components/member-audiences-card"
-import { MemberPurchaseBehavior } from "@/features/members/components/member-purchase-behavior"
 import { MemberConsentsCard } from "@/features/members/components/member-consents-card"
 import { MemberHero } from "@/features/members/components/member-hero"
 import { MemberCommercialKpis } from "@/features/members/components/member-commercial-kpis"
@@ -18,18 +17,25 @@ import {
   getLoyaltySummary,
   getProgramRedemptionRate,
   getCommercialValue,
+  getRfmProfile,
+  listActivePromotionsForMember,
+  listMemberAudiences,
   listMemberConsents,
   listMemberRedemptions,
 } from "@/features/members/lib/queries"
 
 /**
  * Figma "05.3g · Perfil 360 · resumen v2" (1124:4478), pixel-perfect en
- * estructura. Real donde el dato existe: identidad, tarjeta de lealtad,
- * programa de lealtad, log de redenciones, consentimientos, valor
- * comercial y comportamiento de compra (estos dos últimos vía `pedidos`/
- * `pedido_items`). Sigue en marcador temporal lo que necesita un motor de
- * audiencias o de elegibilidad de promociones, que este proyecto no tiene
- * todavía (audiencias activas, promociones activas).
+ * estructura y orden de bloques (Log de redenciones → Audiencias activas a
+ * la izquierda; Promociones activas → Consentimientos a la derecha — el
+ * propio Figma los tiene en ese orden). "Card · Comportamiento de compra"
+ * está `hidden="true"` en el Figma: sus métricas reales viven ahora en el
+ * hero (Frecuencia, Categoría dominante) y en su barra "Ver N atributos
+ * más" (tienda habitual, ticket promedio, última compra, próxima
+ * estimada), no en una tira aparte. Real donde el dato existe: identidad,
+ * tarjeta de lealtad, programa de lealtad, valor comercial, audiencias
+ * (`segment_members`) y promociones (`promociones` + elegibilidad real por
+ * segmento/categoría de compra — ver `listActivePromotionsForMember`).
  */
 export default async function MemberDetailPage({
   params,
@@ -38,19 +44,29 @@ export default async function MemberDetailPage({
   const member = await getMemberById(id)
   if (!member) notFound()
 
-  const [redemptions, summary, programRate, consents, memberOrders] =
-    await Promise.all([
-      listMemberRedemptions(id),
-      getLoyaltySummary(id, member.saldo_puntos),
-      getProgramRedemptionRate(),
-      listMemberConsents(id),
-      getMemberOrders(id),
-    ])
+  const [
+    redemptions,
+    summary,
+    programRate,
+    consents,
+    memberOrders,
+    rfm,
+    audiences,
+  ] = await Promise.all([
+    listMemberRedemptions(id),
+    getLoyaltySummary(id, member.saldo_puntos),
+    getProgramRedemptionRate(),
+    listMemberConsents(id),
+    getMemberOrders(id),
+    getRfmProfile(id),
+    listMemberAudiences(id),
+  ])
 
-  // Ambas se derivan de la misma `memberOrders` (un solo fetch a `pedidos`).
-  const [behavior, commercialValue] = await Promise.all([
+  // Las tres se derivan de la misma `memberOrders` (un solo fetch a `pedidos`).
+  const [behavior, commercialValue, promotions] = await Promise.all([
     getPurchaseBehavior(memberOrders),
     getCommercialValue(memberOrders),
+    listActivePromotionsForMember(id, memberOrders),
   ])
 
   const fullName = `${member.nombre} ${member.apellido}`.trim()
@@ -62,16 +78,16 @@ export default async function MemberDetailPage({
     >
       <BackLink href="/clientes">Volver a Clientes</BackLink>
 
-      <div className="flex items-start gap-3.5">
+      <div className="flex items-stretch gap-3.5">
         <div className="min-w-0 flex-1">
-          <MemberHero member={member} />
+          <MemberHero member={member} behavior={behavior} rfm={rfm} />
         </div>
         <div className="w-[340px] shrink-0">
           <MemberLoyaltyCard member={member} />
         </div>
       </div>
 
-      <div className="flex w-full flex-col gap-3.5 rounded-[20px] bg-muted/40 p-4">
+      <div className="flex w-full flex-col gap-3.5">
         <MemberCommercialKpis commercialValue={commercialValue} />
         <MemberLoyaltyKpis
           member={member}
@@ -80,16 +96,14 @@ export default async function MemberDetailPage({
         />
       </div>
 
-      <MemberPurchaseBehavior behavior={behavior} />
-
       <div className="flex items-start gap-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
-          <MemberAudiencesCard />
           <MemberRedemptionsCard entries={redemptions} />
+          <MemberAudiencesCard audiences={audiences} />
         </div>
         <div className="flex w-[380px] shrink-0 flex-col gap-3.5">
+          <MemberPromotionsCard promotions={promotions} behavior={behavior} />
           <MemberConsentsCard consents={consents} />
-          <MemberPromotionsCard />
         </div>
       </div>
     </AppPage>

@@ -35,7 +35,7 @@ import {
   simulateWorkflowAction,
 } from "./publish-actions"
 import { InspectorPanel } from "./inspector-panel"
-import type { TierSummary, WorkflowWithGraph } from "./queries"
+import type { AudienceSummary, TierSummary, WorkflowWithGraph } from "./queries"
 import { VersionHistoryDialog } from "./version-history-dialog"
 
 const NODE_TYPES = { builderNode: BuilderNode }
@@ -78,9 +78,11 @@ export function toFlowEdge(e: WorkflowWithGraph["edges"][number]): Edge {
 function CanvasArea({
   workflow,
   tiers,
+  audiences,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
+  audiences: AudienceSummary[]
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BuilderNodeData>>(
     workflow.nodes.map(toFlowNode)
@@ -403,6 +405,7 @@ function CanvasArea({
         <InspectorPanel
           node={selectedNode}
           tiers={tiers}
+          audiences={audiences}
           onClose={() => setSelectedId(null)}
           onDelete={deleteNode}
           onConfigChange={updateNodeConfig}
@@ -421,13 +424,15 @@ function CanvasArea({
 export function JourneyEditor({
   workflow,
   tiers,
+  audiences,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
+  audiences: AudienceSummary[]
 }) {
   return (
     <ReactFlowProvider>
-      <CanvasArea workflow={workflow} tiers={tiers} />
+      <CanvasArea workflow={workflow} tiers={tiers} audiences={audiences} />
     </ReactFlowProvider>
   )
 }

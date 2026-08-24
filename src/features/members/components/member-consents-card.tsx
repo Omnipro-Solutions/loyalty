@@ -5,6 +5,7 @@ import {
   Mail,
   MessageCircle,
   MessageSquare,
+  Minus,
   ShieldCheck,
   Sparkles,
   X,
@@ -76,13 +77,22 @@ export function MemberConsentsCard({ consents }: MemberConsentsCardProps) {
         {ORDER.map((channel) => {
           const item = byChannel.get(channel)
           const Icon = CHANNEL_ICON[channel]
-          const granted = item?.otorgado ?? false
+          // Tres estados reales, no dos: "sin registro" (nunca se le pidió
+          // consentimiento por este canal) es distinto de "revocado" (lo
+          // otorgó y luego lo retiró) — tratarlos igual pintaba de rojo
+          // toda la tarjeta de un socio sin ningún registro todavía.
+          const status: "otorgado" | "revocado" | "sin_registro" =
+            item === undefined
+              ? "sin_registro"
+              : item.otorgado
+                ? "otorgado"
+                : "revocado"
           return (
             <div
               key={channel}
               className={cn(
                 "flex flex-col gap-px rounded-[10px] px-3 py-1.5",
-                !granted && "bg-destructive-bg"
+                status === "revocado" && "bg-destructive-bg"
               )}
             >
               <div className="flex items-center gap-2">
@@ -102,28 +112,38 @@ export function MemberConsentsCard({ consents }: MemberConsentsCardProps) {
                 <div
                   className={cn(
                     "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5",
-                    granted ? "bg-success-bg" : "bg-destructive-bg"
+                    status === "otorgado" && "bg-success-bg",
+                    status === "revocado" && "bg-destructive-bg",
+                    status === "sin_registro" && "bg-muted"
                   )}
                 >
-                  {granted ? (
+                  {status === "otorgado" && (
                     <Check className="size-3 text-success" />
-                  ) : (
+                  )}
+                  {status === "revocado" && (
                     <X className="size-3 text-destructive" />
+                  )}
+                  {status === "sin_registro" && (
+                    <Minus className="size-3 text-muted-foreground" />
                   )}
                   <p
                     className={cn(
                       "text-[10px] font-medium",
-                      granted ? "text-success" : "text-destructive"
+                      status === "otorgado" && "text-success",
+                      status === "revocado" && "text-destructive",
+                      status === "sin_registro" && "text-muted-foreground"
                     )}
                   >
-                    {granted ? "Otorgado" : "Revocado"}
+                    {status === "otorgado" && "Otorgado"}
+                    {status === "revocado" && "Revocado"}
+                    {status === "sin_registro" && "Sin registro"}
                   </p>
                 </div>
               </div>
               <p className="truncate pl-[27px] text-[9px] text-muted-foreground">
                 {item
-                  ? `${item.fuente ? CONSENT_SOURCE_LABEL[item.fuente as keyof typeof CONSENT_SOURCE_LABEL] : "Sin fuente"} · desde ${formatDate(item.actualizado_en)} · ${granted ? "indefinida" : "sin vigencia"}`
-                  : "Sin registro"}
+                  ? `${item.fuente ? CONSENT_SOURCE_LABEL[item.fuente as keyof typeof CONSENT_SOURCE_LABEL] : "Sin fuente"} · desde ${formatDate(item.actualizado_en)} · ${status === "otorgado" ? "indefinida" : "sin vigencia"}`
+                  : "—"}
               </p>
             </div>
           )

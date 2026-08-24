@@ -216,7 +216,11 @@ export function MemberForm({ member, stores, tiers }: MemberFormProps) {
                 }
               >
                 <SelectTrigger id="documentType">
-                  <SelectValue placeholder="Selecciona" />
+                  <SelectValue placeholder="Selecciona">
+                    {(v: MemberValues["documentType"]) =>
+                      v ? DOCUMENT_TYPE_LABEL[v] : v
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {DOCUMENT_TYPES.map((t) => (
@@ -243,7 +247,9 @@ export function MemberForm({ member, stores, tiers }: MemberFormProps) {
                 }
               >
                 <SelectTrigger id="gender">
-                  <SelectValue placeholder="Selecciona" />
+                  <SelectValue placeholder="Selecciona">
+                    {(v: MemberValues["gender"]) => (v ? GENDER_LABEL[v] : v)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {GENDERS.map((g) => (
@@ -276,7 +282,11 @@ export function MemberForm({ member, stores, tiers }: MemberFormProps) {
                 }
               >
                 <SelectTrigger id="acquisitionChannel">
-                  <SelectValue placeholder="Selecciona" />
+                  <SelectValue placeholder="Selecciona">
+                    {(v: MemberValues["acquisitionChannel"]) =>
+                      v ? ACQUISITION_CHANNEL_LABEL[v] : v
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {ACQUISITION_CHANNELS.map((c) => (
@@ -297,7 +307,9 @@ export function MemberForm({ member, stores, tiers }: MemberFormProps) {
                 }
               >
                 <SelectTrigger id="enrollmentStoreId">
-                  <SelectValue placeholder="Selecciona" />
+                  <SelectValue placeholder="Selecciona">
+                    {(v: string) => stores.find((t) => t.id === v)?.nombre ?? v}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {stores.map((t) => (
@@ -314,7 +326,16 @@ export function MemberForm({ member, stores, tiers }: MemberFormProps) {
                 onValueChange={(v) => setValue("tierId", v ?? undefined)}
               >
                 <SelectTrigger id="tierId">
-                  <SelectValue placeholder="Selecciona" />
+                  <SelectValue placeholder="Selecciona">
+                    {(v: string) => {
+                      const tier = tiers.find((t) => t.id === v)
+                      if (!tier) return v
+                      return (
+                        TIER_LABEL[tier.nombre as keyof typeof TIER_LABEL] ??
+                        tier.nombre
+                      )
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {tiers.map((t) => (
@@ -388,7 +409,11 @@ export function MemberForm({ member, stores, tiers }: MemberFormProps) {
                 }
               >
                 <SelectTrigger id="maritalStatus">
-                  <SelectValue placeholder="Selecciona" />
+                  <SelectValue placeholder="Selecciona">
+                    {(v: MemberValues["maritalStatus"]) =>
+                      v ? MARITAL_STATUS_LABEL[v] : v
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {MARITAL_STATUSES.map((e) => (

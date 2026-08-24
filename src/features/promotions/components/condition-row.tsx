@@ -112,7 +112,12 @@ export function ConditionRow({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Elige una ciudad" />
+              <SelectValue placeholder="Elige una ciudad">
+                {(v: string) => {
+                  const city = cities.find((c) => c.city === v)
+                  return city ? `${city.city} (${city.totalStores})` : v
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {cities.map((c) => (
@@ -131,7 +136,15 @@ export function ConditionRow({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Elige una audiencia" />
+              <SelectValue placeholder="Elige una audiencia">
+                {(v: string) => {
+                  const segment = segments.find((s) => s.id === v)
+                  if (!segment) return v
+                  return segment.estimatedCount !== null
+                    ? `${segment.name} (${formatNumber(segment.estimatedCount)})`
+                    : segment.name
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {segments.map((s) => (

@@ -12,7 +12,7 @@ const EVENTS_PROCESSED_TODAY = 48231
 
 /**
  * Sin equivalente en Figma — "12 · Integraciones" (1261:3974) no dibuja
- * esta pestaña. Resume el flujo orígenes → Etteer → destinos a partir de
+ * esta pestaña. Resume el flujo orígenes → Loyalty System → destinos a partir de
  * `ACTIVE_CONNECTIONS`.
  */
 export function SystemViewCard() {
@@ -59,7 +59,9 @@ export function SystemViewCard() {
           <div className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Workflow className="size-5" />
           </div>
-          <p className="text-[13px] font-semibold text-foreground">Etteer</p>
+          <p className="text-[13px] font-semibold text-foreground">
+            Loyalty System
+          </p>
           <p className="text-[11px] text-muted-foreground">Motor de lealtad</p>
         </div>
 
@@ -96,8 +98,8 @@ function FlowColumn({
             key={connection.integrationId}
             className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 16px, no vale next/image. */}
-            <img src={integration.logo} alt="" className="size-4 shrink-0" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 20px, no vale next/image. */}
+            <img src={integration.logo} alt="" className="size-5 shrink-0" />
             <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">
               {integration.name}
             </span>

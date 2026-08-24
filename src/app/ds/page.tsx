@@ -49,11 +49,22 @@ import { Chip } from "@/components/filters/chip"
 import { FilterSearch } from "@/components/filters/search"
 import { Segmented } from "@/components/filters/segmented"
 
+import { ChartCardSkeleton } from "@/components/feedback/chart-card-skeleton"
+import { DetailCardSkeleton } from "@/components/feedback/detail-card-skeleton"
 import { EmptyState } from "@/components/feedback/empty-state"
+import { FormSkeleton } from "@/components/feedback/form-skeleton"
+import { HeroSkeleton } from "@/components/feedback/hero-skeleton"
+import { KpiRowSkeleton } from "@/components/feedback/kpi-row-skeleton"
+import { ListCardSkeleton } from "@/components/feedback/list-card-skeleton"
 import { LoadingState } from "@/components/feedback/loading-state"
+import { Skeleton } from "@/components/feedback/skeleton"
+import { TableSkeleton } from "@/components/feedback/table-skeleton"
 
 import { ProductHistoryCard } from "@/features/catalog/components/product-history-card"
 import type { ProductEvent } from "@/features/catalog/lib/queries"
+import { AiCopilotHero } from "@/features/dashboard/components/ai-copilot-hero"
+import { JourneyEditorSkeleton } from "@/features/builder/canvas/journey-editor-skeleton"
+import { MemberHeroSkeleton } from "@/features/members/components/member-hero-skeleton"
 
 type DemoRow = { nombre: string; email: string }
 
@@ -483,10 +494,86 @@ export default function DesignSystemPage() {
       </section>
 
       <section
+        data-ds="skeleton"
+        className="flex items-center gap-3 bg-white p-6"
+      >
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-6 w-16" />
+        <Skeleton className="size-9 rounded-full" />
+      </section>
+
+      <section data-ds="table-skeleton" className="w-[600px] bg-white p-6">
+        <TableSkeleton
+          columns={[null, 140, 110, 110, 120, 100]}
+          rows={5}
+          paginationRow
+        />
+      </section>
+
+      <section data-ds="list-card-skeleton" className="w-[900px] bg-muted p-6">
+        <ListCardSkeleton columns={[null, 140, 110, 110, 120, 100]} />
+      </section>
+
+      <section
+        data-ds="kpi-row-skeleton"
+        className="flex flex-col gap-4 bg-muted p-6"
+      >
+        <KpiRowSkeleton variant="widget" count={4} />
+        <KpiRowSkeleton variant="card" count={4} />
+        <KpiRowSkeleton variant="member" count={4} />
+        <KpiRowSkeleton variant="dense" count={4} />
+      </section>
+
+      <section data-ds="chart-card-skeleton" className="w-[600px] bg-muted p-6">
+        <ChartCardSkeleton />
+      </section>
+
+      <section
+        data-ds="hero-skeleton"
+        className="flex flex-col gap-4 bg-muted p-6"
+      >
+        <HeroSkeleton leadingShape="circle" leadingSize={56} />
+        <HeroSkeleton
+          leadingShape="square"
+          leadingSize={62}
+          trailingWidth={300}
+        />
+      </section>
+
+      <section
+        data-ds="detail-card-skeleton"
+        className="w-[380px] bg-muted p-6"
+      >
+        <DetailCardSkeleton />
+      </section>
+
+      <section data-ds="form-skeleton" className="w-[720px] bg-muted p-6">
+        <FormSkeleton sections={2} />
+      </section>
+
+      <section
+        data-ds="member-hero-skeleton"
+        className="w-[1116px] bg-muted p-6"
+      >
+        <MemberHeroSkeleton />
+      </section>
+
+      <section
+        data-ds="journey-editor-skeleton"
+        className="h-[600px] w-[1200px] bg-muted p-6"
+      >
+        <JourneyEditorSkeleton />
+      </section>
+
+      <section
         data-ds="catalog-product-history"
         className="w-[1116px] bg-muted p-6"
       >
         <ProductHistoryCard events={PRODUCT_HISTORY_MOCK} />
+      </section>
+
+      <section data-ds="dashboard-ai-hero" className="w-[1132px] bg-muted p-6">
+        <AiCopilotHero name="Elena" />
       </section>
     </div>
   )

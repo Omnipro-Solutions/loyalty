@@ -36,6 +36,7 @@ App única de Next.js (sin monorepo).
 | Formularios     | react-hook-form + @hookform/resolvers                           | 7.x · 5.x                      |
 | Server Actions  | next-safe-action                                                | 8.x                            |
 | Canvas builder  | @xyflow/react                                                   | 12.x (Fase 4)                  |
+| Gráficas        | recharts (dashboards 02.1/02.3)                                 | 3.x                            |
 | Lint            | ESLint · eslint-plugin-boundaries                               | 9.x · 7.x                      |
 | Formato         | Prettier · prettier-plugin-tailwindcss                          | 3.9.x · 0.8.x                  |
 | Git hooks       | husky · lint-staged · commitlint                                | 9.x · 17.x · 21.x              |

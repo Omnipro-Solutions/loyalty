@@ -6,11 +6,10 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
-import { CellActions } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
@@ -228,11 +227,11 @@ export function AudienceMembersTable({ members }: AudienceMembersTableProps) {
         }),
         helper.display({
           id: "actions",
-          size: 80,
+          size: 56,
           header: () => null,
           cell: () => (
-            <div onClick={(e) => e.stopPropagation()}>
-              <CellActions />
+            <div className="flex justify-end">
+              <ChevronRight className="size-4 text-muted-foreground" />
             </div>
           ),
         }),

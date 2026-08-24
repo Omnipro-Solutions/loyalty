@@ -1,6 +1,8 @@
-import { Bell, HelpCircle, Search } from "lucide-react"
+import { HelpCircle, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { NotificationsMenu } from "@/components/layout/notifications-menu"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { cn } from "@/lib/utils"
 
 type AppTopbarProps = {
@@ -38,14 +40,8 @@ export function AppTopbar({ breadcrumb, title, className }: AppTopbarProps) {
         />
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon-lg"
-        title="Notificaciones"
-        className="rounded-full bg-background shadow-topbar-control"
-      >
-        <Bell className="size-4" />
-      </Button>
+      <ThemeToggle />
+      <NotificationsMenu />
       <Button
         variant="ghost"
         size="icon-lg"

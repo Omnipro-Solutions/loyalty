@@ -1,30 +1,30 @@
+import type { ReactNode } from "react"
+
 import { formatCOP, formatNumber } from "@/lib/format"
 
-import { ExportPromotionsButton } from "./export-promotions-button"
 import { PromotionsFiltersBar } from "./promotions-filters-bar"
-import { PromotionsPagination } from "./promotions-pagination"
-import { PromotionsTable } from "./promotions-table"
-import type { Promotion, PromotionsSummary } from "../lib/queries"
+import type { PromotionsSummary } from "../lib/queries"
 
 type PromotionsCardProps = {
-  promotions: Promotion[]
-  total: number
-  pageSize: number
   summary: PromotionsSummary
-  totalStores: number
-  categoryNameById: Map<string, string>
-  segmentNameById: Map<string, string>
+  /** `ExportPromotionsButton` necesita las promociones filtradas — vive en su propio `<Suspense>` sin key (no hace falta remontarlo, solo esperar). */
+  exportButton: ReactNode
+  /** Tabla + paginación, dentro de un `<Suspense>` con key. */
+  children: ReactNode
 }
 
-/** Figma "Table" de 06.1 (706:2518): título + conteo + resumen, filtros, tabla, paginación. */
+/**
+ * Figma "Table" de 06.1 (706:2518): título + conteo + resumen, filtros,
+ * tabla, paginación. Shell del card: `summary` es un resumen agregado
+ * (`getPromotionsSummary()`) independiente de los filtros de búsqueda, así
+ * que el pill y la línea de resumen no necesitan `<Suspense>`. La barra de
+ * filtros vive fuera de cualquier boundary con key a propósito — remontarla
+ * borraría el texto del buscador y el foco.
+ */
 export function PromotionsCard({
-  promotions,
-  total,
-  pageSize,
   summary,
-  totalStores,
-  categoryNameById,
-  segmentNameById,
+  exportButton,
+  children,
 }: PromotionsCardProps) {
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
@@ -45,15 +45,9 @@ export function PromotionsCard({
           </p>
         </div>
         <PromotionsFiltersBar />
-        <ExportPromotionsButton promotions={promotions} />
+        {exportButton}
       </div>
-      <PromotionsTable
-        promotions={promotions}
-        totalStores={totalStores}
-        categoryNameById={categoryNameById}
-        segmentNameById={segmentNameById}
-      />
-      <PromotionsPagination total={total} pageSize={pageSize} />
+      {children}
     </div>
   )
 }

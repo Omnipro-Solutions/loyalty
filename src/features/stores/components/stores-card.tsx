@@ -1,29 +1,32 @@
 import { Plus } from "lucide-react"
 import Link from "next/link"
+import type { ReactNode } from "react"
 
 import { formatNumber } from "@/lib/format"
 
-import { ExportStoresButton } from "./export-stores-button"
 import { StoresFiltersBar } from "./stores-filters-bar"
-import { StoresPagination } from "./stores-pagination"
-import { StoresTable } from "./stores-table"
-import type { Store, StoresSummary } from "../lib/queries"
+import type { StoresSummary } from "../lib/queries"
 
 type StoresCardProps = {
-  stores: Store[]
   cities: string[]
-  total: number
-  pageSize: number
   summary: StoresSummary
+  /** `ExportStoresButton` necesita el array resuelto — va detrás de un `<Suspense>`. */
+  exportSlot: ReactNode
+  /** Tabla + paginación — va dentro de un `<Suspense>` con key. */
+  children: ReactNode
 }
 
-/** Figma "Table" (707:2518): título + conteo + resumen arriba, filtros, tabla, paginación. */
+/**
+ * Figma "Table" (707:2518): título + conteo + resumen arriba, filtros,
+ * tabla, paginación. Shell del card — `summary` no depende de los filtros
+ * (`getStoresSummary()` es una consulta aparte), así que el pill y el
+ * resumen se quedan síncronos, sin `<Suspense>`.
+ */
 export function StoresCard({
-  stores,
   cities,
-  total,
-  pageSize,
   summary,
+  exportSlot,
+  children,
 }: StoresCardProps) {
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
@@ -45,7 +48,7 @@ export function StoresCard({
           </p>
         </div>
         <StoresFiltersBar cities={cities} />
-        <ExportStoresButton stores={stores} />
+        {exportSlot}
         <Link
           href="/tiendas/nueva"
           className="flex items-center gap-[7px] rounded-[10px] bg-primary py-[9px] pr-3.5 pl-3 text-xs font-medium text-primary-foreground"
@@ -54,8 +57,7 @@ export function StoresCard({
           Nueva tienda
         </Link>
       </div>
-      <StoresTable stores={stores} />
-      <StoresPagination total={total} pageSize={pageSize} />
+      {children}
     </div>
   )
 }

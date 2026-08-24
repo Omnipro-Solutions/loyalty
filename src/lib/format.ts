@@ -131,6 +131,19 @@ export function formatEventDate(value: string | Date): string {
   return `${day} ${month} ${target.getFullYear()} · ${time}`
 }
 
+/** "22 ago 2026" (05.3g "Audiencias activas"/"Promociones activas") — corto, sin los "de" que `formatDate` inserta en este runtime con mes abreviado. */
+export function formatShortDate(value: string | Date): string {
+  const target = typeof value === "string" ? new Date(value) : value
+  const day = String(target.getDate()).padStart(2, "0")
+  const month = SHORT_MONTHS[target.getMonth()]
+  return `${day} ${month} ${target.getFullYear()}`
+}
+
+/** "09:40" (05.3g "Audiencias activas" — hora de la última sincronización). */
+export function formatTime(value: string | Date): string {
+  return shortTime.format(typeof value === "string" ? new Date(value) : value)
+}
+
 const relative = new Intl.RelativeTimeFormat("es-CO", { numeric: "auto" })
 
 /** "guardado hace 2 min" (Loyalty Builder editor bar, 08.1). */

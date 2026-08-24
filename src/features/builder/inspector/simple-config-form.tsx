@@ -36,10 +36,13 @@ import type { FieldSpec } from "./field-specs"
 export function SimpleConfigForm({
   specs,
   config,
+  audiences = [],
   onChange,
 }: {
   specs: FieldSpec[]
   config: Record<string, unknown>
+  /** Opciones para campos `kind: "audience-select"` (audiencias reales, ver `entra_segmento`). */
+  audiences?: { value: string; label: string }[]
   onChange: (config: Record<string, unknown>) => void
 }) {
   function set(key: string, value: unknown) {
@@ -104,6 +107,12 @@ export function SimpleConfigForm({
         }
 
         const currentValue = config[spec.key]
+        const selectOptions =
+          spec.kind === "select"
+            ? spec.options
+            : spec.kind === "audience-select"
+              ? audiences
+              : null
 
         return (
           <Field
@@ -140,7 +149,7 @@ export function SimpleConfigForm({
                 }
                 onValueChange={(value) => set(spec.key, value)}
               />
-            ) : spec.kind === "select" ? (
+            ) : spec.kind === "select" || spec.kind === "audience-select" ? (
               <Select
                 value={
                   typeof currentValue === "string" ? currentValue : undefined
@@ -148,10 +157,14 @@ export function SimpleConfigForm({
                 onValueChange={(value) => set(spec.key, value)}
               >
                 <SelectTrigger id={`cfg-${spec.key}`} className="w-full">
-                  <SelectValue placeholder="Selecciona una opción" />
+                  <SelectValue placeholder="Selecciona una opción">
+                    {(v: string) =>
+                      selectOptions?.find((opt) => opt.value === v)?.label ?? v
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {spec.options.map((opt) => (
+                  {(selectOptions ?? []).map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
