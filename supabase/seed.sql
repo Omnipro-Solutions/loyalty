@@ -241,7 +241,7 @@ select
     when 'Cuidado bucal' then '/catalogo/cuidado-bucal.jpg'
     when 'Primeros auxilios' then '/catalogo/primeros-auxilios.jpg'
   end,
-  p.precio, p.puntos, p.estado
+  round(p.precio / 4000.0, 2), p.puntos, p.estado
 from (
   values
     ('FAR-70241', 'PRD-004821', '7702057012345', 'Acetaminofén 500 mg', 'Caja x 24 tabletas', 'Genfar', 'Droguerías Cóndor S.A.S.', 'Medicamento OTC', 'Analgésicos', 6900, 12, 'activo'),
@@ -344,7 +344,7 @@ insert into producto_precios (
 )
 select
   (select id from prod where prod.sku = pp.sku),
-  pp.nombre_lista, pp.canal, pp.precio, false, now() - interval '30 days'
+  pp.nombre_lista, pp.canal, round(pp.precio / 4000.0, 2), false, now() - interval '30 days'
 from (
   values
     ('FAR-70241', 'Lista e-commerce', 'Tienda online · app', 7200),
@@ -398,43 +398,43 @@ from (
      jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
        jsonb_build_array((select id::text from categorias where nombre = 'Vitaminas' and org_id = (select id from org))))),
      'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
-     3000000, 2040000, 1284, 1.9, 'activa', current_date - 13, current_date + 6),
+     750, 510, 1284, 1.9, 'activa', current_date - 13, current_date + 6),
     ('15% Clientes VIP', 'PROMO-VIP-15', 'segmento', 10, false, 'pos_ecommerce',
      'todas',
      jsonb_build_array(jsonb_build_object('campo', 'segmento', 'valor', 'VIP')),
-     'descuento_porcentual', 15, 30000, 'subtotal_carrito', 2, 'mes',
-     5000000, 2050000, 612, 3.7, 'activa', current_date - 5, current_date + 12),
-    ('Envío gratis compras mayores a $80.000', 'PROMO-ENVIO-80', 'carrito', 5, true, 'ecommerce',
+     'descuento_porcentual', 15, 7.5, 'subtotal_carrito', 2, 'mes',
+     1250, 512.5, 612, 3.7, 'activa', current_date - 5, current_date + 12),
+    ('Envío gratis compras mayores a $20', 'PROMO-ENVIO-80', 'carrito', 5, true, 'ecommerce',
      'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 80000)),
+     jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 20)),
      'envio_gratis', 1, null::numeric, 'envio', null::smallint, null,
-     5200000, 4836000, 2108, 4.4, 'activa', current_date - 19, current_date),
+     1300, 1209, 2108, 4.4, 'activa', current_date - 19, current_date),
     ('Cupón bienvenida nuevos clientes', 'PROMO-CUPON-BDV', 'cupon', 5, false, 'pos_ecommerce',
      'todas', '[]'::jsonb,
-     'descuento_porcentual', 10, 15000, 'subtotal_carrito', 1, 'sin_limite',
-     3500000, 1890000, 1902, 5.0, 'activa', current_date - 40, null),
+     'descuento_porcentual', 10, 3.75, 'subtotal_carrito', 1, 'sin_limite',
+     875, 472.5, 1902, 5.0, 'activa', current_date - 40, null),
     ('Combo Bienestar: Vitamina C + Analgésico', 'PROMO-BUNDLE-BIENESTAR', 'bundle', 4, false, 'pos',
      'todas', '[]'::jsonb,
-     'precio_fijo_bundle', 25000, null::numeric, 'producto', null::smallint, null,
-     1200000, 0, 0, null::numeric, 'activa', current_date + 3, current_date + 16),
+     'precio_fijo_bundle', 6.25, null::numeric, 'producto', null::smallint, null,
+     300, 0, 0, null::numeric, 'activa', current_date + 3, current_date + 16),
     ('Descuento en Dermocosmética', 'PROMO-DERMO-20', 'categoria', 3, true, 'pos_ecommerce',
      'todas',
      jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
        jsonb_build_array((select id::text from categorias where nombre = 'Dermocosmética' and org_id = (select id from org))))),
      'descuento_porcentual', 20, null::numeric, 'producto', null::smallint, null,
-     1000000, 0, 0, null::numeric, 'activa', current_date + 9, current_date + 24),
+     250, 0, 0, null::numeric, 'activa', current_date + 9, current_date + 24),
     ('Descuento temporada gripal', 'PROMO-RESP-BORRADOR', 'categoria', 5, false, 'pos_ecommerce',
      'todas',
      jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
        jsonb_build_array((select id::text from categorias where nombre = 'Respiratorio' and org_id = (select id from org))))),
      'descuento_porcentual', 12, null::numeric, 'producto', null::smallint, null,
-     800000, 0, 0, null::numeric, 'borrador', current_date, current_date + 30),
+     200, 0, 0, null::numeric, 'borrador', current_date, current_date + 30),
     ('2x1 en Cuidado personal', 'PROMO-2X1-CP-BORRADOR', 'cantidad', 5, false, 'pos_ecommerce',
      'todas',
      jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
        jsonb_build_array((select id::text from categorias where nombre = 'Cuidado personal' and org_id = (select id from org))))),
      'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
-     500000, 0, 0, null::numeric, 'borrador', current_date, null)
+     125, 0, 0, null::numeric, 'borrador', current_date, null)
 ) as v (
   nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
   combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
@@ -728,7 +728,7 @@ on conflict (source_node_id, source_port, target_node_id) do nothing;
 -- aproximado de farmacia (45-45% sobre precio), variado por producto.
 with org as (select id from organizations where slug = 'omni')
 update productos p
-set costo_unitario = c.costo
+set costo_unitario = round(c.costo / 4000.0, 2)
 from (
   values
     ('FAR-70241', 3800), ('FAR-70388', 6300), ('FAR-70422', 15700),
@@ -1293,7 +1293,7 @@ where m.org_id = (select id from org) and m.email = v.email;
 -- === 1. costo_unitario de los 16 SKUs usados por pedido_items de demo ===
 with org as (select id from organizations where slug = 'omni')
 update productos p
-set costo_unitario = c.costo
+set costo_unitario = round(c.costo / 4000.0, 2)
 from (
   values
     ('FAR-70241', 3800), ('FAR-70388', 6300), ('FAR-70422', 15700),
