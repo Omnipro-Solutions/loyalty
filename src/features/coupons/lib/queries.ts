@@ -13,8 +13,49 @@ export type CouponRedemption =
   Database["public"]["Tables"]["coupon_redemption"]["Row"]
 export type CouponAssignment =
   Database["public"]["Tables"]["coupon_assignment"]["Row"]
-export type CouponSearchRow =
-  Database["public"]["Views"]["coupon_search"]["Row"]
+
+type CouponSearchViewRow = Database["public"]["Views"]["coupon_search"]["Row"]
+
+/**
+ * Postgres no propaga `not null` a través de una vista — el generador real
+ * de tipos (`supabase gen types`) marca TODAS las columnas de
+ * `coupon_search` como nulables, aunque `coupon.id/org_id/code/status/
+ * batch_id/created_at` sean `not null` en la tabla origen. Este tipo
+ * restaura esa garantía real (la vista es un `select` directo, sin joins
+ * que puedan volver nula esa parte) para no propagar `| null` por toda la
+ * UI en campos que estructuralmente nunca lo son.
+ */
+export type CouponSearchRow = {
+  id: string
+  org_id: string
+  code: string
+  status: string
+  valid_to: string | null
+  batch_id: string
+  member_id: string | null
+  created_at: string
+  member_nombre: string | null
+  member_email: string | null
+  batch_reference: string | null
+  batch_name: string | null
+}
+
+function toCouponSearchRow(row: CouponSearchViewRow): CouponSearchRow {
+  return {
+    id: row.id as string,
+    org_id: row.org_id as string,
+    code: row.code as string,
+    status: row.status as string,
+    valid_to: row.valid_to,
+    batch_id: row.batch_id as string,
+    member_id: row.member_id,
+    created_at: row.created_at as string,
+    member_nombre: row.member_nombre,
+    member_email: row.member_email,
+    batch_reference: row.batch_reference,
+    batch_name: row.batch_name,
+  }
+}
 
 export const COUPON_BATCHES_PAGE_SIZE = 10
 export const COUPONS_PAGE_SIZE = 25
@@ -104,7 +145,7 @@ export async function listCoupons(
 
   const { data, error, count } = await query
   if (error) throw error
-  return { coupons: data ?? [], total: count ?? 0 }
+  return { coupons: (data ?? []).map(toCouponSearchRow), total: count ?? 0 }
 }
 
 export async function getCouponBatchById(

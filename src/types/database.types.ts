@@ -352,7 +352,7 @@ export type Database = {
           audience_resolved_at: string | null
           audience_segment_id: string | null
           audience_size_at_issue: number | null
-          authorization_ip: string | null
+          authorization_ip: unknown
           authorized_at: string | null
           authorized_by: string | null
           cancelled_count: number
@@ -400,7 +400,7 @@ export type Database = {
           audience_resolved_at?: string | null
           audience_segment_id?: string | null
           audience_size_at_issue?: number | null
-          authorization_ip?: string | null
+          authorization_ip?: unknown
           authorized_at?: string | null
           authorized_by?: string | null
           cancelled_count?: number
@@ -448,7 +448,7 @@ export type Database = {
           audience_resolved_at?: string | null
           audience_segment_id?: string | null
           audience_size_at_issue?: number | null
-          authorization_ip?: string | null
+          authorization_ip?: unknown
           authorized_at?: string | null
           authorized_by?: string | null
           cancelled_count?: number
@@ -550,7 +550,7 @@ export type Database = {
           coupon_id: string | null
           detail: string | null
           id: string
-          ip: string | null
+          ip: unknown
           metadata: Json
           occurred_at: string
           org_id: string
@@ -567,7 +567,7 @@ export type Database = {
           coupon_id?: string | null
           detail?: string | null
           id?: string
-          ip?: string | null
+          ip?: unknown
           metadata?: Json
           occurred_at?: string
           org_id: string
@@ -584,7 +584,7 @@ export type Database = {
           coupon_id?: string | null
           detail?: string | null
           id?: string
-          ip?: string | null
+          ip?: unknown
           metadata?: Json
           occurred_at?: string
           org_id?: string
@@ -2350,23 +2350,24 @@ export type Database = {
     Views: {
       coupon_search: {
         Row: {
-          batch_id: string
+          batch_id: string | null
           batch_name: string | null
           batch_reference: string | null
-          code: string
-          created_at: string
-          id: string
+          code: string | null
+          created_at: string | null
+          id: string | null
           member_email: string | null
           member_id: string | null
           member_nombre: string | null
-          org_id: string
-          status: string
+          org_id: string | null
+          status: string | null
           valid_to: string | null
         }
         Relationships: []
       }
     }
     Functions: {
+      coupon_event_actor: { Args: never; Returns: Record<string, unknown> }
       create_system_roles_for_org: {
         Args: { target_org_id: string }
         Returns: undefined
