@@ -1,14 +1,16 @@
 import {
   Layers,
   Package,
+  Percent,
   ShoppingCart,
+  Star,
   Tag,
   TicketPercent,
   Users,
   type LucideIcon,
 } from "lucide-react"
 
-import type { PromotionType } from "@/types/domain"
+import type { PromotionMechanic, PromotionType } from "@/types/domain"
 
 export const PROMOTION_TYPE_ICON: Record<PromotionType, LucideIcon> = {
   cantidad: Layers,
@@ -29,4 +31,13 @@ export const PROMOTION_TYPE_COLOR: Record<
   carrito: { bg: "bg-avatar-coral-bg", fg: "text-avatar-coral-fg" },
   cupon: { bg: "bg-avatar-amber-bg", fg: "text-avatar-amber-fg" },
   bundle: { bg: "bg-avatar-indigo-bg", fg: "text-avatar-indigo-fg" },
+}
+
+/** Ícono del card picker de mecánica (paso 1 del wizard nuevo) — ver `MechanicPicker`. */
+export const PROMOTION_MECHANIC_ICON: Record<PromotionMechanic, LucideIcon> = {
+  descuento: Percent,
+  escalonado: Layers,
+  puntos: Star,
+  nxm: Package,
+  cupon: TicketPercent,
 }

@@ -4,6 +4,10 @@ import {
   CHANNEL_SCOPES,
   APPLY_TO_OPTIONS,
   CONDITION_COMBINATORS,
+  DISCOUNT_VALUE_TYPES,
+  ESCALONADO_BASES,
+  NXM_SCOPES,
+  POINTS_MODES,
   PROMOTION_PUBLICATION_STATUSES,
   BENEFIT_TYPES,
   PROMOTION_TYPES,
@@ -66,3 +70,46 @@ export const simulatePromotionSchema = z.object({
   channelScope: z.enum(CHANNEL_SCOPES),
   priority: z.number().int().min(1).max(10),
 })
+
+export const tierSchema = z.object({
+  desde: z.number().nonnegative(),
+  tipoDescuento: z.enum(DISCOUNT_VALUE_TYPES),
+  valor: z.number().positive(),
+})
+
+export type TierValues = z.infer<typeof tierSchema>
+
+/** Recompensa (ENTONCES) del wizard nuevo — reemplaza `benefitType`/`benefitValue` planos, ver `features/promotions/lib/mechanics.ts`. */
+export const rewardSchema = z.discriminatedUnion("mecanica", [
+  z.object({
+    mecanica: z.literal("descuento"),
+    tipoDescuento: z.enum(DISCOUNT_VALUE_TYPES),
+    valor: z.number().positive("Ingresa un valor mayor a 0"),
+    topeMaximo: z.number().positive().optional(),
+    aplicarSobre: z.enum(APPLY_TO_OPTIONS),
+  }),
+  z.object({
+    mecanica: z.literal("escalonado"),
+    base: z.enum(ESCALONADO_BASES),
+    tramos: z.array(tierSchema).min(2, "Agrega al menos 2 tramos"),
+  }),
+  z.object({
+    mecanica: z.literal("puntos"),
+    modo: z.enum(POINTS_MODES),
+    valor: z.number().positive("Ingresa un valor mayor a 0"),
+  }),
+  z.object({
+    mecanica: z.literal("nxm"),
+    llevaN: z.number().int().min(2),
+    pagaM: z.number().int().min(1),
+    aplicarA: z.enum(NXM_SCOPES),
+  }),
+  z.object({
+    mecanica: z.literal("cupon"),
+    tipoDescuento: z.enum(DISCOUNT_VALUE_TYPES),
+    valor: z.number().positive("Ingresa un valor mayor a 0"),
+    vigenciaDias: z.number().int().positive(),
+  }),
+])
+
+export type RewardValues = z.infer<typeof rewardSchema>

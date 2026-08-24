@@ -1,4 +1,4 @@
-import { formatUSD } from "@/lib/format"
+import { formatCOP } from "@/lib/format"
 import type {
   BenefitType,
   DiscountValueType,
@@ -59,7 +59,7 @@ export function defaultRewardFor(mecanica: PromotionMechanic): RewardValues {
 }
 
 function formatDiscountValue(tipo: DiscountValueType, valor: number): string {
-  return tipo === "porcentaje" ? `${valor}%` : formatUSD(valor)
+  return tipo === "porcentaje" ? `${valor}%` : formatCOP(valor)
 }
 
 /**
@@ -70,13 +70,13 @@ function formatDiscountValue(tipo: DiscountValueType, valor: number): string {
 export function rewardPreview(reward: RewardValues): string {
   switch (reward.mecanica) {
     case "descuento":
-      return `El cliente obtiene ${formatDiscountValue(reward.tipoDescuento, reward.valor)} de descuento${reward.topeMaximo ? `, hasta ${formatUSD(reward.topeMaximo)}` : ""}.`
+      return `El cliente obtiene ${formatDiscountValue(reward.tipoDescuento, reward.valor)} de descuento${reward.topeMaximo ? `, hasta ${formatCOP(reward.topeMaximo)}` : ""}.`
     case "escalonado": {
       if (reward.tramos.length === 0) return "Agrega al menos 2 tramos."
       const esMonto = reward.base === "monto_carrito"
       return reward.tramos
         .map((t) => {
-          const umbral = esMonto ? formatUSD(t.desde) : `${t.desde} productos`
+          const umbral = esMonto ? formatCOP(t.desde) : `${t.desde} productos`
           return `Desde ${umbral}: ${formatDiscountValue(t.tipoDescuento, t.valor)}`
         })
         .join(" · ")

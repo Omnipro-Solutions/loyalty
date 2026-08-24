@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatUSD } from "@/lib/format"
+import { formatCOP } from "@/lib/format"
 import {
   BENEFIT_TYPES,
   PROMOTION_MECHANICS,
@@ -43,7 +43,7 @@ describe("rewardPreview", () => {
           { desde: 100, tipoDescuento: "porcentaje", valor: 20 },
         ],
       })
-    ).toBe(`Desde ${formatUSD(50)}: 10% · Desde ${formatUSD(100)}: 20%`)
+    ).toBe(`Desde ${formatCOP(50)}: 10% · Desde ${formatCOP(100)}: 20%`)
   })
 
   it("escalonado: sin tramos no revienta", () => {

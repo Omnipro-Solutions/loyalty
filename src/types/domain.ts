@@ -170,6 +170,36 @@ export const PROMOTION_TYPES = [
 ] as const
 export type PromotionType = (typeof PROMOTION_TYPES)[number]
 
+// Promotion mechanic (07.1 wizard, paso 1 "Mecánica") — define qué campos
+// pide el paso "Recompensa (ENTONCES)" a continuación (ver
+// `features/promotions/lib/mechanics.ts`).
+export const PROMOTION_MECHANICS = [
+  "descuento",
+  "escalonado",
+  "puntos",
+  "nxm",
+  "cupon",
+] as const
+export type PromotionMechanic = (typeof PROMOTION_MECHANICS)[number]
+
+// Tipo de valor de un descuento (mecánicas 'descuento'/'cupon' y cada tramo
+// de 'escalonado') — porcentaje vs. monto fijo en COP.
+export const DISCOUNT_VALUE_TYPES = ["porcentaje", "monto_fijo"] as const
+export type DiscountValueType = (typeof DISCOUNT_VALUE_TYPES)[number]
+
+// Base sobre la que se evalúan los tramos de la mecánica 'escalonado'.
+export const ESCALONADO_BASES = ["monto_carrito", "cantidad_productos"] as const
+export type EscalonadoBase = (typeof ESCALONADO_BASES)[number]
+
+// Alcance del producto gratis/descontado en la mecánica 'nxm'.
+export const NXM_SCOPES = ["mismo_producto", "misma_categoria"] as const
+export type NxmScope = (typeof NXM_SCOPES)[number]
+
+// Modo de la mecánica 'puntos': multiplicador sobre lo ganado vs. monto fijo
+// adicional.
+export const POINTS_MODES = ["multiplicador", "fijo"] as const
+export type PointsMode = (typeof POINTS_MODES)[number]
+
 // Field of an IF condition (07.1 "Condiciones (SI)"). All 4 now have a real
 // table — 'categoria'/'tienda' from the start, 'segmento' since 11 ·
 // Audiencias (`segments`), and 'monto_carrito' since `pedidos` exists — the
@@ -190,12 +220,16 @@ export const CONDITION_COMBINATORS = ["todas", "alguna"] as const
 export type ConditionCombinator = (typeof CONDITION_COMBINATORS)[number]
 
 // Reward benefit type (07.1 "Recompensa (ENTONCES)" → "Tipo de beneficio").
+// `'puntos'` es la columna legacy derivada de la mecánica 'puntos' (ver
+// `features/promotions/lib/mechanics.ts` `legacyBenefitFor`) — ninguno de
+// los 5 tipos originales le sirve.
 export const BENEFIT_TYPES = [
   "descuento_porcentual",
   "descuento_monto_fijo",
   "envio_gratis",
   "producto_gratis",
   "precio_fijo_bundle",
+  "puntos",
 ] as const
 export type BenefitType = (typeof BENEFIT_TYPES)[number]
 

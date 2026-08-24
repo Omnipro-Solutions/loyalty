@@ -4,6 +4,10 @@ import type {
   ConditionField,
   ConditionCombinator,
   BenefitType,
+  DiscountValueType,
+  EscalonadoBase,
+  NxmScope,
+  PointsMode,
   PromotionType,
   UsagePeriod,
 } from "@/types/domain"
@@ -51,6 +55,7 @@ export const BENEFIT_TYPE_LABEL: Record<BenefitType, string> = {
   envio_gratis: "Envío gratis",
   producto_gratis: "Producto gratis (2x1, 3x2…)",
   precio_fijo_bundle: "Precio fijo de bundle",
+  puntos: "Puntos",
 }
 
 export const APPLY_TO_LABEL: Record<ApplyTo, string> = {
@@ -64,6 +69,26 @@ export const USAGE_PERIOD_LABEL: Record<UsagePeriod, string> = {
   dia: "por día",
   semana: "por semana",
   mes: "por mes",
+}
+
+export const DISCOUNT_VALUE_TYPE_LABEL: Record<DiscountValueType, string> = {
+  porcentaje: "Porcentaje",
+  monto_fijo: "Monto fijo",
+}
+
+export const ESCALONADO_BASE_LABEL: Record<EscalonadoBase, string> = {
+  monto_carrito: "Monto del carrito",
+  cantidad_productos: "Cantidad de productos",
+}
+
+export const NXM_SCOPE_LABEL: Record<NxmScope, string> = {
+  mismo_producto: "El mismo producto",
+  misma_categoria: "Cualquiera de la misma categoría",
+}
+
+export const POINTS_MODE_LABEL: Record<PointsMode, string> = {
+  multiplicador: "Multiplicador",
+  fijo: "Puntos fijos adicionales",
 }
 
 export const PRIORITY_BAND_LABEL: Record<"alta" | "media" | "baja", string> = {
