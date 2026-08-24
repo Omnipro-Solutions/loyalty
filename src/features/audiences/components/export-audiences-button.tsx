@@ -4,7 +4,7 @@ import { Download } from "lucide-react"
 
 import { formatDateTime } from "@/lib/format"
 
-import { AJO_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
+import { AUDIENCE_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
 import type { AudienceListItem } from "../lib/queries"
 
 const COLUMNS: {
@@ -17,7 +17,7 @@ const COLUMNS: {
   { header: "Tamaño", value: (a) => String(a.size) },
   { header: "Actualizada", value: (a) => formatDateTime(a.updatedAt) },
   { header: "Estado", value: (a) => SEGMENT_STATUS_LABEL[a.status] },
-  { header: "Origen", value: () => AJO_ORIGIN.label },
+  { header: "Origen", value: () => AUDIENCE_ORIGIN.label },
 ]
 
 function csvCell(value: string): string {

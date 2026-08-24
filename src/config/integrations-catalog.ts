@@ -47,7 +47,7 @@ export const SOURCES: IntegrationGroup[] = [
         name: "CJO · Customer Journey Orchestration",
         shortName: "CJO",
         subtitle: "Customer Journey Orchestration",
-        logo: `${LOGOS}/cjo.svg`,
+        logo: `${LOGOS}/adobe.svg`,
         description:
           "Sincroniza perfiles, eventos de compra y estado de lealtad entre Loyalty System y CJO para orquestar recorridos en tiempo real desde un solo lugar.",
         data: "Perfiles unificados · Eventos de transacción · Saldo de puntos · Estado de nivel · Consentimientos",

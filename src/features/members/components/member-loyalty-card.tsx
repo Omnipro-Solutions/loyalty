@@ -1,9 +1,10 @@
-import { Gem } from "lucide-react"
+import { Award, Gem, Medal, Trophy, type LucideIcon } from "lucide-react"
 import QRCode from "qrcode"
 import type { ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { formatNumber } from "@/lib/format"
+import type { TierName } from "@/types/domain"
 
 import { MEMBER_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
 import { getQualificationPeriod, type Member } from "../lib/queries"
@@ -13,6 +14,14 @@ const STATUS_BADGE_VARIANT = {
   inactivo: "neutral",
   suspendido: "error",
 } as const
+
+/** Un ícono de `lucide-react` por nivel — jerarquía de medalla a trofeo a gema, en vez de un único ícono genérico para los 4 niveles. */
+const TIER_ICON: Record<TierName, LucideIcon> = {
+  bronce: Medal,
+  plata: Award,
+  oro: Trophy,
+  diamante: Gem,
+}
 
 function cardNumber(memberCode: string): string {
   const number = memberCode.replace(/^CLI-0*/, "")
@@ -48,6 +57,9 @@ export async function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
   const { endDate } = getQualificationPeriod()
   const validityLabel = `${String(endDate.getMonth() + 1).padStart(2, "0")}/${endDate.getFullYear()}`
   const status = member.estado_cuenta as keyof typeof STATUS_BADGE_VARIANT
+  const TierIcon = member.tier
+    ? (TIER_ICON[member.tier.nombre as keyof typeof TIER_ICON] ?? Gem)
+    : Gem
   // Tinta del QR fija en negro/blanco puro (no tokens de tema): es una zona
   // impresa real de la tarjeta — debe seguir siendo escaneable sin importar
   // claro/oscuro, igual que el panel blanco que la contiene.
@@ -84,7 +96,7 @@ export async function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
         </div>
 
         <div className="flex w-full flex-col items-center gap-1 rounded-[14px] bg-gradient-to-r from-white/20 to-white/[0.06] px-4 py-[18px]">
-          <Gem className="size-4 text-white" />
+          <TierIcon className="size-4 text-white" />
           <p className="text-sm leading-[19px] font-semibold whitespace-nowrap text-white">
             {member.tier
               ? `Nivel ${TIER_LABEL[member.tier.nombre as keyof typeof TIER_LABEL] ?? member.tier.nombre}`

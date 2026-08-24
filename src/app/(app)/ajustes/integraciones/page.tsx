@@ -1,4 +1,5 @@
 import { AppPage } from "@/components/layout/app-page"
+import { DESTINATIONS, SOURCES } from "@/config/integrations-catalog"
 import { AccountsCard } from "@/features/integrations/components/accounts-card"
 import { ActiveConnectionsCard } from "@/features/integrations/components/active-connections-card"
 import { IntegrationsCatalog } from "@/features/integrations/components/integrations-catalog"
@@ -7,17 +8,12 @@ import {
   type IntegrationsTab,
 } from "@/features/integrations/components/integrations-tabs-nav"
 import { SystemViewCard } from "@/features/integrations/components/system-view-card"
-import { DESTINATIONS, SOURCES } from "@/features/integrations/lib/catalog"
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
-/**
- * Figma "12 · Integraciones" (1261:3974): sub-vista de Ajustes, agrupada
- * junto a Equipo bajo el ítem colapsable "Ajustes" del sidebar (ver
- * `config/navigation.ts`).
- */
+/** Figma "12 · Integraciones" (1261:3974). Ítem propio del sidebar bajo "Configuración" (ver `config/navigation.ts`). */
 export default async function IntegrationsPage({
   searchParams,
 }: PageProps<"/ajustes/integraciones">) {

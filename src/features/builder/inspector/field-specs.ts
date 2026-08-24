@@ -44,10 +44,48 @@ export type FieldSpec =
   | { key: string; label: string; kind: "time-range" }
 
 const TIER_OPTIONS = [
-  { value: "bronce", label: "Bronce" },
+  { value: "bronce", label: "Base" },
   { value: "plata", label: "Plata" },
   { value: "oro", label: "Oro" },
   { value: "diamante", label: "Diamante" },
+]
+
+/**
+ * Guardarraíles compartidos por los 3 bloques de acción de mensajería
+ * (`email`, `push`, `sms_whatsapp`) — lo único que Loyalty System sigue
+ * enforceando antes de despachar al proveedor. El contenido (asunto,
+ * plantilla, mensaje) y el canal de envío ya NO se configuran aquí: ese
+ * bloque despacha a un flujo de un proveedor externo conectado (Adobe
+ * Journey Optimizer, CJO, Braze — ver `config/integration-flows.ts`), y ese
+ * proveedor es quien redacta el contenido. `SimpleConfigForm` renderiza esto
+ * dentro de `IntegrationMessageForm`
+ * (`inspector/integration-message-form.tsx`), no directo desde
+ * `InspectorPanel` — por eso los 3 tipos abajo son idénticos: lo único que
+ * los distingue ahora es qué flujos del proveedor ofrecen.
+ */
+const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
+  { key: "ventana_envio", label: "Ventana de envío", kind: "time-range" },
+  {
+    key: "verificar_consentimiento",
+    label: "Verificar consentimiento",
+    kind: "boolean",
+  },
+  {
+    key: "limite_frecuencia",
+    label: "Límite de frecuencia",
+    kind: "number",
+    min: 1,
+    suffix: "por semana",
+  },
+  {
+    key: "fallback_sin_consentimiento",
+    label: "Fallback si no hay consentimiento",
+    kind: "select",
+    options: [
+      { value: "saltar_nodo", label: "Saltar nodo" },
+      { value: "detener", label: "Detener workflow" },
+    ],
+  },
 ]
 
 /**
@@ -74,6 +112,12 @@ const TIER_OPTIONS = [
  * se repite en este spec. `canje_cupon` y `alta_socio` no tienen tarjeta
  * en el catálogo de Figma (no fue diseñado) — se dejan con la
  * configuración mínima razonable que ya existía, documentado abajo.
+ *
+ * `email`/`push`/`sms_whatsapp` también tienen componente dedicado
+ * (`IntegrationMessageForm`, ver `MESSAGE_GUARDRAIL_SPECS` arriba) por la
+ * misma razón que `acumular_puntos`/`condicion_multiple`: proveedor → flujo
+ * es una cascada dependiente que no cabe en el modelo plano de
+ * `FieldSpec[]`. Sí aparecen abajo, pero solo con sus guardarraíles.
  */
 export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
   {
@@ -420,101 +464,10 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
       },
     ],
 
-    // === Acciones (Email / Push / SMS comparten tarjeta en el Figma
-    // "Email / Push / SMS" — el "Canal" de esa tarjeta se omite aquí a
-    // propósito: en este proyecto el canal ya lo elige el usuario al
-    // arrastrar el bloque específico (Email, Push o SMS/WhatsApp) desde la
-    // paleta, así que pedirlo de nuevo dentro del formulario sería
-    // redundante. Las demás propiedades sí se comparten entre los 3.) ===
-    email: [
-      { key: "asunto", label: "Asunto", kind: "text", required: true },
-      {
-        key: "plantilla",
-        label: "Plantilla",
-        kind: "text",
-        required: true,
-        placeholder: "Ej. Reactivación VIP",
-      },
-      {
-        key: "variables",
-        label: "Variables",
-        kind: "textarea",
-        placeholder: "cliente.nombre, cupon.codigo",
-      },
-      { key: "ventana_envio", label: "Ventana de envío", kind: "time-range" },
-      {
-        key: "verificar_consentimiento",
-        label: "Verificar consentimiento",
-        kind: "boolean",
-      },
-      {
-        key: "limite_frecuencia",
-        label: "Límite de frecuencia",
-        kind: "number",
-        min: 1,
-        suffix: "por semana",
-      },
-      {
-        key: "fallback_sin_consentimiento",
-        label: "Fallback si no hay consentimiento",
-        kind: "select",
-        options: [
-          { value: "saltar_nodo", label: "Saltar nodo" },
-          { value: "detener", label: "Detener workflow" },
-        ],
-      },
-    ],
-    push: [
-      { key: "titulo", label: "Título", kind: "text", required: true },
-      {
-        key: "plantilla",
-        label: "Plantilla",
-        kind: "text",
-        required: true,
-        placeholder: "Ej. Reactivación VIP",
-      },
-      { key: "mensaje", label: "Mensaje", kind: "textarea" },
-      { key: "ventana_envio", label: "Ventana de envío", kind: "time-range" },
-      {
-        key: "verificar_consentimiento",
-        label: "Verificar consentimiento",
-        kind: "boolean",
-      },
-      {
-        key: "limite_frecuencia",
-        label: "Límite de frecuencia",
-        kind: "number",
-        min: 1,
-        suffix: "por semana",
-      },
-    ],
-    sms_whatsapp: [
-      {
-        key: "plantilla",
-        label: "Plantilla",
-        kind: "text",
-        required: true,
-        placeholder: "Ej. Reactivación VIP",
-      },
-      {
-        key: "mensaje",
-        label: "Mensaje",
-        kind: "textarea",
-        placeholder: "Máx. 160 caracteres",
-      },
-      {
-        key: "verificar_consentimiento",
-        label: "Verificar consentimiento",
-        kind: "boolean",
-      },
-      {
-        key: "limite_frecuencia",
-        label: "Límite de frecuencia",
-        kind: "number",
-        min: 1,
-        suffix: "por semana",
-      },
-    ],
+    // === Acciones ===
+    email: MESSAGE_GUARDRAIL_SPECS,
+    push: MESSAGE_GUARDRAIL_SPECS,
+    sms_whatsapp: MESSAGE_GUARDRAIL_SPECS,
     aplicar_promocion: [
       {
         key: "regla",

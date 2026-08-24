@@ -3,6 +3,11 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
+import {
+  connectedMessageProviders,
+  findFlow,
+  isMessageNodeType,
+} from "@/config/integration-flows"
 import { cn } from "@/lib/utils"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
@@ -91,6 +96,29 @@ export function outputsForNode(
   return branchesConfig ?? OUTPUT_HANDLES[tipo] ?? DEFAULT_OUTPUT
 }
 
+/**
+ * Proveedor + flujo elegidos en un bloque de mensajería (`email`/`push`/
+ * `sms_whatsapp`), para mostrarlo al pie del nodo — sin esto la integración
+ * es invisible desde el canvas y hay que abrir cada nodo para saber a dónde
+ * despacha. `null` si el tipo no es de mensajería o todavía no tiene flujo
+ * elegido (bloque a medio configurar).
+ */
+function messageFlowSummary(
+  tipo: BuilderNodeType,
+  config: Record<string, unknown>
+): { logo: string; flowName: string } | null {
+  if (!isMessageNodeType(tipo)) return null
+  const flowId = config.flujo_id
+  if (typeof flowId !== "string") return null
+  const flow = findFlow(flowId)
+  if (!flow) return null
+  const provider = connectedMessageProviders(tipo).find(
+    (p) => p.integrationId === flow.integrationId
+  )
+  if (!provider) return null
+  return { logo: provider.logo, flowName: flow.name }
+}
+
 export function BuilderNode({
   data,
   selected,
@@ -102,6 +130,7 @@ export function BuilderNode({
     data.tipo
   )
   const outputs = outputsForNode(data.tipo, data.config ?? {})
+  const flowSummary = messageFlowSummary(data.tipo, data.config ?? {})
 
   return (
     <div
@@ -141,6 +170,16 @@ export function BuilderNode({
           </span>
         )}
       </div>
+
+      {flowSummary && (
+        <div className="flex items-center gap-1.5 border-t border-border px-3 py-2">
+          {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 14px, no vale next/image. */}
+          <img src={flowSummary.logo} alt="" className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+            {flowSummary.flowName}
+          </span>
+        </div>
+      )}
 
       {outputs.length > 1 && (
         <div className="flex flex-col gap-1.5 border-t border-border px-3 py-2">

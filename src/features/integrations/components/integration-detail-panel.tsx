@@ -2,7 +2,7 @@ import { FileText, Info, Settings2, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 
-import type { Integration } from "../lib/catalog"
+import type { Integration } from "@/config/integrations-catalog"
 
 type IntegrationDetailPanelProps = {
   integration: Integration

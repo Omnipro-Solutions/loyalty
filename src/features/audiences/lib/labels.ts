@@ -5,7 +5,7 @@ export const TIER_LABEL: Record<TierName, string> = {
   diamante: "Diamante",
   oro: "Oro",
   plata: "Plata",
-  bronce: "Bronce",
+  bronce: "Base",
 }
 
 export const SEGMENT_STATUS_LABEL: Record<SegmentStatus, string> = {
@@ -25,10 +25,10 @@ export const MEMBER_STATUS_LABEL: Record<MemberStatus, string> = {
  * lookup por id de integración. `segments.sincronizado_con_ajo` sigue
  * siendo el flag real de sincronización individual (ver `AudienceHero` y
  * `syncAudienceAction`), pero es independiente de este badge de origen.
- * Logo duplicado de `features/integrations/lib/catalog.ts` (`ajo`) por
+ * Logo duplicado de `config/integrations-catalog.ts` (`adobe-rtcdp`) por
  * aislamiento entre features.
  */
-export const AJO_ORIGIN = {
-  label: "AJO · Adobe",
+export const AUDIENCE_ORIGIN = {
+  label: "Adobe CDP",
   logo: "/integraciones/logos/adobe.svg",
 }

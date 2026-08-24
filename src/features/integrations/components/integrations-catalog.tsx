@@ -7,9 +7,12 @@ import { useMemo, useState } from "react"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { FilterSearch } from "@/components/filters/search"
 import { Button } from "@/components/ui/button"
+import type { IntegrationGroup } from "@/config/integrations-catalog"
+import {
+  ACTIVE_CONNECTIONS,
+  type ConnectionStatus,
+} from "@/config/integrations-connections"
 
-import type { IntegrationGroup } from "../lib/catalog"
-import { ACTIVE_CONNECTIONS, type ConnectionStatus } from "../lib/connections"
 import { IntegrationCard } from "./integration-card"
 import { IntegrationDetailPanel } from "./integration-detail-panel"
 import { IntegrationsRail } from "./integrations-rail"

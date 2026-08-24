@@ -2,7 +2,8 @@ import {
   BarChart3,
   LayoutGrid,
   Package,
-  Settings,
+  PlugZap,
+  ShieldCheck,
   Store,
   Tag,
   TrendingUp,
@@ -65,18 +66,19 @@ export const NAVIGATION: NavGroup[] = [
   {
     title: "Configuración",
     items: [
+      // No Figma equivalent: "09 · Equipo y permisos" y "12 ·
+      // Integraciones" son secciones independientes del archivo, antes
+      // agrupadas bajo un único ítem colapsable "Ajustes" — a pedido de
+      // producto quedan como ítems propios de nivel superior en Configuración.
       {
-        label: "Ajustes",
-        href: "/ajustes",
-        icon: Settings,
-        // No Figma equivalent: "09 · Equipo y permisos" and "12 ·
-        // Integraciones" are independent sections of the file. The app
-        // groups them under a single collapsible "Ajustes" item instead of
-        // adding them as their own items in the main sidebar.
-        children: [
-          { label: "Equipo y permisos", href: "/ajustes/equipo" },
-          { label: "Integraciones", href: "/ajustes/integraciones" },
-        ],
+        label: "Equipo y permisos",
+        href: "/ajustes/equipo",
+        icon: ShieldCheck,
+      },
+      {
+        label: "Integraciones",
+        href: "/ajustes/integraciones",
+        icon: PlugZap,
       },
     ],
   },

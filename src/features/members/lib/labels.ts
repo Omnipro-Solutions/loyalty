@@ -89,5 +89,5 @@ export const TIER_LABEL: Record<TierName, string> = {
   diamante: "Diamante",
   oro: "Oro",
   plata: "Plata",
-  bronce: "Bronce",
+  bronce: "Base",
 }

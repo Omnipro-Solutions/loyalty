@@ -9,15 +9,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatNumber } from "@/lib/format"
-import { cn } from "@/lib/utils"
-
-import { findIntegration } from "../lib/catalog"
+import { findIntegration } from "@/config/integrations-catalog"
 import {
   ACTIVE_CONNECTIONS,
   CONNECTION_STATUS_DOT,
   CONNECTION_STATUS_LABEL,
-} from "../lib/connections"
+} from "@/config/integrations-connections"
+import { formatNumber } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 /**
  * Sin equivalente en Figma — "12 · Integraciones" (1261:3974) no dibuja

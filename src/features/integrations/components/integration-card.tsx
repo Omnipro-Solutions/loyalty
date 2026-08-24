@@ -1,13 +1,12 @@
 import { MoreHorizontal } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-
-import type { Integration } from "../lib/catalog"
+import type { Integration } from "@/config/integrations-catalog"
 import {
   CONNECTION_STATUS_LABEL,
   type ConnectionStatus,
-} from "../lib/connections"
+} from "@/config/integrations-connections"
+import { cn } from "@/lib/utils"
 
 type IntegrationCardProps = {
   integration: Integration

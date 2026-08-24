@@ -99,7 +99,7 @@ const FIELDS: Field[] = [
     label: "Nivel",
     valueEditorType: "select",
     values: [
-      { name: "bronce", label: "Bronce" },
+      { name: "bronce", label: "Base" },
       { name: "plata", label: "Plata" },
       { name: "oro", label: "Oro" },
       { name: "diamante", label: "Diamante" },

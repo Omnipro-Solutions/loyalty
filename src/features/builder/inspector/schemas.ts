@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { isMessageNodeType } from "@/config/integration-flows"
 import type { BuilderNodeType } from "@/types/domain"
 
 import { SIMPLE_FIELD_SPECS, type FieldSpec } from "./field-specs"
@@ -75,6 +76,21 @@ export const multiConditionConfigSchema = z.object({
 })
 
 /**
+ * `email`/`push`/`sms_whatsapp` (ver `IntegrationMessageForm`): proveedor +
+ * flujo elegidos del catálogo de `config/integration-flows.ts`, más el
+ * mapeo de parámetros del flujo a variables del journey. Se compone con el
+ * schema de `MESSAGE_GUARDRAIL_SPECS` (vía `specsSchema`) en
+ * `nodeConfigSchemaFor` — este objeto solo cubre lo que no es un `FieldSpec`.
+ */
+function messageActionConfigSchema(specs: FieldSpec[]) {
+  return specsSchema(specs).extend({
+    integracion_id: z.string().min(1).optional(),
+    flujo_id: z.string().min(1).optional(),
+    mapeo: z.record(z.string(), z.string()).optional(),
+  })
+}
+
+/**
  * Un schema por tipo de bloque, mapeado por `tipo` en vez de una unión
  * discriminada literal: `config` vive en una columna separada de `tipo` en
  * `workflow_nodes` (no es un campo dentro del objeto a validar), así que
@@ -89,5 +105,6 @@ export function nodeConfigSchemaFor(tipo: BuilderNodeType): z.ZodTypeAny {
     return branchesConfigSchema
   }
   const specs = SIMPLE_FIELD_SPECS[tipo] ?? []
+  if (isMessageNodeType(tipo)) return messageActionConfigSchema(specs)
   return specsSchema(specs)
 }

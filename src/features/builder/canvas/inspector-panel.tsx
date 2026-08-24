@@ -5,11 +5,13 @@ import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
+import { isMessageNodeType } from "@/config/integration-flows"
 import { AccumulatePointsForm } from "@/features/builder/inspector/accumulate-points-form"
 import { MultiConditionForm } from "@/features/builder/inspector/multi-condition-form"
 import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
+import { IntegrationMessageForm } from "@/features/builder/inspector/integration-message-form"
 import { SimpleConfigForm } from "@/features/builder/inspector/simple-config-form"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -124,6 +126,12 @@ export function InspectorPanel({
             />
           ) : tipo === "condicion_multiple" ? (
             <MultiConditionForm config={node.data.config} onChange={update} />
+          ) : isMessageNodeType(tipo as never) ? (
+            <IntegrationMessageForm
+              channel={tipo as never}
+              config={node.data.config}
+              onChange={update}
+            />
           ) : (
             <SimpleConfigForm
               specs={

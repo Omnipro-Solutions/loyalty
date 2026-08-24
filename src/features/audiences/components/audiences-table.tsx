@@ -6,7 +6,7 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
-import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronRight, ChevronUp, Users } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useMemo } from "react"
 
@@ -16,7 +16,7 @@ import { formatEventDate, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { avatarPalette } from "../lib/avatar-palette"
-import { AJO_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
+import { AUDIENCE_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
 import type { AudienceListItem, AudiencesSort } from "../lib/queries"
 import { Sparkline } from "./sparkline"
 
@@ -139,9 +139,13 @@ export function AudiencesTable({ audiences, sort, dir }: AudiencesTableProps) {
           header: () => "ORIGEN",
           cell: () => (
             <div className="flex min-w-0 items-center gap-1.5">
-              <img src={AJO_ORIGIN.logo} alt="" className="size-4 shrink-0" />
+              <img
+                src={AUDIENCE_ORIGIN.logo}
+                alt=""
+                className="size-4 shrink-0"
+              />
               <span className="truncate text-[13px] font-medium text-foreground">
-                {AJO_ORIGIN.label}
+                {AUDIENCE_ORIGIN.label}
               </span>
             </div>
           ),
@@ -160,9 +164,12 @@ export function AudiencesTable({ audiences, sort, dir }: AudiencesTableProps) {
             </div>
           ),
           cell: (info) => (
-            <span className="block text-right text-[13px] font-medium text-foreground">
-              {formatNumber(info.row.original.size)}
-            </span>
+            <div className="flex items-center justify-end gap-1.5">
+              <Users className="size-3.5 text-muted-foreground" />
+              <span className="text-[13px] font-medium text-foreground">
+                {formatNumber(info.row.original.size)}
+              </span>
+            </div>
           ),
         }),
         helper.display({

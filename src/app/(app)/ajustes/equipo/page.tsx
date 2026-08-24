@@ -47,12 +47,7 @@ function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
-/**
- * Figma "09 · Equipo y permisos" (725:3563). El sidebar principal de estas
- * pantallas resalta "Ajustes" — no es un ítem de nav propio, es una
- * sub-vista de Ajustes, agrupada junto a Integraciones bajo el ítem
- * colapsable "Ajustes" del sidebar (ver `config/navigation.ts`).
- */
+/** Figma "09 · Equipo y permisos" (725:3563). Ítem propio del sidebar bajo "Configuración" (ver `config/navigation.ts`). */
 export default async function TeamPage({
   searchParams,
 }: PageProps<"/ajustes/equipo">) {

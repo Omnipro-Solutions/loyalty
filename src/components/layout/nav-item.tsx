@@ -12,10 +12,9 @@ import { cn } from "@/lib/utils"
  * Figma "Nav / Item" (624:171 Default, 624:175 Hover, 624:179 Active).
  * 244×36, rounded-xl, p-10 gap-10, 16px icon, 13/18 medium text.
  *
- * `children` has no Figma equivalent: it's the mechanism that groups
- * "Equipo y permisos" and "Integraciones" under a single collapsible
- * "Ajustes" item, instead of adding them as their own items in the main
- * sidebar (see `config/navigation.ts`).
+ * `children` has no Figma equivalent: it's a generic mechanism for grouping
+ * sub-routes under a collapsible item — unused by any item in
+ * `config/navigation.ts` today.
  */
 export function NavItem({ label, href, icon: Icon, children }: NavItemData) {
   const pathname = usePathname()

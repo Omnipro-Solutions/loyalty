@@ -46,6 +46,20 @@ export const ACTIVE_CONNECTIONS: ActiveConnection[] = [
     frequency: "Cada 6 h",
   },
   {
+    integrationId: "ajo",
+    direction: "destino",
+    status: "activa",
+    lastSyncedAt: "Hace 8 min",
+    frequency: "Tiempo real",
+  },
+  {
+    integrationId: "braze",
+    direction: "destino",
+    status: "activa",
+    lastSyncedAt: "Hace 20 min",
+    frequency: "Tiempo real",
+  },
+  {
     integrationId: "salesforce-cdp",
     direction: "destino",
     status: "con_error",

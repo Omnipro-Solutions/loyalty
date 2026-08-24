@@ -1,11 +1,13 @@
 import { ArrowRight, Workflow } from "lucide-react"
 
 import { KpiCard } from "@/components/data/kpi-card"
+import { findIntegration } from "@/config/integrations-catalog"
+import {
+  ACTIVE_CONNECTIONS,
+  type ActiveConnection,
+} from "@/config/integrations-connections"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
-
-import { findIntegration } from "../lib/catalog"
-import { ACTIVE_CONNECTIONS, type ActiveConnection } from "../lib/connections"
 
 /** Demo estático — todavía no hay un backend real de eventos detrás de las conexiones. */
 const EVENTS_PROCESSED_TODAY = 48231

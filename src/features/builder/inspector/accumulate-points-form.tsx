@@ -32,7 +32,7 @@ const DEFAULT_CONFIG: AccumulatePointsConfig = {
 }
 
 const TIER_LABEL: Record<TierName, string> = {
-  bronce: "Bronce",
+  bronce: "Base",
   plata: "Plata",
   oro: "Oro",
   diamante: "Diamante",

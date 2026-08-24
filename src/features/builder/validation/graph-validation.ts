@@ -1,3 +1,4 @@
+import { isMessageNodeType } from "@/config/integration-flows"
 import {
   BUILDER_ENTRY_NODE_TYPES,
   BUILDER_LOGIC_NODE_TYPES,
@@ -80,6 +81,17 @@ export function validateGraph(
   }
 
   for (const node of nodes) {
+    if (
+      isMessageNodeType(node.tipo) &&
+      typeof node.config.flujo_id !== "string"
+    ) {
+      issues.push({
+        level: "advertencia",
+        nodeId: node.id,
+        message: `"${node.tipo}" todavía no tiene un flujo de integración elegido.`,
+      })
+    }
+
     const expected = expectedPorts(node, node.config)
     if (expected.length <= 1) continue
     const connected = new Set(
