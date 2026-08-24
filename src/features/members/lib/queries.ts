@@ -868,6 +868,19 @@ function promotionValidity(promotion: {
   return "activa"
 }
 
+/** IDs de `member_promociones` para un socio — comparte la consulta entre `listActivePromotionsForMember` y `listPromotionsForManualAssignment`. */
+async function getManuallyAssignedPromotionIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  memberId: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("member_promociones")
+    .select("promocion_id")
+    .eq("member_id", memberId)
+  if (error) throw error
+  return new Set((data ?? []).map((r) => r.promocion_id))
+}
+
 /**
  * "Card · Promociones activas" (1125:4724) real, con matices documentados
  * en el plan de esta tarea:
@@ -888,7 +901,8 @@ function promotionValidity(promotion: {
  */
 export async function listActivePromotionsForMember(
   memberId: string,
-  memberOrders: MemberOrder[]
+  memberOrders: MemberOrder[],
+  manuallyAssignedIds?: Set<string>
 ): Promise<MemberPromotionRow[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.from("promociones").select("*")
@@ -938,14 +952,9 @@ export async function listActivePromotionsForMember(
     ? await getPurchasedRootCategoryIds(memberOrders)
     : new Set<string>()
 
-  const { data: assignedRows, error: assignedError } = await supabase
-    .from("member_promociones")
-    .select("promocion_id")
-    .eq("member_id", memberId)
-  if (assignedError) throw assignedError
-  const manuallyAssignedIds = new Set(
-    (assignedRows ?? []).map((r) => r.promocion_id)
-  )
+  const assignedIds =
+    manuallyAssignedIds ??
+    (await getManuallyAssignedPromotionIds(supabase, memberId))
 
   const rows: MemberPromotionRow[] = []
   for (const { row, condiciones, status } of candidates) {
@@ -986,7 +995,7 @@ export async function listActivePromotionsForMember(
       presupuestoAsignado: row.presupuesto_asignado,
       presupuestoConsumido: row.presupuesto_consumido,
       condition,
-      assignedManually: manuallyAssignedIds.has(row.id),
+      assignedManually: assignedIds.has(row.id),
     })
   }
 
@@ -1004,24 +1013,17 @@ export async function listPromotionsForManualAssignment(
   memberId: string
 ): Promise<AssignablePromotion[]> {
   const supabase = await createClient()
-  const [
-    { data: promotions, error: promotionsError },
-    { data: assigned, error: assignedError },
-  ] = await Promise.all([
-    supabase
-      .from("promociones")
-      .select("id, nombre, codigo, tipo")
-      .eq("estado_publicacion", "activa")
-      .order("nombre"),
-    supabase
-      .from("member_promociones")
-      .select("promocion_id")
-      .eq("member_id", memberId),
-  ])
+  const [{ data: promotions, error: promotionsError }, assignedIds] =
+    await Promise.all([
+      supabase
+        .from("promociones")
+        .select("id, nombre, codigo, tipo")
+        .eq("estado_publicacion", "activa")
+        .order("nombre"),
+      getManuallyAssignedPromotionIds(supabase, memberId),
+    ])
   if (promotionsError) throw promotionsError
-  if (assignedError) throw assignedError
 
-  const assignedIds = new Set((assigned ?? []).map((r) => r.promocion_id))
   return (promotions ?? []).map((p) => ({
     id: p.id,
     nombre: p.nombre,

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { hasPermission } from "../lib/permissions"
 import { assignPromotionSchema } from "../schemas"
-import { membersActionClient } from "./action-client"
+import { membersPermissionActionClient } from "./action-client"
 
 /**
  * "Enviar promoción" del Hero: no hay motor de mensajería en este proyecto
@@ -13,7 +13,7 @@ import { membersActionClient } from "./action-client"
  * elegibilidad por segmento/categoría. Ver `member_promociones`
  * (`20260823220000_member_promociones.sql`).
  */
-export const assignPromotionToMemberAction = membersActionClient
+export const assignPromotionToMemberAction = membersPermissionActionClient
   .inputSchema(assignPromotionSchema)
   .action(async ({ parsedInput, ctx }) => {
     if (!hasPermission(ctx.permissionsSet, "promociones", "crear")) {

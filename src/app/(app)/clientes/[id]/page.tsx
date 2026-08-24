@@ -10,7 +10,10 @@ import { MemberLoyaltyKpis } from "@/features/members/components/member-loyalty-
 import { MemberPromotionsCard } from "@/features/members/components/member-promotions-card"
 import { MemberRedemptionsCard } from "@/features/members/components/member-redemptions-card"
 import { MemberLoyaltyCard } from "@/features/members/components/member-loyalty-card"
-import { getMemberActionPermissions } from "@/features/members/lib/permissions"
+import {
+  getMemberProfilePermissions,
+  hasPermission,
+} from "@/features/members/lib/permissions"
 import {
   getMemberById,
   getPurchaseBehavior,
@@ -55,7 +58,7 @@ export default async function MemberDetailPage({
     rfm,
     audiences,
     promotionsForAssignment,
-    permissions,
+    profilePermissions,
   ] = await Promise.all([
     listMemberRedemptions(id),
     getLoyaltySummary(id, member.saldo_puntos),
@@ -65,14 +68,28 @@ export default async function MemberDetailPage({
     getRfmProfile(id),
     listMemberAudiences(id),
     listPromotionsForManualAssignment(id),
-    getMemberActionPermissions(),
+    getMemberProfilePermissions(),
   ])
+
+  const canAssignPromotion = Boolean(
+    profilePermissions &&
+    hasPermission(profilePermissions.permissions, "promociones", "crear")
+  )
+  const canApplyPointsRule = Boolean(
+    profilePermissions &&
+    hasPermission(profilePermissions.permissions, "reglas", "crear")
+  )
+
+  // Ya se sabe qué promociones están asignadas a mano por `promotionsForAssignment` — se reutiliza en vez de volver a consultar `member_promociones`.
+  const manuallyAssignedIds = new Set(
+    promotionsForAssignment.filter((p) => p.yaAsignada).map((p) => p.id)
+  )
 
   // Las tres se derivan de la misma `memberOrders` (un solo fetch a `pedidos`).
   const [behavior, commercialValue, promotions] = await Promise.all([
     getPurchaseBehavior(memberOrders),
     getCommercialValue(memberOrders),
-    listActivePromotionsForMember(id, memberOrders),
+    listActivePromotionsForMember(id, memberOrders, manuallyAssignedIds),
   ])
 
   const fullName = `${member.nombre} ${member.apellido}`.trim()
@@ -91,7 +108,8 @@ export default async function MemberDetailPage({
             behavior={behavior}
             rfm={rfm}
             promotionsForAssignment={promotionsForAssignment}
-            permissions={permissions}
+            canAssignPromotion={canAssignPromotion}
+            canApplyPointsRule={canApplyPointsRule}
           />
         </div>
         <div className="w-[340px] shrink-0">

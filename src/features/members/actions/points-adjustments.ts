@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { hasPermission } from "../lib/permissions"
 import { pointsAdjustmentSchema } from "../schemas"
-import { membersActionClient } from "./action-client"
+import { membersPermissionActionClient } from "./action-client"
 
 /**
  * "Aplicar regla" del Hero: no existe un motor de reglas en este proyecto
@@ -14,7 +14,7 @@ import { membersActionClient } from "./action-client"
  * `points_ledger_apply_after_insert` actualiza `members.saldo_puntos`
  * solo; nunca se escribe esa columna a mano.
  */
-export const applyPointsAdjustmentAction = membersActionClient
+export const applyPointsAdjustmentAction = membersPermissionActionClient
   .inputSchema(pointsAdjustmentSchema)
   .action(async ({ parsedInput, ctx }) => {
     if (!hasPermission(ctx.permissionsSet, "reglas", "crear")) {

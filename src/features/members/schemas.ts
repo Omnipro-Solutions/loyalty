@@ -44,8 +44,6 @@ export const assignPromotionSchema = z.object({
   note: z.string().max(280).optional(),
 })
 
-export type AssignPromotionValues = z.infer<typeof assignPromotionSchema>
-
 /** "Aplicar regla" del Hero — ajuste manual de puntos (único alcance real hoy, ver plan de la tarea). */
 export const pointsAdjustmentSchema = z.object({
   memberId: z.string().uuid(),
@@ -53,5 +51,3 @@ export const pointsAdjustmentSchema = z.object({
   amount: z.number().int().positive(),
   reason: z.string().min(1, "Elige un motivo").max(120),
 })
-
-export type PointsAdjustmentValues = z.infer<typeof pointsAdjustmentSchema>

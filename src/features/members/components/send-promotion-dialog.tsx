@@ -65,8 +65,8 @@ export function SendPromotionDialog({
     defaultValues: { promotionId: "", note: "" },
   })
 
-  const values = useWatch({ control })
-  const selected = promotions.find((p) => p.id === values.promotionId)
+  const promotionId = useWatch({ control, name: "promotionId" })
+  const selected = promotions.find((p) => p.id === promotionId)
 
   const assign = useAction(assignPromotionToMemberAction, {
     onSuccess: ({ data }) => {
@@ -116,7 +116,7 @@ export function SendPromotionDialog({
         >
           <Field label="Promoción" required error={errors.promotionId?.message}>
             <Select
-              value={values.promotionId}
+              value={promotionId}
               onValueChange={(v) => setValue("promotionId", v ?? "")}
             >
               <SelectTrigger>

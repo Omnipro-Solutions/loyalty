@@ -175,8 +175,11 @@ export function ApplyPointsRuleDialog({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="otorgar">Otorgar puntos</SelectItem>
-                <SelectItem value="restar">Restar puntos</SelectItem>
+                {Object.entries(DIRECTION_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>

@@ -52,7 +52,6 @@ import {
   SALES_CHANNEL_LABEL,
   TIER_LABEL,
 } from "../lib/labels"
-import type { MemberActionPermissions } from "../lib/permissions"
 import {
   calculateCompleteness,
   isAtRiskOfTierDowngrade,
@@ -113,7 +112,8 @@ type MemberHeroProps = {
   behavior: PurchaseBehavior
   rfm: RfmProfile | null
   promotionsForAssignment: AssignablePromotion[]
-  permissions: MemberActionPermissions
+  canAssignPromotion: boolean
+  canApplyPointsRule: boolean
 }
 
 /**
@@ -136,7 +136,8 @@ export function MemberHero({
   behavior,
   rfm,
   promotionsForAssignment,
-  permissions,
+  canAssignPromotion,
+  canApplyPointsRule,
 }: MemberHeroProps) {
   const fullName = `${member.nombre} ${member.apellido}`.trim()
   const palette = avatarPalette(member.id)
@@ -257,13 +258,13 @@ export function MemberHero({
               Calificación cierra 31 dic · {daysRemaining} días
             </p>
           </div>
-          {permissions.canAssignPromotion && (
+          {canAssignPromotion && (
             <SendPromotionDialog
               memberId={member.id}
               promotions={promotionsForAssignment}
             />
           )}
-          {permissions.canApplyPointsRule && (
+          {canApplyPointsRule && (
             <ApplyPointsRuleDialog
               memberId={member.id}
               currentBalance={member.saldo_puntos}
