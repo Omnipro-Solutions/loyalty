@@ -27,6 +27,7 @@ const config = {
         "audiences",
         "integrations",
         "profile",
+        "coupons",
         // transversal / infra
         "ui",
         "db",

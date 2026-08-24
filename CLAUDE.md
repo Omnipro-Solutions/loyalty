@@ -9,7 +9,7 @@ Guía para trabajar en este repositorio. Léela antes de tocar código.
 > los docs incluidos en `node_modules/next/dist/docs/` (ver también
 > `AGENTS.md`, que un hook de `next dev` mantiene actualizado — no lo borres).
 
-Demo de un sistema de loyalty (**Loyalty System · By Omni**) construida
+Demo de un sistema de loyalty (**Loyalty System · By Etter**) construida
 pixel-perfect contra el Figma "Loyalty-Desing"
 (`KxtI6mzVfDqGisGhC9VAf5`). Ver `.claude/plans/` (o pedir al usuario) por el
 plan de fases completo. Tenant de demo: **Omni Retail Group**
@@ -139,6 +139,11 @@ Arquitectura por capas: cada capa solo importa **hacia abajo**, y las
   - Los valores literales de los union types de dominio (ver punto anterior).
   - Todo el copy visible al usuario (texto JSX, `aria-label`, `placeholder`,
     mensajes de error/éxito) — el tenant de demo es hispanohablante.
+  - **Excepción — módulo de cupones (`features/coupons`):** tablas, columnas
+    y valores de `check` van **en inglés** (`coupon_batch`, `created_at`,
+    `discount_type in ('percentage', ...)`), a diferencia de las demás 30+
+    tablas del proyecto. Decisión explícita del usuario al construir el
+    módulo (ver `docs/cupones.md`) — no la generalices a otras features.
 - **Alias de import:** `@/*` → `src/*`. No uses rutas relativas largas.
 - **SQL:** tablas y columnas en `snake_case`; sin `enum` de Postgres — usar
   `text` + `check` (misma razón: evolucionar un valor no debe requerir
@@ -194,9 +199,12 @@ App Router: **todo es Server Component por defecto.**
   además de sus políticas RLS, o Postgres rechaza el acceso antes de
   evaluarlas.
 - **Autorización fina por rol** (quién puede publicar, aprobar, etc.) vive en
-  la función pura `can(baseRole, action, resource)` de `src/lib/permissions.ts` —
-  debe mantenerse equivalente a la tabla `role_permissions` (sembrada en
-  `supabase/seed.sql`, pensada para la UI de 09.2).
+  filas reales de `role_permissions` (`role_id, recurso, accion`), leídas en
+  cada Server Action vía el `actionClient` de la feature (ver
+  `features/promotions/actions/action-client.ts`). `can(baseRole, action,
+resource)` en `src/lib/permissions.ts` es solo una plantilla/fallback de UI
+  (prellenar la matriz al crear un rol desde un archetype) — **nunca**
+  autorización de escritura real.
 - **MFA:** "Basic MFA" (TOTP vía app authenticator) está incluido en el plan
   Free de Supabase — verificado contra supabase.com/pricing. Solo "Advanced
   MFA - Phone" (SMS) es un add-on de pago; por eso el método de respaldo usa
