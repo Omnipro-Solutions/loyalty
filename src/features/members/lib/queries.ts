@@ -217,15 +217,6 @@ export async function listTiersOptions(): Promise<TierOption[]> {
   return data
 }
 
-/**
- * USD por punto — mismo tipo de supuesto de negocio que cualquier programa
- * de lealtad real (aquí no hay un valor configurable por organización
- * todavía). Alimenta "equivalen a $X" y "Pasivo acumulado" (05.3g),
- * calculados de verdad a partir de esto en vez de inventados por socio.
- * Reescalado junto con el resto de importes COP→USD (÷4000).
- */
-export const POINT_VALUE_USD = 0.0017
-
 /** Roles de sistema, no de socio: "VIP" en 05.3g se aproxima con los dos niveles superiores — no hay un motor RFM real. */
 export function isVip(tierName: string | undefined): boolean {
   return tierName === "diamante" || tierName === "oro"
@@ -281,7 +272,8 @@ export type LoyaltySummary = {
 /** KPIs reales de "PROGRAMA DE LEALTAD" (05.3g), derivados del ledger real — sin LTV/riesgo de fuga (esos sí necesitan pedidos y scoring). */
 export async function getLoyaltySummary(
   memberId: string,
-  currentBalance: number
+  currentBalance: number,
+  pointValueUsd: number
 ): Promise<LoyaltySummary> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -328,7 +320,7 @@ export async function getLoyaltySummary(
     nextExpirationDate: nextExpiration,
     redemptionRate: accrualSum > 0 ? redemptionSum / accrualSum : null,
     accruedLiability:
-      Math.max(0, currentBalance - expiringSoon) * POINT_VALUE_USD,
+      Math.max(0, currentBalance - expiringSoon) * pointValueUsd,
     balanceSeries: balanceSeries.slice(-8),
   }
 }
@@ -817,6 +809,23 @@ type PromotionCondition =
   | { campo: "tienda"; valor: string }
   | { campo: "segmento"; valor: string }
   | { campo: "monto_carrito"; valor: number }
+type PromotionConditionNode =
+  | PromotionCondition
+  | { combinador: "todas" | "alguna"; condiciones: PromotionConditionNode[] }
+
+/**
+ * `promociones.condiciones` es un árbol de grupos Y/O anidados (ver
+ * `features/promotions/lib/condition-tree.ts`), no un array plano —
+ * aplana recursivamente para recolectar todas las hojas. Copia mínima
+ * duplicada por aislamiento entre features (CLAUDE.md §2).
+ */
+function flattenPromotionConditions(
+  node: PromotionConditionNode
+): PromotionCondition[] {
+  if ("condiciones" in node)
+    return node.condiciones.flatMap(flattenPromotionConditions)
+  return [node]
+}
 
 export type MemberPromotionCondition =
   | { campo: "segmento" }
@@ -912,7 +921,9 @@ export async function listActivePromotionsForMember(
   const candidates = (data ?? [])
     .map((row) => ({
       row,
-      condiciones: (row.condiciones ?? []) as PromotionCondition[],
+      condiciones: row.condiciones
+        ? flattenPromotionConditions(row.condiciones as PromotionConditionNode)
+        : [],
       status: promotionValidity(row),
     }))
     .filter(

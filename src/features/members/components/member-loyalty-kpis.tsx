@@ -6,11 +6,7 @@ import {
 } from "@/lib/format"
 
 import { KpiCard } from "./kpi-card"
-import {
-  POINT_VALUE_USD,
-  type Member,
-  type LoyaltySummary,
-} from "../lib/queries"
+import { type Member, type LoyaltySummary } from "../lib/queries"
 
 function daysUntil(isoDate: string): number {
   return Math.ceil((new Date(isoDate).getTime() - Date.now()) / 86_400_000)
@@ -20,6 +16,7 @@ type MemberLoyaltyKpisProps = {
   member: Member
   summary: LoyaltySummary
   programRate: number | null
+  pointValueUsd: number
 }
 
 /** Figma "Sección · PROGRAMA DE LEALTAD" (1186:4825) pixel-perfect, con KPIs reales derivados de `points_ledger`. */
@@ -27,6 +24,7 @@ export function MemberLoyaltyKpis({
   member,
   summary,
   programRate,
+  pointValueUsd,
 }: MemberLoyaltyKpisProps) {
   return (
     <div className="flex w-full flex-col gap-2.5">
@@ -38,7 +36,7 @@ export function MemberLoyaltyKpis({
           label="Saldo de puntos"
           value={formatNumber(member.saldo_puntos)}
           series={summary.balanceSeries}
-          detail={`equivalen a ${formatUSD(member.saldo_puntos * POINT_VALUE_USD)}`}
+          detail={`equivalen a ${formatUSD(member.saldo_puntos * pointValueUsd)}`}
         />
         <KpiCard
           label="Por vencer"

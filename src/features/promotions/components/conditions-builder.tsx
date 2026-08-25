@@ -1,93 +1,59 @@
 "use client"
 
-import { Plus } from "lucide-react"
-import { useFieldArray, useWatch, type Control } from "react-hook-form"
+import { useWatch, type Control } from "react-hook-form"
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { CONDITION_COMBINATORS } from "@/types/domain"
-import type { ConditionCombinator } from "@/types/domain"
-
-import { ConditionRow } from "./condition-row"
-import { CONDITION_COMBINATOR_LABEL } from "../lib/labels"
+import { countLeavesAndDepth } from "../lib/condition-tree"
+import { ConditionTreeGroup } from "./condition-tree-group"
 import type {
   ConditionCategory,
   ConditionCity,
   ConditionSegment,
+  CouponBatchOption,
 } from "../lib/queries"
-import type { PromotionValues } from "../schemas"
+import type { ConditionGroupValues, PromotionValues } from "../schemas"
 
 type ConditionsBuilderProps = {
   control: Control<PromotionValues>
-  onCombinatorChange: (value: ConditionCombinator) => void
+  onChange: (next: ConditionGroupValues) => void
   categories: ConditionCategory[]
   cities: ConditionCity[]
   segments: ConditionSegment[]
+  couponBatches: CouponBatchOption[]
 }
 
-/** Figma "Card · Condiciones (SI)" (633:851): combinador AND/OR + filas dinámicas + "Agregar condición". */
+/**
+ * Figma "Card · Condiciones (árbol)" (1395:68, dentro de "07.2 · Paso 2 ·
+ * Condiciones · árbol" 1395:6) — header con el conteo estructural
+ * ("CONDICIONES · N en M niveles", puro cálculo sobre la forma del árbol,
+ * sin consultar datos reales) más el árbol recursivo de grupos Y/O.
+ */
 export function ConditionsBuilder({
   control,
-  onCombinatorChange,
+  onChange,
   categories,
   cities,
   segments,
+  couponBatches,
 }: ConditionsBuilderProps) {
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: "conditions",
-  })
-  const combinator = useWatch({ control, name: "conditionCombinator" })
+  const tree = useWatch({ control, name: "conditions" })
+  const { leaves, maxDepth } = countLeavesAndDepth(tree)
 
   return (
-    <div className="flex w-full flex-col gap-3.5">
-      <div className="flex items-center gap-2">
-        {CONDITION_COMBINATORS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => onCombinatorChange(value)}
-            className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap",
-              combinator === value
-                ? "border-primary bg-brand-subtle text-primary-800"
-                : "border-border bg-background text-secondary-foreground"
-            )}
-          >
-            {CONDITION_COMBINATOR_LABEL[value]}
-          </button>
-        ))}
-      </div>
-
-      {fields.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          Sin condiciones: la promoción aplica a todos los clientes.
-        </p>
-      )}
-
-      {fields.map((field, index) => (
-        <ConditionRow
-          key={field.id}
-          rowNumber={index + 1}
-          condition={field}
-          categories={categories}
-          cities={cities}
-          segments={segments}
-          onChange={(next) => update(index, next)}
-          onRemove={() => remove(index)}
-        />
-      ))}
-
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => append({ campo: "categoria", valor: [] })}
-        className="w-fit"
-      >
-        <Plus className="size-3.5" />
-        Agregar condición
-      </Button>
+    <div className="flex w-full flex-col gap-2">
+      <p className="text-[9px] font-semibold tracking-[0.5px] text-muted-foreground uppercase">
+        {leaves === 0
+          ? "CONDICIONES"
+          : `CONDICIONES  ·  ${leaves} en ${maxDepth} nivel${maxDepth > 1 ? "es" : ""}`}
+      </p>
+      <ConditionTreeGroup
+        node={tree}
+        depth={0}
+        onChange={onChange}
+        categories={categories}
+        cities={cities}
+        segments={segments}
+        couponBatches={couponBatches}
+      />
     </div>
   )
 }

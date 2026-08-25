@@ -46,6 +46,7 @@ export type Database = {
           nombre: string
           org_id: string
           parent_id: string | null
+          taxonomia: string
         }
         Insert: {
           creado_en?: string
@@ -53,6 +54,7 @@ export type Database = {
           nombre: string
           org_id: string
           parent_id?: string | null
+          taxonomia?: string
         }
         Update: {
           creado_en?: string
@@ -60,6 +62,7 @@ export type Database = {
           nombre?: string
           org_id?: string
           parent_id?: string | null
+          taxonomia?: string
         }
         Relationships: [
           {
@@ -1578,6 +1581,7 @@ export type Database = {
           nombre: string
           org_id: string
           precio: number
+          precio_minimo_legal: number | null
           presentacion: string | null
           proveedor: string | null
           puntos: number
@@ -1598,6 +1602,7 @@ export type Database = {
           nombre: string
           org_id: string
           precio?: number
+          precio_minimo_legal?: number | null
           presentacion?: string | null
           proveedor?: string | null
           puntos?: number
@@ -1618,6 +1623,7 @@ export type Database = {
           nombre?: string
           org_id?: string
           precio?: number
+          precio_minimo_legal?: number | null
           presentacion?: string | null
           proveedor?: string | null
           puntos?: number
@@ -1695,85 +1701,321 @@ export type Database = {
           },
         ]
       }
+      programa_parametros: {
+        Row: {
+          actualizado_en: string
+          breakage_estimado_pct: number
+          creado_en: string
+          exclusiones_reglamento: string[]
+          id: string
+          org_id: string
+          redencion_cashback_pct: number
+          techo_descuento_apilado_pct: number
+          topes_catalogo: Json
+          valor_punto: number
+          vigencia_puntos_dias: number | null
+        }
+        Insert: {
+          actualizado_en?: string
+          breakage_estimado_pct?: number
+          creado_en?: string
+          exclusiones_reglamento?: string[]
+          id?: string
+          org_id: string
+          redencion_cashback_pct?: number
+          techo_descuento_apilado_pct?: number
+          topes_catalogo?: Json
+          valor_punto?: number
+          vigencia_puntos_dias?: number | null
+        }
+        Update: {
+          actualizado_en?: string
+          breakage_estimado_pct?: number
+          creado_en?: string
+          exclusiones_reglamento?: string[]
+          id?: string
+          org_id?: string
+          redencion_cashback_pct?: number
+          techo_descuento_apilado_pct?: number
+          topes_catalogo?: Json
+          valor_punto?: number
+          vigencia_puntos_dias?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programa_parametros_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       promociones: {
         Row: {
           actualizado_en: string
           acumulable: boolean
+          alcance_piezas: string | null
+          aplica_a_rx: string
+          aplica_sobre_precio: string
           aplicar_sobre: string
+          aprobacion_regulatoria: boolean
+          autorizacion_venta_bajo_costo: boolean
+          beneficio_sobre_regalo_pct: number | null
+          bono_puntos: number | null
           canal_aplicacion: string
           canjes: number
+          cantidad_minima_comprada: number | null
+          cantidad_regalo: number | null
           codigo: string
-          combinador_condiciones: string
+          compra_cantidad: number | null
           condiciones: Json
+          contrato_id: string | null
+          coupon_batch_id: string | null
           creado_en: string
+          cupo_disponible: number | null
+          descuento_acumula_puntos: boolean
+          descuento_unidad_extra_pct: number | null
+          devolucion_si_vence: boolean
+          dias_semana: string[] | null
+          disponibilidad_dias: number | null
+          duracion_cupon_dias: number | null
+          elegible_en_inactividad: boolean
+          escalones: Json | null
+          estado_inicial: string
           estado_publicacion: string
+          evento_gatillo: string | null
+          financiador: string
+          frecuencia_disparo: string | null
+          grupo_exclusion: string | null
+          hasta_agotar_existencias: boolean
+          hora_fin: string | null
+          hora_inicio: string | null
           id: string
+          limites: Json
+          mezcla_en_universo: boolean
+          modo_calculo: string | null
+          modo_multiple: string
+          modo_resolucion_multiplicador: string | null
+          momento_acreditacion: string
+          momento_debito_puntos: string | null
+          momento_resolucion: string | null
+          monto_minimo_canje: number | null
+          monto_minimo_disparo: number | null
+          motivo_emision: string | null
+          multiplicador_puntos: number | null
+          naturaleza_costo: string
+          nivel_aplicacion: string
+          niveles_requeridos: string[] | null
           nombre: string
           org_id: string
+          paga_cantidad: number | null
+          periodo_liquidacion: string | null
+          porcentaje_costo_proveedor: number | null
+          precio_promocional: number | null
+          precio_referencia: number | null
           presupuesto_asignado: number
           presupuesto_consumido: number
           prioridad: number
+          producto_comprado_id: string | null
+          producto_regalo_id: string | null
+          productos_bundle_ids: string[] | null
+          proveedor: string | null
+          registra_uso: boolean
+          requisito_alta: string | null
+          respeta_precio_minimo_legal: boolean
           roi: number | null
+          simulacion_ejecutada: boolean
           tipo: string
           tipo_beneficio: string
+          tipo_beneficio_no_transaccional: string
+          tipo_monedero: string
+          tipo_saldo: string
           tope_maximo: number | null
-          usos_periodo: string | null
-          usos_por_cliente: number | null
+          umbral_alerta_presupuesto_pct: number | null
+          umbral_puntos: number | null
+          umbral_tipo: string | null
+          validacion_requerida: string | null
           valor_beneficio: number | null
+          vigencia_saldo_dias: number | null
           vigente_desde: string
           vigente_hasta: string | null
         }
         Insert: {
           actualizado_en?: string
           acumulable?: boolean
+          alcance_piezas?: string | null
+          aplica_a_rx?: string
+          aplica_sobre_precio?: string
           aplicar_sobre?: string
+          aprobacion_regulatoria?: boolean
+          autorizacion_venta_bajo_costo?: boolean
+          beneficio_sobre_regalo_pct?: number | null
+          bono_puntos?: number | null
           canal_aplicacion?: string
           canjes?: number
+          cantidad_minima_comprada?: number | null
+          cantidad_regalo?: number | null
           codigo: string
-          combinador_condiciones?: string
+          compra_cantidad?: number | null
           condiciones?: Json
+          contrato_id?: string | null
+          coupon_batch_id?: string | null
           creado_en?: string
+          cupo_disponible?: number | null
+          descuento_acumula_puntos?: boolean
+          descuento_unidad_extra_pct?: number | null
+          devolucion_si_vence?: boolean
+          dias_semana?: string[] | null
+          disponibilidad_dias?: number | null
+          duracion_cupon_dias?: number | null
+          elegible_en_inactividad?: boolean
+          escalones?: Json | null
+          estado_inicial?: string
           estado_publicacion?: string
+          evento_gatillo?: string | null
+          financiador?: string
+          frecuencia_disparo?: string | null
+          grupo_exclusion?: string | null
+          hasta_agotar_existencias?: boolean
+          hora_fin?: string | null
+          hora_inicio?: string | null
           id?: string
+          limites?: Json
+          mezcla_en_universo?: boolean
+          modo_calculo?: string | null
+          modo_multiple?: string
+          modo_resolucion_multiplicador?: string | null
+          momento_acreditacion?: string
+          momento_debito_puntos?: string | null
+          momento_resolucion?: string | null
+          monto_minimo_canje?: number | null
+          monto_minimo_disparo?: number | null
+          motivo_emision?: string | null
+          multiplicador_puntos?: number | null
+          naturaleza_costo?: string
+          nivel_aplicacion?: string
+          niveles_requeridos?: string[] | null
           nombre: string
           org_id: string
+          paga_cantidad?: number | null
+          periodo_liquidacion?: string | null
+          porcentaje_costo_proveedor?: number | null
+          precio_promocional?: number | null
+          precio_referencia?: number | null
           presupuesto_asignado?: number
           presupuesto_consumido?: number
           prioridad?: number
+          producto_comprado_id?: string | null
+          producto_regalo_id?: string | null
+          productos_bundle_ids?: string[] | null
+          proveedor?: string | null
+          registra_uso?: boolean
+          requisito_alta?: string | null
+          respeta_precio_minimo_legal?: boolean
           roi?: number | null
+          simulacion_ejecutada?: boolean
           tipo: string
           tipo_beneficio: string
+          tipo_beneficio_no_transaccional?: string
+          tipo_monedero?: string
+          tipo_saldo?: string
           tope_maximo?: number | null
-          usos_periodo?: string | null
-          usos_por_cliente?: number | null
+          umbral_alerta_presupuesto_pct?: number | null
+          umbral_puntos?: number | null
+          umbral_tipo?: string | null
+          validacion_requerida?: string | null
           valor_beneficio?: number | null
+          vigencia_saldo_dias?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null
         }
         Update: {
           actualizado_en?: string
           acumulable?: boolean
+          alcance_piezas?: string | null
+          aplica_a_rx?: string
+          aplica_sobre_precio?: string
           aplicar_sobre?: string
+          aprobacion_regulatoria?: boolean
+          autorizacion_venta_bajo_costo?: boolean
+          beneficio_sobre_regalo_pct?: number | null
+          bono_puntos?: number | null
           canal_aplicacion?: string
           canjes?: number
+          cantidad_minima_comprada?: number | null
+          cantidad_regalo?: number | null
           codigo?: string
-          combinador_condiciones?: string
+          compra_cantidad?: number | null
           condiciones?: Json
+          contrato_id?: string | null
+          coupon_batch_id?: string | null
           creado_en?: string
+          cupo_disponible?: number | null
+          descuento_acumula_puntos?: boolean
+          descuento_unidad_extra_pct?: number | null
+          devolucion_si_vence?: boolean
+          dias_semana?: string[] | null
+          disponibilidad_dias?: number | null
+          duracion_cupon_dias?: number | null
+          elegible_en_inactividad?: boolean
+          escalones?: Json | null
+          estado_inicial?: string
           estado_publicacion?: string
+          evento_gatillo?: string | null
+          financiador?: string
+          frecuencia_disparo?: string | null
+          grupo_exclusion?: string | null
+          hasta_agotar_existencias?: boolean
+          hora_fin?: string | null
+          hora_inicio?: string | null
           id?: string
+          limites?: Json
+          mezcla_en_universo?: boolean
+          modo_calculo?: string | null
+          modo_multiple?: string
+          modo_resolucion_multiplicador?: string | null
+          momento_acreditacion?: string
+          momento_debito_puntos?: string | null
+          momento_resolucion?: string | null
+          monto_minimo_canje?: number | null
+          monto_minimo_disparo?: number | null
+          motivo_emision?: string | null
+          multiplicador_puntos?: number | null
+          naturaleza_costo?: string
+          nivel_aplicacion?: string
+          niveles_requeridos?: string[] | null
           nombre?: string
           org_id?: string
+          paga_cantidad?: number | null
+          periodo_liquidacion?: string | null
+          porcentaje_costo_proveedor?: number | null
+          precio_promocional?: number | null
+          precio_referencia?: number | null
           presupuesto_asignado?: number
           presupuesto_consumido?: number
           prioridad?: number
+          producto_comprado_id?: string | null
+          producto_regalo_id?: string | null
+          productos_bundle_ids?: string[] | null
+          proveedor?: string | null
+          registra_uso?: boolean
+          requisito_alta?: string | null
+          respeta_precio_minimo_legal?: boolean
           roi?: number | null
+          simulacion_ejecutada?: boolean
           tipo?: string
           tipo_beneficio?: string
+          tipo_beneficio_no_transaccional?: string
+          tipo_monedero?: string
+          tipo_saldo?: string
           tope_maximo?: number | null
-          usos_periodo?: string | null
-          usos_por_cliente?: number | null
+          umbral_alerta_presupuesto_pct?: number | null
+          umbral_puntos?: number | null
+          umbral_tipo?: string | null
+          validacion_requerida?: string | null
           valor_beneficio?: number | null
+          vigencia_saldo_dias?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null
         }
@@ -1783,6 +2025,27 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promociones_producto_comprado_id_fkey"
+            columns: ["producto_comprado_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promociones_producto_regalo_id_fkey"
+            columns: ["producto_regalo_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promociones_coupon_batch_id_fkey"
+            columns: ["coupon_batch_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_batch"
             referencedColumns: ["id"]
           },
         ]

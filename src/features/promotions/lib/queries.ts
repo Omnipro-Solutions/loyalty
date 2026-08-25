@@ -1,5 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
+import type {
+  ConditionCombinator,
+  LimitExcessBehavior,
+  LimitSubject,
+  LimitUnit,
+  LimitWindow,
+} from "@/types/domain"
 
 import { promotionStatus } from "./status"
 
@@ -10,13 +17,59 @@ export type Condition =
   | { campo: "tienda"; valor: string }
   | { campo: "segmento"; valor: string }
   | { campo: "monto_carrito"; valor: number }
+  | { campo: "cupon_codigo"; valor: string }
 
-export type Promotion = Omit<PromotionRow, "condiciones"> & {
-  condiciones: Condition[]
+/**
+ * Árbol de condiciones (jsonb de `promociones.condiciones`) — grupos Y/O
+ * anidados sin límite, la raíz siempre es un grupo. Mismo criterio
+ * estructural que `ConditionGroupValues`/`ConditionNodeValues` de
+ * `../schemas` (grupo vs hoja se distingue por tener `condiciones`, sin
+ * campo discriminante) — se redeclara en vez de importar porque este
+ * archivo es server-only y `schemas.ts` es el lado de validación de
+ * cliente, mismo patrón de duplicación que ya tenía `Condition` aquí.
+ */
+export type ConditionGroup = {
+  combinador: ConditionCombinator
+  condiciones: ConditionNode[]
+}
+export type ConditionNode = Condition | ConditionGroup
+
+/** Elemento de `promociones.escalones` — solo con `tipo_beneficio = 'descuento_escalonado'` (docs §7.1a). */
+export type Escalon = { umbral: number; beneficio_valor: number }
+
+/** Elemento de `promociones.limites` — mismo tipo que `LimitValues` de `../schemas`, redeclarado (server-only, ver comentario de `ConditionGroup` arriba). */
+export type Limit = {
+  unidad: LimitUnit
+  sujeto: LimitSubject
+  ventana: LimitWindow
+  ventanaDias?: number
+  tope: number
+  alExceder: LimitExcessBehavior
+}
+
+export type Promotion = Omit<
+  PromotionRow,
+  "condiciones" | "escalones" | "limites"
+> & {
+  condiciones: ConditionGroup
+  escalones: Escalon[] | null
+  limites: Limit[]
+}
+
+const EMPTY_CONDITION_GROUP: ConditionGroup = {
+  combinador: "todas",
+  condiciones: [],
 }
 
 function withTypedConditions(row: PromotionRow): Promotion {
-  return { ...row, condiciones: (row.condiciones ?? []) as Condition[] }
+  return {
+    ...row,
+    condiciones: (row.condiciones as ConditionGroup) ?? EMPTY_CONDITION_GROUP,
+    // `null` (no `[]`) se conserva a propósito: distingue "esta promoción
+    // no es escalonada" de "es escalonada pero sin escalones todavía".
+    escalones: (row.escalones as Escalon[] | null) ?? null,
+    limites: (row.limites as Limit[]) ?? [],
+  }
 }
 
 export type PromotionsFilters = {
@@ -146,13 +199,19 @@ export async function getFeaturedPromotions(limit = 3): Promise<Promotion[]> {
 
 export type ConditionCategory = { id: string; name: string }
 
-/** Categorías raíz reales de Catálogo, para el selector de la condición "Categoría del producto". */
+/**
+ * Categorías raíz reales de Catálogo, para el selector de la condición
+ * "Categoría del producto" — filtrado a `taxonomia = 'comercial'` (S11,
+ * S23): la terapéutica es dato de salud bajo la LFPDPPP y solo puede
+ * restringir dónde aplica una promoción, nunca construir la audiencia.
+ */
 export async function listConditionCategories(): Promise<ConditionCategory[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("categorias")
     .select("id, nombre")
     .is("parent_id", null)
+    .eq("taxonomia", "comercial")
     .order("nombre")
   if (error) throw error
   return (data ?? []).map((c) => ({ id: c.id, name: c.nombre }))
@@ -216,4 +275,68 @@ export async function getCategoryNames(
     .in("id", ids)
   if (error) throw error
   return new Map((data ?? []).map((c) => [c.id, c.nombre]))
+}
+
+/** `costUnit` (`productos.costo_unitario`) alimenta el aviso de venta bajo costo de `precio_especial` (F12) — el bloqueo real corre en servidor, esto es solo el aviso en vivo del formulario. */
+export type ProductOption = {
+  id: string
+  name: string
+  sku: string
+  costUnit: number | null
+}
+
+/**
+ * Duplica `listFreeProductOptions` de `features/coupons/lib/queries.ts`
+ * (aislamiento entre features, CLAUDE.md §2) — tope de 50 por nombre,
+ * mismo criterio que ese selector. `includeIds` agrega por una segunda
+ * consulta cualquier producto ya guardado que no esté en el top 50, para
+ * que al editar una promoción el producto elegido no se muestre como un
+ * uuid crudo (mismo bug que existe hoy en `coupons/components/step-coupon.tsx`,
+ * que no se repite aquí).
+ */
+export async function listProductOptionsForPromotions(
+  includeIds: string[] = []
+): Promise<ProductOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("productos")
+    .select("id, nombre, sku, costo_unitario")
+    .eq("estado", "activo")
+    .order("nombre")
+    .limit(50)
+  if (error) throw error
+  const base = data ?? []
+
+  const missingIds = includeIds.filter((id) => !base.some((p) => p.id === id))
+  let extra: typeof base = []
+  if (missingIds.length > 0) {
+    const { data: extraData, error: extraError } = await supabase
+      .from("productos")
+      .select("id, nombre, sku, costo_unitario")
+      .in("id", missingIds)
+    if (extraError) throw extraError
+    extra = extraData ?? []
+  }
+
+  return [...base, ...extra].map((p) => ({
+    id: p.id,
+    name: p.nombre,
+    sku: p.sku,
+    costUnit: p.costo_unitario,
+  }))
+}
+
+export type CouponBatchOption = { id: string; reference: string; name: string }
+
+/** Duplica `listCouponBatchesForBuilder` de `features/builder/canvas/queries.ts` — sin filtrar por `status`, mismo criterio. */
+export async function listCouponBatchesForPromotions(): Promise<
+  CouponBatchOption[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_batch")
+    .select("id, reference, name")
+    .order("created_at", { ascending: false })
+  if (error) throw error
+  return data ?? []
 }

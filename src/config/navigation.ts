@@ -3,6 +3,7 @@ import {
   LayoutGrid,
   Package,
   PlugZap,
+  Settings2,
   ShieldCheck,
   Store,
   Tag,
@@ -81,6 +82,15 @@ export const NAVIGATION: NavGroup[] = [
         label: "Integraciones",
         href: "/ajustes/integraciones",
         icon: PlugZap,
+      },
+      // Sin equivalente en el Figma — nace del plan de cobertura de
+      // docs/promociones.md (Fase 0): parámetros de organización que
+      // Promociones y Clientes comparten (valor del punto, breakage,
+      // techo de descuento apilado, exclusiones del reglamento).
+      {
+        label: "Parámetros del programa",
+        href: "/ajustes/programa",
+        icon: Settings2,
       },
     ],
   },

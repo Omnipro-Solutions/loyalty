@@ -28,6 +28,20 @@ cross join (
 where o.slug = 'omni'
 on conflict (org_id, nombre) do nothing;
 
+-- Parámetros del programa (Fase 0 de docs/promociones.md) — `valor_punto`
+-- reemplaza el `POINT_VALUE_USD` hardcodeado de
+-- `features/members/lib/queries.ts`; `breakage_estimado_pct` usa el 28%
+-- del ejemplo trabajado del documento de modalidades.
+insert into programa_parametros (
+  org_id, valor_punto, breakage_estimado_pct, redencion_cashback_pct,
+  techo_descuento_apilado_pct, vigencia_puntos_dias, exclusiones_reglamento
+)
+select o.id, 0.0017, 28, 65, 50, 365,
+  array['tabaco', 'pago_servicios', 'tarjetas_prepago', 'recargas', 'herbalife']
+from organizations o
+where o.slug = 'omni'
+on conflict (org_id) do nothing;
+
 -- Los roles de sistema (Administrador/Gerente comercial/Analista) se crean
 -- solos: el insert de `organizations` de arriba dispara
 -- `organizations_after_insert_system_roles`
@@ -388,8 +402,8 @@ where m.org_id = (select id from org) and m.email = t.email and m.tienda_inscrip
 with org as (select id from organizations where slug = 'omni')
 insert into promociones (
   org_id, nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
-  combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
-  tope_maximo, aplicar_sobre, usos_por_cliente, usos_periodo,
+  condiciones, tipo_beneficio, valor_beneficio,
+  tope_maximo, aplicar_sobre, limites,
   presupuesto_asignado, presupuesto_consumido, canjes, roi,
   estado_publicacion, vigente_desde, vigente_hasta
 )
@@ -397,51 +411,47 @@ select (select id from org), v.*
 from (
   values
     ('2x1 en Vitaminas', 'PROMO-2X1-VIT', 'cantidad', 6, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Vitaminas' and org_id = (select id from org))))),
-     'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Vitaminas' and org_id = (select id from org)))))),
+     'producto_gratis', 1, null::numeric, 'producto', '[]'::jsonb,
      750, 510, 1284, 1.9, 'activa', current_date - 13, current_date + 6),
     ('15% Clientes VIP', 'PROMO-VIP-15', 'segmento', 10, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'segmento', 'valor', 'VIP')),
-     'descuento_porcentual', 15, 7.5, 'subtotal_carrito', 2, 'mes',
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'segmento', 'valor', 'VIP'))),
+     'descuento_porcentual', 15, 7.5, 'subtotal_carrito',
+     jsonb_build_array(jsonb_build_object('unidad', 'veces', 'sujeto', 'socio', 'ventana', 'mes_calendario', 'tope', 2, 'alExceder', 'descartar')),
      1250, 512.5, 612, 3.7, 'activa', current_date - 5, current_date + 12),
     ('Envío gratis compras mayores a $20', 'PROMO-ENVIO-80', 'carrito', 5, true, 'ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 20)),
-     'envio_gratis', 1, null::numeric, 'envio', null::smallint, null,
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 20))),
+     'envio_gratis', 1, null::numeric, 'envio', '[]'::jsonb,
      1300, 1209, 2108, 4.4, 'activa', current_date - 19, current_date),
     ('Cupón bienvenida nuevos clientes', 'PROMO-CUPON-BDV', 'cupon', 5, false, 'pos_ecommerce',
-     'todas', '[]'::jsonb,
-     'descuento_porcentual', 10, 3.75, 'subtotal_carrito', 1, 'sin_limite',
+     jsonb_build_object('combinador', 'todas', 'condiciones', '[]'::jsonb),
+     'descuento_porcentual', 10, 3.75, 'subtotal_carrito',
+     jsonb_build_array(jsonb_build_object('unidad', 'veces', 'sujeto', 'socio', 'ventana', 'vida', 'tope', 1, 'alExceder', 'descartar')),
      875, 472.5, 1902, 5.0, 'activa', current_date - 40, null),
     ('Combo Bienestar: Vitamina C + Analgésico', 'PROMO-BUNDLE-BIENESTAR', 'bundle', 4, false, 'pos',
-     'todas', '[]'::jsonb,
-     'precio_fijo_bundle', 6.25, null::numeric, 'producto', null::smallint, null,
+     jsonb_build_object('combinador', 'todas', 'condiciones', '[]'::jsonb),
+     'precio_fijo_bundle', 6.25, null::numeric, 'producto', '[]'::jsonb,
      300, 0, 0, null::numeric, 'activa', current_date + 3, current_date + 16),
     ('Descuento en Dermocosmética', 'PROMO-DERMO-20', 'categoria', 3, true, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Dermocosmética' and org_id = (select id from org))))),
-     'descuento_porcentual', 20, null::numeric, 'producto', null::smallint, null,
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Dermocosmética' and org_id = (select id from org)))))),
+     'descuento_porcentual', 20, null::numeric, 'producto', '[]'::jsonb,
      250, 0, 0, null::numeric, 'activa', current_date + 9, current_date + 24),
     ('Descuento temporada gripal', 'PROMO-RESP-BORRADOR', 'categoria', 5, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Respiratorio' and org_id = (select id from org))))),
-     'descuento_porcentual', 12, null::numeric, 'producto', null::smallint, null,
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Respiratorio' and org_id = (select id from org)))))),
+     'descuento_porcentual', 12, null::numeric, 'producto', '[]'::jsonb,
      200, 0, 0, null::numeric, 'borrador', current_date, current_date + 30),
     ('2x1 en Cuidado personal', 'PROMO-2X1-CP-BORRADOR', 'cantidad', 5, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Cuidado personal' and org_id = (select id from org))))),
-     'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Cuidado personal' and org_id = (select id from org)))))),
+     'producto_gratis', 1, null::numeric, 'producto', '[]'::jsonb,
      125, 0, 0, null::numeric, 'borrador', current_date, null)
 ) as v (
   nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
-  combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
-  tope_maximo, aplicar_sobre, usos_por_cliente, usos_periodo,
+  condiciones, tipo_beneficio, valor_beneficio,
+  tope_maximo, aplicar_sobre, limites,
   presupuesto_asignado, presupuesto_consumido, canjes, roi,
   estado_publicacion, vigente_desde, vigente_hasta
 )

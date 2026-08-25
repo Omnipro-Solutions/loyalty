@@ -1,11 +1,18 @@
 import { formatUSD } from "@/lib/format"
 
-import type { Condition } from "./queries"
+import type { Condition, ConditionNode } from "./queries"
+
+/** Mismo criterio estructural que `flattenConditionTree` de `lib/condition-tree.ts`, redeclarado por ser server-only (ver `collision.ts`). */
+function flattenConditionNode(node: ConditionNode): Condition[] {
+  if ("condiciones" in node)
+    return node.condiciones.flatMap(flattenConditionNode)
+  return [node]
+}
 
 type PromotionScope = {
   tipo: string
   canal_aplicacion: string
-  condiciones: Condition[]
+  condiciones: ConditionNode
 }
 
 type ScopeContext = {
@@ -23,24 +30,26 @@ export function scopeSummary(
   promotion: PromotionScope,
   ctx: ScopeContext
 ): string {
-  const segment = promotion.condiciones.find((c) => c.campo === "segmento")
+  const conditions = flattenConditionNode(promotion.condiciones)
+  const segment = conditions.find((c) => c.campo === "segmento")
   if (segment) {
     return `Segmento ${ctx.segmentNameById.get(segment.valor) ?? segment.valor}`
   }
 
-  const category = promotion.condiciones.find((c) => c.campo === "categoria")
+  const category = conditions.find((c) => c.campo === "categoria")
   if (category) {
     const names = category.valor.map((id) => ctx.categoryNameById.get(id) ?? id)
     return names.join(", ") || "—"
   }
 
-  const store = promotion.condiciones.find((c) => c.campo === "tienda")
+  const store = conditions.find((c) => c.campo === "tienda")
   if (store) return store.valor
 
-  const cartAmount = promotion.condiciones.find(
-    (c) => c.campo === "monto_carrito"
-  )
+  const cartAmount = conditions.find((c) => c.campo === "monto_carrito")
   if (cartAmount) return `Carrito ≥ ${formatUSD(cartAmount.valor)}`
+
+  const couponCode = conditions.find((c) => c.campo === "cupon_codigo")
+  if (couponCode) return "Requiere código"
 
   if (promotion.canal_aplicacion === "pos") return "Tiendas físicas"
   if (promotion.canal_aplicacion === "ecommerce") return "E-commerce"

@@ -17,9 +17,23 @@ export type RelatedPromotion = {
 }
 
 type RawCondition = { campo?: string; valor?: unknown }
+type RawConditionNode =
+  RawCondition | { combinador?: string; condiciones?: RawConditionNode[] }
 
+/**
+ * `promociones.condiciones` es un árbol de grupos Y/O anidados (ver
+ * `features/promotions/lib/condition-tree.ts`), no un array plano —
+ * aplana recursivamente para recolectar todas las hojas, sin importar en
+ * qué subgrupo estén. Copia mínima duplicada por aislamiento entre
+ * features (CLAUDE.md §2).
+ */
 function conditionsOf(json: unknown): RawCondition[] {
-  return Array.isArray(json) ? (json as RawCondition[]) : []
+  if (!json || typeof json !== "object") return []
+  const node = json as RawConditionNode
+  if ("condiciones" in node && Array.isArray(node.condiciones)) {
+    return node.condiciones.flatMap(conditionsOf)
+  }
+  return [node as RawCondition]
 }
 
 function dateOnly(value: string): number {
@@ -45,18 +59,52 @@ function validityStatus(
   return "activa"
 }
 
-function mechanicSummary(benefitType: string, benefitValue: number | null) {
-  switch (benefitType) {
+type MechanicSummaryRow = {
+  tipo_beneficio: string
+  valor_beneficio: number | null
+  compra_cantidad: number | null
+  paga_cantidad: number | null
+  multiplicador_puntos: number | null
+  bono_puntos: number | null
+  precio_promocional: number | null
+  tipo_monedero: string | null
+}
+
+/**
+ * `tipo_beneficio` es `string` (no `BenefitType`) para no acoplar esta
+ * query a `@/types/domain` — su `switch` NO avisa en el typecheck si se
+ * agrega una mecánica nueva sin tocar aquí (a diferencia de
+ * `BENEFIT_TYPE_LABEL`, que sí es `Record<BenefitType,…>`), así que cada
+ * mecánica nueva de `features/promotions` necesita agregarse a mano.
+ */
+function mechanicSummary(row: MechanicSummaryRow) {
+  switch (row.tipo_beneficio) {
     case "descuento_porcentual":
-      return `${benefitValue ?? 0} % de descuento`
+      return `${row.valor_beneficio ?? 0} % de descuento`
     case "descuento_monto_fijo":
-      return `${formatUSD(benefitValue ?? 0)} de descuento`
+      return `${formatUSD(row.valor_beneficio ?? 0)} de descuento`
     case "envio_gratis":
       return "Envío gratis"
     case "producto_gratis":
       return "Producto gratis (2x1, 3x2…)"
     case "precio_fijo_bundle":
-      return `Precio fijo: ${formatUSD(benefitValue ?? 0)}`
+      return `Precio fijo: ${formatUSD(row.valor_beneficio ?? 0)}`
+    case "descuento_escalonado":
+      return "Descuento escalonado por tramos"
+    case "por_piezas":
+      return `Compra ${row.compra_cantidad ?? "?"}, paga ${row.paga_cantidad ?? "?"}`
+    case "multiplicador_puntos":
+      return `${row.multiplicador_puntos ?? "?"}x puntos`
+    case "bono_puntos":
+      return `+${row.bono_puntos ?? "?"} puntos de bono`
+    case "emitir_cupon":
+      return "Emite un cupón"
+    case "precio_especial":
+      return `Precio especial: ${formatUSD(row.precio_promocional ?? 0)}`
+    case "cashback":
+      return row.tipo_monedero === "monto_fijo"
+        ? `Cashback: ${formatUSD(row.valor_beneficio ?? 0)}`
+        : `Cashback: ${row.valor_beneficio ?? 0} %`
     default:
       return "—"
   }
@@ -75,7 +123,7 @@ export async function listPromotionsByCategories(
   const { data, error } = await supabase
     .from("promociones")
     .select(
-      "id, nombre, tipo, tipo_beneficio, valor_beneficio, vigente_desde, vigente_hasta, estado_publicacion, canal_aplicacion, condiciones, creado_en"
+      "id, nombre, tipo, tipo_beneficio, valor_beneficio, compra_cantidad, paga_cantidad, multiplicador_puntos, bono_puntos, precio_promocional, tipo_monedero, vigente_desde, vigente_hasta, estado_publicacion, canal_aplicacion, condiciones, creado_en"
     )
     .neq("estado_publicacion", "borrador")
     .order("creado_en", { ascending: false })
@@ -116,7 +164,7 @@ export async function listPromotionsByCategories(
         id: row.id,
         name: row.nombre,
         type: row.tipo as PromotionType,
-        mechanic: mechanicSummary(row.tipo_beneficio, row.valor_beneficio),
+        mechanic: mechanicSummary(row),
         validFrom: row.vigente_desde,
         validTo: row.vigente_hasta,
         status: validityStatus(row),
