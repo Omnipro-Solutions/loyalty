@@ -4,21 +4,13 @@ import { useWatch, type Control } from "react-hook-form"
 
 import { countLeavesAndDepth } from "../lib/condition-tree"
 import { ConditionTreeGroup } from "./condition-tree-group"
-import type {
-  ConditionCategory,
-  ConditionCity,
-  ConditionSegment,
-  CouponBatchOption,
-} from "../lib/queries"
+import type { ConditionOptions } from "../lib/queries"
 import type { ConditionGroupValues, PromotionValues } from "../schemas"
 
 type ConditionsBuilderProps = {
   control: Control<PromotionValues>
   onChange: (next: ConditionGroupValues) => void
-  categories: ConditionCategory[]
-  cities: ConditionCity[]
-  segments: ConditionSegment[]
-  couponBatches: CouponBatchOption[]
+  options: ConditionOptions
 }
 
 /**
@@ -30,10 +22,7 @@ type ConditionsBuilderProps = {
 export function ConditionsBuilder({
   control,
   onChange,
-  categories,
-  cities,
-  segments,
-  couponBatches,
+  options,
 }: ConditionsBuilderProps) {
   const tree = useWatch({ control, name: "conditions" })
   const { leaves, maxDepth } = countLeavesAndDepth(tree)
@@ -49,10 +38,7 @@ export function ConditionsBuilder({
         node={tree}
         depth={0}
         onChange={onChange}
-        categories={categories}
-        cities={cities}
-        segments={segments}
-        couponBatches={couponBatches}
+        options={options}
       />
     </div>
   )

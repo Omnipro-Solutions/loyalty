@@ -24,6 +24,7 @@ import {
   RX_APPLICABILITY_LABEL,
   SETTLEMENT_PERIOD_LABEL,
   STACKING_MODE_LABEL,
+  STORE_FORMAT_LABEL,
   TIER_NAME_LABEL,
   TRIGGER_EVENT_LABEL,
   formatDiscountTier,
@@ -34,6 +35,7 @@ import { BENEFIT_TYPES_WITH_APPLY_TO } from "../lib/mechanic-fields"
 import type {
   ConditionCategory,
   ConditionSegment,
+  ConditionTier,
   CouponBatchOption,
   ProductOption,
 } from "../lib/queries"
@@ -73,7 +75,8 @@ function conditionLeafSummary(
   condition: ConditionValues,
   categoryNameById: Map<string, string>,
   segmentNameById: Map<string, string>,
-  couponBatchNameById: Map<string, string>
+  couponBatchNameById: Map<string, string>,
+  tierNameById: Map<string, string>
 ): string {
   if (condition.campo === "categoria") {
     return (
@@ -90,6 +93,32 @@ function conditionLeafSummary(
   if (condition.campo === "cupon_codigo") {
     return couponBatchNameById.get(condition.valor) ?? condition.valor
   }
+  if (condition.campo === "socio_nivel") {
+    return (
+      condition.valor.map((id) => tierNameById.get(id) ?? id).join(", ") || "—"
+    )
+  }
+  if (condition.campo === "tienda_formato") {
+    return (
+      condition.valor
+        .map((f) => STORE_FORMAT_LABEL[f as keyof typeof STORE_FORMAT_LABEL])
+        .join(", ") || "—"
+    )
+  }
+  if (
+    condition.campo === "socio_provincia" ||
+    condition.campo === "tienda_region" ||
+    condition.campo === "producto_marca" ||
+    condition.campo === "producto_proveedor"
+  ) {
+    return condition.valor.join(", ") || "—"
+  }
+  if (condition.campo === "socio_antiguedad") {
+    return `${condition.valor} meses o más`
+  }
+  if (condition.campo === "socio_edad") {
+    return `${condition.valor} años o más`
+  }
   return String(condition.valor)
 }
 
@@ -100,12 +129,14 @@ function ConditionNodeSummary({
   categoryNameById,
   segmentNameById,
   couponBatchNameById,
+  tierNameById,
 }: {
   node: ConditionNodeValues
   depth: number
   categoryNameById: Map<string, string>
   segmentNameById: Map<string, string>
   couponBatchNameById: Map<string, string>
+  tierNameById: Map<string, string>
 }) {
   const paddingLeft = depth * 12
 
@@ -120,7 +151,8 @@ function ConditionNodeSummary({
             node,
             categoryNameById,
             segmentNameById,
-            couponBatchNameById
+            couponBatchNameById,
+            tierNameById
           )}
         </span>
       </p>
@@ -153,6 +185,7 @@ function ConditionNodeSummary({
           categoryNameById={categoryNameById}
           segmentNameById={segmentNameById}
           couponBatchNameById={couponBatchNameById}
+          tierNameById={tierNameById}
         />
       ))}
     </div>
@@ -165,6 +198,7 @@ type PromotionReviewSummaryProps = {
   segments: ConditionSegment[]
   products: ProductOption[]
   couponBatches: CouponBatchOption[]
+  tiers: ConditionTier[]
 }
 
 /** Paso 6 "Resumen" del stepper — revisión de todo lo capturado antes de guardar (no diseñado en el Figma de la regla). */
@@ -174,10 +208,12 @@ export function PromotionReviewSummary({
   segments,
   products,
   couponBatches,
+  tiers,
 }: PromotionReviewSummaryProps) {
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
   const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
   const productNameById = new Map(products.map((p) => [p.id, p.name]))
+  const tierNameById = new Map(tiers.map((t) => [t.id, t.name]))
   const couponBatchNameById = new Map(couponBatches.map((b) => [b.id, b.name]))
   const conditionsTree = values.conditions
 
@@ -212,6 +248,7 @@ export function PromotionReviewSummary({
             categoryNameById={categoryNameById}
             segmentNameById={segmentNameById}
             couponBatchNameById={couponBatchNameById}
+            tierNameById={tierNameById}
           />
         )}
       </SummaryGroup>

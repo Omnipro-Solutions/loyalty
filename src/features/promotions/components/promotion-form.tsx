@@ -97,12 +97,9 @@ import {
   STACKING_MODE_LABEL,
 } from "../lib/labels"
 import type {
-  ConditionCategory,
-  ConditionCity,
   ConditionNode,
-  CouponBatchOption,
+  ConditionOptions,
   Promotion,
-  ConditionSegment,
   ProductOption,
 } from "../lib/queries"
 import { promotionSchema, type PromotionValues } from "../schemas"
@@ -168,11 +165,8 @@ function fieldsForStep(
 }
 
 type PromotionFormProps = {
-  categories: ConditionCategory[]
-  cities: ConditionCity[]
-  segments: ConditionSegment[]
+  options: ConditionOptions
   products: ProductOption[]
-  couponBatches: CouponBatchOption[]
   promotion?: Promotion
 }
 
@@ -191,11 +185,8 @@ type PromotionFormProps = {
  * los detalla, pero el stepper sí los contempla).
  */
 export function PromotionForm({
-  categories,
-  cities,
-  segments,
+  options,
   products,
-  couponBatches,
   promotion,
 }: PromotionFormProps) {
   const router = useRouter()
@@ -691,10 +682,7 @@ export function PromotionForm({
               <ConditionsBuilder
                 control={control}
                 onChange={(next) => setValue("conditions", next)}
-                categories={categories}
-                cities={cities}
-                segments={segments}
-                couponBatches={couponBatches}
+                options={options}
               />
             </Section>
           )}
@@ -795,7 +783,7 @@ export function PromotionForm({
                   errors={errors}
                   setValue={setValue}
                   products={products}
-                  couponBatches={couponBatches}
+                  couponBatches={options.couponBatches}
                 />
               )}
             </Section>
@@ -1249,10 +1237,11 @@ export function PromotionForm({
             >
               <PromotionReviewSummary
                 values={values as Partial<PromotionValues>}
-                categories={categories}
-                segments={segments}
+                categories={options.categories}
+                segments={options.segments}
                 products={products}
-                couponBatches={couponBatches}
+                couponBatches={options.couponBatches}
+                tiers={options.tiers}
               />
             </Section>
           )}
@@ -1283,7 +1272,7 @@ export function PromotionForm({
                 condiciones: [],
               }) as ConditionNode
             }
-            segments={segments}
+            segments={options.segments}
             channelScope={values.channelScope ?? "pos_ecommerce"}
             priority={values.priority ?? 5}
             values={values as Partial<PromotionValues>}

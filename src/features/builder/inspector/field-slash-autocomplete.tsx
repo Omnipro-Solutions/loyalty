@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-export type AutocompleteField = { name: string; label: string }
+export type AutocompleteField = {
+  name: string
+  label: string
+  /** Encabezado del grupo cmdk que agrupa esta opción (ej. "Atributos del socio", o la etiqueta de un bloque anterior del grafo). Sin `group`, todas las opciones caen en un único grupo sin encabezado — mismo aspecto que antes de soportar agrupación. */
+  group?: string
+}
 
 /**
  * Autocompletado de atributos "/" (plan Fase 4, caso `condicion_multiple`):
@@ -49,6 +54,15 @@ export function FieldSlashAutocomplete({
     () => fields.find((f) => f.name === value)?.label ?? value,
     [fields, value]
   )
+
+  const groups = useMemo(() => {
+    const byGroup = new Map<string, AutocompleteField[]>()
+    for (const f of fields) {
+      const key = f.group ?? ""
+      byGroup.set(key, [...(byGroup.get(key) ?? []), f])
+    }
+    return [...byGroup.entries()]
+  }, [fields])
 
   return (
     <div className="relative">
@@ -93,24 +107,31 @@ export function FieldSlashAutocomplete({
           <Command>
             <CommandList>
               <CommandEmpty>Sin coincidencias.</CommandEmpty>
-              <CommandGroup>
-                {fields
-                  .filter((f) =>
-                    f.label.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map((f) => (
-                    <CommandItem
-                      key={f.name}
-                      onSelect={() => {
-                        onSelect(f.name)
-                        setSearch("")
-                        setOpen(false)
-                      }}
-                    >
-                      {f.label}
-                    </CommandItem>
-                  ))}
-              </CommandGroup>
+              {groups.map(([group, groupFields]) => {
+                const matches = groupFields.filter((f) =>
+                  f.label.toLowerCase().includes(search.toLowerCase())
+                )
+                if (!matches.length) return null
+                return (
+                  <CommandGroup
+                    key={group || "__default"}
+                    heading={group || undefined}
+                  >
+                    {matches.map((f) => (
+                      <CommandItem
+                        key={f.name}
+                        onSelect={() => {
+                          onSelect(f.name)
+                          setSearch("")
+                          setOpen(false)
+                        }}
+                      >
+                        {f.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )
+              })}
             </CommandList>
           </Command>
         </PopoverContent>

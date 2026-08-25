@@ -206,6 +206,61 @@ describe("annotateCounts", () => {
   })
 })
 
+describe("annotateCounts — variables de un bloque anterior del grafo", () => {
+  const members = [
+    member({ tier: "oro", saldo_puntos: 2000 }),
+    member({ tier: "oro", saldo_puntos: 10 }),
+  ]
+
+  it("una regla sobre una variable que no es un atributo de members da matchCount null, no un 0 inventado", () => {
+    const tree: ConditionGroup = {
+      id: "raiz",
+      combinator: "and",
+      rules: [
+        { id: "evento", field: "compra.monto", operator: ">", value: "100" },
+      ],
+    }
+    const count = annotateCounts(tree, members)
+    expect(count).toEqual({
+      type: "grupo",
+      id: "raiz",
+      scope: null,
+      children: [{ type: "regla", id: "evento", matchCount: null }],
+    })
+  })
+
+  it("un grupo con una mezcla de atributo real + variable de evento da scope null, pero cada regla calculable conserva su conteo real", () => {
+    const tree: ConditionGroup = {
+      id: "raiz",
+      combinator: "and",
+      rules: [
+        { id: "real", field: "tier", operator: "=", value: "oro" },
+        { id: "evento", field: "compra.monto", operator: ">", value: "100" },
+      ],
+    }
+    const count = annotateCounts(tree, members)
+    expect(count).toEqual({
+      type: "grupo",
+      id: "raiz",
+      scope: null,
+      children: [
+        { type: "regla", id: "real", matchCount: 2 },
+        { type: "regla", id: "evento", matchCount: null },
+      ],
+    })
+  })
+
+  it("un grupo donde todas las reglas son atributos reales sigue dando un scope numérico", () => {
+    const tree: ConditionGroup = {
+      id: "raiz",
+      combinator: "and",
+      rules: [{ id: "real", field: "tier", operator: "=", value: "oro" }],
+    }
+    const count = annotateCounts(tree, members)
+    expect(count.type === "grupo" && count.scope).toBe(2)
+  })
+})
+
 describe("flattenCounts", () => {
   it("indexa cada nodo del árbol de conteos por id, incluyendo anidados", () => {
     const count = annotateCounts(

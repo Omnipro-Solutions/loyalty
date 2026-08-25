@@ -1,6 +1,7 @@
 "use client"
 
 import { Handle, Position, type NodeProps } from "@xyflow/react"
+import { AlertTriangle } from "lucide-react"
 
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
 import {
@@ -8,6 +9,7 @@ import {
   findFlow,
   isMessageNodeType,
 } from "@/config/integration-flows"
+import { validateNodeConfig } from "@/features/builder/inspector/schemas"
 import { cn } from "@/lib/utils"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
@@ -131,6 +133,7 @@ export function BuilderNode({
   )
   const outputs = outputsForNode(data.tipo, data.config ?? {})
   const flowSummary = messageFlowSummary(data.tipo, data.config ?? {})
+  const missingFields = validateNodeConfig(data.tipo, data.config ?? {})
 
   return (
     <div
@@ -164,6 +167,14 @@ export function BuilderNode({
             {data.etiqueta}
           </p>
         </div>
+        {missingFields.length > 0 && (
+          <span
+            title={`Faltan campos obligatorios: ${missingFields.join(", ")}.`}
+            className="flex shrink-0 items-center justify-center"
+          >
+            <AlertTriangle className="size-3.5 text-warning" />
+          </span>
+        )}
         {data.simulacion && (
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
             {data.simulacion.entryCount.toLocaleString("es-CO")}

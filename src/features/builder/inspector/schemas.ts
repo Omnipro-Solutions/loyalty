@@ -50,8 +50,18 @@ export const branchSchema = z.object({
   weight: z.number().min(0).optional(),
 })
 
+// El default espeja el que usa `BranchesTab` al montar sin `config.branches`
+// todavía — un nodo recién soltado que nunca abrió la pestaña Ramas no debe
+// contar como "incompleto" (`OUTPUT_HANDLES`/el simulador ya asumen ese
+// mismo par por defecto para poder conectarlo y correr Simular).
 export const branchesConfigSchema = z.object({
-  branches: z.array(branchSchema).min(1, "Agrega al menos una rama"),
+  branches: z
+    .array(branchSchema)
+    .min(1, "Agrega al menos una rama")
+    .default([
+      { id: "rama_1", label: "Rama 1", weight: 50 },
+      { id: "por_defecto", label: "Por defecto", weight: 50 },
+    ]),
 })
 
 export const accumulatePointsConfigSchema = z.object({
@@ -102,9 +112,39 @@ export function nodeConfigSchemaFor(tipo: BuilderNodeType): z.ZodTypeAny {
   if (tipo === "acumular_puntos") return accumulatePointsConfigSchema
   if (tipo === "condicion_multiple") return multiConditionConfigSchema
   if (tipo === "ramificacion_valor" || tipo === "split_ab") {
-    return branchesConfigSchema
+    // `branchesConfigSchema` por sí solo solo cubre la pestaña Ramas — sin
+    // este `.extend`, los campos obligatorios de la pestaña Configuración
+    // (`atributo_evaluado`/`modo` en ramificación por valor, `criterio_exito`
+    // en split A/B) nunca se validaban.
+    return branchesConfigSchema.extend(
+      specsSchema(SIMPLE_FIELD_SPECS[tipo] ?? []).shape
+    )
   }
   const specs = SIMPLE_FIELD_SPECS[tipo] ?? []
   if (isMessageNodeType(tipo)) return messageActionConfigSchema(specs)
   return specsSchema(specs)
+}
+
+/**
+ * Campos obligatorios (`FieldSpec.required`) sin completar en `config`, ya
+ * traducidos al label humano del catálogo (`SIMPLE_FIELD_SPECS`) — una sola
+ * fuente de verdad compartida entre `validateGraph` (bloquea Publicar) y el
+ * badge de advertencia de `BuilderNode` en el canvas. `[]` = nodo completo.
+ */
+export function validateNodeConfig(
+  tipo: BuilderNodeType,
+  config: Record<string, unknown>
+): string[] {
+  const result = nodeConfigSchemaFor(tipo).safeParse(config)
+  if (result.success) return []
+
+  const labelByKey = new Map(
+    (SIMPLE_FIELD_SPECS[tipo] ?? []).map((spec) => [spec.key, spec.label])
+  )
+  const labels = new Set<string>()
+  for (const issue of result.error.issues) {
+    const key = String(issue.path[0] ?? "")
+    labels.add(labelByKey.get(key) ?? key)
+  }
+  return [...labels]
 }

@@ -8,6 +8,7 @@ import type {
   BalanceType,
   BxgyScope,
   ConditionField,
+  ConditionFieldDomain,
   ConditionCombinator,
   CostNature,
   BenefitType,
@@ -28,6 +29,7 @@ import type {
   RxApplicability,
   SettlementPeriod,
   StackingMode,
+  StoreFormat,
   TierName,
   TriggerEvent,
   TriggerFrequency,
@@ -58,6 +60,14 @@ export const CONDITION_FIELD_LABEL: Record<ConditionField, string> = {
   segmento: "Segmento del cliente",
   monto_carrito: "Monto del carrito",
   cupon_codigo: "Código de cupón",
+  socio_nivel: "Nivel de lealtad",
+  socio_provincia: "Provincia del socio",
+  socio_antiguedad: "Antigüedad como socio",
+  socio_edad: "Edad del socio",
+  tienda_region: "Región de la tienda",
+  tienda_formato: "Formato de tienda",
+  producto_marca: "Marca del producto",
+  producto_proveedor: "Proveedor / laboratorio",
 }
 
 /** Operador implícito por campo (07.1: cada campo del mock trae siempre el mismo operador). */
@@ -67,6 +77,41 @@ export const CONDITION_FIELD_OPERATOR: Record<ConditionField, string> = {
   segmento: "es igual a",
   monto_carrito: "mayor o igual a",
   cupon_codigo: "coincide con",
+  socio_nivel: "pertenece a",
+  socio_provincia: "está en",
+  socio_antiguedad: "mayor o igual a",
+  socio_edad: "mayor o igual a",
+  tienda_region: "está en",
+  tienda_formato: "pertenece a",
+  producto_marca: "pertenece a",
+  producto_proveedor: "pertenece a",
+}
+
+/** Agrupa el `Select` de campo por ámbito (`CONDITION_FIELD_DOMAINS`) — 13 campos en una lista plana son difíciles de escanear sin agrupar. */
+export const CONDITION_FIELD_DOMAIN: Record<
+  ConditionField,
+  ConditionFieldDomain
+> = {
+  monto_carrito: "Carrito",
+  categoria: "Producto",
+  producto_marca: "Producto",
+  producto_proveedor: "Producto",
+  tienda: "Tienda",
+  tienda_region: "Tienda",
+  tienda_formato: "Tienda",
+  segmento: "Cliente",
+  socio_nivel: "Cliente",
+  socio_provincia: "Cliente",
+  socio_antiguedad: "Cliente",
+  socio_edad: "Cliente",
+  cupon_codigo: "Cupón",
+}
+
+/** Duplica `STORE_FORMAT_LABEL` de `features/stores/lib/labels.ts` (aislamiento entre features, CLAUDE.md §2) — alimenta la condición "Formato de tienda", que reusa la tupla `STORE_FORMATS` directamente porque su `check` de Postgres ya coincide 1:1. */
+export const STORE_FORMAT_LABEL: Record<StoreFormat, string> = {
+  flagship: "Flagship",
+  express: "Express",
+  mall: "Mall",
 }
 
 /** Frase larga del selector de cabecera de un grupo (Figma "Regla del grupo": "...cumple [todas las condiciones ▾]" / "...si cumple [al menos una ▾]"). */

@@ -68,6 +68,22 @@ export function defaultConditionFor(field: ConditionField): ConditionValues {
       return { campo: field, valor: 0 }
     case "cupon_codigo":
       return { campo: field, valor: "" }
+    case "socio_nivel":
+      return { campo: field, valor: [] }
+    case "socio_provincia":
+      return { campo: field, valor: [] }
+    case "socio_antiguedad":
+      return { campo: field, valor: 0 }
+    case "socio_edad":
+      return { campo: field, valor: 0 }
+    case "tienda_region":
+      return { campo: field, valor: [] }
+    case "tienda_formato":
+      return { campo: field, valor: [] }
+    case "producto_marca":
+      return { campo: field, valor: [] }
+    case "producto_proveedor":
+      return { campo: field, valor: [] }
   }
 }
 

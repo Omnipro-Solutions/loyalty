@@ -3,21 +3,21 @@ import type { BuilderNodeType } from "@/types/domain"
 /**
  * Variables que cada tipo de bloque deja disponibles para los bloques
  * siguientes del flujo — lista extraída de la fila "Expone" del catálogo
- * de Figma (`1109:4478 · 08.4`) para cada tipo documentado ahí. Es
- * informativa por ahora (no hay todavía un motor de ejecución real que las
- * inyecte, ver `features/builder/engine/simulate.ts`); decisión de
- * alcance: mostrar la lista es suficiente para esta fase, resolver qué
- * bloque ANTERIOR en el grafo produjo cada variable (lo que el mockup de
- * Figma "Inspector · Email de reactivación · Datos" muestra como "desde
- * Acumular puntos") es un problema de análisis del grafo completo, más
- * grande que este panel aislado — no se inventa aquí un origen que no se
- * puede calcular todavía. `canje_cupon` y `alta_socio` no tienen tarjeta
- * en el catálogo de Figma; se les dejó una lista mínima razonable.
+ * de Figma (`1109:4478 · 08.4`) para cada tipo documentado ahí. Sigue sin
+ * haber un motor de ejecución real que las inyecte en producción (ver
+ * `features/builder/engine/simulate.ts`) — pero qué bloque ANTERIOR en el
+ * grafo produjo cada variable (lo que el mockup de Figma "Inspector · Email
+ * de reactivación · Datos" muestra como "desde Acumular puntos") sí se
+ * resuelve ahora — ver `resolveAvailableVariables` más abajo. `canje_cupon`
+ * y `alta_socio` no tienen tarjeta en el catálogo de Figma; se les dejó una
+ * lista mínima razonable.
  *
  * Vive fuera de `data-tab.tsx` porque el mapeo de parámetros de
- * `integration-message-form.tsx` (bloques `email`/`push`/`sms_whatsapp`)
- * necesita la misma lista para ofrecer variables del journey al elegir el
- * flujo del proveedor.
+ * `integration-message-form.tsx` (bloques `email`/`push`/`sms_whatsapp`) y
+ * el selector de campos de `multi-condition-form.tsx` (bloque
+ * `condicion_multiple`) necesitan la misma lista, resuelta contra el grafo
+ * real de cada workflow, para ofrecer solo las variables que de verdad
+ * llegan hasta ese nodo.
  */
 export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   evento_compra: [
@@ -69,9 +69,62 @@ export function inferType(variable: string): string {
   return "texto"
 }
 
-/** Unión deduplicada y ordenada de todas las variables de todos los bloques, para el picker de mapeo de `integration-message-form.tsx` — ahí no se sabe de antemano qué bloque anterior del grafo produjo cada variable (ver comentario de arriba), así que se ofrece el catálogo completo. */
-export const ALL_NODE_VARIABLES: { name: string; label: string }[] = [
-  ...new Set(Object.values(VARIABLES_BY_TYPE).flat()),
-]
-  .sort()
-  .map((name) => ({ name, label: name }))
+export type GraphNodeRef = {
+  id: string
+  tipo: BuilderNodeType
+  etiqueta: string
+}
+
+export type GraphEdgeRef = {
+  source_node_id: string
+  target_node_id: string
+}
+
+export type GraphVariable = {
+  name: string
+  /** Id del nodo del grafo que expone esta variable — para diferenciar dos bloques del mismo tipo con nombres distintos. */
+  sourceNodeId: string
+  /** `etiqueta` real del nodo (no `BUILDER_BLOCKS[tipo].label`) — así "Compra grande" y "Compra POS" no se confunden entre sí en el picker. */
+  sourceLabel: string
+}
+
+/**
+ * Variables realmente disponibles en `targetNodeId`: las que exponen los
+ * bloques que lo preceden en ESTE grafo (cualquier camino que llegue hasta
+ * acá, no solo el padre directo) — no el catálogo completo de los 19 tipos.
+ * BFS hacia atrás sobre `edges`; un `visited` evita recorrer dos veces un
+ * ancestro común a varias ramas (y protege contra un ciclo en un borrador a
+ * medio construir, el mismo caso que ya maneja `simulateWorkflow`).
+ */
+export function resolveAvailableVariables(
+  nodes: GraphNodeRef[],
+  edges: GraphEdgeRef[],
+  targetNodeId: string
+): GraphVariable[] {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const parentsByNode = new Map<string, string[]>()
+  for (const e of edges) {
+    const parents = parentsByNode.get(e.target_node_id) ?? []
+    parents.push(e.source_node_id)
+    parentsByNode.set(e.target_node_id, parents)
+  }
+
+  const ancestors = new Set<string>()
+  const pending = [...(parentsByNode.get(targetNodeId) ?? [])]
+  while (pending.length) {
+    const id = pending.pop()!
+    if (ancestors.has(id)) continue
+    ancestors.add(id)
+    pending.push(...(parentsByNode.get(id) ?? []))
+  }
+
+  const variables: GraphVariable[] = []
+  for (const id of ancestors) {
+    const node = byId.get(id)
+    if (!node) continue
+    for (const name of VARIABLES_BY_TYPE[node.tipo] ?? []) {
+      variables.push({ name, sourceNodeId: id, sourceLabel: node.etiqueta })
+    }
+  }
+  return variables.sort((a, b) => a.name.localeCompare(b.name))
+}

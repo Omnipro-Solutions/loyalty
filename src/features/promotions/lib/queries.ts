@@ -18,6 +18,14 @@ export type Condition =
   | { campo: "segmento"; valor: string }
   | { campo: "monto_carrito"; valor: number }
   | { campo: "cupon_codigo"; valor: string }
+  | { campo: "socio_nivel"; valor: string[] }
+  | { campo: "socio_provincia"; valor: string[] }
+  | { campo: "socio_antiguedad"; valor: number }
+  | { campo: "socio_edad"; valor: number }
+  | { campo: "tienda_region"; valor: string[] }
+  | { campo: "tienda_formato"; valor: string[] }
+  | { campo: "producto_marca"; valor: string[] }
+  | { campo: "producto_proveedor"; valor: string[] }
 
 /**
  * Árbol de condiciones (jsonb de `promociones.condiciones`) — grupos Y/O
@@ -277,6 +285,61 @@ export async function getCategoryNames(
   return new Map((data ?? []).map((c) => [c.id, c.nombre]))
 }
 
+/** Opción genérica {value, label} para los selectores de condición cuyo universo de valores es "los distintos que existan hoy en una columna de texto" (provincia, región, marca, proveedor) — sin tabla de catálogo propia detrás. */
+export type ConditionOption = { value: string; label: string }
+
+function distinctTextValues(values: (string | null)[]): ConditionOption[] {
+  const unique = new Set(values.filter((v): v is string => Boolean(v)))
+  return [...unique]
+    .sort((a, b) => a.localeCompare(b))
+    .map((v) => ({ value: v, label: v }))
+}
+
+export type ConditionTier = { id: string; name: string }
+
+/** Niveles reales de lealtad (`tiers`), para la condición "Nivel de lealtad" — ordenados por `orden`, no alfabéticamente, para que el multiselect respete la jerarquía del programa. */
+export async function listConditionTiers(): Promise<ConditionTier[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("tiers")
+    .select("id, nombre")
+    .order("orden")
+  if (error) throw error
+  return (data ?? []).map((t) => ({ id: t.id, name: t.nombre }))
+}
+
+/** Provincias reales con al menos un socio, para la condición "Provincia del socio". */
+export async function listConditionProvinces(): Promise<ConditionOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("members").select("provincia")
+  if (error) throw error
+  return distinctTextValues((data ?? []).map((m) => m.provincia))
+}
+
+/** Regiones reales de Tiendas, para la condición "Región de la tienda". */
+export async function listConditionStoreRegions(): Promise<ConditionOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("tiendas").select("region")
+  if (error) throw error
+  return distinctTextValues((data ?? []).map((t) => t.region))
+}
+
+/** Marcas reales de Catálogo, para la condición "Marca del producto". */
+export async function listConditionBrands(): Promise<ConditionOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("productos").select("marca")
+  if (error) throw error
+  return distinctTextValues((data ?? []).map((p) => p.marca))
+}
+
+/** Proveedores/laboratorios reales de Catálogo, para la condición "Proveedor / laboratorio". */
+export async function listConditionSuppliers(): Promise<ConditionOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("productos").select("proveedor")
+  if (error) throw error
+  return distinctTextValues((data ?? []).map((p) => p.proveedor))
+}
+
 /** `costUnit` (`productos.costo_unitario`) alimenta el aviso de venta bajo costo de `precio_especial` (F12) — el bloqueo real corre en servidor, esto es solo el aviso en vivo del formulario. */
 export type ProductOption = {
   id: string
@@ -339,4 +402,27 @@ export async function listCouponBatchesForPromotions(): Promise<
     .order("created_at", { ascending: false })
   if (error) throw error
   return data ?? []
+}
+
+/**
+ * Todas las opciones que alimentan el árbol de condiciones, en un solo
+ * objeto — reemplaza las 4 props sueltas que tenían
+ * `ConditionsBuilder`/`ConditionTreeGroup`/`ConditionLeafRow` antes de
+ * las condiciones por atributos de socio/tienda/producto: llegar a 10
+ * props sueltas para 10 listas ya no escalaba. `storeFormats` no viene de
+ * una consulta — `tiendas.formato` está acotado por el mismo `check` que
+ * la tupla `STORE_FORMATS` de `@/types/domain`, así que se pasa el
+ * catálogo fijo, no un `SELECT DISTINCT`.
+ */
+export type ConditionOptions = {
+  categories: ConditionCategory[]
+  cities: ConditionCity[]
+  segments: ConditionSegment[]
+  couponBatches: CouponBatchOption[]
+  tiers: ConditionTier[]
+  provinces: ConditionOption[]
+  storeRegions: ConditionOption[]
+  storeFormats: ConditionOption[]
+  brands: ConditionOption[]
+  suppliers: ConditionOption[]
 }

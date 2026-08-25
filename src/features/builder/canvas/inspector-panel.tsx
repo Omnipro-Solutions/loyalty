@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,11 @@ import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
 import { IntegrationMessageForm } from "@/features/builder/inspector/integration-message-form"
+import {
+  resolveAvailableVariables,
+  type GraphEdgeRef,
+  type GraphNodeRef,
+} from "@/features/builder/inspector/node-variables"
 import { SimpleConfigForm } from "@/features/builder/inspector/simple-config-form"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -31,6 +36,8 @@ function tabsFor(tipo: string): readonly string[] {
 
 export function InspectorPanel({
   node,
+  nodes,
+  edges,
   tiers,
   audiences,
   couponBatches,
@@ -42,6 +49,9 @@ export function InspectorPanel({
     id: string
     data: { tipo: string; etiqueta: string; config: Record<string, unknown> }
   } | null
+  /** Grafo completo del canvas — para resolver qué variables de bloques anteriores llegan hasta el nodo seleccionado (ver `resolveAvailableVariables`). */
+  nodes: GraphNodeRef[]
+  edges: GraphEdgeRef[]
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
@@ -52,6 +62,10 @@ export function InspectorPanel({
   const tabs = node ? tabsFor(node.data.tipo) : []
   const [tab, setTab] = useState<string>("Configuración")
   const activeTab = tabs.includes(tab) ? tab : "Configuración"
+  const graphVariables = useMemo(
+    () => (node ? resolveAvailableVariables(nodes, edges, node.id) : []),
+    [nodes, edges, node]
+  )
 
   if (!node) {
     return (
@@ -131,11 +145,16 @@ export function InspectorPanel({
               onChange={update}
             />
           ) : tipo === "condicion_multiple" ? (
-            <MultiConditionForm config={node.data.config} onChange={update} />
+            <MultiConditionForm
+              config={node.data.config}
+              graphVariables={graphVariables}
+              onChange={update}
+            />
           ) : isMessageNodeType(tipo as never) ? (
             <IntegrationMessageForm
               channel={tipo as never}
               config={node.data.config}
+              graphVariables={graphVariables}
               onChange={update}
             />
           ) : (

@@ -20,7 +20,7 @@ import {
 
 import { FieldSlashAutocomplete } from "./field-slash-autocomplete"
 import { SIMPLE_FIELD_SPECS } from "./field-specs"
-import { ALL_NODE_VARIABLES } from "./node-variables"
+import type { GraphVariable } from "./node-variables"
 import { SimpleConfigForm } from "./simple-config-form"
 
 type MessageConfig = {
@@ -41,10 +41,13 @@ type MessageConfig = {
 export function IntegrationMessageForm({
   channel,
   config,
+  graphVariables,
   onChange,
 }: {
   channel: MessageNodeType
   config: Record<string, unknown>
+  /** Variables reales de los bloques anteriores a este en el grafo (`resolveAvailableVariables`, resuelto por `InspectorPanel`) — solo estas tiene sentido mapear a un parámetro del flujo del proveedor. */
+  graphVariables: GraphVariable[]
   onChange: (config: Record<string, unknown>) => void
 }) {
   const providers = connectedMessageProviders(channel)
@@ -153,6 +156,13 @@ export function IntegrationMessageForm({
           <p className="text-[11px] font-semibold tracking-[0.4px] text-muted-foreground uppercase">
             Mapeo de variables
           </p>
+          {graphVariables.length === 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              Ningún bloque anterior de este flujo expone variables todavía —
+              conecta este bloque después de uno que sí (ej. Evento de compra)
+              para poder mapearlas aquí.
+            </p>
+          )}
           {selectedFlow.parameters.map((param) => (
             <div key={param.key} className="flex items-center gap-2">
               <span
@@ -164,7 +174,11 @@ export function IntegrationMessageForm({
               </span>
               <div className="min-w-0 flex-1">
                 <FieldSlashAutocomplete
-                  fields={ALL_NODE_VARIABLES}
+                  fields={graphVariables.map((v) => ({
+                    name: v.name,
+                    label: v.name,
+                    group: v.sourceLabel,
+                  }))}
                   value={mapeo?.[param.key] ?? ""}
                   onSelect={(name) => setMappingValue(param.key, name)}
                   placeholder="Escribe / para elegir una variable"

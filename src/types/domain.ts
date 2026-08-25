@@ -323,23 +323,48 @@ export const PROMOTION_TYPES = [
 ] as const
 export type PromotionType = (typeof PROMOTION_TYPES)[number]
 
-// Field of an IF condition (07.1 "Condiciones (SI)"). All 5 now have a real
-// table — 'categoria'/'tienda' from the start, 'segmento' since 11 ·
-// Audiencias (`segments`), 'monto_carrito' since `pedidos` exists, and
-// 'cupon_codigo' since `coupon_batch` exists (T15 del documento de
-// modalidades: "Cupón con código") — the creation form lets you add all 5.
+// Field of an IF condition (07.1 "Condiciones (SI)"). All 13 have a real
+// table/column behind them — 'categoria'/'tienda' from the start,
+// 'segmento' since 11 · Audiencias (`segments`), 'monto_carrito' since
+// `pedidos` exists, 'cupon_codigo' since `coupon_batch` exists (T15 del
+// documento de modalidades: "Cupón con código"), and the 8
+// socio_*/tienda_*/producto_* fields added to let a promotion condition
+// on member/store/product attributes (`members`, `tiers`, `tiendas`,
+// `productos`) — the creation form lets you add all 13. Deliberately
+// left out: any "ticket"/"linea"/"contexto" field (día, hora, medio de
+// pago, receta, feriados) — none of those have a real column anywhere in
+// the schema, so adding them would be inventing UI for data that doesn't
+// exist.
 export const CONDITION_FIELDS = [
   "categoria",
   "tienda",
   "segmento",
   "monto_carrito",
   "cupon_codigo",
+  "socio_nivel",
+  "socio_provincia",
+  "socio_antiguedad",
+  "socio_edad",
+  "tienda_region",
+  "tienda_formato",
+  "producto_marca",
+  "producto_proveedor",
 ] as const
 export type ConditionField = (typeof CONDITION_FIELDS)[number]
 
-/** Gradual rollout mechanism (not every field had a real table from day 1) — today all 5 are enabled, kept in case a new field is added before it has a data source. */
+/** Gradual rollout mechanism (not every field had a real table from day 1) — today all 13 are enabled, kept in case a new field is added before it has a data source. */
 export const ENABLED_CONDITION_FIELDS: readonly ConditionField[] =
   CONDITION_FIELDS
+
+/** Agrupa el selector de campo de una condición por ámbito de negocio — sin esto, 13 campos en una sola lista plana son difíciles de escanear. */
+export const CONDITION_FIELD_DOMAINS = [
+  "Carrito",
+  "Producto",
+  "Tienda",
+  "Cliente",
+  "Cupón",
+] as const
+export type ConditionFieldDomain = (typeof CONDITION_FIELD_DOMAINS)[number]
 
 export const CONDITION_COMBINATORS = ["todas", "alguna"] as const
 export type ConditionCombinator = (typeof CONDITION_COMBINATORS)[number]

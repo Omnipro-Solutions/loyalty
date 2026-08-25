@@ -39,7 +39,7 @@ import {
 
 import { flattenConditionTree } from "./lib/condition-tree"
 
-const conditionSchema = z.discriminatedUnion("campo", [
+export const conditionSchema = z.discriminatedUnion("campo", [
   z.object({
     campo: z.literal("categoria"),
     valor: z.array(z.string().uuid()).min(1, "Elige al menos una categoría"),
@@ -63,6 +63,42 @@ const conditionSchema = z.discriminatedUnion("campo", [
   z.object({
     campo: z.literal("cupon_codigo"),
     valor: z.string().uuid("Elige una emisión de cupones"),
+  }),
+  // --- Atributos del socio, tienda y producto (dominios "Cliente" /
+  // "Tienda" / "Producto" del selector) — cada uno respaldado por una
+  // columna real (`members`/`tiers`, `tiendas`, `productos`), sin motor
+  // de evaluación en vivo, igual que el resto del módulo.
+  z.object({
+    campo: z.literal("socio_nivel"),
+    valor: z.array(z.string().uuid()).min(1, "Elige al menos un nivel"),
+  }),
+  z.object({
+    campo: z.literal("socio_provincia"),
+    valor: z.array(z.string()).min(1, "Elige al menos una provincia"),
+  }),
+  z.object({
+    campo: z.literal("socio_antiguedad"),
+    valor: z.number().int().nonnegative(),
+  }),
+  z.object({
+    campo: z.literal("socio_edad"),
+    valor: z.number().int().nonnegative(),
+  }),
+  z.object({
+    campo: z.literal("tienda_region"),
+    valor: z.array(z.string()).min(1, "Elige al menos una región"),
+  }),
+  z.object({
+    campo: z.literal("tienda_formato"),
+    valor: z.array(z.string()).min(1, "Elige al menos un formato"),
+  }),
+  z.object({
+    campo: z.literal("producto_marca"),
+    valor: z.array(z.string()).min(1, "Elige al menos una marca"),
+  }),
+  z.object({
+    campo: z.literal("producto_proveedor"),
+    valor: z.array(z.string()).min(1, "Elige al menos un proveedor"),
   }),
 ])
 

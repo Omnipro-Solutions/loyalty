@@ -1,9 +1,12 @@
+import { BUILDER_BLOCKS } from "@/config/builder-blocks"
 import { isMessageNodeType } from "@/config/integration-flows"
 import {
   BUILDER_ENTRY_NODE_TYPES,
   BUILDER_LOGIC_NODE_TYPES,
   type BuilderNodeType,
 } from "@/types/domain"
+
+import { validateNodeConfig } from "../inspector/schemas"
 
 export type GraphNode = { id: string; tipo: BuilderNodeType }
 export type GraphEdge = {
@@ -52,8 +55,9 @@ function expectedPorts(node: GraphNode, config: Record<string, unknown>) {
  *
  * "Bloqueante" (nivel `error`, impide Publicar) vs. "advertencia": solo
  * los problemas que dejarían el workflow en un estado incoherente al
- * ejecutarlo de verdad (sin entrada, más de una entrada, o un ciclo) son
- * bloqueantes. Una rama sin conectar es válida en un borrador a medio
+ * ejecutarlo de verdad (sin entrada, más de una entrada, un ciclo, o un
+ * nodo con campos obligatorios sin completar — ver `validateNodeConfig`)
+ * son bloqueantes. Una rama sin conectar es válida en un borrador a medio
  * construir — se avisa, pero no bloquea Publicar (decisión de producto:
  * forzar cada rama conectada antes de poder guardar sería demasiado
  * fricción para iterar).
@@ -89,6 +93,15 @@ export function validateGraph(
         level: "advertencia",
         nodeId: node.id,
         message: `"${node.tipo}" todavía no tiene un flujo de integración elegido.`,
+      })
+    }
+
+    const missingFields = validateNodeConfig(node.tipo, node.config)
+    if (missingFields.length) {
+      issues.push({
+        level: "error",
+        nodeId: node.id,
+        message: `"${BUILDER_BLOCKS[node.tipo].label}" tiene campos obligatorios sin completar: ${missingFields.join(", ")}.`,
       })
     }
 

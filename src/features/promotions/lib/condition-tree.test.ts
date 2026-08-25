@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 
 import {
   countLeavesAndDepth,
+  defaultConditionFor,
   flattenConditionTree,
   isConditionGroup,
   withChildRemoved,
@@ -110,6 +111,38 @@ describe("withChildReplaced / withChildRemoved", () => {
   it("removes only the targeted child", () => {
     const next = withChildRemoved(group, 0)
     expect(next.condiciones).toEqual([leafMonto])
+  })
+})
+
+describe("defaultConditionFor", () => {
+  it("returns an empty array for the multiselect fields (existing + socio/tienda/producto)", () => {
+    for (const field of [
+      "categoria",
+      "socio_nivel",
+      "socio_provincia",
+      "tienda_region",
+      "tienda_formato",
+      "producto_marca",
+      "producto_proveedor",
+    ] as const) {
+      expect(defaultConditionFor(field)).toEqual({ campo: field, valor: [] })
+    }
+  })
+
+  it("returns an empty string for the single-select fields", () => {
+    for (const field of ["tienda", "segmento", "cupon_codigo"] as const) {
+      expect(defaultConditionFor(field)).toEqual({ campo: field, valor: "" })
+    }
+  })
+
+  it("returns 0 for the numeric threshold fields (existing + socio_antiguedad/socio_edad)", () => {
+    for (const field of [
+      "monto_carrito",
+      "socio_antiguedad",
+      "socio_edad",
+    ] as const) {
+      expect(defaultConditionFor(field)).toEqual({ campo: field, valor: 0 })
+    }
   })
 })
 

@@ -22,12 +22,7 @@ import {
   CONDITION_COMBINATOR_CONNECTOR_LABEL,
   CONDITION_COMBINATOR_LABEL,
 } from "../lib/labels"
-import type {
-  ConditionCategory,
-  ConditionCity,
-  ConditionSegment,
-  CouponBatchOption,
-} from "../lib/queries"
+import type { ConditionOptions } from "../lib/queries"
 import type { ConditionGroupValues, ConditionNodeValues } from "../schemas"
 
 const COMBINATOR_TRIGGER =
@@ -38,10 +33,7 @@ type ConditionTreeGroupProps = {
   depth: number
   onChange: (next: ConditionGroupValues) => void
   onRemove?: () => void
-  categories: ConditionCategory[]
-  cities: ConditionCity[]
-  segments: ConditionSegment[]
-  couponBatches: CouponBatchOption[]
+  options: ConditionOptions
 }
 
 /**
@@ -63,10 +55,7 @@ export function ConditionTreeGroup({
   depth,
   onChange,
   onRemove,
-  categories,
-  cities,
-  segments,
-  couponBatches,
+  options,
 }: ConditionTreeGroupProps) {
   const isRoot = depth === 0
 
@@ -161,18 +150,12 @@ export function ConditionTreeGroup({
                   depth={depth + 1}
                   onChange={(next) => updateChild(index, next)}
                   onRemove={() => removeChild(index)}
-                  categories={categories}
-                  cities={cities}
-                  segments={segments}
-                  couponBatches={couponBatches}
+                  options={options}
                 />
               ) : (
                 <ConditionLeafRow
                   condition={child}
-                  categories={categories}
-                  cities={cities}
-                  segments={segments}
-                  couponBatches={couponBatches}
+                  options={options}
                   onChange={(next) => updateChild(index, next)}
                   onRemove={() => removeChild(index)}
                 />
