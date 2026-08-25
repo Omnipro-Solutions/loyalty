@@ -1,4 +1,8 @@
-import type { CouponBatchStatus } from "@/types/domain"
+import type {
+  CouponBatchStatus,
+  CouponDiscountType,
+  CouponOrigin,
+} from "@/types/domain"
 
 export const EMIT_BLOCKERS = [
   "missing_name",
@@ -81,6 +85,62 @@ export type EmitIntent = "emit" | "request_approval" | "blocked"
 export type EmitGate = {
   intent: EmitIntent
   blockers: EmitBlocker[]
+}
+
+export type MissingFieldCheck = {
+  origin: CouponOrigin
+  name: string
+  memberId?: string
+  audienceSegmentId?: string
+  requestedQuantity?: number
+  importRowCount: number
+  discountType: CouponDiscountType
+  discountValue: number
+  freeProductId?: string
+  issueReason: string
+}
+
+/**
+ * Campos obligatorios del asistente (doc §4.2), como códigos — no strings —
+ * para que el panel "Antes de emitir" y el paso "Revisar y emitir" compartan
+ * un solo origen de verdad con `EMIT_BLOCKER_COPY` (mensaje + paso al que
+ * saltar). El resto de `EMIT_BLOCKERS` (los de aprobación) los añade
+ * `evaluateEmitGate`, no esta función — aquí solo lo que depende del
+ * formulario, no del estado del batch.
+ */
+export function computeMissingFieldBlockers(
+  input: MissingFieldCheck
+): EmitBlocker[] {
+  const blockers: EmitBlocker[] = []
+
+  if (!input.name) blockers.push("missing_name")
+  if (
+    (input.origin === "manual_customer" ||
+      input.origin === "points_redemption") &&
+    !input.memberId
+  ) {
+    blockers.push("missing_recipient")
+  }
+  if (input.origin === "batch_audience" && !input.audienceSegmentId) {
+    blockers.push("missing_audience")
+  }
+  if (input.origin === "batch_anonymous" && !input.requestedQuantity) {
+    blockers.push("missing_quantity")
+  }
+  if (input.origin === "csv_import" && input.importRowCount === 0) {
+    blockers.push("missing_file")
+  }
+
+  const invalidDiscount =
+    (input.discountType === "free_product" && !input.freeProductId) ||
+    (input.discountType === "percentage" &&
+      (input.discountValue < 1 || input.discountValue > 100)) ||
+    (input.discountType === "fixed_amount" && input.discountValue <= 0)
+  if (invalidDiscount) blockers.push("missing_discount")
+
+  if (!input.issueReason) blockers.push("missing_issue_reason")
+
+  return blockers
 }
 
 /**

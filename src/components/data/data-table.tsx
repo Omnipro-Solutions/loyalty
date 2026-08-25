@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactTable, RowData, TableFeatures } from "@tanstack/react-table"
+import { Fragment, type ReactNode } from "react"
 
 import {
   Table,
@@ -17,6 +18,8 @@ type DataTableProps<TFeatures extends TableFeatures, TData extends RowData> = {
   onRowClick?: (row: TData) => void
   /** E.g. `bg-accent` when the header doesn't use the default neutral background (03.1). */
   headerClassName?: string
+  /** Extra full-width row rendered right below a row when it's expanded (needs `rowExpandingFeature`) — e.g. the "Datos de la emisión" panel in 13.1. */
+  renderSubRow?: (row: TData) => ReactNode
 }
 
 /**
@@ -28,7 +31,12 @@ type DataTableProps<TFeatures extends TableFeatures, TData extends RowData> = {
 export function DataTable<
   TFeatures extends TableFeatures,
   TData extends RowData,
->({ table, onRowClick, headerClassName }: DataTableProps<TFeatures, TData>) {
+>({
+  table,
+  onRowClick,
+  headerClassName,
+  renderSubRow,
+}: DataTableProps<TFeatures, TData>) {
   const headerGroups = table.getHeaderGroups()
   // `getSize()` only exists if the table registered `columnSizingFeature` —
   // this component's generic `TFeatures` doesn't guarantee it, so it's
@@ -36,6 +44,9 @@ export function DataTable<
   // fix column widths (the browser decides, as before).
   const columnWidth = (column: unknown) =>
     (column as { getSize?: () => number }).getSize?.()
+  // Same reasoning for `getIsExpanded()` (`rowExpandingFeature`).
+  const isRowExpanded = (row: unknown) =>
+    (row as { getIsExpanded?: () => boolean }).getIsExpanded?.() ?? false
 
   return (
     // No box of its own (rounded/border/shadow): in the Figma the table is
@@ -68,19 +79,31 @@ export function DataTable<
         ))}
       </TableHeader>
       <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <TableRow
-            key={row.id}
-            onClick={() => onRowClick?.(row.original)}
-            className={onRowClick ? "cursor-pointer" : undefined}
-          >
-            {row.getAllCells().map((cell) => (
-              <TableCell key={cell.id}>
-                <table.FlexRender cell={cell} />
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
+        {table.getRowModel().rows.map((row) => {
+          const cells = row.getAllCells()
+          const expanded = renderSubRow ? isRowExpanded(row) : false
+          return (
+            <Fragment key={row.id}>
+              <TableRow
+                onClick={() => onRowClick?.(row.original)}
+                className={onRowClick ? "cursor-pointer" : undefined}
+              >
+                {cells.map((cell) => (
+                  <TableCell key={cell.id}>
+                    <table.FlexRender cell={cell} />
+                  </TableCell>
+                ))}
+              </TableRow>
+              {expanded && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={cells.length} className="p-0">
+                    {renderSubRow?.(row.original)}
+                  </TableCell>
+                </TableRow>
+              )}
+            </Fragment>
+          )
+        })}
       </TableBody>
     </Table>
   )

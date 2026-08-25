@@ -4,9 +4,17 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { Pagination } from "@/components/data/pagination"
 
-type CouponsPaginationProps = { total: number; pageSize: number }
+type CouponsPaginationProps = {
+  total: number
+  pageSize: number
+  summary?: React.ReactNode
+}
 
-export function CouponsPagination({ total, pageSize }: CouponsPaginationProps) {
+export function CouponsPagination({
+  total,
+  pageSize,
+  summary,
+}: CouponsPaginationProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -24,6 +32,7 @@ export function CouponsPagination({ total, pageSize }: CouponsPaginationProps) {
       pageSize={pageSize}
       page={page}
       onPageChange={onPageChange}
+      summary={summary}
     />
   )
 }

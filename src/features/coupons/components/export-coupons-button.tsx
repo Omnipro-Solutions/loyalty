@@ -4,24 +4,9 @@ import { Download } from "lucide-react"
 
 import type { CouponBatchStatus, CouponOrigin } from "@/types/domain"
 
+import { csvCell, downloadCsv } from "../lib/csv"
 import { COUPON_BATCH_STATUS_LABEL, COUPON_ORIGIN_LABEL } from "../lib/labels"
 import type { CouponBatch, CouponSearchRow } from "../lib/queries"
-
-function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`
-}
-
-function download(filename: string, rows: string[][]) {
-  const blob = new Blob([rows.map((r) => r.join(",")).join("\n")], {
-    type: "text/csv;charset=utf-8;",
-  })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
 
 const BATCH_COLUMNS: { header: string; value: (b: CouponBatch) => string }[] = [
   { header: "Referencia", value: (b) => b.reference },
@@ -59,14 +44,14 @@ export function ExportCouponsButton(
 ) {
   function handleExport() {
     if (props.view === "batches") {
-      download("emisiones.csv", [
+      downloadCsv("emisiones.csv", [
         BATCH_COLUMNS.map((c) => csvCell(c.header)),
         ...props.batches.map((b) =>
           BATCH_COLUMNS.map((c) => csvCell(c.value(b)))
         ),
       ])
     } else {
-      download("cupones.csv", [
+      downloadCsv("cupones.csv", [
         COUPON_COLUMNS.map((c) => csvCell(c.header)),
         ...props.coupons.map((c) =>
           COUPON_COLUMNS.map((col) => csvCell(col.value(c)))

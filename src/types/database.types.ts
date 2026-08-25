@@ -157,6 +157,7 @@ export type Database = {
           code: string
           created_at: string
           currency: string
+          discount_cap: number | null
           discount_type: string
           discount_value: number
           id: string
@@ -190,6 +191,7 @@ export type Database = {
           code: string
           created_at?: string
           currency?: string
+          discount_cap?: number | null
           discount_type: string
           discount_value?: number
           id?: string
@@ -223,6 +225,7 @@ export type Database = {
           code?: string
           created_at?: string
           currency?: string
+          discount_cap?: number | null
           discount_type?: string
           discount_value?: number
           id?: string
@@ -344,8 +347,78 @@ export type Database = {
           },
         ]
       }
+      coupon_approval: {
+        Row: {
+          approver_id: string | null
+          batch_id: string
+          decided_at: string | null
+          id: string
+          note: string | null
+          org_id: string
+          requested_at: string
+          requested_by: string | null
+          status: string
+          threshold_reasons: string[]
+        }
+        Insert: {
+          approver_id?: string | null
+          batch_id: string
+          decided_at?: string | null
+          id?: string
+          note?: string | null
+          org_id: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          threshold_reasons?: string[]
+        }
+        Update: {
+          approver_id?: string | null
+          batch_id?: string
+          decided_at?: string | null
+          id?: string
+          note?: string | null
+          org_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          threshold_reasons?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_approval_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_approval_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_approval_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_approval_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_batch: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           assigned_count: number
           audience_mode: string | null
           audience_name: string | null
@@ -364,6 +437,7 @@ export type Database = {
           csv_file_id: string | null
           currency: string
           delivery_channels: string[]
+          discount_cap: number | null
           discount_type: string
           discount_value: number
           free_product_id: string | null
@@ -394,6 +468,8 @@ export type Database = {
           valid_to: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_count?: number
           audience_mode?: string | null
           audience_name?: string | null
@@ -412,6 +488,7 @@ export type Database = {
           csv_file_id?: string | null
           currency?: string
           delivery_channels?: string[]
+          discount_cap?: number | null
           discount_type: string
           discount_value?: number
           free_product_id?: string | null
@@ -442,6 +519,8 @@ export type Database = {
           valid_to?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_count?: number
           audience_mode?: string | null
           audience_name?: string | null
@@ -460,6 +539,7 @@ export type Database = {
           csv_file_id?: string | null
           currency?: string
           delivery_channels?: string[]
+          discount_cap?: number | null
           discount_type?: string
           discount_value?: number
           free_product_id?: string | null
@@ -490,6 +570,13 @@ export type Database = {
           valid_to?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "coupon_batch_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coupon_batch_audience_segment_id_fkey"
             columns: ["audience_segment_id"]
@@ -2355,12 +2442,17 @@ export type Database = {
           batch_reference: string | null
           code: string | null
           created_at: string | null
+          discount_cap: number | null
+          discount_type: string | null
+          discount_value: number | null
           id: string | null
           member_email: string | null
           member_id: string | null
           member_nombre: string | null
           org_id: string | null
+          points_cost: number | null
           status: string | null
+          valid_from: string | null
           valid_to: string | null
         }
         Relationships: []
@@ -2373,6 +2465,10 @@ export type Database = {
         Returns: undefined
       }
       current_org_id: { Args: never; Returns: string }
+      decide_coupon_approval: {
+        Args: { p_approval_id: string; p_decision: string; p_note?: string }
+        Returns: string
+      }
       generate_coupon_batch_chunk: {
         Args: { p_batch_id: string; p_chunk_size?: number }
         Returns: {

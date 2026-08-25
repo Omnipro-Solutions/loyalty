@@ -6,6 +6,7 @@ import {
   COUPON_DISCOUNT_TYPES,
   COUPON_ORIGINS,
   COUPON_POINTS_CHARGE_TIMINGS,
+  COUPON_PRINT_LAYOUTS,
 } from "@/types/domain"
 
 const importRowSchema = z.object({
@@ -47,6 +48,7 @@ const couponBatchBaseSchema = z.object({
   name: z.string().min(3, "Ingresa el nombre de la emisión"),
   discountType: z.enum(COUPON_DISCOUNT_TYPES),
   discountValue: z.number().nonnegative(),
+  discountCap: z.number().positive().optional(),
   freeProductId: z.string().uuid().optional(),
   minPurchaseAmount: z.number().nonnegative().optional(),
   // Sin `.default(...)`: el formulario siempre los provee vía
@@ -145,7 +147,7 @@ export const updateCouponBatchSchema = couponBatchBaseSchema
   .extend({ id: z.string().uuid() })
   .superRefine(refineByOrigin)
 
-export const cancelCouponSchema = z.object({
+export const cancelCouponBaseSchema = z.object({
   couponId: z.string().uuid(),
   reasonCode: z.enum([
     "issued_in_error",
@@ -158,9 +160,42 @@ export const cancelCouponSchema = z.object({
   refundPoints: z.boolean().default(false),
 })
 
+/** Espejo del check `coupon_cancel_note_required` — ver `COUPON_CANCEL_REASONS_REQUIRING_NOTE` en `types/domain.ts`. Exportado (no inline) para que el diálogo pueda reaplicarlo sobre la variante sin `couponId` que usa react-hook-form. */
+export function refineCancelReasonNote(
+  v: { reasonCode: string; reasonNote?: string },
+  ctx: z.RefinementCtx
+) {
+  const requiresNote =
+    v.reasonCode === "suspected_fraud" || v.reasonCode === "other"
+  if (requiresNote && !v.reasonNote?.trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reasonNote"],
+      message: "La nota es obligatoria para este motivo",
+    })
+  }
+}
+
+export const cancelCouponSchema = cancelCouponBaseSchema.superRefine(
+  refineCancelReasonNote
+)
+
 export const extendValiditySchema = z.object({
   couponId: z.string().uuid(),
   validTo: z.string().min(1, "Elige la nueva fecha de vencimiento"),
+})
+
+export const resendCouponSchema = z.object({
+  couponId: z.string().uuid(),
+})
+
+export const decideApprovalSchema = z.object({
+  approvalId: z.string().uuid(),
+  note: z.string().optional(),
+})
+
+export const withdrawApprovalSchema = z.object({
+  approvalId: z.string().uuid(),
 })
 
 export const assignCouponSchema = z.object({
@@ -170,6 +205,20 @@ export const assignCouponSchema = z.object({
 
 export const generateChunkSchema = z.object({
   batchId: z.string().uuid(),
+})
+
+export const exportBatchCouponsSchema = z.object({
+  batchId: z.string().uuid(),
+})
+
+export const resendUnviewedSchema = z.object({
+  batchId: z.string().uuid(),
+})
+
+export const registerPrintJobSchema = z.object({
+  batchId: z.string().uuid(),
+  couponIds: z.array(z.string().uuid()).min(1),
+  layout: z.enum(COUPON_PRINT_LAYOUTS),
 })
 
 export const exportCouponsSchema = z.object({

@@ -6,13 +6,13 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { DataTable } from "@/components/data/data-table"
-import { formatDateTime } from "@/lib/format"
+import { formatDateTime, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import {
@@ -20,6 +20,7 @@ import {
   COUPON_DISPLAY_STATUS_LABEL,
 } from "../lib/labels"
 import type { CouponSearchRow } from "../lib/queries"
+import { couponValueDisplay } from "../lib/recap"
 import { couponStatus } from "../lib/status"
 
 const features = tableFeatures({ columnSizingFeature })
@@ -27,7 +28,7 @@ const helper = createColumnHelper<typeof features, CouponSearchRow>()
 
 type CouponsTableProps = { coupons: CouponSearchRow[] }
 
-/** Listado de cupones (doc §4.1 "Cupones"): ID + fecha, persona, emisión, estado. */
+/** Listado de cupones (Figma 13.2): ID + fecha, persona, emisión, valor, puntos, estado. */
 export function CouponsTable({ coupons }: CouponsTableProps) {
   const router = useRouter()
 
@@ -36,8 +37,8 @@ export function CouponsTable({ coupons }: CouponsTableProps) {
       helper.columns([
         helper.display({
           id: "code",
-          size: 200,
-          header: () => "CUPÓN",
+          size: 190,
+          header: () => "ID CUPÓN",
           cell: (info) => {
             const coupon = info.row.original
             return (
@@ -54,12 +55,26 @@ export function CouponsTable({ coupons }: CouponsTableProps) {
         }),
         helper.display({
           id: "person",
-          size: 220,
+          size: 210,
           header: () => "PERSONA",
           cell: (info) => {
             const coupon = info.row.original
             if (!coupon.member_nombre) {
-              return <span className="text-muted-foreground">Al portador</span>
+              return (
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    —
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] leading-[17px] text-foreground">
+                      Al portador
+                    </p>
+                    <p className="truncate text-[10px] leading-[14px] text-muted-foreground">
+                      sin titular asignado
+                    </p>
+                  </div>
+                </div>
+              )
             }
             return (
               <div className="flex min-w-0 items-center gap-2">
@@ -78,20 +93,48 @@ export function CouponsTable({ coupons }: CouponsTableProps) {
         }),
         helper.display({
           id: "batch",
-          size: 200,
+          size: 190,
           header: () => "EMISIÓN",
           cell: (info) => {
             const coupon = info.row.original
             return (
-              <span className="truncate rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-secondary-foreground">
-                {coupon.batch_reference} · {coupon.batch_name}
+              <div className="min-w-0">
+                <span className="truncate rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-secondary-foreground">
+                  {coupon.batch_reference}
+                </span>
+                <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                  {coupon.batch_name}
+                </p>
+              </div>
+            )
+          },
+        }),
+        helper.display({
+          id: "value",
+          size: 100,
+          header: () => "VALOR",
+          cell: (info) => (
+            <span className="text-xs font-semibold text-foreground">
+              {couponValueDisplay(info.row.original)}
+            </span>
+          ),
+        }),
+        helper.display({
+          id: "points",
+          size: 90,
+          header: () => "PUNTOS",
+          cell: (info) => {
+            const points = info.row.original.points_cost
+            return (
+              <span className="text-xs text-secondary-foreground">
+                {points != null ? formatNumber(points) : "—"}
               </span>
             )
           },
         }),
         helper.display({
           id: "status",
-          size: 130,
+          size: 120,
           header: () => "ESTADO",
           cell: (info) => {
             const status = couponStatus({
@@ -115,11 +158,12 @@ export function CouponsTable({ coupons }: CouponsTableProps) {
         }),
         helper.display({
           id: "actions",
-          size: 56,
+          size: 110,
           header: () => null,
           cell: () => (
-            <div className="flex justify-end">
-              <MoreHorizontal className="size-4 text-muted-foreground" />
+            <div className="flex items-center justify-end gap-1 text-xs font-medium text-primary">
+              Ver detalle
+              <ChevronRight className="size-3.5" />
             </div>
           ),
         }),
@@ -128,7 +172,7 @@ export function CouponsTable({ coupons }: CouponsTableProps) {
   )
 
   const data = useMemo(() => coupons, [coupons])
-  const table = useTable({ features, columns, data })
+  const table = useTable({ features, columns, data, getRowId: (row) => row.id })
 
   return (
     <DataTable

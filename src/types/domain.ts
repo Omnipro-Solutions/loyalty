@@ -141,6 +141,15 @@ export const COUPON_BATCH_STATUSES = [
 ] as const
 export type CouponBatchStatus = (typeof COUPON_BATCH_STATUSES)[number]
 
+/** Espeja el check de `coupon_approval.status` (migración del flujo de doble aprobación). 'revoked' no está aquí a propósito: ninguna acción del módulo lo produce todavía (ver actions/approvals.ts). */
+export const COUPON_APPROVAL_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+] as const
+export type CouponApprovalStatus = (typeof COUPON_APPROVAL_STATUSES)[number]
+
 export const COUPON_DISCOUNT_TYPES = [
   "percentage",
   "fixed_amount",
@@ -214,12 +223,15 @@ export const COUPON_REDEMPTION_RESULTS = [
 export type CouponRedemptionResult = (typeof COUPON_REDEMPTION_RESULTS)[number]
 
 /**
- * `viewed`, `reminder_sent` y `delivered` del doc quedan fuera: no hay
- * sender de email/SMS ni tracking de apertura en este proyecto — emitirlos
- * sería dato fabricado (misma postura que `producto_eventos`).
- * `approval_requested`/`approval_rejected`/`approval_withdrawn` no estaban
- * en el doc: sin ellos la petición y el rechazo de una doble aprobación
- * quedarían invisibles en la línea de tiempo.
+ * `delivered`/`viewed` (Figma 13.4 "Entregado por email"/"Cupón
+ * visualizado") reflejan hechos que en producción llegarían de una
+ * integración externa (proveedor de email, SDK de la app) — este proyecto
+ * no tiene ese sender ni ese tracking, así que en la demo se siembran como
+ * datos de ejemplo, no como eventos que el sistema genera solo. `reminder_sent`
+ * del doc se queda fuera: no hay ningún flujo de recordatorio, ni siquiera
+ * simulado, que lo dispare. `approval_requested`/`approval_rejected`/
+ * `approval_withdrawn` no estaban en el doc: sin ellos la petición y el
+ * rechazo de una doble aprobación quedarían invisibles en la línea de tiempo.
  */
 export const COUPON_EVENT_TYPES = [
   "batch_created",
@@ -235,6 +247,8 @@ export const COUPON_EVENT_TYPES = [
   "assigned",
   "unassigned",
   "validity_extended",
+  "delivered",
+  "viewed",
   "redeemed",
   "redemption_rejected",
   "expired",

@@ -3,38 +3,29 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 import { Segmented } from "@/components/filters/segmented"
-import {
-  COUPON_BATCH_STATUSES,
-  COUPON_ORIGINS,
-  COUPON_STATUSES,
-} from "@/types/domain"
+import { COUPON_ORIGINS, COUPON_SEARCH_SCOPES } from "@/types/domain"
 
-import {
-  COUPON_BATCH_STATUS_LABEL,
-  COUPON_DISPLAY_STATUS_LABEL,
-  COUPON_ORIGIN_LABEL,
-} from "../lib/labels"
+import { CouponSearchField } from "./coupon-search-field"
+import { ValidityFilter } from "./validity-filter"
+import { COUPON_ORIGIN_LABEL, COUPON_SEARCH_SCOPE_LABEL } from "../lib/labels"
 
 const VIEW_OPTIONS = [
   { value: "batches", label: "Emisiones" },
   { value: "coupons", label: "Cupones" },
 ]
 
-// Sin 'expired': no es un valor almacenado en `coupon.status` (se deriva de
-// `valid_to`, ver lib/status.ts) — filtrar por él en el servidor exigiría
-// lógica aparte que este MVP no cubre todavía.
-const COUPON_STATUS_OPTIONS = COUPON_STATUSES.map((s) => ({
+const SCOPE_OPTIONS = COUPON_SEARCH_SCOPES.map((s) => ({
   value: s,
-  label: COUPON_DISPLAY_STATUS_LABEL[s],
+  label: COUPON_SEARCH_SCOPE_LABEL[s],
 }))
 
 /**
- * Buscador + filtros + selector Emisiones/Cupones (doc §4.1) — cada cambio
- * actualiza los searchParams y la página server-side vuelve a consultar.
- * Mismo patrón que `features/promotions/components/promotions-filters-bar.tsx`.
+ * Buscador con ámbito + filtros de origen/vigencia + selector Emisiones/
+ * Cupones (Figma 13.1/13.2). El estado ya no vive aquí — pasó a los chips
+ * de `StatusChipsRow`, dentro de `CouponsCard`. Cada cambio actualiza los
+ * searchParams y la página server-side vuelve a consultar.
  */
 export function CouponsFiltersBar() {
   const router = useRouter()
@@ -42,6 +33,7 @@ export function CouponsFiltersBar() {
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
   const vista = searchParams.get("vista") ?? "batches"
+  const scope = searchParams.get("ambito") ?? "all"
 
   useEffect(() => {
     const current = new URLSearchParams(window.location.search)
@@ -63,8 +55,9 @@ export function CouponsFiltersBar() {
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const selectedStatus = searchParams.get("estado")
   const selectedOrigin = searchParams.get("origen")
+  const validFrom = searchParams.get("desde") ?? undefined
+  const validTo = searchParams.get("hasta") ?? undefined
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -73,44 +66,44 @@ export function CouponsFiltersBar() {
         value={vista}
         onValueChange={(v) => update((params) => params.set("vista", v))}
       />
-      <FilterSearch
+      <CouponSearchField
+        scope={scope}
+        scopeOptions={SCOPE_OPTIONS}
+        onScopeChange={(v) => update((params) => params.set("ambito", v))}
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={setSearch}
+        placeholder="Buscar por persona, ID de cupón o emisión…"
       />
-      <FilterSelect
-        label="Estado"
-        options={
-          vista === "batches"
-            ? COUPON_BATCH_STATUSES.map((s) => ({
-                value: s,
-                label: COUPON_BATCH_STATUS_LABEL[s],
-              }))
-            : COUPON_STATUS_OPTIONS
-        }
-        value={selectedStatus ? [selectedStatus] : []}
-        onChange={(value) =>
-          update((params) => {
-            if (value[0]) params.set("estado", value[0])
-            else params.delete("estado")
-          })
-        }
-      />
-      {vista === "batches" && (
-        <FilterSelect
-          label="Origen"
-          options={COUPON_ORIGINS.map((o) => ({
-            value: o,
-            label: COUPON_ORIGIN_LABEL[o],
-          }))}
-          value={selectedOrigin ? [selectedOrigin] : []}
-          onChange={(value) =>
+      <div className="ml-auto flex items-center gap-2.5">
+        {vista === "batches" && (
+          <FilterSelect
+            label="Origen"
+            options={COUPON_ORIGINS.map((o) => ({
+              value: o,
+              label: COUPON_ORIGIN_LABEL[o],
+            }))}
+            value={selectedOrigin ? [selectedOrigin] : []}
+            onChange={(value) =>
+              update((params) => {
+                if (value[0]) params.set("origen", value[0])
+                else params.delete("origen")
+              })
+            }
+          />
+        )}
+        <ValidityFilter
+          from={validFrom}
+          to={validTo}
+          onChange={({ from, to }) =>
             update((params) => {
-              if (value[0]) params.set("origen", value[0])
-              else params.delete("origen")
+              if (from) params.set("desde", from)
+              else params.delete("desde")
+              if (to) params.set("hasta", to)
+              else params.delete("hasta")
             })
           }
         />
-      )}
+      </div>
     </div>
   )
 }

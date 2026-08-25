@@ -1,7 +1,8 @@
 import { AppPage } from "@/components/layout/app-page"
-import { BackLink } from "@/components/layout/back-link"
 import { CouponBatchForm } from "@/features/coupons/components/coupon-batch-form"
 import {
+  countOtherApprovers,
+  getProfileWithPermissions,
   listAudienceSegments,
   listFreeProductOptions,
   listLinkablePromotions,
@@ -10,27 +11,31 @@ import {
 } from "@/features/coupons/lib/queries"
 
 export default async function NewCouponBatchPage() {
-  const [audiences, products, stores, categories, promotions] =
+  const profile = await getProfileWithPermissions()
+  const [audiences, products, stores, categories, promotions, otherApprovers] =
     await Promise.all([
       listAudienceSegments(),
       listFreeProductOptions(),
       listRestrictionStores(),
       listRestrictionCategories(),
       listLinkablePromotions(),
+      profile
+        ? countOtherApprovers(profile.orgId, profile.profileId)
+        : Promise.resolve(0),
     ])
 
   return (
     <AppPage
       breadcrumb="Comercial  ›  Cupones  ›  Nueva emisión"
-      title="Emitir cupones"
+      title="Cupones"
     >
-      <BackLink href="/cupones">Volver a Cupones</BackLink>
       <CouponBatchForm
         audiences={audiences}
         products={products}
         stores={stores}
         categories={categories}
         promotions={promotions}
+        hasOtherApprovers={otherApprovers > 0}
       />
     </AppPage>
   )

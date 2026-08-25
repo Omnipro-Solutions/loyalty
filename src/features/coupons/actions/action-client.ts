@@ -15,7 +15,7 @@ export const couponsActionClient = actionClient.use(async ({ next }) => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role_id")
+    .select("org_id, role_id, nombre")
     .eq("id", user.id)
     .single()
   if (!profile) throw new Error("Perfil no encontrado.")
@@ -30,6 +30,14 @@ export const couponsActionClient = actionClient.use(async ({ next }) => {
   )
 
   return next({
-    ctx: { supabase, userId: user.id, orgId: profile.org_id, permissionsSet },
+    ctx: {
+      supabase,
+      userId: user.id,
+      orgId: profile.org_id,
+      // Evita que cada action vuelva a consultar `profiles` solo para
+      // etiquetar sus propios eventos de auditoría (`actor_label`).
+      actorLabel: profile.nombre ?? "Usuario",
+      permissionsSet,
+    },
   })
 })

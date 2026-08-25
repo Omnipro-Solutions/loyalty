@@ -1,10 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
-import type {
-  CouponBatchStatus,
-  CouponOrigin,
-  CouponStatus,
+import {
+  COUPON_BATCH_STATUSES,
+  COUPON_DISPLAY_STATUSES,
+  type CouponBatchStatus,
+  type CouponDisplayStatus,
+  type CouponOrigin,
+  type CouponSearchScope,
+  type CouponStatus,
 } from "@/types/domain"
+
+import { couponStatus } from "./status"
 
 export type CouponBatch = Database["public"]["Tables"]["coupon_batch"]["Row"]
 export type Coupon = Database["public"]["Tables"]["coupon"]["Row"]
@@ -13,6 +19,8 @@ export type CouponRedemption =
   Database["public"]["Tables"]["coupon_redemption"]["Row"]
 export type CouponAssignment =
   Database["public"]["Tables"]["coupon_assignment"]["Row"]
+export type CouponApproval =
+  Database["public"]["Tables"]["coupon_approval"]["Row"]
 
 type CouponSearchViewRow = Database["public"]["Views"]["coupon_search"]["Row"]
 
@@ -38,6 +46,10 @@ export type CouponSearchRow = {
   member_email: string | null
   batch_reference: string | null
   batch_name: string | null
+  discount_type: string
+  discount_value: number
+  discount_cap: number | null
+  points_cost: number | null
 }
 
 function toCouponSearchRow(row: CouponSearchViewRow): CouponSearchRow {
@@ -54,6 +66,10 @@ function toCouponSearchRow(row: CouponSearchViewRow): CouponSearchRow {
     member_email: row.member_email,
     batch_reference: row.batch_reference,
     batch_name: row.batch_name,
+    discount_type: row.discount_type as string,
+    discount_value: row.discount_value as number,
+    discount_cap: row.discount_cap,
+    points_cost: row.points_cost,
   }
 }
 
@@ -67,14 +83,55 @@ function sanitizeSearch(value: string): string {
 
 export type CouponBatchFilters = {
   search?: string
+  searchScope?: CouponSearchScope
   status?: CouponBatchStatus
   origin?: CouponOrigin
+  validFrom?: string
+  validTo?: string
   page?: number
+}
+
+/** Emisiones cuyos CUPONES (no la emisión en sí) coinciden con la búsqueda — así "Todo"/"ID cupón"/"Persona" en 13.1 encuentran la emisión dueña de un código o de un titular, no solo por nombre/referencia. */
+async function batchIdsMatchingCouponSearch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  search: string,
+  scope: CouponSearchScope
+): Promise<string[]> {
+  let query = supabase.from("coupon_search").select("batch_id")
+  if (scope === "person") {
+    query = query.or(
+      `member_nombre.ilike.%${search}%,member_email.ilike.%${search}%`
+    )
+  } else if (scope === "code") {
+    query = query.ilike("code", `%${search}%`)
+  } else {
+    query = query.or(
+      `code.ilike.%${search}%,member_nombre.ilike.%${search}%,member_email.ilike.%${search}%`
+    )
+  }
+  const { data, error } = await query
+  if (error) throw error
+  return [
+    ...new Set((data ?? []).map((r) => r.batch_id).filter(Boolean)),
+  ] as string[]
+}
+
+/**
+ * Fila de emisión enriquecida con lo que la tabla necesita mostrar sin un
+ * join aparte por fila: SKU del producto gratis (columna "VALOR DEL
+ * CUPÓN") y nombre de quien autorizó (panel expandido "Datos de la
+ * emisión"). Ambos son embebidos de Supabase (FK ya declaradas en el
+ * esquema), no consultas nuevas.
+ */
+export type CouponBatchListItem = CouponBatch & {
+  free_product: { sku: string } | null
+  authorized_by_profile: { nombre: string } | null
+  approved_by_profile: { nombre: string } | null
 }
 
 export async function listCouponBatches(
   filters: CouponBatchFilters = {}
-): Promise<{ batches: CouponBatch[]; total: number }> {
+): Promise<{ batches: CouponBatchListItem[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
   const from = (page - 1) * COUPON_BATCHES_PAGE_SIZE
@@ -82,27 +139,104 @@ export async function listCouponBatches(
 
   let query = supabase
     .from("coupon_batch")
-    .select("*", { count: "exact" })
+    .select(
+      "*, free_product:productos!coupon_batch_free_product_id_fkey(sku), authorized_by_profile:profiles!coupon_batch_authorized_by_fkey(nombre), approved_by_profile:profiles!coupon_batch_approved_by_fkey(nombre)",
+      { count: "exact" }
+    )
     .order("created_at", { ascending: false })
     .range(from, to)
 
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
-    query = query.or(`name.ilike.%${search}%,reference.ilike.%${search}%`)
+    const scope = filters.searchScope ?? "all"
+    if (scope === "batch") {
+      query = query.or(`name.ilike.%${search}%,reference.ilike.%${search}%`)
+    } else {
+      const matchedIds = await batchIdsMatchingCouponSearch(
+        supabase,
+        search,
+        scope
+      )
+      const idFilter =
+        matchedIds.length > 0
+          ? `id.in.(${matchedIds.join(",")})`
+          : "id.eq.00000000-0000-0000-0000-000000000000"
+      query =
+        scope === "all"
+          ? query.or(
+              `name.ilike.%${search}%,reference.ilike.%${search}%,${idFilter}`
+            )
+          : query.or(idFilter)
+    }
   }
   if (filters.status) query = query.eq("status", filters.status)
   if (filters.origin) query = query.eq("origin", filters.origin)
+  // "Vigente en el rango": la emisión sigue vigente en la fecha de inicio
+  // del rango (o no tiene fin) y ya arrancó antes del fin del rango.
+  if (filters.validFrom) {
+    query = query.or(`valid_to.is.null,valid_to.gte.${filters.validFrom}`)
+  }
+  if (filters.validTo) query = query.lte("valid_from", filters.validTo)
 
   const { data, error, count } = await query
   if (error) throw error
-  return { batches: data ?? [], total: count ?? 0 }
+  return { batches: (data ?? []) as CouponBatchListItem[], total: count ?? 0 }
+}
+
+/** Conteo por estado (chips de 13.1, "Todas/Borrador/Generando/Emitidas/Cerradas/Anuladas") sobre el universo completo, no la página cargada. */
+export async function getCouponBatchStatusCounts(): Promise<
+  Record<CouponBatchStatus, number>
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("coupon_batch").select("status")
+  if (error) throw error
+
+  const counts = Object.fromEntries(
+    COUPON_BATCH_STATUSES.map((s) => [s, 0])
+  ) as Record<CouponBatchStatus, number>
+  for (const row of data ?? []) {
+    const status = row.status as CouponBatchStatus
+    counts[status] = (counts[status] ?? 0) + 1
+  }
+  return counts
+}
+
+/** Muestra de códigos por emisión para el panel expandido (Figma 13.1 "Muestra de códigos generados") — reusa `coupon_search` (ya denormaliza el titular) en vez de un join propio. */
+export async function listSampleCoupons(
+  batchIds: string[],
+  limitPerBatch = 6
+): Promise<Record<string, { code: string; memberNombre: string | null }[]>> {
+  if (batchIds.length === 0) return {}
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_search")
+    .select("batch_id, code, member_nombre, created_at")
+    .in("batch_id", batchIds)
+    .order("created_at", { ascending: true })
+    .limit(batchIds.length * limitPerBatch * 4)
+  if (error) throw error
+
+  const byBatch: Record<
+    string,
+    { code: string; memberNombre: string | null }[]
+  > = {}
+  for (const row of data ?? []) {
+    const batchId = row.batch_id as string | null
+    if (!batchId) continue
+    const list = (byBatch[batchId] ??= [])
+    if (list.length >= limitPerBatch) continue
+    list.push({ code: row.code as string, memberNombre: row.member_nombre })
+  }
+  return byBatch
 }
 
 export type CouponFilters = {
   search?: string
-  searchScope?: "all" | "person" | "code" | "batch"
+  searchScope?: CouponSearchScope
   status?: CouponStatus
   batchId?: string
+  validFrom?: string
+  validTo?: string
   page?: number
 }
 
@@ -123,53 +257,51 @@ export async function listCoupons(
 
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
-    const scope = filters.searchScope ?? "all"
-    if (scope === "person") {
-      query = query.or(
-        `member_nombre.ilike.%${search}%,member_email.ilike.%${search}%`
-      )
-    } else if (scope === "code") {
-      query = query.ilike("code", `%${search}%`)
-    } else if (scope === "batch") {
-      query = query.or(
-        `batch_reference.ilike.%${search}%,batch_name.ilike.%${search}%`
-      )
-    } else {
-      query = query.or(
-        `code.ilike.%${search}%,member_nombre.ilike.%${search}%,member_email.ilike.%${search}%,batch_reference.ilike.%${search}%,batch_name.ilike.%${search}%`
-      )
-    }
+    query = applyCouponSearchFilter(query, search, filters.searchScope ?? "all")
   }
   if (filters.status) query = query.eq("status", filters.status)
   if (filters.batchId) query = query.eq("batch_id", filters.batchId)
+  if (filters.validFrom) {
+    query = query.or(`valid_to.is.null,valid_to.gte.${filters.validFrom}`)
+  }
+  if (filters.validTo) query = query.lte("valid_from", filters.validTo)
 
   const { data, error, count } = await query
   if (error) throw error
   return { coupons: (data ?? []).map(toCouponSearchRow), total: count ?? 0 }
 }
 
+/** Mismos embebidos que `listCouponBatches` (SKU del regalo, quien autorizó) — "Emisión de origen" de 13.4 los necesita igual que la fila expandida de 13.1. */
 export async function getCouponBatchById(
   id: string
-): Promise<CouponBatch | null> {
+): Promise<CouponBatchListItem | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("coupon_batch")
-    .select("*")
+    .select(
+      "*, free_product:productos!coupon_batch_free_product_id_fkey(sku), authorized_by_profile:profiles!coupon_batch_authorized_by_fkey(nombre), approved_by_profile:profiles!coupon_batch_approved_by_fkey(nombre)"
+    )
     .eq("id", id)
     .maybeSingle()
   if (error) throw error
-  return data
+  return data as CouponBatchListItem | null
 }
 
-export async function getCouponById(id: string): Promise<Coupon | null> {
+export type CouponWithHolder = Coupon & {
+  member: { nombre: string; email: string } | null
+}
+
+export async function getCouponById(
+  id: string
+): Promise<CouponWithHolder | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("coupon")
-    .select("*")
+    .select("*, member:members!coupon_member_id_fkey(nombre, email)")
     .eq("id", id)
     .maybeSingle()
   if (error) throw error
-  return data
+  return data as CouponWithHolder | null
 }
 
 export async function listBatchEvents(batchId: string): Promise<CouponEvent[]> {
@@ -183,6 +315,7 @@ export async function listBatchEvents(batchId: string): Promise<CouponEvent[]> {
   return data ?? []
 }
 
+/** Orden cronológico ascendente (Figma 13.4 "Log de eventos" se lee de arriba hacia abajo como una historia, no como un feed de "lo más reciente primero"). */
 export async function listCouponEvents(
   couponId: string
 ): Promise<CouponEvent[]> {
@@ -191,94 +324,157 @@ export async function listCouponEvents(
     .from("coupon_event")
     .select("*")
     .eq("coupon_id", couponId)
-    .order("occurred_at", { ascending: false })
+    .order("occurred_at", { ascending: true })
   if (error) throw error
   return data ?? []
+}
+
+export type CouponRedemptionWithStore = CouponRedemption & {
+  tienda: { nombre: string } | null
 }
 
 export async function listCouponRedemptions(
   couponId: string
-): Promise<CouponRedemption[]> {
+): Promise<CouponRedemptionWithStore[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("coupon_redemption")
-    .select("*")
+    .select("*, tienda:tiendas(nombre)")
     .eq("coupon_id", couponId)
     .order("occurred_at", { ascending: false })
   if (error) throw error
-  return data ?? []
+  return (data ?? []) as CouponRedemptionWithStore[]
+}
+
+export type CouponAssignmentWithMember = CouponAssignment & {
+  member: { nombre: string; email: string } | null
 }
 
 export async function listCouponAssignments(
   couponId: string
-): Promise<CouponAssignment[]> {
+): Promise<CouponAssignmentWithMember[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("coupon_assignment")
-    .select("*")
+    .select("*, member:members!coupon_assignment_member_id_fkey(nombre, email)")
     .eq("coupon_id", couponId)
     .order("assigned_at", { ascending: false })
+  if (error) throw error
+  return (data ?? []) as CouponAssignmentWithMember[]
+}
+
+export type CouponPrintJob =
+  Database["public"]["Tables"]["coupon_print_job"]["Row"]
+
+/** Trabajos de impresión que incluyeron este cupón (`coupon_ids` es un array por lote, no una FK 1:1). */
+export async function listCouponPrintJobs(
+  couponId: string
+): Promise<CouponPrintJob[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_print_job")
+    .select("*")
+    .contains("coupon_ids", [couponId])
+    .order("created_at", { ascending: false })
   if (error) throw error
   return data ?? []
 }
 
-export type CouponsSummary = {
-  totalBatches: number
-  pendingApproval: number
-  generating: number
-  issuedCoupons: number
-}
-
-export async function getCouponsSummary(): Promise<CouponsSummary> {
-  const supabase = await createClient()
-  const [
-    { count: totalBatches },
-    { count: pendingApproval },
-    { count: generating },
-    { count: issuedCoupons },
-  ] = await Promise.all([
-    supabase.from("coupon_batch").select("*", { count: "exact", head: true }),
-    supabase
-      .from("coupon_batch")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending_approval"),
-    supabase
-      .from("coupon_batch")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "generating"),
-    supabase
-      .from("coupon")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["issued", "assigned"]),
-  ])
-  return {
-    totalBatches: totalBatches ?? 0,
-    pendingApproval: pendingApproval ?? 0,
-    generating: generating ?? 0,
-    issuedCoupons: issuedCoupons ?? 0,
+function applyCouponSearchFilter<
+  T extends { or: (f: string) => T; ilike: (c: string, v: string) => T },
+>(query: T, search: string, scope: CouponSearchScope): T {
+  if (scope === "person") {
+    return query.or(
+      `member_nombre.ilike.%${search}%,member_email.ilike.%${search}%`
+    )
   }
+  if (scope === "code") return query.ilike("code", `%${search}%`)
+  if (scope === "batch") {
+    return query.or(
+      `batch_reference.ilike.%${search}%,batch_name.ilike.%${search}%`
+    )
+  }
+  return query.or(
+    `code.ilike.%${search}%,member_nombre.ilike.%${search}%,member_email.ilike.%${search}%,batch_reference.ilike.%${search}%,batch_name.ilike.%${search}%`
+  )
 }
 
-/** Chips de estado con contador (doc §4.1) sobre el universo COMPLETO, no la página cargada. */
-export async function getCouponStatusCounts(): Promise<
-  Record<CouponStatus | "expired", number>
-> {
+export type CouponStatusCount = { total: number; matched: number | null }
+
+/**
+ * Conteo por estado visible (chips de 13.2) sobre el universo COMPLETO, no
+ * la página cargada. Con búsqueda activa, además calcula `matched` — las
+ * coincidencias de esa búsqueda dentro de cada estado ("21 de 842") — sobre
+ * el mismo criterio que `listCoupons`. `expired` se deriva cruzando
+ * `status`×`valid_to` (no es un valor almacenado, ver `couponStatus`).
+ */
+export async function getCouponStatusCounts(
+  search?: string,
+  searchScope?: CouponSearchScope
+): Promise<Record<CouponDisplayStatus, CouponStatusCount>> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("coupon").select("status")
+
+  function tally(rows: { status: string; valid_to: string | null }[]) {
+    const counts = Object.fromEntries(
+      COUPON_DISPLAY_STATUSES.map((s) => [s, 0])
+    ) as Record<CouponDisplayStatus, number>
+    for (const row of rows) {
+      const display = couponStatus({
+        status: row.status as CouponStatus,
+        valid_to: row.valid_to,
+      })
+      counts[display] += 1
+    }
+    return counts
+  }
+
+  const { data: allRows, error } = await supabase
+    .from("coupon")
+    .select("status, valid_to")
   if (error) throw error
+  const totals = tally(allRows ?? [])
 
-  const counts: Record<string, number> = {
-    draft: 0,
-    issued: 0,
-    assigned: 0,
-    redeemed: 0,
-    cancelled: 0,
-    expired: 0,
+  let matched: Record<CouponDisplayStatus, number> | null = null
+  const clean = search ? sanitizeSearch(search) : ""
+  if (clean) {
+    const query = applyCouponSearchFilter(
+      supabase.from("coupon_search").select("status, valid_to"),
+      clean,
+      searchScope ?? "all"
+    )
+    const { data: matchedRows, error: matchedError } = await query
+    if (matchedError) throw matchedError
+    matched = tally(
+      (matchedRows ?? []) as { status: string; valid_to: string | null }[]
+    )
   }
-  for (const row of data ?? []) {
-    counts[row.status] = (counts[row.status] ?? 0) + 1
+
+  const result = {} as Record<CouponDisplayStatus, CouponStatusCount>
+  for (const status of COUPON_DISPLAY_STATUSES) {
+    result[status] = {
+      total: totals[status],
+      matched: matched ? matched[status] : null,
+    }
   }
-  return counts as Record<CouponStatus | "expired", number>
+  return result
+}
+
+/** Emisiones distintas entre los cupones que coinciden con la búsqueda (línea de contexto de 13.2: "48 cupones de 4 emisiones distintas"). */
+export async function countDistinctBatchesForCoupons(
+  search: string,
+  searchScope?: CouponSearchScope
+): Promise<number> {
+  const supabase = await createClient()
+  const clean = sanitizeSearch(search)
+  if (!clean) return 0
+  const query = applyCouponSearchFilter(
+    supabase.from("coupon_search").select("batch_id"),
+    clean,
+    searchScope ?? "all"
+  )
+  const { data, error } = await query
+  if (error) throw error
+  return new Set((data ?? []).map((r) => r.batch_id).filter(Boolean)).size
 }
 
 // --- Lookups para el asistente ---
@@ -402,4 +598,141 @@ export async function countOtherApprovers(
     .eq("roles.role_permissions.accion", "aprobar")
   if (error) throw error
   return data?.length ?? 0
+}
+
+export type ProfileWithPermissions = {
+  profileId: string
+  orgId: string
+  roleId: string
+  permissions: Set<string>
+}
+
+/** Calco de `features/team/lib/queries.ts` `getProfileWithPermissions` — duplicado a propósito, las features no se importan entre sí (ver CLAUDE.md §2). Decide qué botones de acción mostrar en `/cupones/[id]`. */
+export async function getProfileWithPermissions(): Promise<ProfileWithPermissions | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("org_id, role_id")
+    .eq("id", user.id)
+    .maybeSingle()
+  if (error) throw error
+  if (!profile) return null
+
+  const { data: permissions, error: permissionsError } = await supabase
+    .from("role_permissions")
+    .select("recurso, accion")
+    .eq("role_id", profile.role_id)
+  if (permissionsError) throw permissionsError
+
+  return {
+    profileId: user.id,
+    orgId: profile.org_id,
+    roleId: profile.role_id,
+    permissions: new Set(
+      (permissions ?? []).map((p) => `${p.recurso}:${p.accion}`)
+    ),
+  }
+}
+
+export type CouponApprovalWithBatch = CouponApproval & {
+  requested_by_profile: { nombre: string } | null
+  approver_profile: { nombre: string } | null
+  batch: {
+    reference: string
+    name: string
+    origin: string
+    requested_quantity: number
+    discount_type: string
+    discount_value: number
+    discount_cap: number | null
+    min_purchase_amount: number | null
+    points_cost: number | null
+    points_rate: number | null
+    free_product_id: string | null
+  } | null
+}
+
+const APPROVAL_EMBED =
+  "*, requested_by_profile:profiles!coupon_approval_requested_by_fkey(nombre), approver_profile:profiles!coupon_approval_approver_id_fkey(nombre), batch:coupon_batch!coupon_approval_batch_id_fkey(reference, name, origin, requested_quantity, discount_type, discount_value, discount_cap, min_purchase_amount, points_cost, points_rate, free_product_id)"
+
+/** Cola de `/cupones/aprobaciones` — las más antiguas primero (quien lleva más tiempo esperando, primero). */
+export async function listPendingApprovals(): Promise<
+  CouponApprovalWithBatch[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_approval")
+    .select(APPROVAL_EMBED)
+    .eq("status", "pending")
+    .order("requested_at", { ascending: true })
+  if (error) throw error
+  return (data ?? []) as unknown as CouponApprovalWithBatch[]
+}
+
+/** Historial (decididas o retiradas) — mismo embed, más recientes primero. */
+export async function listDecidedApprovals(
+  limit = 20
+): Promise<CouponApprovalWithBatch[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_approval")
+    .select(APPROVAL_EMBED)
+    .neq("status", "pending")
+    .order("decided_at", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return (data ?? []) as unknown as CouponApprovalWithBatch[]
+}
+
+/** Sin el límite de 25 de `listCoupons` — "Exportar CSV" de una emisión necesita el universo de esa emisión, no una página. */
+export async function listAllCouponsForBatch(
+  batchId: string
+): Promise<CouponSearchRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_search")
+    .select("*")
+    .eq("batch_id", batchId)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  return (data ?? []).map(toCouponSearchRow)
+}
+
+/** IDs de cupones de la emisión sin evento `viewed` — universo de "Reenviar no vistos". Cancelados quedan fuera: reenviar un cupón anulado no tiene sentido. */
+export async function listUnviewedCouponIds(
+  batchId: string
+): Promise<string[]> {
+  const supabase = await createClient()
+  const { data: coupons, error: couponsError } = await supabase
+    .from("coupon")
+    .select("id")
+    .eq("batch_id", batchId)
+    .neq("status", "cancelled")
+  if (couponsError) throw couponsError
+  const ids = (coupons ?? []).map((c) => c.id)
+  if (ids.length === 0) return []
+
+  const { data: viewedEvents, error: eventsError } = await supabase
+    .from("coupon_event")
+    .select("coupon_id")
+    .eq("type", "viewed")
+    .in("coupon_id", ids)
+  if (eventsError) throw eventsError
+  const viewed = new Set((viewedEvents ?? []).map((e) => e.coupon_id))
+  return ids.filter((id) => !viewed.has(id))
+}
+
+export async function getPendingApprovalsCount(): Promise<number> {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from("coupon_approval")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending")
+  if (error) throw error
+  return count ?? 0
 }

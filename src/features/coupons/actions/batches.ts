@@ -4,18 +4,25 @@ import { revalidatePath } from "next/cache"
 
 import { getRequestIp } from "@/lib/request-ip"
 import type { Database } from "@/types/database.types"
+import type { CouponOrigin } from "@/types/domain"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { couponsActionClient } from "./action-client"
 import { renderCodePattern } from "../lib/code"
 import { hasPermission } from "../lib/permissions"
+import { listUnviewedCouponIds } from "../lib/queries"
 import { evaluateApprovalRequirement } from "../lib/thresholds"
-import { couponBatchSchema, type CouponBatchValues } from "../schemas"
+import {
+  couponBatchSchema,
+  generateChunkSchema,
+  resendUnviewedSchema,
+  type CouponBatchValues,
+} from "../schemas"
 
 const APPROVAL_MESSAGE =
-  "Esta emisión supera los umbrales de doble aprobación (más de 500 códigos, más de $50 USD de valor unitario, o 2.500 puntos o más) — ese flujo todavía no está disponible en esta versión. Reduce la cantidad o el valor para emitir directamente."
+  "Esta emisión supera los umbrales de doble aprobación (más de 500 códigos, más de $50 USD de valor unitario, o 2.500 puntos o más) — usa «Solicitar aprobación» en vez de emitir directamente."
 
-type DirectCoupon = {
+export type DirectCoupon = {
   code: string
   sequence: number
   member_id: string | null
@@ -24,12 +31,115 @@ type DirectCoupon = {
 }
 
 /**
+ * Único punto que resuelve "cuántos códigos va a tener este batch" — lo
+ * usan tanto `emitCouponBatchAction` (emisión directa) como
+ * `requestApprovalAction` (../actions/approvals.ts): los umbrales de doble
+ * aprobación (`evaluateApprovalRequirement`) deben evaluarse sobre el mismo
+ * número sin importar qué acción termine creando el batch.
+ */
+export async function resolveRequestedQuantity(
+  supabase: SupabaseClient<Database>,
+  parsedInput: CouponBatchValues
+): Promise<
+  | { requestedQuantity: number; audienceSizeAtIssue: number | null }
+  | { error: string }
+> {
+  if (parsedInput.origin === "batch_audience") {
+    if (!parsedInput.audienceSegmentId) {
+      return { error: "Elige una audiencia." }
+    }
+    const { data: segment } = await supabase
+      .from("segments")
+      .select("conteo_estimado")
+      .eq("id", parsedInput.audienceSegmentId)
+      .maybeSingle()
+    if (!segment) {
+      return { error: "La audiencia elegida ya no existe." }
+    }
+    return {
+      requestedQuantity: segment.conteo_estimado ?? 0,
+      audienceSizeAtIssue: segment.conteo_estimado,
+    }
+  }
+  if (parsedInput.origin === "batch_anonymous") {
+    return {
+      requestedQuantity: parsedInput.requestedQuantity ?? 0,
+      audienceSizeAtIssue: null,
+    }
+  }
+  if (parsedInput.origin === "csv_import") {
+    return {
+      requestedQuantity: parsedInput.importRows?.length ?? 0,
+      audienceSizeAtIssue: null,
+    }
+  }
+  return { requestedQuantity: 1, audienceSizeAtIssue: null }
+}
+
+/**
+ * Genera los códigos de un batch `batch_audience`/`batch_anonymous` por
+ * chunks (RPC `generate_coupon_batch_chunk`) y, para `batch_audience`,
+ * completa `coupon_assignment` a partir de lo que el RPC ya asignó en
+ * `coupon.member_id`. Solo la usa `emitCouponBatchAction` (emisión
+ * directa, acotada a ≤500 códigos por los propios umbrales de aprobación) —
+ * `approveApprovalAction` (../actions/approvals.ts) deliberadamente NO la
+ * llama tras aprobar: un batch aprobado puede ser arbitrariamente grande, y
+ * recorrer aquí los hasta 200 chunks arriesgaría el timeout de la función
+ * serverless (ver el comentario en approvals.ts).
+ */
+export async function generateBatchChunks(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  batchId: string,
+  origin: CouponOrigin
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  for (let i = 0; i < 200; i += 1) {
+    const { data: chunk, error: chunkError } = await supabase.rpc(
+      "generate_coupon_batch_chunk",
+      { p_batch_id: batchId, p_chunk_size: 500 }
+    )
+    if (chunkError) {
+      return {
+        ok: false,
+        message: "No se pudieron generar los códigos de la emisión.",
+      }
+    }
+    if (!chunk || chunk.length === 0 || chunk[0]?.done) break
+  }
+
+  // El RPC solo materializa `coupon.member_id` — completa aquí
+  // `coupon_assignment` para que "Personas asociadas" tenga historial.
+  if (origin === "batch_audience") {
+    const { data: assignedCoupons } = await supabase
+      .from("coupon")
+      .select("id, member_id")
+      .eq("batch_id", batchId)
+      .not("member_id", "is", null)
+    if (assignedCoupons && assignedCoupons.length > 0) {
+      await supabase.from("coupon_assignment").insert(
+        assignedCoupons.map((c) => ({
+          org_id: orgId,
+          coupon_id: c.id,
+          member_id: c.member_id as string,
+          role: "holder" as const,
+          source: "manual" as const,
+        }))
+      )
+    }
+  }
+
+  return { ok: true }
+}
+
+/**
  * Orígenes de volumen bajo (1 a unas pocas decenas): se materializan en un
  * solo paso, sin el chunking asíncrono que sí necesitan
  * `batch_audience`/`batch_anonymous` (ver Fase 7 del plan — no hay
- * worker/cola en este proyecto).
+ * worker/cola en este proyecto). Exportada: `requestApprovalAction`
+ * (../actions/approvals.ts) la reusa para pre-materializar estos códigos en
+ * `'draft'` mientras la solicitud está pendiente (ver comentario ahí).
  */
-async function buildDirectCoupons(
+export async function buildDirectCoupons(
   supabase: SupabaseClient<Database>,
   orgId: string,
   values: CouponBatchValues
@@ -110,33 +220,11 @@ export const emitCouponBatchAction = couponsActionClient
       }
     }
 
-    let requestedQuantity: number
-    let audienceSizeAtIssue: number | null = null
-
-    if (parsedInput.origin === "batch_audience") {
-      if (!parsedInput.audienceSegmentId) {
-        return { ok: false as const, message: "Elige una audiencia." }
-      }
-      const { data: segment } = await ctx.supabase
-        .from("segments")
-        .select("conteo_estimado")
-        .eq("id", parsedInput.audienceSegmentId)
-        .maybeSingle()
-      if (!segment) {
-        return {
-          ok: false as const,
-          message: "La audiencia elegida ya no existe.",
-        }
-      }
-      requestedQuantity = segment.conteo_estimado ?? 0
-      audienceSizeAtIssue = segment.conteo_estimado
-    } else if (parsedInput.origin === "batch_anonymous") {
-      requestedQuantity = parsedInput.requestedQuantity ?? 0
-    } else if (parsedInput.origin === "csv_import") {
-      requestedQuantity = parsedInput.importRows?.length ?? 0
-    } else {
-      requestedQuantity = 1
+    const resolved = await resolveRequestedQuantity(ctx.supabase, parsedInput)
+    if ("error" in resolved) {
+      return { ok: false as const, message: resolved.error }
     }
+    const { requestedQuantity, audienceSizeAtIssue } = resolved
 
     if (requestedQuantity <= 0) {
       return {
@@ -160,13 +248,7 @@ export const emitCouponBatchAction = couponsActionClient
 
     const ip = await getRequestIp()
     const now = new Date().toISOString()
-
-    const { data: author } = await ctx.supabase
-      .from("profiles")
-      .select("nombre")
-      .eq("id", ctx.userId)
-      .single()
-    const authorLabel = author?.nombre ?? "Usuario"
+    const authorLabel = ctx.actorLabel
 
     // 1. Crear en 'draft' ya con la firma de autorización puesta — la
     // transición a 'generating' (guard_coupon_batch_transition) la exige.
@@ -178,6 +260,7 @@ export const emitCouponBatchAction = couponsActionClient
         origin: parsedInput.origin,
         discount_type: parsedInput.discountType,
         discount_value: parsedInput.discountValue,
+        discount_cap: parsedInput.discountCap ?? null,
         free_product_id: parsedInput.freeProductId ?? null,
         min_purchase_amount: parsedInput.minPurchaseAmount ?? null,
         max_uses_per_coupon: parsedInput.maxUsesPerCoupon,
@@ -265,42 +348,14 @@ export const emitCouponBatchAction = couponsActionClient
       parsedInput.origin === "batch_audience" ||
       parsedInput.origin === "batch_anonymous"
     ) {
-      // Chunked vía RPC (generate_coupon_batch_chunk) — a escala de demo
-      // esto cierra en una sola vuelta; el RPC ya deja el batch 'issued' y
-      // registra su propio evento generation_completed.
-      for (let i = 0; i < 200; i += 1) {
-        const { data: chunk, error: chunkError } = await ctx.supabase.rpc(
-          "generate_coupon_batch_chunk",
-          { p_batch_id: batch.id, p_chunk_size: 500 }
-        )
-        if (chunkError) {
-          return {
-            ok: false as const,
-            message: "No se pudieron generar los códigos de la emisión.",
-          }
-        }
-        if (!chunk || chunk.length === 0 || chunk[0]?.done) break
-      }
-
-      // El RPC solo materializa `coupon.member_id` — completa aquí
-      // `coupon_assignment` para que "Personas asociadas" tenga historial.
-      if (parsedInput.origin === "batch_audience") {
-        const { data: assignedCoupons } = await ctx.supabase
-          .from("coupon")
-          .select("id, member_id")
-          .eq("batch_id", batch.id)
-          .not("member_id", "is", null)
-        if (assignedCoupons && assignedCoupons.length > 0) {
-          await ctx.supabase.from("coupon_assignment").insert(
-            assignedCoupons.map((c) => ({
-              org_id: ctx.orgId,
-              coupon_id: c.id,
-              member_id: c.member_id as string,
-              role: "holder" as const,
-              source: "manual" as const,
-            }))
-          )
-        }
+      const chunkResult = await generateBatchChunks(
+        ctx.supabase,
+        ctx.orgId,
+        batch.id,
+        parsedInput.origin
+      )
+      if (!chunkResult.ok) {
+        return { ok: false as const, message: chunkResult.message }
       }
     } else {
       const built = await buildDirectCoupons(
@@ -325,6 +380,7 @@ export const emitCouponBatchAction = couponsActionClient
             bearer: c.bearer,
             discount_type: parsedInput.discountType,
             discount_value: parsedInput.discountValue,
+            discount_cap: parsedInput.discountCap ?? null,
             min_purchase_amount: parsedInput.minPurchaseAmount ?? null,
             max_uses: parsedInput.maxUsesPerCoupon,
             points_cost: parsedInput.pointsCost ?? null,
@@ -385,4 +441,132 @@ export const emitCouponBatchAction = couponsActionClient
 
     revalidatePath("/cupones")
     return { ok: true as const, batchId: batch.id as string }
+  })
+
+/**
+ * Genera UN chunk (hasta 500 códigos) y devuelve el progreso — a diferencia
+ * de `generateBatchChunks` (que recorre todos los chunks dentro de una sola
+ * request), esta acción existe para que el CLIENTE la llame repetidamente
+ * y pinte una barra de progreso real (Fase 6). Es también el mecanismo de
+ * "reanudar": si la pestaña se cierra a medias, volver a
+ * `/cupones/emisiones/[id]` con el batch todavía en `'generating'` simplemente
+ * retoma las llamadas donde se quedaron — el RPC ya es idempotente por
+ * `sequence`.
+ */
+export const generateNextChunkAction = couponsActionClient
+  .inputSchema(generateChunkSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "cupones", "emitir")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para generar códigos.",
+      }
+    }
+
+    const { data: batch, error: batchError } = await ctx.supabase
+      .from("coupon_batch")
+      .select("id, status, origin")
+      .eq("id", parsedInput.batchId)
+      .maybeSingle()
+    if (batchError || !batch) {
+      return { ok: false as const, message: "La emisión ya no existe." }
+    }
+    if (batch.status !== "generating") {
+      return {
+        ok: false as const,
+        message: "Esta emisión no está en generación.",
+      }
+    }
+
+    const { data: chunk, error: chunkError } = await ctx.supabase.rpc(
+      "generate_coupon_batch_chunk",
+      { p_batch_id: batch.id, p_chunk_size: 500 }
+    )
+    if (chunkError) {
+      return {
+        ok: false as const,
+        message: "No se pudo generar el siguiente lote de códigos.",
+      }
+    }
+    const result = chunk?.[0]
+
+    if (result?.done && batch.origin === "batch_audience") {
+      const { data: assignedCoupons } = await ctx.supabase
+        .from("coupon")
+        .select("id, member_id")
+        .eq("batch_id", batch.id)
+        .not("member_id", "is", null)
+      if (assignedCoupons && assignedCoupons.length > 0) {
+        await ctx.supabase.from("coupon_assignment").insert(
+          assignedCoupons.map((c) => ({
+            org_id: ctx.orgId,
+            coupon_id: c.id,
+            member_id: c.member_id as string,
+            role: "holder" as const,
+            source: "manual" as const,
+          }))
+        )
+      }
+    }
+
+    revalidatePath(`/cupones/emisiones/${batch.id}`)
+    if (result?.done) revalidatePath("/cupones")
+
+    return {
+      ok: true as const,
+      generated: result?.generated ?? 0,
+      total: result?.total ?? 0,
+      done: result?.done ?? true,
+    }
+  })
+
+/**
+ * Versión en lote de `resendCouponAction` (../actions/coupons.ts): registra
+ * un evento `delivered` para cada cupón de la emisión que todavía no tiene
+ * un `viewed` — mismo límite que esa acción (sin sender real, ver
+ * docs/cupones.md §4.3).
+ */
+export const resendUnviewedAction = couponsActionClient
+  .inputSchema(resendUnviewedSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "cupones", "emitir")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para reenviar cupones.",
+      }
+    }
+
+    const couponIds = await listUnviewedCouponIds(parsedInput.batchId)
+    if (couponIds.length === 0) {
+      return {
+        ok: false as const,
+        message: "Todos los cupones de esta emisión ya fueron vistos.",
+      }
+    }
+
+    const { error: eventError } = await ctx.supabase
+      .from("coupon_event")
+      .insert(
+        couponIds.map((couponId) => ({
+          org_id: ctx.orgId,
+          coupon_id: couponId,
+          batch_id: parsedInput.batchId,
+          type: "delivered" as const,
+          title: "Cupón reenviado",
+          detail:
+            "Reenvío masivo (no vistos) — sin proveedor de email/SMS conectado.",
+          actor_type: "user" as const,
+          actor_id: ctx.userId,
+          actor_label: ctx.actorLabel,
+        }))
+      )
+    if (eventError) {
+      return {
+        ok: false as const,
+        message: "No se pudo registrar el reenvío.",
+      }
+    }
+
+    revalidatePath(`/cupones/emisiones/${parsedInput.batchId}`)
+    return { ok: true as const, count: couponIds.length }
   })

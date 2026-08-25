@@ -70,7 +70,7 @@ export function StepAuthorization({
             .map((r) => APPROVAL_THRESHOLD_REASON_LABEL[r])
             .join(
               ", "
-            )}. El flujo de doble aprobación todavía no está disponible en esta versión — reduce la cantidad o el valor para poder emitir directamente.`}
+            )}. Al confirmar, se enviará a un segundo aprobador — la generación de códigos empieza recién cuando la apruebe.`}
         />
       )}
     </Section>

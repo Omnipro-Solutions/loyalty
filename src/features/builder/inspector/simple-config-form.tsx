@@ -158,9 +158,7 @@ export function SimpleConfigForm({
               spec.kind === "audience-select" ||
               spec.kind === "coupon-select" ? (
               <Select
-                value={
-                  typeof currentValue === "string" ? currentValue : undefined
-                }
+                value={typeof currentValue === "string" ? currentValue : null}
                 onValueChange={(value) => set(spec.key, value)}
               >
                 <SelectTrigger id={`cfg-${spec.key}`} className="w-full">

@@ -24,6 +24,7 @@ type StepReviewProps = {
   recipientLabel?: string
   audienceLabel?: string
   blockers: string[]
+  approvalRequired: boolean
 }
 
 /** Paso "Revisar y emitir" (doc §4.2): resumen completo + checklist de bloqueos. */
@@ -32,6 +33,7 @@ export function StepReview({
   recipientLabel,
   audienceLabel,
   blockers,
+  approvalRequired,
 }: StepReviewProps) {
   const rows: ReviewRow[] = [
     {
@@ -87,7 +89,9 @@ export function StepReview({
           <div className="flex items-center gap-2 text-success">
             <CheckCircle2 className="size-4 shrink-0" />
             <p className="text-[13px] font-medium">
-              Todo listo — puedes emitir esta emisión.
+              {approvalRequired
+                ? "Todo listo — al confirmar, se enviará a doble aprobación."
+                : "Todo listo — puedes emitir esta emisión."}
             </p>
           </div>
         ) : (
