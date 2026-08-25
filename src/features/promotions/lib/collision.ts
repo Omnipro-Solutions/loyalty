@@ -1,5 +1,12 @@
 import { CONDITION_FIELD_LABEL } from "./labels"
-import type { Condition, Promotion } from "./queries"
+import type { Condition, ConditionNode, Promotion } from "./queries"
+
+/** Mismo criterio estructural que `isConditionGroup` de `lib/condition-tree.ts` (grupo si tiene `condiciones`), redeclarado porque ese archivo trabaja sobre los tipos de `schemas.ts` (lado cliente), no los de `queries.ts` (server-only). */
+function flattenConditionNode(node: ConditionNode): Condition[] {
+  if ("condiciones" in node)
+    return node.condiciones.flatMap(flattenConditionNode)
+  return [node]
+}
 
 export type Collision = {
   promotionId: string
@@ -39,11 +46,12 @@ export function detectCollisions(
       draft.channelScope === "pos_ecommerce"
     if (!sharesChannel) continue
 
+    const otherLeaves = flattenConditionNode(other.condiciones)
     const shared = draft.conditions.find((c) =>
-      other.condiciones.some((o) => sameValue(o, c))
+      otherLeaves.some((o) => sameValue(o, c))
     )
     const bothHaveNoConditions =
-      draft.conditions.length === 0 && other.condiciones.length === 0
+      draft.conditions.length === 0 && otherLeaves.length === 0
     if (!shared && !bothHaveNoConditions) continue
 
     collisions.push({

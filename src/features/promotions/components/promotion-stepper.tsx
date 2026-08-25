@@ -11,7 +11,7 @@ type PromotionStepperProps = {
   onStepClick: (index: number) => void
 }
 
-/** Figma "Stepper" (633:798): 5 pasos, círculo + etiqueta + conector — interactivo (click salta al paso). */
+/** Figma "Stepper" (633:798, `NavStepperRegla` en 1395:6/1399:6/1401:28): 7 pasos, círculo + etiqueta + conector — interactivo (click salta al paso, bloqueado hacia adelante al crear si el paso actual no es válido). */
 export function PromotionStepper({
   steps,
   current,

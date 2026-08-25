@@ -1,59 +1,119 @@
 "use client"
 
-import { Check } from "lucide-react"
+import type { UseFormSetValue } from "react-hook-form"
 
-import { cn } from "@/lib/utils"
-import { PROMOTION_MECHANICS, type PromotionMechanic } from "@/types/domain"
+import { RadioCard } from "@/components/form/radio-card"
+import { Section } from "@/components/form/section"
+import { RadioGroup } from "@/components/ui/radio-group"
+import { BENEFIT_TYPES, type BenefitType } from "@/types/domain"
 
-import { MECHANIC_EXAMPLE, MECHANIC_LABEL } from "../lib/mechanics"
-import { PROMOTION_MECHANIC_ICON } from "../lib/type-icon"
+import { suggestedCostNature } from "../lib/cost-nature"
+import { BENEFIT_TYPE_DESCRIPTION, BENEFIT_TYPE_LABEL } from "../lib/labels"
+import {
+  ALL_MECHANIC_SPECIFIC_FIELDS,
+  MECHANIC_FIELDS,
+} from "../lib/mechanic-fields"
+import type { PromotionValues } from "../schemas"
 
 type MechanicPickerProps = {
-  value: PromotionMechanic
-  onChange: (mechanic: PromotionMechanic) => void
+  value: BenefitType
+  onChange: (value: BenefitType) => void
+  setValue: UseFormSetValue<PromotionValues>
 }
 
-/** Paso 1 del wizard: la mecánica elegida define qué campos pide "Recompensa" más adelante. */
-export function MechanicPicker({ value, onChange }: MechanicPickerProps) {
+/**
+ * Valor al que se resetea cada campo al limpiarlo (en vez de `undefined`)
+ * — SOLO para los campos de `ALL_MECHANIC_SPECIFIC_FIELDS` que en
+ * `schemas.ts` son de tipo base obligatorio (`applyTo`, `discountTiers`,
+ * `thresholdType`, `tierCalculationMode`: ninguno tiene `.optional()`, a
+ * diferencia de `compraCantidad`/`multiplicadorPuntos`/etc.). Poner
+ * `undefined` en un campo obligatorio rompe el schema BASE (no el
+ * `superRefine`) — y un schema base roto salta el `superRefine` entero,
+ * exactamente como el bug de `NaN` ya documentado en
+ * `discount-tiers-builder.tsx`: `trigger()` del paso "Configuración" deja
+ * de ver los errores reales de la mecánica activa y "Siguiente" avanza con
+ * datos inválidos. Detectado en vivo: al elegir `por_piezas`, esto dejaba
+ * `compraCantidad`/`pagaCantidad` sin validar.
+ */
+const MECHANIC_FIELD_RESET_VALUE: Partial<
+  Record<(typeof ALL_MECHANIC_SPECIFIC_FIELDS)[number], unknown>
+> = {
+  applyTo: "subtotal_carrito",
+  discountTiers: [],
+  thresholdType: "unidades",
+  tierCalculationMode: "escalon_unico",
+  productosBundleIds: [],
+  nivelesRequeridos: [],
+  modoResolucionMultiplicador: "gana_mayor",
+  tipoBeneficioNoTransaccional: "envio_gratis",
+  hastaAgotarExistencias: false,
+  respetaPrecioMinimoLegal: true,
+  tipoMonedero: "porcentaje",
+  mezclaEnUniverso: true,
+  tipoSaldo: "canjeable",
+  momentoAcreditacion: "inmediato",
+  estadoInicial: "disponible",
+  registraUso: false,
+  devolucionSiVence: false,
+  elegibleEnInactividad: false,
+}
+
+/**
+ * Paso "Mecánica" — mismo patrón que
+ * `features/coupons/components/step-origin.tsx` (`RadioGroup` +
+ * `RadioCard`), con 10 tarjetas en vez de 2. Al cambiar de mecánica limpia
+ * los campos propios de TODAS las demás (bug #3 de la revisión: react-hook-
+ * form no desregistra valores de inputs que dejan de montarse) — doble
+ * seguro junto al null-out de `toRow()` en `actions/promotions.ts`.
+ */
+export function MechanicPicker({
+  value,
+  onChange,
+  setValue,
+}: MechanicPickerProps) {
+  function handleChange(next: BenefitType) {
+    const keep = new Set(MECHANIC_FIELDS[next])
+    // `setValue` está tipado para exigir un `name` literal cuyo tipo de
+    // valor combina con ese campo — recorrer una lista dinámica de campos
+    // (`ALL_MECHANIC_SPECIFIC_FIELDS`) no calza con esa sobrecarga, así que
+    // se relaja el tipo solo dentro de este loop de limpieza.
+    const clear = setValue as unknown as (
+      field: (typeof ALL_MECHANIC_SPECIFIC_FIELDS)[number],
+      fieldValue: unknown
+    ) => void
+    for (const field of ALL_MECHANIC_SPECIFIC_FIELDS) {
+      if (keep.has(field)) continue
+      clear(field, MECHANIC_FIELD_RESET_VALUE[field])
+    }
+    // Paso "Economía": la naturaleza de costo se sugiere por mecánica
+    // (confirmar, no rellenar) — el operador puede volver a cambiarla ahí.
+    setValue("naturalezaCosto", suggestedCostNature(next))
+    // T03 · "debe declararse no acumulable por defecto" — sugerencia, no
+    // un bloqueo: el operador puede volver a marcarla acumulable.
+    if (next === "precio_especial") setValue("stackable", false)
+    onChange(next)
+  }
+
   return (
-    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {PROMOTION_MECHANICS.map((mechanic) => {
-        const Icon = PROMOTION_MECHANIC_ICON[mechanic]
-        const selected = mechanic === value
-        return (
-          <button
-            key={mechanic}
-            type="button"
-            onClick={() => onChange(mechanic)}
-            className={cn(
-              "flex flex-col items-start gap-2 rounded-[14px] border px-4 py-3.5 text-left transition-colors",
-              selected
-                ? "border-primary bg-brand-subtle"
-                : "border-border bg-background hover:border-border-strong"
-            )}
-          >
-            <div className="flex w-full items-center justify-between">
-              <div
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-lg",
-                  selected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                <Icon className="size-4" />
-              </div>
-              {selected && <Check className="size-4 text-primary" />}
-            </div>
-            <p className="text-[13px] font-semibold text-foreground">
-              {MECHANIC_LABEL[mechanic]}
-            </p>
-            <p className="text-xs leading-[16px] text-muted-foreground">
-              {MECHANIC_EXAMPLE[mechanic]}
-            </p>
-          </button>
-        )
-      })}
-    </div>
+    <Section
+      title="Mecánica"
+      description="El tipo de beneficio determina qué campos de configuración siguen."
+    >
+      <RadioGroup
+        value={value}
+        onValueChange={(v) => handleChange(v as BenefitType)}
+        className="grid grid-cols-3 gap-3"
+      >
+        {BENEFIT_TYPES.map((type) => (
+          <RadioCard
+            key={type}
+            value={type}
+            title={BENEFIT_TYPE_LABEL[type]}
+            description={BENEFIT_TYPE_DESCRIPTION[type]}
+            className="w-full"
+          />
+        ))}
+      </RadioGroup>
+    </Section>
   )
 }

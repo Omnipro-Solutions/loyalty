@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { getProgramParameters } from "@/lib/program-parameters"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { MemberAudiencesCard } from "@/features/members/components/member-audiences-card"
@@ -49,6 +50,8 @@ export default async function MemberDetailPage({
   const member = await getMemberById(id)
   if (!member) notFound()
 
+  const programParameters = await getProgramParameters()
+
   const [
     redemptions,
     summary,
@@ -61,7 +64,7 @@ export default async function MemberDetailPage({
     profilePermissions,
   ] = await Promise.all([
     listMemberRedemptions(id),
-    getLoyaltySummary(id, member.saldo_puntos),
+    getLoyaltySummary(id, member.saldo_puntos, programParameters.valorPunto),
     getProgramRedemptionRate(),
     listMemberConsents(id),
     getMemberOrders(id),
@@ -123,6 +126,7 @@ export default async function MemberDetailPage({
           member={member}
           summary={summary}
           programRate={programRate}
+          pointValueUsd={programParameters.valorPunto}
         />
       </div>
 

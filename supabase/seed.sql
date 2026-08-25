@@ -28,6 +28,20 @@ cross join (
 where o.slug = 'omni'
 on conflict (org_id, nombre) do nothing;
 
+-- Parámetros del programa (Fase 0 de docs/promociones.md) — `valor_punto`
+-- reemplaza el `POINT_VALUE_USD` hardcodeado de
+-- `features/members/lib/queries.ts`; `breakage_estimado_pct` usa el 28%
+-- del ejemplo trabajado del documento de modalidades.
+insert into programa_parametros (
+  org_id, valor_punto, breakage_estimado_pct, redencion_cashback_pct,
+  techo_descuento_apilado_pct, vigencia_puntos_dias, exclusiones_reglamento
+)
+select o.id, 0.0017, 28, 65, 50, 365,
+  array['tabaco', 'pago_servicios', 'tarjetas_prepago', 'recargas', 'herbalife']
+from organizations o
+where o.slug = 'omni'
+on conflict (org_id) do nothing;
+
 -- Los roles de sistema (Administrador/Gerente comercial/Analista) se crean
 -- solos: el insert de `organizations` de arriba dispara
 -- `organizations_after_insert_system_roles`
@@ -59,8 +73,11 @@ from (
     ('Jefe de tienda', 'promociones', 'ver'), ('Jefe de tienda', 'promociones', 'crear'),
     ('Jefe de tienda', 'reglas', 'ver'),
     ('Jefe de tienda', 'journeys', 'ver'),
+    ('Jefe de tienda', 'cupones', 'ver'), ('Jefe de tienda', 'cupones', 'crear'),
+    ('Jefe de tienda', 'cupones', 'emitir'), ('Jefe de tienda', 'cupones', 'imprimir'),
     ('Operador de caja', 'catalogo', 'ver'),
-    ('Operador de caja', 'promociones', 'ver'), ('Operador de caja', 'promociones', 'crear')
+    ('Operador de caja', 'promociones', 'ver'), ('Operador de caja', 'promociones', 'crear'),
+    ('Operador de caja', 'cupones', 'ver'), ('Operador de caja', 'cupones', 'imprimir')
 ) as rp (nombre, recurso, accion)
 on conflict (role_id, recurso, accion) do nothing;
 
@@ -241,7 +258,7 @@ select
     when 'Cuidado bucal' then '/catalogo/cuidado-bucal.jpg'
     when 'Primeros auxilios' then '/catalogo/primeros-auxilios.jpg'
   end,
-  p.precio, p.puntos, p.estado
+  round(p.precio / 4000.0, 2), p.puntos, p.estado
 from (
   values
     ('FAR-70241', 'PRD-004821', '7702057012345', 'Acetaminofén 500 mg', 'Caja x 24 tabletas', 'Genfar', 'Droguerías Cóndor S.A.S.', 'Medicamento OTC', 'Analgésicos', 6900, 12, 'activo'),
@@ -344,7 +361,7 @@ insert into producto_precios (
 )
 select
   (select id from prod where prod.sku = pp.sku),
-  pp.nombre_lista, pp.canal, pp.precio, false, now() - interval '30 days'
+  pp.nombre_lista, pp.canal, round(pp.precio / 4000.0, 2), false, now() - interval '30 days'
 from (
   values
     ('FAR-70241', 'Lista e-commerce', 'Tienda online · app', 7200),
@@ -385,8 +402,8 @@ where m.org_id = (select id from org) and m.email = t.email and m.tienda_inscrip
 with org as (select id from organizations where slug = 'omni')
 insert into promociones (
   org_id, nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
-  combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
-  tope_maximo, aplicar_sobre, usos_por_cliente, usos_periodo,
+  condiciones, tipo_beneficio, valor_beneficio,
+  tope_maximo, aplicar_sobre, limites,
   presupuesto_asignado, presupuesto_consumido, canjes, roi,
   estado_publicacion, vigente_desde, vigente_hasta
 )
@@ -394,51 +411,47 @@ select (select id from org), v.*
 from (
   values
     ('2x1 en Vitaminas', 'PROMO-2X1-VIT', 'cantidad', 6, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Vitaminas' and org_id = (select id from org))))),
-     'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
-     3000000, 2040000, 1284, 1.9, 'activa', current_date - 13, current_date + 6),
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Vitaminas' and org_id = (select id from org)))))),
+     'producto_gratis', 1, null::numeric, 'producto', '[]'::jsonb,
+     750, 510, 1284, 1.9, 'activa', current_date - 13, current_date + 6),
     ('15% Clientes VIP', 'PROMO-VIP-15', 'segmento', 10, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'segmento', 'valor', 'VIP')),
-     'descuento_porcentual', 15, 30000, 'subtotal_carrito', 2, 'mes',
-     5000000, 2050000, 612, 3.7, 'activa', current_date - 5, current_date + 12),
-    ('Envío gratis compras mayores a $80.000', 'PROMO-ENVIO-80', 'carrito', 5, true, 'ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 80000)),
-     'envio_gratis', 1, null::numeric, 'envio', null::smallint, null,
-     5200000, 4836000, 2108, 4.4, 'activa', current_date - 19, current_date),
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'segmento', 'valor', 'VIP'))),
+     'descuento_porcentual', 15, 7.5, 'subtotal_carrito',
+     jsonb_build_array(jsonb_build_object('unidad', 'veces', 'sujeto', 'socio', 'ventana', 'mes_calendario', 'tope', 2, 'alExceder', 'descartar')),
+     1250, 512.5, 612, 3.7, 'activa', current_date - 5, current_date + 12),
+    ('Envío gratis compras mayores a $20', 'PROMO-ENVIO-80', 'carrito', 5, true, 'ecommerce',
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'monto_carrito', 'valor', 20))),
+     'envio_gratis', 1, null::numeric, 'envio', '[]'::jsonb,
+     1300, 1209, 2108, 4.4, 'activa', current_date - 19, current_date),
     ('Cupón bienvenida nuevos clientes', 'PROMO-CUPON-BDV', 'cupon', 5, false, 'pos_ecommerce',
-     'todas', '[]'::jsonb,
-     'descuento_porcentual', 10, 15000, 'subtotal_carrito', 1, 'sin_limite',
-     3500000, 1890000, 1902, 5.0, 'activa', current_date - 40, null),
+     jsonb_build_object('combinador', 'todas', 'condiciones', '[]'::jsonb),
+     'descuento_porcentual', 10, 3.75, 'subtotal_carrito',
+     jsonb_build_array(jsonb_build_object('unidad', 'veces', 'sujeto', 'socio', 'ventana', 'vida', 'tope', 1, 'alExceder', 'descartar')),
+     875, 472.5, 1902, 5.0, 'activa', current_date - 40, null),
     ('Combo Bienestar: Vitamina C + Analgésico', 'PROMO-BUNDLE-BIENESTAR', 'bundle', 4, false, 'pos',
-     'todas', '[]'::jsonb,
-     'precio_fijo_bundle', 25000, null::numeric, 'producto', null::smallint, null,
-     1200000, 0, 0, null::numeric, 'activa', current_date + 3, current_date + 16),
+     jsonb_build_object('combinador', 'todas', 'condiciones', '[]'::jsonb),
+     'precio_fijo_bundle', 6.25, null::numeric, 'producto', '[]'::jsonb,
+     300, 0, 0, null::numeric, 'activa', current_date + 3, current_date + 16),
     ('Descuento en Dermocosmética', 'PROMO-DERMO-20', 'categoria', 3, true, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Dermocosmética' and org_id = (select id from org))))),
-     'descuento_porcentual', 20, null::numeric, 'producto', null::smallint, null,
-     1000000, 0, 0, null::numeric, 'activa', current_date + 9, current_date + 24),
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Dermocosmética' and org_id = (select id from org)))))),
+     'descuento_porcentual', 20, null::numeric, 'producto', '[]'::jsonb,
+     250, 0, 0, null::numeric, 'activa', current_date + 9, current_date + 24),
     ('Descuento temporada gripal', 'PROMO-RESP-BORRADOR', 'categoria', 5, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Respiratorio' and org_id = (select id from org))))),
-     'descuento_porcentual', 12, null::numeric, 'producto', null::smallint, null,
-     800000, 0, 0, null::numeric, 'borrador', current_date, current_date + 30),
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Respiratorio' and org_id = (select id from org)))))),
+     'descuento_porcentual', 12, null::numeric, 'producto', '[]'::jsonb,
+     200, 0, 0, null::numeric, 'borrador', current_date, current_date + 30),
     ('2x1 en Cuidado personal', 'PROMO-2X1-CP-BORRADOR', 'cantidad', 5, false, 'pos_ecommerce',
-     'todas',
-     jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
-       jsonb_build_array((select id::text from categorias where nombre = 'Cuidado personal' and org_id = (select id from org))))),
-     'producto_gratis', 1, null::numeric, 'producto', null::smallint, null,
-     500000, 0, 0, null::numeric, 'borrador', current_date, null)
+     jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(jsonb_build_object('campo', 'categoria', 'valor',
+       jsonb_build_array((select id::text from categorias where nombre = 'Cuidado personal' and org_id = (select id from org)))))),
+     'producto_gratis', 1, null::numeric, 'producto', '[]'::jsonb,
+     125, 0, 0, null::numeric, 'borrador', current_date, null)
 ) as v (
   nombre, codigo, tipo, prioridad, acumulable, canal_aplicacion,
-  combinador_condiciones, condiciones, tipo_beneficio, valor_beneficio,
-  tope_maximo, aplicar_sobre, usos_por_cliente, usos_periodo,
+  condiciones, tipo_beneficio, valor_beneficio,
+  tope_maximo, aplicar_sobre, limites,
   presupuesto_asignado, presupuesto_consumido, canjes, roi,
   estado_publicacion, vigente_desde, vigente_hasta
 )
@@ -728,7 +741,7 @@ on conflict (source_node_id, source_port, target_node_id) do nothing;
 -- aproximado de farmacia (45-45% sobre precio), variado por producto.
 with org as (select id from organizations where slug = 'omni')
 update productos p
-set costo_unitario = c.costo
+set costo_unitario = round(c.costo / 4000.0, 2)
 from (
   values
     ('FAR-70241', 3800), ('FAR-70388', 6300), ('FAR-70422', 15700),
@@ -1293,7 +1306,7 @@ where m.org_id = (select id from org) and m.email = v.email;
 -- === 1. costo_unitario de los 16 SKUs usados por pedido_items de demo ===
 with org as (select id from organizations where slug = 'omni')
 update productos p
-set costo_unitario = c.costo
+set costo_unitario = round(c.costo / 4000.0, 2)
 from (
   values
     ('FAR-70241', 3800), ('FAR-70388', 6300), ('FAR-70422', 15700),
@@ -1477,3 +1490,408 @@ from segmentos_reforzar sr
 cross join activos a
 where a.rn % 10 < 3
 on conflict (segment_id, member_id) do nothing;
+
+-- Datos demo del módulo de cupones — duplicado palabra por palabra de
+-- 20260824130000_cupones_datos_demo.sql (ver esa migración para el porqué
+-- de la doble escritura). Un batch por cada uno de los 6 orígenes
+-- (docs/cupones.md §3), ligados a socios/audiencias/promociones reales de
+-- este mismo archivo.
+
+-- === 1. Manual · cliente identificado ===
+with org as (select id from organizations where slug = 'omni'),
+socio as (select id from members where org_id = (select id from org) and email = 'sofia.ramirez@example.com'),
+promo as (select id from promociones where org_id = (select id from org) and codigo = 'PROMO-CUPON-BDV')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, valid_from, valid_to, promotion_id,
+  issue_reason, internal_reference
+)
+select
+  (select id from org), 'EMI-DEMO-0001', 'Bienvenida nueva socia · Sofía Ramírez',
+  'manual_customer', 'issued', 'percentage', 15, 'USD', 1,
+  now() - interval '10 days', now() + interval '20 days', (select id from promo),
+  'Bienvenida a nueva socia Diamante', 'TCK-DEMO-001'
+where exists (select 1 from socio)
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0001'),
+socio as (select id from members where org_id = (select id from org) and email = 'sofia.ramirez@example.com')
+insert into coupon (
+  org_id, batch_id, code, sequence, status, member_id, discount_type,
+  discount_value, currency, valid_from, valid_to, issued_at, assigned_at, qr_value
+)
+select
+  (select id from org), (select id from batch), 'CUP-BDV-0001', 1, 'assigned',
+  (select id from socio), 'percentage', 15, 'USD',
+  now() - interval '10 days', now() + interval '20 days',
+  now() - interval '10 days', now() - interval '10 days', 'CUP-BDV-0001'
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+c as (select id from coupon where org_id = (select id from org) and code = 'CUP-BDV-0001'),
+socio as (select id from members where org_id = (select id from org) and email = 'sofia.ramirez@example.com')
+insert into coupon_assignment (org_id, coupon_id, member_id, role, source, assigned_at)
+select (select id from org), (select id from c), (select id from socio), 'holder', 'manual', now() - interval '10 days'
+where exists (select 1 from c)
+on conflict do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0001'),
+c as (select id from coupon where org_id = (select id from org) and code = 'CUP-BDV-0001')
+insert into coupon_event (org_id, coupon_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+select * from (
+  values
+    ((select id from org), null::uuid, (select id from b), 'batch_created', 'Emisión creada', 'user', 'Carlos Granados', now() - interval '10 days'),
+    ((select id from org), null::uuid, (select id from b), 'authorization_signed', 'Autorización firmada', 'user', 'Carlos Granados', now() - interval '10 days'),
+    ((select id from org), (select id from c), (select id from b), 'issued', 'Cupón emitido', 'system', 'Sistema de cupones', now() - interval '10 days'),
+    ((select id from org), (select id from c), (select id from b), 'assigned', 'Asignado a Sofía Ramírez', 'user', 'Carlos Granados', now() - interval '10 days')
+) as v (org_id, coupon_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+where exists (select 1 from b);
+
+-- === 2. Manual · al portador ===
+with org as (select id from organizations where slug = 'omni')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, valid_from, valid_to, issue_reason
+)
+values (
+  (select id from org), 'EMI-DEMO-0002', 'Cupón mostrador · ST-0142',
+  'manual_bearer', 'issued', 'fixed_amount', 5, 'USD', 1,
+  now() - interval '6 days', now() + interval '24 days',
+  'Cortesía por incidente en caja'
+)
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0002')
+insert into coupon (
+  org_id, batch_id, code, sequence, status, bearer, discount_type,
+  discount_value, currency, valid_from, valid_to, issued_at, qr_value
+)
+select
+  (select id from org), (select id from batch), 'CUP-MSTR-0001', 1, 'issued', true,
+  'fixed_amount', 5, 'USD', now() - interval '6 days', now() + interval '24 days',
+  now() - interval '6 days', 'CUP-MSTR-0001'
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0002')
+insert into coupon_event (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+select (select id from org), (select id from b), 'batch_created', 'Emisión creada', 'user', 'Carlos Granados', now() - interval '6 days'
+where exists (select 1 from b);
+
+-- === 3. Canje de puntos ===
+with org as (select id from organizations where slug = 'omni'),
+socio as (select id from members where org_id = (select id from org) and email = 'camilo.torres@example.com')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, points_cost, points_charge_timing, points_rate,
+  valid_from, valid_to, issue_reason
+)
+select
+  (select id from org), 'EMI-DEMO-0003', 'Canje de puntos · Camilo Torres',
+  'points_redemption', 'issued', 'fixed_amount', 2.04, 'USD', 1,
+  1200, 'on_create', 0.0017, now() - interval '3 days', now() + interval '27 days',
+  'Canje de puntos solicitado por el socio en tienda'
+where exists (select 1 from socio)
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0003'),
+socio as (select id from members where org_id = (select id from org) and email = 'camilo.torres@example.com')
+insert into coupon (
+  org_id, batch_id, code, sequence, status, member_id, discount_type,
+  discount_value, currency, points_cost, points_charged_at, valid_from, valid_to,
+  issued_at, assigned_at, qr_value
+)
+select
+  (select id from org), (select id from batch), 'CUP-PTS-0001', 1, 'assigned',
+  (select id from socio), 'fixed_amount', 2.04, 'USD', 1200, now() - interval '3 days',
+  now() - interval '3 days', now() + interval '27 days',
+  now() - interval '3 days', now() - interval '3 days', 'CUP-PTS-0001'
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+c as (select id from coupon where org_id = (select id from org) and code = 'CUP-PTS-0001'),
+socio as (select id from members where org_id = (select id from org) and email = 'camilo.torres@example.com')
+insert into coupon_assignment (org_id, coupon_id, member_id, role, source, assigned_at)
+select (select id from org), (select id from c), (select id from socio), 'holder', 'manual', now() - interval '3 days'
+where exists (select 1 from c)
+on conflict do nothing;
+
+-- === 4. Batch · audiencia CDP ===
+-- `seg_vip_gold` tiene conteo_estimado 3.482 pero solo 3 filas de muestra
+-- en `segment_members` (segments.lib: la muestra es curada, no el universo
+-- completo) — este batch demuestra exactamente esa limitación real en vez
+-- de fingir 3.482 cupones: se solicitan 3.482, se generan 3 (los únicos
+-- resolubles hoy) y la emisión se cierra igual, como haría
+-- generate_coupon_batch_chunk() en producción.
+with org as (select id from organizations where slug = 'omni'),
+seg as (select id, conteo_estimado from segments where org_id = (select id from org) and codigo = 'seg_vip_gold')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, audience_segment_id, audience_name,
+  audience_mode, audience_resolved_at, audience_size_at_issue,
+  valid_from, valid_to, issue_reason, generation_started_at, generation_completed_at
+)
+select
+  (select id from org), 'EMI-DEMO-0004', 'Reactivación VIP · nivel Oro',
+  'batch_audience', 'issued', 'percentage', 20, 'USD', seg.conteo_estimado,
+  seg.id, 'Alto valor · VIP', 'frozen', now() - interval '5 days', seg.conteo_estimado,
+  now() - interval '5 days', now() + interval '25 days',
+  'Campaña de reactivación para el segmento de mayor valor',
+  now() - interval '5 days', now() - interval '5 days' + interval '2 minutes'
+from seg
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0004'),
+mem as (select email, id from members where org_id = (select id from org))
+insert into coupon (
+  org_id, batch_id, code, sequence, status, member_id, discount_type,
+  discount_value, currency, valid_from, valid_to, issued_at, assigned_at, qr_value
+)
+select
+  (select id from org), (select id from batch), v.code, v.seq, 'assigned',
+  (select id from mem where mem.email = v.email), 'percentage', 20, 'USD',
+  now() - interval '5 days', now() + interval '25 days',
+  now() - interval '5 days', now() - interval '5 days', v.code
+from (
+  values
+    ('CUP-VIP-0001', 1, 'maria.gonzalez@mail.com'),
+    ('CUP-VIP-0002', 2, 'sofia.ramirez@example.com'),
+    ('CUP-VIP-0003', 3, 'andres.gomez@example.com')
+) as v (code, seq, email)
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+mem as (select email, id from members where org_id = (select id from org)),
+c as (select code, id from coupon where org_id = (select id from org) and code like 'CUP-VIP-%')
+insert into coupon_assignment (org_id, coupon_id, member_id, role, source, assigned_at)
+select (select id from org), c.id, mem.id, 'holder', 'manual', now() - interval '5 days'
+from (
+  values ('CUP-VIP-0001', 'maria.gonzalez@mail.com'), ('CUP-VIP-0002', 'sofia.ramirez@example.com'), ('CUP-VIP-0003', 'andres.gomez@example.com')
+) as v (code, email)
+join c on c.code = v.code
+join mem on mem.email = v.email
+on conflict do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0004')
+insert into coupon_event (org_id, batch_id, type, title, detail, actor_type, actor_label, occurred_at)
+select * from (
+  values
+    ((select id from org), (select id from b), 'batch_created', 'Emisión creada', null, 'user', 'Carlos Granados', now() - interval '5 days'),
+    ((select id from org), (select id from b), 'generation_started', 'Generación iniciada', null, 'system', 'Sistema de cupones', now() - interval '5 days'),
+    ((select id from org), (select id from b), 'generation_completed', 'Generación completada', 'Muestra agotada: 3 de 3.482 estimados resueltos hoy.', 'system', 'Sistema de cupones', now() - interval '5 days' + interval '2 minutes')
+) as v (org_id, batch_id, type, title, detail, actor_type, actor_label, occurred_at)
+where exists (select 1 from b);
+
+-- Uno de los cupones VIP ya se canjeó en tienda — ilustra "Uso y redención" del detalle.
+with org as (select id from organizations where slug = 'omni')
+update coupon
+set status = 'redeemed', redeemed_at = now() - interval '1 day', uses_count = 1
+where org_id = (select id from org) and code = 'CUP-VIP-0003' and status = 'assigned';
+
+with org as (select id from organizations where slug = 'omni'),
+c as (select id from coupon where org_id = (select id from org) and code = 'CUP-VIP-0003'),
+tienda as (select id from tiendas where org_id = (select id from org) and codigo_tienda = 'ST-0151'),
+mem as (select id from members where org_id = (select id from org) and email = 'andres.gomez@example.com')
+insert into coupon_redemption (org_id, coupon_id, member_id, tienda_id, order_amount, discount_applied, result, channel, occurred_at)
+select (select id from org), (select id from c), (select id from mem), (select id from tienda), 42.90, 8.58, 'applied', 'pos', now() - interval '1 day'
+where exists (select 1 from c)
+on conflict do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0004'),
+c as (select id from coupon where org_id = (select id from org) and code = 'CUP-VIP-0003')
+insert into coupon_event (org_id, coupon_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+select (select id from org), (select id from c), (select id from b), 'redeemed', 'Cupón canjeado en tienda', 'store', 'POS · ST-0151', now() - interval '1 day'
+where exists (select 1 from c);
+
+-- === 5. Batch · lote anónimo ===
+with org as (select id from organizations where slug = 'omni'),
+tienda as (select id from tiendas where org_id = (select id from org) and codigo_tienda = 'ST-0142')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, store_ids, delivery_channels,
+  valid_from, valid_to, issue_reason, generation_started_at, generation_completed_at
+)
+select
+  (select id from org), 'EMI-DEMO-0005', 'Lote impreso · feria comercial',
+  'batch_anonymous', 'issued', 'fixed_amount', 3, 'USD', 20,
+  array[tienda.id], array['print'], now() - interval '15 days', now() + interval '15 days',
+  'Material impreso para la feria comercial de agosto',
+  now() - interval '15 days', now() - interval '15 days' + interval '1 minute'
+from tienda
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0005')
+insert into coupon (
+  org_id, batch_id, code, sequence, status, bearer, discount_type,
+  discount_value, currency, valid_from, valid_to, issued_at, printed_at, print_count, qr_value
+)
+select
+  (select id from org), (select id from batch),
+  'CUP-FERIA-' || lpad(g::text, 4, '0'), g, 'issued', true,
+  'fixed_amount', 3, 'USD', now() - interval '15 days', now() + interval '15 days',
+  now() - interval '15 days',
+  case when g <= 10 then now() - interval '14 days' else null end,
+  case when g <= 10 then 1 else 0 end,
+  'CUP-FERIA-' || lpad(g::text, 4, '0')
+from generate_series(1, 20) as g
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0005')
+insert into coupon_print_job (org_id, batch_id, sequence_from, sequence_to, layout, page_count, status, created_at)
+select (select id from org), (select id from b), 1, 10, 'grid_8', 2, 'ready', now() - interval '14 days'
+where exists (select 1 from b);
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0005')
+insert into coupon_event (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+select * from (
+  values
+    ((select id from org), (select id from b), 'batch_created', 'Emisión creada', 'user', 'Carlos Granados', now() - interval '15 days'),
+    ((select id from org), (select id from b), 'generation_completed', 'Generación completada: 20 códigos', 'system', 'Sistema de cupones', now() - interval '15 days' + interval '1 minute'),
+    ((select id from org), (select id from b), 'printed', 'Impresos códigos 1-10 (cuadrícula 8)', 'user', 'Carlos Granados', now() - interval '14 days')
+) as v (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+where exists (select 1 from b);
+
+-- === 6. Importar CSV ===
+with org as (select id from organizations where slug = 'omni')
+insert into coupon_import_file (org_id, filename, row_count, matched_count, unmatched_count, column_mapping, uploaded_at)
+values (
+  (select id from org), 'campana_aniversario.csv', 4, 3, 1,
+  '{"email": 0}'::jsonb, now() - interval '2 days'
+)
+on conflict do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+file as (select id from coupon_import_file where org_id = (select id from org) and filename = 'campana_aniversario.csv')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, csv_file_id, valid_from, valid_to, issue_reason
+)
+select
+  (select id from org), 'EMI-DEMO-0006', 'Importación campaña aniversario',
+  'csv_import', 'issued', 'percentage', 10, 'USD', 4, file.id,
+  now() - interval '2 days', now() + interval '28 days',
+  'Campaña de aniversario — lista de clientes frecuentes'
+from file
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0006'),
+mem as (select email, id from members where org_id = (select id from org))
+insert into coupon (
+  org_id, batch_id, code, sequence, status, member_id, bearer, discount_type,
+  discount_value, currency, valid_from, valid_to, issued_at, assigned_at, qr_value
+)
+select
+  (select id from org), (select id from batch), v.code, v.seq,
+  case when v.email is null then 'issued' else 'assigned' end,
+  (select id from mem where mem.email = v.email), v.email is null,
+  'percentage', 10, 'USD', now() - interval '2 days', now() + interval '28 days',
+  now() - interval '2 days',
+  case when v.email is not null then now() - interval '2 days' end,
+  v.code
+from (
+  values
+    ('CUP-ANIV-0001', 1, 'valentina.rios@example.com'),
+    ('CUP-ANIV-0002', 2, 'mariana.ocampo@example.com'),
+    ('CUP-ANIV-0003', 3, 'julian.restrepo@example.com'),
+    ('CUP-ANIV-0004', 4, null)
+) as v (code, seq, email)
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+mem as (select email, id from members where org_id = (select id from org)),
+c as (select code, id from coupon where org_id = (select id from org) and code like 'CUP-ANIV-%')
+insert into coupon_assignment (org_id, coupon_id, member_id, role, source, assigned_at)
+select (select id from org), c.id, mem.id, 'holder', 'csv', now() - interval '2 days'
+from (
+  values ('CUP-ANIV-0001', 'valentina.rios@example.com'), ('CUP-ANIV-0002', 'mariana.ocampo@example.com'), ('CUP-ANIV-0003', 'julian.restrepo@example.com')
+) as v (code, email)
+join c on c.code = v.code
+join mem on mem.email = v.email
+on conflict do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0006')
+insert into coupon_event (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+select * from (
+  values
+    ((select id from org), (select id from b), 'batch_created', 'Emisión creada', 'user', 'Carlos Granados', now() - interval '2 days'),
+    ((select id from org), (select id from b), 'generation_completed', 'Generación completada: 3 coincidencias, 1 al portador', 'system', 'Sistema de cupones', now() - interval '2 days')
+) as v (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+where exists (select 1 from b);
+
+-- === 7. Batch · lote anónimo, generación en curso ===
+-- 22 de 50 códigos generados — el mismo estado en el que quedaría un batch
+-- grande si la pestaña se cerró a medias (sin worker/cola en este proyecto,
+-- la generación depende de una pestaña abierta). `/cupones/emisiones/[id]`
+-- la retoma.
+with org as (select id from organizations where slug = 'omni')
+insert into coupon_batch (
+  org_id, reference, name, origin, status, discount_type, discount_value,
+  currency, requested_quantity, valid_from, valid_to, issue_reason,
+  generation_started_at
+)
+values (
+  (select id from org), 'EMI-DEMO-0007', 'Lote de bienvenida · otoño',
+  'batch_anonymous', 'generating', 'percentage', 12, 'USD', 50,
+  now() - interval '1 day', now() + interval '29 days',
+  'Material impreso para activación de otoño',
+  now() - interval '50 minutes'
+)
+on conflict (org_id, reference) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+batch as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0007')
+insert into coupon (
+  org_id, batch_id, code, sequence, status, bearer, discount_type,
+  discount_value, currency, valid_from, valid_to, issued_at, qr_value
+)
+select
+  (select id from org), (select id from batch),
+  'CUP-OTO-' || lpad(g::text, 4, '0'), g, 'issued', true,
+  'percentage', 12, 'USD', now() - interval '1 day', now() + interval '29 days',
+  now() - interval '50 minutes', 'CUP-OTO-' || lpad(g::text, 4, '0')
+from generate_series(1, 22) as g
+where exists (select 1 from batch)
+on conflict (org_id, code) do nothing;
+
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0007')
+insert into coupon_event (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+select * from (
+  values
+    ((select id from org), (select id from b), 'batch_created', 'Emisión creada', 'user', 'Carlos Granados', now() - interval '1 day'),
+    ((select id from org), (select id from b), 'authorization_signed', 'Autorización firmada', 'user', 'Carlos Granados', now() - interval '1 day'),
+    ((select id from org), (select id from b), 'generation_started', 'Generación iniciada', 'system', 'Sistema de cupones', now() - interval '50 minutes')
+) as v (org_id, batch_id, type, title, actor_type, actor_label, occurred_at)
+where exists (select 1 from b);
+
+-- Timeline completo de 13.4 sobre CUP-BDV-0001 (delivered/viewed no llegan
+-- de un sender real — se siembran como datos demo, ver COUPON_EVENT_TYPES
+-- en src/types/domain.ts).
+with org as (select id from organizations where slug = 'omni'),
+b as (select id from coupon_batch where org_id = (select id from org) and reference = 'EMI-DEMO-0001'),
+c as (select id from coupon where org_id = (select id from org) and code = 'CUP-BDV-0001')
+insert into coupon_event (org_id, coupon_id, batch_id, type, title, detail, actor_type, actor_label, occurred_at)
+select * from (
+  values
+    ((select id from org), (select id from c), (select id from b), 'delivered', 'Enviado por email', 'Proveedor externo (simulado)', 'system', 'Sistema de cupones', now() - interval '9 days' - interval '23 hours'),
+    ((select id from org), (select id from c), (select id from b), 'viewed', 'Cupón visualizado', 'Abierto desde el email', 'system', 'Sistema de cupones', now() - interval '9 days' - interval '20 hours')
+) as v (org_id, coupon_id, batch_id, type, title, detail, actor_type, actor_label, occurred_at)
+where exists (select 1 from c);

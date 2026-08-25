@@ -1,6 +1,6 @@
 import { Gift } from "lucide-react"
 
-import { formatCOP, formatShortDate } from "@/lib/format"
+import { formatUSD, formatShortDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import {
@@ -41,9 +41,9 @@ function conditionDetail(
   if (condition.campo === "monto_carrito") {
     const ticket =
       behavior.totalOrders > 0
-        ? ` · su ticket medio es ${formatCOP(behavior.averageTicket)}`
+        ? ` · su ticket medio es ${formatUSD(behavior.averageTicket)}`
         : ""
-    return `${typeLabel} · Aplica desde ${formatCOP(condition.threshold)}${ticket}`
+    return `${typeLabel} · Aplica desde ${formatUSD(condition.threshold)}${ticket}`
   }
   return `${typeLabel} · ${condition.valor}`
 }

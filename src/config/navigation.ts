@@ -3,9 +3,11 @@ import {
   LayoutGrid,
   Package,
   PlugZap,
+  Settings2,
   ShieldCheck,
   Store,
   Tag,
+  Ticket,
   TrendingUp,
   Users,
   Workflow,
@@ -58,6 +60,7 @@ export const NAVIGATION: NavGroup[] = [
     title: "Comercial",
     items: [
       { label: "Promociones", href: "/promociones", icon: Tag },
+      { label: "Cupones", href: "/cupones", icon: Ticket },
       { label: "Loyalty Builder", href: "/journeys", icon: Workflow },
       { label: "Clientes", href: "/clientes", icon: Users },
       { label: "Audiencias", href: "/audiencias", icon: TrendingUp },
@@ -79,6 +82,15 @@ export const NAVIGATION: NavGroup[] = [
         label: "Integraciones",
         href: "/ajustes/integraciones",
         icon: PlugZap,
+      },
+      // Sin equivalente en el Figma — nace del plan de cobertura de
+      // docs/promociones.md (Fase 0): parámetros de organización que
+      // Promociones y Clientes comparten (valor del punto, breakage,
+      // techo de descuento apilado, exclusiones del reglamento).
+      {
+        label: "Parámetros del programa",
+        href: "/ajustes/programa",
+        icon: Settings2,
       },
     ],
   },

@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatCOP, formatDate, formatPercent } from "@/lib/format"
+import { formatUSD, formatDate, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { deltaVsBase, validityStatus, type ValidityStatus } from "../lib/prices"
@@ -48,7 +48,7 @@ export function PricesCard({ prices }: PricesCardProps) {
         <p className="text-xs text-muted-foreground">
           {prices.length}{" "}
           {prices.length === 1 ? "lista configurada" : "listas configuradas"} ·
-          moneda COP
+          moneda USD
         </p>
       </div>
       {prices.length === 0 ? (
@@ -82,7 +82,7 @@ export function PricesCard({ prices }: PricesCardProps) {
                     {price.canal}
                   </TableCell>
                   <TableCell className="font-semibold text-foreground">
-                    {formatCOP(price.precio)}
+                    {formatUSD(price.precio)}
                   </TableCell>
                   <TableCell>
                     {delta === null ? (

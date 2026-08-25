@@ -1,14 +1,26 @@
 "use client"
 
 import { useAction } from "next-safe-action/hooks"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { formatNumber } from "@/lib/format"
 
 import { simulatePromotionAction } from "../actions/promotions"
 import type { Collision } from "../lib/collision"
-import type { Condition, ConditionSegment } from "../lib/queries"
+import {
+  evaluateProgramRules,
+  type ProgramRuleIssue,
+} from "../lib/program-rules"
+import type { Condition, ConditionNode, ConditionSegment } from "../lib/queries"
+import type { PromotionValues } from "../schemas"
+
+/** Mismo criterio estructural que `flattenConditionTree` de `lib/condition-tree.ts` (schemas.ts, lado cliente) — redeclarado porque este archivo consume los tipos de `lib/queries.ts` (server-only). */
+function flattenConditionNode(node: ConditionNode): Condition[] {
+  if ("condiciones" in node)
+    return node.condiciones.flatMap(flattenConditionNode)
+  return [node]
+}
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
@@ -23,11 +35,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 type PromotionSummaryCardProps = {
   excludeId?: string
-  conditions: Condition[]
+  conditions: ConditionNode
   segments: ConditionSegment[]
   channelScope: string
   priority: number
+  values: Partial<PromotionValues>
   onSave: (status: "activa" | "borrador") => void
+  onSimulated: () => void
   saving: boolean
 }
 
@@ -38,17 +52,24 @@ export function PromotionSummaryCard({
   segments,
   channelScope,
   priority,
+  values,
   onSave,
+  onSimulated,
   saving,
 }: PromotionSummaryCardProps) {
-  const segmentCondition = conditions.find((c) => c.campo === "segmento")
+  const leaves = flattenConditionNode(conditions)
+  const segmentCondition = leaves.find((c) => c.campo === "segmento")
   const segment = segmentCondition
     ? segments.find((s) => s.id === segmentCondition.valor)
     : undefined
   const [result, setResult] = useState<{
     impactedStores: number
     collisions: Collision[]
+    advisories: ProgramRuleIssue[]
   } | null>(null)
+  // "Simular con datos reales" (manual) es lo único que satisface S15 — la
+  // corrida automática al montar es solo una primera estimación, no cuenta.
+  const isManualRun = useRef(false)
 
   const simulate = useAction(simulatePromotionAction, {
     onSuccess: ({ data }) => {
@@ -56,25 +77,35 @@ export function PromotionSummaryCard({
         setResult({
           impactedStores: data.impactedStores,
           collisions: data.collisions,
+          advisories: data.advisories,
         })
+        if (isManualRun.current) onSimulated()
       }
     },
   })
 
-  function runSimulation() {
+  function runSimulation(manual: boolean) {
+    isManualRun.current = manual
     simulate.execute({
       excludeId,
-      conditions,
+      conditions: leaves,
       channelScope: channelScope as "pos" | "ecommerce" | "pos_ecommerce",
       priority,
+      benefitType: values.benefitType,
+      benefitValue: values.benefitValue,
+      stackable: values.stackable,
+      exclusionGroup: values.exclusionGroup,
     })
   }
 
   // Primera estimación automática al montar, con las condiciones por defecto.
   useEffect(() => {
-    runSimulation()
+    runSimulation(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo la corrida inicial; después el usuario dispara "Simular con datos reales".
   }, [])
+
+  const localAdvisories = evaluateProgramRules(values)
+  const advisories = [...localAdvisories, ...(result?.advisories ?? [])]
 
   return (
     <div className="flex w-full flex-col gap-3.5">
@@ -128,6 +159,25 @@ export function PromotionSummaryCard({
         </div>
       )}
 
+      {advisories.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-[20px] bg-warning-bg px-4 py-3.5 shadow-form-section">
+          <p className="text-[13px] font-semibold text-warning">
+            Antes de publicar — no bloquean, pero conviene revisarlas
+          </p>
+          {advisories.map((advisory, i) => (
+            <p
+              key={i}
+              className="text-xs leading-[18px] text-secondary-foreground"
+            >
+              <span className="font-medium text-foreground">
+                {advisory.rule}
+              </span>{" "}
+              · {advisory.message}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <Button
           type="button"
@@ -139,7 +189,7 @@ export function PromotionSummaryCard({
         <Button
           type="button"
           variant="outline"
-          onClick={runSimulation}
+          onClick={() => runSimulation(true)}
           disabled={simulate.isPending}
         >
           {simulate.isPending ? "Simulando…" : "Simular con datos reales"}

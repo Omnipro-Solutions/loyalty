@@ -1,7 +1,7 @@
 import { Receipt } from "lucide-react"
 
 import { PlaceholderCard } from "@/components/feedback/placeholder-card"
-import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
+import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 
 import { KpiCard } from "./kpi-card"
 import type { CommercialValue } from "../lib/queries"
@@ -42,27 +42,27 @@ export function MemberCommercialKpis({
       <div className="flex w-full items-start gap-3">
         <KpiCard
           label="Ingresos de por vida"
-          value={formatCOP(commercialValue.ltv)}
+          value={formatUSD(commercialValue.ltv)}
           series={commercialValue.monthlySeries}
-          detail={`${formatNumber(commercialValue.totalOrders)} pedidos · ticket ${formatCOP(
+          detail={`${formatNumber(commercialValue.totalOrders)} pedidos · ticket ${formatUSD(
             commercialValue.ltv / commercialValue.totalOrders
           )}`}
         />
         <KpiCard
           label="Contribución de margen"
-          value={formatCOP(commercialValue.margin)}
+          value={formatUSD(commercialValue.margin)}
           series={commercialValue.monthlySeries}
           detail={
             commercialValue.marginPct !== null
-              ? `${formatPercent(commercialValue.marginPct)} · devoluciones ${formatCOP(commercialValue.returns)}`
+              ? `${formatPercent(commercialValue.marginPct)} · devoluciones ${formatUSD(commercialValue.returns)}`
               : "—"
           }
         />
         <KpiCard
           label="Valor previsto 12m"
-          value={formatCOP(commercialValue.projectedValue12m)}
+          value={formatUSD(commercialValue.projectedValue12m)}
           series={commercialValue.monthlySeries}
-          detail={`${formatCOP(commercialValue.projectedMarginValue)} de margen · ±${commercialValue.trendPct}%`}
+          detail={`${formatUSD(commercialValue.projectedMarginValue)} de margen · ±${commercialValue.trendPct}%`}
         />
         <KpiCard
           label="Riesgo de fuga"

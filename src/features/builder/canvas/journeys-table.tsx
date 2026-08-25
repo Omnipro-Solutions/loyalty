@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
+import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { deleteWorkflowsAction } from "./actions"
@@ -167,7 +167,7 @@ function useColumns(
       header: () => <span className="block text-right">Ingreso</span>,
       cell: (info) => (
         <span className="block text-right text-[13px] font-semibold text-foreground">
-          {info.getValue() !== null ? formatCOP(info.getValue()!) : "—"}
+          {info.getValue() !== null ? formatUSD(info.getValue()!) : "—"}
         </span>
       ),
     }),

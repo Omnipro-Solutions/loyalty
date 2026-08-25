@@ -5,15 +5,20 @@ import {
   listConditionCategories,
   listConditionCities,
   listConditionSegments,
+  listCouponBatchesForPromotions,
+  listProductOptionsForPromotions,
 } from "@/features/promotions/lib/queries"
 
 /** Adaptado de Figma "07.1 · Regla · configuración" (633:658) — ver nota en la migración. */
 export default async function NewPromotionPage() {
-  const [categories, cities, segments] = await Promise.all([
-    listConditionCategories(),
-    listConditionCities(),
-    listConditionSegments(),
-  ])
+  const [categories, cities, segments, products, couponBatches] =
+    await Promise.all([
+      listConditionCategories(),
+      listConditionCities(),
+      listConditionSegments(),
+      listProductOptionsForPromotions(),
+      listCouponBatchesForPromotions(),
+    ])
 
   return (
     <AppPage
@@ -25,6 +30,8 @@ export default async function NewPromotionPage() {
         categories={categories}
         cities={cities}
         segments={segments}
+        products={products}
+        couponBatches={couponBatches}
       />
     </AppPage>
   )

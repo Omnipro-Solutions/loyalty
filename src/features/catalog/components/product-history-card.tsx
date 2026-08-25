@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { EmptyState } from "@/components/feedback/empty-state"
 import { Badge } from "@/components/ui/badge"
-import { formatCOP, formatDeltaPercent, formatEventDate } from "@/lib/format"
+import { formatUSD, formatDeltaPercent, formatEventDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
   PRODUCT_EVENT_CATEGORIES,
@@ -48,7 +48,7 @@ function eventDetail(event: ProductEvent): string | null {
     const change = previous !== 0 ? (next - previous) / previous : 0
     const prefix = descripcion ? `${descripcion}  ·  ` : ""
     const percentage = formatDeltaPercent(change).replace("%", " %")
-    return `${prefix}${formatCOP(previous)} → ${formatCOP(next)}  (${percentage})`
+    return `${prefix}${formatUSD(previous)} → ${formatUSD(next)}  (${percentage})`
   }
 
   if (campo === "imagen_url" && valor_nuevo) {

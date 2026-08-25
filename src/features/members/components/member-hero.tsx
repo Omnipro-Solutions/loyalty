@@ -29,7 +29,7 @@ import type { ReactNode } from "react"
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Badge } from "@/components/ui/badge"
 import {
-  formatCOP,
+  formatUSD,
   formatDate,
   formatLongDate,
   formatMonthYear,
@@ -205,7 +205,7 @@ export function MemberHero({
         icon={Receipt}
         label="Ticket promedio"
         value={
-          behavior.totalOrders > 0 ? formatCOP(behavior.averageTicket) : "—"
+          behavior.totalOrders > 0 ? formatUSD(behavior.averageTicket) : "—"
         }
       />
       <HeroField
@@ -405,7 +405,8 @@ export function MemberHero({
             }
           />
           {/* No hay tabla de campañas/journeys por socio en este proyecto
-              (`workflow_runs`/`coupons` no se usan) — la única pista real
+              (`workflow_runs` no se usa para esto; el módulo de cupones
+              trackea cupones, no campañas) — la única pista real
               (`points_ledger.origen` en texto libre) solo existe para 2 de
               13 socios y solo matchea por similitud de string, no por FK.
               Encadenar eso sería inventar una relación; se deja honesto. */}

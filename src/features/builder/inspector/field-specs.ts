@@ -33,6 +33,13 @@ export type FieldSpec =
       hint?: string
       required?: boolean
     }
+  | {
+      key: string
+      label: string
+      kind: "coupon-select"
+      hint?: string
+      required?: boolean
+    }
   | { key: string; label: string; kind: "currency"; required?: boolean }
   | {
       key: string
@@ -98,12 +105,17 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
  * event, schedule, mapping) se resuelven al control más cercano ya
  * existente (select con opciones cerradas razonables, number con sufijo,
  * o text libre para referencias a catálogos que este proyecto todavía no
- * modela — promociones/plantillas/reglas como entidades reales es trabajo
- * de Fase 5, no de este inspector). La excepción es `audiencia_id`
- * (`entra_segmento`): las audiencias sí existen como entidad real
- * (`segments`, ver 11 · Audiencias), así que ese campo usa `kind:
- * "audience-select"` — opciones cargadas desde la base, no una lista
- * cerrada en este archivo.
+ * modela — reglas como entidad real sigue siendo trabajo de Fase 5, no de
+ * este inspector). Dos excepciones ya tienen entidad real: `audiencia_id`
+ * (`entra_segmento`) usa `kind: "audience-select"` (`segments`, ver 11 ·
+ * Audiencias) y `coupon_batch_id` (`emitir_cupon`) usa `kind:
+ * "coupon-select"` (`coupon_batch`, ver el módulo de cupones) — en ambos
+ * casos las opciones se cargan desde la base, no una lista cerrada en este
+ * archivo. `tipo_codigo` ("único por socio" / "código compartido") se quitó
+ * de `emitir_cupon`: "código compartido" no tiene dónde vivir en el
+ * esquema real (`coupon` tiene `unique(org_id, code)`, cada código es de
+ * una sola fila), y sin esa opción el campo dejaba de ser una elección
+ * real.
  *
  * `acumular_puntos` y `condicion_multiple` tienen su propio componente
  * dedicado (no están aquí). `ramificacion_valor`/`split_ab` sí están aquí
@@ -348,20 +360,11 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
     ],
     emitir_cupon: [
       {
-        key: "promocion_base",
-        label: "Promoción base",
-        kind: "text",
+        key: "coupon_batch_id",
+        label: "Emisión base",
+        kind: "coupon-select",
         required: true,
-        placeholder: "Ej. 15% Clientes VIP",
-      },
-      {
-        key: "tipo_codigo",
-        label: "Tipo de código",
-        kind: "select",
-        options: [
-          { value: "unico_por_socio", label: "Único por socio" },
-          { value: "compartido", label: "Código compartido" },
-        ],
+        hint: "Cupón real cuya configuración (descuento, vigencia, restricciones) se reutiliza para cada socio que llega aquí.",
       },
       {
         key: "vigencia_dias",

@@ -9,6 +9,8 @@ type PaginationProps = {
   pageSize: number
   page: number
   onPageChange: (page: number) => void
+  /** Reemplaza el texto "Mostrando X–Y de Z" por defecto (13 · Cupones: resumen de selección o de búsqueda). */
+  summary?: React.ReactNode
   className?: string
 }
 
@@ -35,6 +37,7 @@ export function Pagination({
   pageSize,
   page,
   onPageChange,
+  summary,
   className,
 }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -53,8 +56,12 @@ export function Pagination({
       )}
     >
       <p className="min-w-0 flex-1 text-[12px] leading-4 text-muted-foreground">
-        Mostrando {formatNumber(from)}–{formatNumber(to)} de{" "}
-        {formatNumber(total)}
+        {summary ?? (
+          <>
+            Mostrando {formatNumber(from)}–{formatNumber(to)} de{" "}
+            {formatNumber(total)}
+          </>
+        )}
       </p>
       <Button
         variant="ghost"

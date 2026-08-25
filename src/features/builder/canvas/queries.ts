@@ -37,6 +37,27 @@ export async function listAudiences(): Promise<AudienceSummary[]> {
   }))
 }
 
+export type CouponBatchSummary = { id: string; reference: string; name: string }
+
+/**
+ * Emisiones reales del módulo de cupones (`coupon_batch`), para el
+ * selector "Emisión base" del bloque `emitir_cupon` — duplicado de
+ * `features/coupons` por aislamiento entre features (ver CLAUDE.md §2).
+ * Sin filtrar por `status`: mismo criterio que `listAudiences()`, que
+ * tampoco filtra por `estado`.
+ */
+export async function listCouponBatchesForBuilder(): Promise<
+  CouponBatchSummary[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_batch")
+    .select("id, reference, name")
+    .order("created_at", { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
 export type WorkflowListItem = {
   id: string
   nombre: string

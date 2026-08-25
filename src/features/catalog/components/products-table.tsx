@@ -14,7 +14,7 @@ import { useMemo } from "react"
 import { CellEntity } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { formatCOP, formatNumber, formatPercent } from "@/lib/format"
+import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { colorByRootCategory } from "../lib/categories-tree"
@@ -121,7 +121,7 @@ const columns = helper.columns([
     header: () => "PRECIO",
     cell: (info) => (
       <span className="font-semibold text-foreground">
-        {formatCOP(info.getValue())}
+        {formatUSD(info.getValue())}
       </span>
     ),
   }),

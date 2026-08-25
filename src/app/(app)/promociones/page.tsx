@@ -5,7 +5,7 @@ import { Suspense } from "react"
 import { AppPage } from "@/components/layout/app-page"
 import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
-import { formatCOP } from "@/lib/format"
+import { formatUSD } from "@/lib/format"
 import { PromoKpiCard } from "@/features/promotions/components/promo-kpi-card"
 import { PromotionsCard } from "@/features/promotions/components/promotions-card"
 import { PromotionsExportSection } from "@/features/promotions/components/promotions-export-section"
@@ -73,7 +73,7 @@ export default async function PromotionsPage({
           </p>
           <p className="text-xs text-muted-foreground">
             {summary.active} activas · {summary.scheduled} programadas ·
-            presupuesto asignado {formatCOP(summary.assignedBudget)}
+            presupuesto asignado {formatUSD(summary.assignedBudget)}
           </p>
         </div>
         <Link
