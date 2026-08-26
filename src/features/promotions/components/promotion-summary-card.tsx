@@ -1,7 +1,7 @@
 "use client"
 
 import { useAction } from "next-safe-action/hooks"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { formatNumber } from "@/lib/format"
@@ -41,7 +41,6 @@ type PromotionSummaryCardProps = {
   priority: number
   values: Partial<PromotionValues>
   onSave: (status: "activa" | "borrador") => void
-  onSimulated: () => void
   saving: boolean
 }
 
@@ -54,7 +53,6 @@ export function PromotionSummaryCard({
   priority,
   values,
   onSave,
-  onSimulated,
   saving,
 }: PromotionSummaryCardProps) {
   const leaves = flattenConditionNode(conditions)
@@ -67,9 +65,6 @@ export function PromotionSummaryCard({
     collisions: Collision[]
     advisories: ProgramRuleIssue[]
   } | null>(null)
-  // "Simular con datos reales" (manual) es lo único que satisface S15 — la
-  // corrida automática al montar es solo una primera estimación, no cuenta.
-  const isManualRun = useRef(false)
 
   const simulate = useAction(simulatePromotionAction, {
     onSuccess: ({ data }) => {
@@ -79,13 +74,11 @@ export function PromotionSummaryCard({
           collisions: data.collisions,
           advisories: data.advisories,
         })
-        if (isManualRun.current) onSimulated()
       }
     },
   })
 
-  function runSimulation(manual: boolean) {
-    isManualRun.current = manual
+  function runSimulation() {
     simulate.execute({
       excludeId,
       conditions: leaves,
@@ -98,10 +91,10 @@ export function PromotionSummaryCard({
     })
   }
 
-  // Primera estimación automática al montar, con las condiciones por defecto.
+  // Estimación automática al montar, con las condiciones por defecto.
   useEffect(() => {
-    runSimulation(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo la corrida inicial; después el usuario dispara "Simular con datos reales".
+    runSimulation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo la corrida inicial.
   }, [])
 
   const localAdvisories = evaluateProgramRules(values)
@@ -185,14 +178,6 @@ export function PromotionSummaryCard({
           disabled={saving}
         >
           Guardar y activar
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => runSimulation(true)}
-          disabled={simulate.isPending}
-        >
-          {simulate.isPending ? "Simulando…" : "Simular con datos reales"}
         </Button>
         <Button
           type="button"

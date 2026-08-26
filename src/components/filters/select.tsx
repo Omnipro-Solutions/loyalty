@@ -83,31 +83,33 @@ export function FilterSelect({
         <ChevronDown className="size-[11px] text-muted-foreground" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 gap-0 p-1.5">
-        {options.map((option) => {
-          const selected = value.includes(option.value)
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => toggle(option.value)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
-            >
-              {multiple ? (
-                <Checkbox checked={selected} tabIndex={-1} />
-              ) : (
-                <span
-                  className={cn(
-                    "size-[7px] rounded-full",
-                    selected ? "bg-primary" : "bg-transparent"
-                  )}
-                />
-              )}
-              <span className="flex-1 truncate text-foreground">
-                {option.label}
-              </span>
-            </button>
-          )
-        })}
+        <div className="max-h-72 overflow-y-auto">
+          {options.map((option) => {
+            const selected = value.includes(option.value)
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => toggle(option.value)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
+              >
+                {multiple ? (
+                  <Checkbox checked={selected} tabIndex={-1} />
+                ) : (
+                  <span
+                    className={cn(
+                      "size-[7px] rounded-full",
+                      selected ? "bg-primary" : "bg-transparent"
+                    )}
+                  />
+                )}
+                <span className="flex-1 truncate text-foreground">
+                  {option.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </PopoverContent>
     </Popover>
   )

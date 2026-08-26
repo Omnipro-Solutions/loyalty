@@ -3,6 +3,7 @@
 import { Check, Copy } from "lucide-react"
 import { useState } from "react"
 
+import { formatUSD } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { colorByRootCategory } from "../lib/categories-tree"
@@ -198,6 +199,15 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
         <Field label="MARCA" value={product.marca ?? "—"} />
         {DIVIDER}
         <Field label="PROVEEDOR" value={product.proveedor ?? "—"} />
+        {DIVIDER}
+        <Field
+          label="COSTO UNITARIO"
+          value={
+            product.costo_unitario !== null
+              ? formatUSD(product.costo_unitario)
+              : "—"
+          }
+        />
       </div>
       <div className="h-px w-full bg-muted" />
       <ClassificationSection

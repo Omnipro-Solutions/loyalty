@@ -1754,10 +1754,81 @@ export type Database = {
           },
         ]
       }
+      promocion_eventos: {
+        Row: {
+          actor_etiqueta: string
+          actor_id: string | null
+          actor_tipo: string
+          canal: string | null
+          codigo_motivo: string | null
+          detalle: string | null
+          id: string
+          ip: string | null
+          metadatos: Json
+          nota_motivo: string | null
+          ocurrido_en: string
+          org_id: string
+          promocion_id: string
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          actor_etiqueta: string
+          actor_id?: string | null
+          actor_tipo: string
+          canal?: string | null
+          codigo_motivo?: string | null
+          detalle?: string | null
+          id?: string
+          ip?: string | null
+          metadatos?: Json
+          nota_motivo?: string | null
+          ocurrido_en?: string
+          org_id: string
+          promocion_id: string
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          actor_etiqueta?: string
+          actor_id?: string | null
+          actor_tipo?: string
+          canal?: string | null
+          codigo_motivo?: string | null
+          detalle?: string | null
+          id?: string
+          ip?: string | null
+          metadatos?: Json
+          nota_motivo?: string | null
+          ocurrido_en?: string
+          org_id?: string
+          promocion_id?: string
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promocion_eventos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_eventos_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       promociones: {
         Row: {
           actualizado_en: string
           acumulable: boolean
+          acumula_retroactivo: boolean
+          al_romper_continuidad: string | null
           alcance_piezas: string | null
           aplica_a_rx: string
           aplica_sobre_precio: string
@@ -1776,6 +1847,7 @@ export type Database = {
           contrato_id: string | null
           coupon_batch_id: string | null
           creado_en: string
+          criterio_seleccion_piezas: string | null
           cupo_disponible: number | null
           descuento_acumula_puntos: boolean
           descuento_unidad_extra_pct: number | null
@@ -1783,6 +1855,7 @@ export type Database = {
           dias_semana: string[] | null
           disponibilidad_dias: number | null
           duracion_cupon_dias: number | null
+          efecto_devolucion: string | null
           elegible_en_inactividad: boolean
           escalones: Json | null
           estado_inicial: string
@@ -1840,6 +1913,7 @@ export type Database = {
           umbral_tipo: string | null
           validacion_requerida: string | null
           valor_beneficio: number | null
+          ventana_continuidad_dias: number | null
           vigencia_saldo_dias: number | null
           vigente_desde: string
           vigente_hasta: string | null
@@ -1847,6 +1921,8 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           acumulable?: boolean
+          acumula_retroactivo?: boolean
+          al_romper_continuidad?: string | null
           alcance_piezas?: string | null
           aplica_a_rx?: string
           aplica_sobre_precio?: string
@@ -1865,6 +1941,7 @@ export type Database = {
           contrato_id?: string | null
           coupon_batch_id?: string | null
           creado_en?: string
+          criterio_seleccion_piezas?: string | null
           cupo_disponible?: number | null
           descuento_acumula_puntos?: boolean
           descuento_unidad_extra_pct?: number | null
@@ -1872,6 +1949,7 @@ export type Database = {
           dias_semana?: string[] | null
           disponibilidad_dias?: number | null
           duracion_cupon_dias?: number | null
+          efecto_devolucion?: string | null
           elegible_en_inactividad?: boolean
           escalones?: Json | null
           estado_inicial?: string
@@ -1929,6 +2007,7 @@ export type Database = {
           umbral_tipo?: string | null
           validacion_requerida?: string | null
           valor_beneficio?: number | null
+          ventana_continuidad_dias?: number | null
           vigencia_saldo_dias?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null
@@ -1936,6 +2015,8 @@ export type Database = {
         Update: {
           actualizado_en?: string
           acumulable?: boolean
+          acumula_retroactivo?: boolean
+          al_romper_continuidad?: string | null
           alcance_piezas?: string | null
           aplica_a_rx?: string
           aplica_sobre_precio?: string
@@ -1954,6 +2035,7 @@ export type Database = {
           contrato_id?: string | null
           coupon_batch_id?: string | null
           creado_en?: string
+          criterio_seleccion_piezas?: string | null
           cupo_disponible?: number | null
           descuento_acumula_puntos?: boolean
           descuento_unidad_extra_pct?: number | null
@@ -1961,6 +2043,7 @@ export type Database = {
           dias_semana?: string[] | null
           disponibilidad_dias?: number | null
           duracion_cupon_dias?: number | null
+          efecto_devolucion?: string | null
           elegible_en_inactividad?: boolean
           escalones?: Json | null
           estado_inicial?: string
@@ -2018,6 +2101,7 @@ export type Database = {
           umbral_tipo?: string | null
           validacion_requerida?: string | null
           valor_beneficio?: number | null
+          ventana_continuidad_dias?: number | null
           vigencia_saldo_dias?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null

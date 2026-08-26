@@ -1,4 +1,4 @@
-import { Plus, Upload } from "lucide-react"
+import { Gauge, Plus, Upload } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 
@@ -79,6 +79,13 @@ export default async function PromotionsPage({
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          <Link
+            href="/panel-promociones"
+            className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-2.5 pr-4 pl-3.5 text-sm font-medium text-secondary-foreground"
+          >
+            <Gauge className="size-4" />
+            Panel
+          </Link>
           <Link
             href="/promociones/importar"
             className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-2.5 pr-4 pl-3.5 text-sm font-medium text-secondary-foreground"

@@ -4,6 +4,7 @@ import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { PromotionForm } from "@/features/promotions/components/promotion-form"
 import {
+  flattenConditionNodes,
   getPromotionById,
   listConditionBrands,
   listConditionCategories,
@@ -57,17 +58,24 @@ export default async function EditPromotionPage({
   ])
   if (!promotion) notFound()
 
-  // El producto comprado/de regalo guardado puede no estar entre los 50
-  // primeros por nombre — sin esto se mostraría como un uuid crudo al
-  // reabrir en editar (mismo bug que ya existe en `coupons/step-coupon.tsx`).
+  // El producto comprado/de regalo guardado, o cualquiera elegido en una
+  // condición `producto`, puede no estar entre los 50 primeros por nombre
+  // — sin esto se mostraría como un uuid crudo al reabrir en editar (mismo
+  // bug que ya existe en `coupons/step-coupon.tsx`).
+  const conditionProductIds = flattenConditionNodes(promotion.condiciones)
+    .filter((c) => c.campo === "producto")
+    .flatMap((c) => c.valor)
   const products = await listProductOptionsForPromotions(
-    [promotion.producto_comprado_id, promotion.producto_regalo_id].filter(
-      (id): id is string => Boolean(id)
-    )
+    [
+      promotion.producto_comprado_id,
+      promotion.producto_regalo_id,
+      ...conditionProductIds,
+    ].filter((id): id is string => Boolean(id))
   )
 
   const options: ConditionOptions = {
     categories,
+    products,
     cities,
     segments,
     couponBatches,

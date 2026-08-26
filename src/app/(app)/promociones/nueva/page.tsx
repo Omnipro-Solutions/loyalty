@@ -52,6 +52,7 @@ export default async function NewPromotionPage() {
 
   const options: ConditionOptions = {
     categories,
+    products,
     cities,
     segments,
     couponBatches,

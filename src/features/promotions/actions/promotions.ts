@@ -19,45 +19,8 @@ import {
   updatePromotionSchema,
   promotionSchema,
   simulatePromotionSchema,
-  type PromotionValues,
 } from "../schemas"
 import { getProgramParameters } from "@/lib/program-parameters"
-import type { createClient } from "@/lib/supabase/server"
-
-const BELOW_COST_MESSAGE =
-  "El precio especial queda por debajo del costo de adquisición — autoriza la venta bajo costo en el paso Economía (F12)."
-
-/**
- * F12, crítica: "ninguna promoción vende por debajo del costo sin
- * autorización". Es la única regla del documento que exige un dato que
- * hoy no vive en `promociones` (`productos.costo_unitario`), así que no
- * puede ser un `superRefine` puro de `schemas.ts` — se recalcula aquí,
- * siempre en servidor, igual que el resto de checks de negocio de esta
- * Server Action.
- */
-async function violatesSellingBelowCost(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  values: PromotionValues
-): Promise<boolean> {
-  if (
-    values.benefitType !== "precio_especial" ||
-    values.autorizacionVentaBajoCosto ||
-    values.precioPromocional === undefined ||
-    !values.productoCompradoId
-  ) {
-    return false
-  }
-  const { data: product } = await supabase
-    .from("productos")
-    .select("costo_unitario")
-    .eq("id", values.productoCompradoId)
-    .maybeSingle()
-  return (
-    product?.costo_unitario !== null &&
-    product?.costo_unitario !== undefined &&
-    values.precioPromocional < product.costo_unitario
-  )
-}
 
 export const createPromotionAction = promotionsActionClient
   .inputSchema(promotionSchema)
@@ -72,10 +35,6 @@ export const createPromotionAction = promotionsActionClient
             ? "No tienes permiso para activar promociones — guárdala como borrador."
             : "No tienes permiso para crear promociones.",
       }
-    }
-
-    if (await violatesSellingBelowCost(ctx.supabase, parsedInput)) {
-      return { ok: false as const, message: BELOW_COST_MESSAGE }
     }
 
     const { data, error } = await ctx.supabase
@@ -109,10 +68,6 @@ export const updatePromotionAction = promotionsActionClient
             ? "No tienes permiso para activar promociones — guárdala como borrador."
             : "No tienes permiso para editar promociones.",
       }
-    }
-
-    if (await violatesSellingBelowCost(ctx.supabase, parsedInput)) {
-      return { ok: false as const, message: BELOW_COST_MESSAGE }
     }
 
     const { id, ...values } = parsedInput

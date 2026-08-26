@@ -9,6 +9,7 @@ import {
 } from "react-hook-form"
 
 import { Segmented } from "@/components/filters/segmented"
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { Field } from "@/components/form/field"
 import { Row } from "@/components/form/row"
 import { Stepper } from "@/components/form/stepper"
@@ -23,6 +24,12 @@ import {
 import { BXGY_SCOPES, type BxgyScope } from "@/types/domain"
 
 import { BXGY_SCOPE_LABEL } from "../../lib/labels"
+import {
+  ProductPickerRow,
+  productBrandFacet,
+  productPickerChipLabel,
+  productPickerSearchText,
+} from "../../lib/product-picker"
 import type { ProductOption } from "../../lib/queries"
 import type { PromotionValues } from "../../schemas"
 
@@ -128,26 +135,22 @@ export function BxgyForm({
           required
           error={errors.productoCompradoId?.message}
         >
-          <Select
-            value={productoCompradoId ?? ""}
-            onValueChange={(v) => v && setValue("productoCompradoId", v)}
-          >
-            <SelectTrigger id="productoCompradoId">
-              <SelectValue placeholder="Elige un producto">
-                {(v: string) => {
-                  const product = products.find((p) => p.id === v)
-                  return product ? `${product.name} · ${product.sku}` : v
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} · {p.sku}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EntityPickerField
+            id="productoCompradoId"
+            title="Producto"
+            description="Busca por nombre, SKU o marca."
+            mode="single"
+            items={products}
+            getId={(p) => p.id}
+            getSearchText={productPickerSearchText}
+            getChipLabel={productPickerChipLabel}
+            renderRow={(p) => <ProductPickerRow product={p} />}
+            facets={[productBrandFacet(products)]}
+            placeholder="Elige un producto"
+            confirmLabel="Elegir producto"
+            value={productoCompradoId ? [productoCompradoId] : []}
+            onValueChange={([id]) => setValue("productoCompradoId", id)}
+          />
         </Field>
       )}
       {alcancePiezas === "misma_categoria" && (

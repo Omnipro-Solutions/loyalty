@@ -13,6 +13,7 @@ import type { CouponBatchOption, ProductOption } from "../lib/queries"
 import type { PromotionValues } from "../schemas"
 import { BxgyForm } from "./mechanic-forms/bxgy-form"
 import { CashbackForm } from "./mechanic-forms/cashback-form"
+import { ContinuityForm } from "./mechanic-forms/continuity-form"
 import { FixedBundleForm } from "./mechanic-forms/fixed-bundle-form"
 import { FreeProductForm } from "./mechanic-forms/free-product-form"
 import { FreeShippingForm } from "./mechanic-forms/free-shipping-form"
@@ -29,6 +30,8 @@ type MechanicConfigFormProps = {
   setValue: UseFormSetValue<PromotionValues>
   products: ProductOption[]
   couponBatches: CouponBatchOption[]
+  /** Solo lo usa `descuento_continuidad` — salta al paso "Condiciones", donde se define a qué productos/marcas aplica la promoción. */
+  onGoToConditionsStep: () => void
 }
 
 /**
@@ -46,6 +49,7 @@ export function MechanicConfigForm({
   setValue,
   products,
   couponBatches,
+  onGoToConditionsStep,
 }: MechanicConfigFormProps) {
   switch (benefitType) {
     case "envio_gratis":
@@ -132,6 +136,17 @@ export function MechanicConfigForm({
           register={register}
           errors={errors}
           setValue={setValue}
+        />
+      )
+    case "descuento_continuidad":
+      return (
+        <ContinuityForm
+          control={control}
+          register={register}
+          errors={errors}
+          setValue={setValue}
+          products={products}
+          onGoToConditionsStep={onGoToConditionsStep}
         />
       )
     default:

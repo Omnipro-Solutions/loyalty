@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Gauge,
   LayoutGrid,
   Package,
   PlugZap,
@@ -32,14 +33,17 @@ export type NavGroup = {
 }
 
 /**
- * Exact mirror of the Figma sidebar (624:561), with two exceptions: the file
- * doesn't give Journeys/Loyalty Builder its own item in the main nav (the
- * "trending-up" icon there is used by "Audiencias"), and "Analítica" (02.1 ·
+ * Exact mirror of the Figma sidebar (624:561), with three exceptions: the
+ * file doesn't give Journeys/Loyalty Builder its own item in the main nav
+ * (the "trending-up" icon there is used by "Audiencias"), "Analítica" (02.1 ·
  * Dashboard · denso) isn't in this mock's sidebar at all — it's a second
- * dashboard variant, reachable only via its own frame's node id. Since both
- * are priority MVP modules, they were added as new entries (Journeys under
- * COMERCIAL, Analítica under Principal, next to Resumen which now renders
- * 02.3 · Dashboard · IA) — everything else (order, labels, icons) is literal.
+ * dashboard variant, reachable only via its own frame's node id — and
+ * "Panel de promociones" has no Figma node at all (user request, not in the
+ * Figma plan). Since all three are priority additions, they were added as
+ * new entries (Journeys under COMERCIAL, Analítica under Principal next to
+ * Resumen which now renders 02.3 · Dashboard · IA, Panel de promociones as
+ * the first item under Principal) — everything else (order, labels, icons)
+ * is literal.
  */
 export const NAVIGATION: NavGroup[] = [
   {
@@ -47,6 +51,11 @@ export const NAVIGATION: NavGroup[] = [
     items: [
       { label: "Resumen", href: "/resumen", icon: LayoutGrid },
       { label: "Analítica", href: "/analitica", icon: BarChart3 },
+      {
+        label: "Panel de promociones",
+        href: "/panel-promociones",
+        icon: Gauge,
+      },
     ],
   },
   {

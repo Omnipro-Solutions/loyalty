@@ -1,4 +1,4 @@
-import type { BenefitType } from "@/types/domain"
+import type { BenefitType, PromotionType } from "@/types/domain"
 
 import type { PromotionValues } from "../schemas"
 
@@ -98,6 +98,15 @@ export const MECHANIC_FIELDS: Record<BenefitType, (keyof PromotionValues)[]> = {
     "vigenciaSaldoDias",
     "montoMinimoCanje",
   ],
+  descuento_continuidad: [
+    "discountTiers",
+    "productoCompradoId",
+    "ventanaContinuidadDias",
+    "alRomperContinuidad",
+    "acumulaRetroactivo",
+    "efectoDevolucion",
+    "criterioSeleccionPiezas",
+  ],
 }
 
 /** Las 3 únicas mecánicas donde "Aplicar sobre"/"Tope máximo" tienen sentido (un % o $ variable). */
@@ -111,3 +120,39 @@ export const BENEFIT_TYPES_WITH_APPLY_TO: readonly BenefitType[] = [
 export const ALL_MECHANIC_SPECIFIC_FIELDS: (keyof PromotionValues)[] = [
   ...new Set(Object.values(MECHANIC_FIELDS).flat()),
 ]
+
+/**
+ * Qué mecánicas tiene sentido ofrecer según el "Tipo de promoción" — sin
+ * respaldo en `docs/promociones.md` (ahí `tipo` está documentado como "solo
+ * una etiqueta visual, no conduce ninguna lógica real"); esta tabla es una
+ * decisión de producto tomada a propósito para que el paso "Mecánica" no
+ * muestre combinaciones incoherentes con el tipo elegido. Varias mecánicas
+ * aparecen en más de un tipo donde de verdad aplican (ej. "Envío gratis"
+ * en segmento y carrito) — no es una partición 1 a 1.
+ */
+export const PROMOTION_TYPE_MECHANICS: Record<PromotionType, BenefitType[]> = {
+  cantidad: ["producto_gratis", "por_piezas", "descuento_escalonado"],
+  categoria: [
+    "descuento_porcentual",
+    "descuento_monto_fijo",
+    "descuento_escalonado",
+    "envio_gratis",
+    "precio_especial",
+  ],
+  segmento: [
+    "multiplicador_puntos",
+    "bono_puntos",
+    "cashback",
+    "descuento_continuidad",
+    "envio_gratis",
+  ],
+  carrito: [
+    "descuento_porcentual",
+    "descuento_monto_fijo",
+    "envio_gratis",
+    "cashback",
+    "emitir_cupon",
+  ],
+  cupon: ["emitir_cupon"],
+  bundle: ["precio_fijo_bundle", "producto_gratis"],
+}

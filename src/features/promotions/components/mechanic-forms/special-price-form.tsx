@@ -8,6 +8,7 @@ import {
   type UseFormSetValue,
 } from "react-hook-form"
 
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { CurrencyInput } from "@/components/form/currency-input"
 import { Field } from "@/components/form/field"
 import { Row } from "@/components/form/row"
@@ -19,6 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import {
+  ProductPickerRow,
+  productBrandFacet,
+  productPickerChipLabel,
+  productPickerSearchText,
+} from "../../lib/product-picker"
 import type { ProductOption } from "../../lib/queries"
 import type { PromotionValues } from "../../schemas"
 
@@ -28,11 +35,6 @@ type SpecialPriceFormProps = {
   errors: FieldErrors<PromotionValues>
   setValue: UseFormSetValue<PromotionValues>
   products: ProductOption[]
-}
-
-function productLabel(products: ProductOption[], id: string): string {
-  const product = products.find((p) => p.id === id)
-  return product ? `${product.name} · ${product.sku}` : id
 }
 
 /**
@@ -49,7 +51,6 @@ export function SpecialPriceForm({
   products,
 }: SpecialPriceFormProps) {
   const productoCompradoId = useWatch({ control, name: "productoCompradoId" })
-  const precioPromocional = useWatch({ control, name: "precioPromocional" })
   const hastaAgotarExistencias = useWatch({
     control,
     name: "hastaAgotarExistencias",
@@ -58,13 +59,6 @@ export function SpecialPriceForm({
     control,
     name: "respetaPrecioMinimoLegal",
   })
-
-  const selectedProduct = products.find((p) => p.id === productoCompradoId)
-  const isBelowCost =
-    selectedProduct?.costUnit !== null &&
-    selectedProduct?.costUnit !== undefined &&
-    precioPromocional !== undefined &&
-    precioPromocional < selectedProduct.costUnit
 
   return (
     <div className="flex w-full flex-col gap-3.5">
@@ -75,23 +69,22 @@ export function SpecialPriceForm({
           required
           error={errors.productoCompradoId?.message}
         >
-          <Select
-            value={productoCompradoId ?? ""}
-            onValueChange={(v) => v && setValue("productoCompradoId", v)}
-          >
-            <SelectTrigger id="productoCompradoId">
-              <SelectValue placeholder="Elige un producto">
-                {(v: string) => productLabel(products, v)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} · {p.sku}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EntityPickerField
+            id="productoCompradoId"
+            title="Producto"
+            description="Busca por nombre, SKU o marca."
+            mode="single"
+            items={products}
+            getId={(p) => p.id}
+            getSearchText={productPickerSearchText}
+            getChipLabel={productPickerChipLabel}
+            renderRow={(p) => <ProductPickerRow product={p} />}
+            facets={[productBrandFacet(products)]}
+            placeholder="Elige un producto"
+            confirmLabel="Elegir producto"
+            value={productoCompradoId ? [productoCompradoId] : []}
+            onValueChange={([id]) => setValue("productoCompradoId", id)}
+          />
         </Field>
         <Field
           label="Precio especial"
@@ -145,7 +138,7 @@ export function SpecialPriceForm({
         <Field
           label="Respeta el precio mínimo legal"
           htmlFor="respetaPrecioMinimoLegal"
-          hint="Si se desmarca, el precio especial puede quedar por debajo del costo — exige autorización en el paso Economía (F12)."
+          hint="Si se desmarca, el precio especial puede quedar por debajo del mínimo legal del producto."
         >
           <Select
             value={respetaPrecioMinimoLegal ? "si" : "no"}
@@ -165,13 +158,6 @@ export function SpecialPriceForm({
           </Select>
         </Field>
       </Row>
-      {isBelowCost && (
-        <p className="text-xs text-warning">
-          Este precio queda por debajo del costo de adquisición del producto —
-          autoriza la venta bajo costo en el paso Economía o no se podrá guardar
-          (F12).
-        </p>
-      )}
     </div>
   )
 }

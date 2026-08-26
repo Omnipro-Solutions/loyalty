@@ -550,7 +550,14 @@ export async function listRestrictionCategories(): Promise<CatalogOption[]> {
   return (data ?? []).map((c) => ({ id: c.id, name: c.nombre }))
 }
 
-export type ProductOption = { id: string; name: string; sku: string }
+/** `brand`/`price` (`marca`, `precio`) alimentan las columnas del picker de productos (`ProductPickerRow`) — no requieren un join, ya son columnas de `productos`. */
+export type ProductOption = {
+  id: string
+  name: string
+  sku: string
+  brand: string | null
+  price: number
+}
 
 export async function listFreeProductOptions(
   search?: string
@@ -558,7 +565,7 @@ export async function listFreeProductOptions(
   const supabase = await createClient()
   let query = supabase
     .from("productos")
-    .select("id, nombre, sku")
+    .select("id, nombre, sku, marca, precio")
     .eq("estado", "activo")
     .order("nombre")
     .limit(50)
@@ -568,7 +575,13 @@ export async function listFreeProductOptions(
   }
   const { data, error } = await query
   if (error) throw error
-  return (data ?? []).map((p) => ({ id: p.id, name: p.nombre, sku: p.sku }))
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    name: p.nombre,
+    sku: p.sku,
+    brand: p.marca,
+    price: p.precio,
+  }))
 }
 
 export async function listLinkablePromotions(): Promise<CatalogOption[]> {

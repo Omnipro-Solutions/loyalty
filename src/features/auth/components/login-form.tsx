@@ -129,7 +129,7 @@ export function LoginForm({
           Iniciar sesión
         </p>
         <p className="text-[13px] leading-[18px] text-muted-foreground">
-          Accede al panel de promociones de omni.
+          Accede al panel de promociones de Etter.
         </p>
       </div>
 

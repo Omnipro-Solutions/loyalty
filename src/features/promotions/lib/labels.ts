@@ -1,4 +1,9 @@
 import { formatUSD } from "@/lib/format"
+
+import {
+  normalizeContinuityTiers,
+  type ContinuityTier,
+} from "./continuity-discount"
 import type {
   AccrualTiming,
   ApplicationLevel,
@@ -10,6 +15,7 @@ import type {
   ConditionField,
   ConditionFieldDomain,
   ConditionCombinator,
+  ContinuityBreakBehavior,
   CostNature,
   BenefitType,
   DayOfWeek,
@@ -25,9 +31,12 @@ import type {
   MaritalStatus,
   MultiplierResolutionMode,
   NonTransactionalBenefitType,
+  PieceSelectionCriterion,
   PointsDebitTiming,
   PriceBasis,
+  PromotionEventType,
   PromotionType,
+  ReturnEffect,
   RxApplicability,
   SettlementPeriod,
   StackingMode,
@@ -58,6 +67,7 @@ export const PROMOTION_TYPE_LABEL: Record<PromotionType, string> = {
 
 export const CONDITION_FIELD_LABEL: Record<ConditionField, string> = {
   categoria: "Categoría del producto",
+  producto: "Producto específico",
   tienda: "Tienda",
   segmento: "Segmento del cliente",
   monto_carrito: "Monto del carrito",
@@ -80,6 +90,7 @@ export const CONDITION_FIELD_LABEL: Record<ConditionField, string> = {
 /** Operador implícito por campo (07.1: cada campo del mock trae siempre el mismo operador). */
 export const CONDITION_FIELD_OPERATOR: Record<ConditionField, string> = {
   categoria: "pertenece a",
+  producto: "pertenece a",
   tienda: "está en",
   segmento: "es igual a",
   monto_carrito: "mayor o igual a",
@@ -99,13 +110,14 @@ export const CONDITION_FIELD_OPERATOR: Record<ConditionField, string> = {
   producto_receta: "es igual a",
 }
 
-/** Agrupa el `Select` de campo por ámbito (`CONDITION_FIELD_DOMAINS`) — 18 campos en una lista plana son difíciles de escanear sin agrupar. */
+/** Agrupa el `Select` de campo por ámbito (`CONDITION_FIELD_DOMAINS`) — 19 campos en una lista plana son difíciles de escanear sin agrupar. */
 export const CONDITION_FIELD_DOMAIN: Record<
   ConditionField,
   ConditionFieldDomain
 > = {
   monto_carrito: "Carrito",
   categoria: "Producto",
+  producto: "Producto",
   producto_marca: "Producto",
   producto_proveedor: "Producto",
   producto_receta: "Producto",
@@ -159,6 +171,7 @@ export const BENEFIT_TYPE_LABEL: Record<BenefitType, string> = {
   emitir_cupon: "Emitir cupón",
   precio_especial: "Precio especial",
   cashback: "Cashback al monedero",
+  descuento_continuidad: "Descuento por continuidad",
 }
 
 /** Descripción corta de cada tarjeta del paso "Mecánica" (`MechanicPicker`). */
@@ -178,6 +191,8 @@ export const BENEFIT_TYPE_DESCRIPTION: Record<BenefitType, string> = {
   emitir_cupon: "Dispara una emisión real del módulo de Cupones.",
   precio_especial: "Sustituye el precio de lista de un SKU puntual.",
   cashback: "Devuelve saldo en efectivo al monedero del socio.",
+  descuento_continuidad:
+    "El descuento crece con cada compra consecutiva dentro de una ventana de días.",
 }
 
 /**
@@ -250,6 +265,32 @@ export const DISCOUNT_TIER_CALCULATION_MODE_HINT: Record<
     "Cada tramo se descuenta por separado y se suman, como los tramos de un impuesto. Cada unidad extra siempre da un poco más.",
 }
 
+/** `descuento_continuidad` — qué pasa al exceder la ventana de continuidad entre compras. */
+export const CONTINUITY_BREAK_BEHAVIOR_LABEL: Record<
+  ContinuityBreakBehavior,
+  string
+> = {
+  reiniciar: "Reinicia al primer escalón",
+  retroceder_un_escalon: "Retrocede un escalón",
+  mantener: "Mantiene el escalón alcanzado",
+}
+
+/** `descuento_continuidad` — efecto de una devolución sobre el escalón alcanzado. */
+export const RETURN_EFFECT_LABEL: Record<ReturnEffect, string> = {
+  no_afecta: "No afecta el escalón",
+  rompe_racha: "Reinicia la continuidad",
+  retrocede_escalon: "Retrocede un escalón",
+}
+
+/** `descuento_continuidad` — sobre qué piezas elegibles recae el beneficio cuando el límite de piezas topa las unidades. */
+export const PIECE_SELECTION_CRITERION_LABEL: Record<
+  PieceSelectionCriterion,
+  string
+> = {
+  menor_precio: "Las de menor precio",
+  mayor_precio: "Las de mayor precio",
+}
+
 /** "3 un. → 15 %" / "USD $500,00 → 5 %" — usado por el builder de escalones y el Resumen. */
 export function formatDiscountTier(
   tier: { umbral: number; beneficio_valor: number },
@@ -258,6 +299,43 @@ export function formatDiscountTier(
   const from =
     thresholdType === "unidades" ? `${tier.umbral} un.` : formatUSD(tier.umbral)
   return `${from} → ${tier.beneficio_valor} %`
+}
+
+/** "Compra 2 → 25 %" — mismo par que `formatDiscountTier`, para `descuento_continuidad` (`umbral` es el ordinal de compra, no unidades/monto). */
+export function formatContinuityTier(tier: {
+  umbral: number
+  beneficio_valor: number
+}): string {
+  return `Compra ${tier.umbral} → ${tier.beneficio_valor} %`
+}
+
+/**
+ * Traduce la configuración de `descuento_continuidad` a una frase en
+ * lenguaje natural — el mecanismo más directo para que quien configura la
+ * regla confirme que hizo lo que quería, sin tener que interpretar 6
+ * campos por separado. `null` mientras falte lo mínimo para que la frase
+ * tenga sentido (2+ escalones y la ventana).
+ */
+export function describeContinuityRule(
+  tiers: ContinuityTier[],
+  windowDays: number | undefined,
+  breakBehavior: ContinuityBreakBehavior | undefined
+): string | null {
+  const sorted = normalizeContinuityTiers(tiers)
+  if (sorted.length < 2 || !windowDays) return null
+
+  const ladder = sorted
+    .map((tier, i) => `${i + 1}.ª compra ${tier.beneficio_valor} %`)
+    .join(" → ")
+
+  const breakPhrase =
+    breakBehavior === "mantener"
+      ? "el cliente conserva el escalón alcanzado"
+      : breakBehavior === "retroceder_un_escalon"
+        ? "la racha retrocede un escalón"
+        : `la racha se reinicia y la siguiente compra vuelve a valer ${sorted[0].beneficio_valor} %`
+
+  return `${ladder}. Si la siguiente compra ocurre dentro de ${windowDays} días, sube al siguiente escalón; si pasan más días, ${breakPhrase}.`
 }
 
 export const APPLY_TO_LABEL: Record<ApplyTo, string> = {
@@ -479,4 +557,17 @@ export const ENROLLMENT_REQUIREMENT_LABEL: Record<
   ninguno: "Ninguno",
   perfil_completo: "Perfil completo",
   primera_compra: "Primera compra",
+}
+
+/** Bitácora de "Panel de promociones · Logs" (`promocion_eventos.tipo`). */
+export const PROMOTION_EVENT_TYPE_LABEL: Record<PromotionEventType, string> = {
+  creada: "Creada",
+  activada: "Activada",
+  pausada: "Pausada",
+  presupuesto_incrementado: "Presupuesto incrementado",
+  presupuesto_agotado: "Presupuesto agotado",
+  vencida: "Vencida",
+  cancelada: "Cancelada",
+  canje: "Canje",
+  canje_rechazado: "Canje rechazado",
 }

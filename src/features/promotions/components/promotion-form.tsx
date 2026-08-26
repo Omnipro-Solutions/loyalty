@@ -41,12 +41,14 @@ import {
   type ChannelScope,
   type ApplyTo,
   type BxgyScope,
+  type ContinuityBreakBehavior,
   type CostNature,
   type DayOfWeek,
   type EnrollmentRequirement,
   type Financiador,
   type MultiplierResolutionMode,
   type NonTransactionalBenefitType,
+  type PieceSelectionCriterion,
   type PointsDebitTiming,
   type PriceBasis,
   type PromotionPublicationStatus,
@@ -54,6 +56,7 @@ import {
   type DiscountTierCalculationMode,
   type DiscountTierThresholdType,
   type PromotionType,
+  type ReturnEffect,
   type RxApplicability,
   type SettlementPeriod,
   type StackingMode,
@@ -71,13 +74,14 @@ import {
 import {
   BENEFIT_TYPES_WITH_APPLY_TO,
   MECHANIC_FIELDS,
+  PROMOTION_TYPE_MECHANICS,
 } from "../lib/mechanic-fields"
 import { createPromotionDefaults } from "../lib/promotion-defaults"
 import { ConditionsBuilder } from "./conditions-builder"
 import { DiscountTiersBuilder } from "./discount-tiers-builder"
 import { LimitsBuilder } from "./limits-builder"
 import { MechanicConfigForm } from "./mechanic-config-form"
-import { MechanicPicker } from "./mechanic-picker"
+import { MechanicPicker, applyMechanicChange } from "./mechanic-picker"
 import { PromotionReviewSummary } from "./promotion-review-summary"
 import { PromotionStepper } from "./promotion-stepper"
 import { PromotionSummaryCard } from "./promotion-summary-card"
@@ -153,7 +157,6 @@ function fieldsForStep(
         "porcentajeCostoProveedor",
         "periodoLiquidacion",
         "umbralAlertaPresupuestoPct",
-        "autorizacionVentaBajoCosto",
         "nivelAplicacion",
         "aplicaSobrePrecio",
         "descuentoAcumulaPuntos",
@@ -236,7 +239,18 @@ export function PromotionForm({
           tierCalculationMode:
             (promotion.modo_calculo as DiscountTierCalculationMode) ??
             "escalon_unico",
-          applyTo: promotion.aplicar_sobre as ApplyTo,
+          // `aplicar_sobre` también guarda "producto"/"envio" para mecánicas
+          // que no muestran este selector (ver `PRODUCT_LEVEL_BENEFIT_TYPES`
+          // en `lib/to-row.ts`) — valores fuera del enum `ApplyTo` (que solo
+          // tiene sentido para las 3 mecánicas de `BENEFIT_TYPES_WITH_APPLY_TO`).
+          // Sin este fallback, reabrir esas promociones para editar deja
+          // `applyTo` en un valor que el schema rechaza y bloquea "Guardar"
+          // con un error genérico, sin tocar este campo en ningún paso.
+          applyTo: (APPLY_TO_OPTIONS as readonly string[]).includes(
+            promotion.aplicar_sobre
+          )
+            ? (promotion.aplicar_sobre as ApplyTo)
+            : "subtotal_carrito",
           // por_piezas (BxGy)
           compraCantidad: promotion.compra_cantidad ?? undefined,
           pagaCantidad: promotion.paga_cantidad ?? undefined,
@@ -311,6 +325,18 @@ export function PromotionForm({
           disponibilidadDias: promotion.disponibilidad_dias ?? undefined,
           vigenciaSaldoDias: promotion.vigencia_saldo_dias ?? undefined,
           montoMinimoCanje: promotion.monto_minimo_canje ?? undefined,
+          // descuento_continuidad
+          ventanaContinuidadDias:
+            promotion.ventana_continuidad_dias ?? undefined,
+          alRomperContinuidad:
+            (promotion.al_romper_continuidad as ContinuityBreakBehavior) ??
+            undefined,
+          acumulaRetroactivo: promotion.acumula_retroactivo,
+          efectoDevolucion:
+            (promotion.efecto_devolucion as ReturnEffect) ?? undefined,
+          criterioSeleccionPiezas:
+            (promotion.criterio_seleccion_piezas as PieceSelectionCriterion) ??
+            undefined,
           validFrom: promotion.vigente_desde,
           validUntil: promotion.vigente_hasta ?? undefined,
           daysOfWeek: (promotion.dias_semana as DayOfWeek[] | null) ?? [],
@@ -332,7 +358,6 @@ export function PromotionForm({
             (promotion.periodo_liquidacion as SettlementPeriod) ?? undefined,
           umbralAlertaPresupuestoPct:
             promotion.umbral_alerta_presupuesto_pct ?? undefined,
-          autorizacionVentaBajoCosto: promotion.autorizacion_venta_bajo_costo,
           nivelAplicacion:
             (promotion.nivel_aplicacion as ApplicationLevel) ?? "ticket",
           aplicaSobrePrecio:
@@ -340,7 +365,6 @@ export function PromotionForm({
           descuentoAcumulaPuntos: promotion.descuento_acumula_puntos,
           aplicaARx: (promotion.aplica_a_rx as RxApplicability) ?? "permitido",
           aprobacionRegulatoria: promotion.aprobacion_regulatoria,
-          simulacionEjecutada: promotion.simulacion_ejecutada,
           publicationStatus:
             promotion.estado_publicacion as PromotionPublicationStatus,
         }
@@ -374,10 +398,6 @@ export function PromotionForm({
   const saving = create.isPending || update.isPending
 
   function save(publicationStatus: "activa" | "borrador") {
-    // La validación de `handleSubmit` lee `publicationStatus` del propio
-    // formulario (S15 lo exige vía `refineCompliance`) — sin este `setValue`
-    // previo, seguía viendo el valor precargado ("borrador") y el gate de
-    // simulación nunca se disparaba al pulsar "Guardar y activar".
     setValue("publicationStatus", publicationStatus)
     return handleSubmit(
       (formValues: PromotionValues) => {
@@ -392,19 +412,7 @@ export function PromotionForm({
           create.execute({ ...formValues, publicationStatus })
         }
       },
-      // Sin esto, un valor que pasó la validación del paso pero no la del
-      // formulario completo (ej. NaN que `trigger()` de un paso anterior no
-      // cubría) fallaba en silencio: `handleSubmit` sin segundo argumento
-      // simplemente no llama a nada si el resolver rechaza. `simulacionEjecutada`
-      // (S15) no tiene un campo visible en ningún paso — sin este caso
-      // especial, el bloqueo salía como el mensaje genérico sin decir por
-      // qué, dejando al usuario sin poder saber qué corregir.
-      (formErrors) =>
-        setGeneralError(
-          formErrors.simulacionEjecutada
-            ? 'Corre "Simular con datos reales" en el panel antes de activar (S15).'
-            : "Revisa los campos marcados antes de guardar."
-        )
+      () => setGeneralError("Revisa los campos marcados antes de guardar.")
     )
   }
 
@@ -521,7 +529,22 @@ export function PromotionForm({
                 <Field label="Tipo de promoción" htmlFor="type">
                   <Select
                     value={values.type}
-                    onValueChange={(v) => setValue("type", v as PromotionType)}
+                    onValueChange={(v) => {
+                      const nextType = v as PromotionType
+                      setValue("type", nextType)
+                      const allowed = PROMOTION_TYPE_MECHANICS[nextType]
+                      const currentBenefit =
+                        values.benefitType ?? "descuento_porcentual"
+                      // Si la mecánica ya elegida no aplica al nuevo tipo, se
+                      // cambia a la primera válida — mismo criterio de
+                      // limpieza que un cambio manual de mecánica, para no
+                      // dejar campos de la mecánica anterior a medio llenar.
+                      if (!allowed.includes(currentBenefit)) {
+                        const nextBenefit = allowed[0]
+                        applyMechanicChange(nextBenefit, setValue)
+                        setValue("benefitType", nextBenefit)
+                      }
+                    }}
                   >
                     <SelectTrigger id="type">
                       <SelectValue>
@@ -591,6 +614,7 @@ export function PromotionForm({
           {step === 0 && (
             <MechanicPicker
               value={values.benefitType ?? "descuento_porcentual"}
+              promotionType={values.type ?? "categoria"}
               onChange={(v) => setValue("benefitType", v)}
               setValue={setValue}
             />
@@ -706,6 +730,7 @@ export function PromotionForm({
                   setValue={setValue}
                   products={products}
                   couponBatches={options.couponBatches}
+                  onGoToConditionsStep={() => handleStepClick(1)}
                 />
               )}
             </Section>
@@ -1012,30 +1037,6 @@ export function PromotionForm({
                     })}
                   />
                 </Field>
-                <Field
-                  label="Autorización para vender bajo costo"
-                  htmlFor="autorizacionVentaBajoCosto"
-                  hint="Requerido si el precio resultante queda por debajo del costo de adquisición (F12)."
-                >
-                  <Select
-                    value={values.autorizacionVentaBajoCosto ? "si" : "no"}
-                    onValueChange={(v) =>
-                      setValue("autorizacionVentaBajoCosto", v === "si")
-                    }
-                  >
-                    <SelectTrigger id="autorizacionVentaBajoCosto">
-                      <SelectValue>
-                        {(v: "si" | "no") =>
-                          v === "si" ? "Autorizada" : "No autorizada"
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">No autorizada</SelectItem>
-                      <SelectItem value="si">Autorizada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
               </Row>
 
               <Row>
@@ -1214,7 +1215,6 @@ export function PromotionForm({
             priority={values.priority ?? 5}
             values={values as Partial<PromotionValues>}
             onSave={(status) => save(status)()}
-            onSimulated={() => setValue("simulacionEjecutada", true)}
             saving={saving}
           />
         </div>

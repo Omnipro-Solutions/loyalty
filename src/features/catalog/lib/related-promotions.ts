@@ -105,6 +105,8 @@ function mechanicSummary(row: MechanicSummaryRow) {
       return row.tipo_monedero === "monto_fijo"
         ? `Cashback: ${formatUSD(row.valor_beneficio ?? 0)}`
         : `Cashback: ${row.valor_beneficio ?? 0} %`
+    case "descuento_continuidad":
+      return "Descuento por continuidad de compra"
     default:
       return "—"
   }

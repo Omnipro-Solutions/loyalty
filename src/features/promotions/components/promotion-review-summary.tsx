@@ -9,6 +9,7 @@ import {
   BXGY_SCOPE_LABEL,
   CHANNEL_SCOPE_LABEL,
   CONDITION_FIELD_LABEL,
+  CONTINUITY_BREAK_BEHAVIOR_LABEL,
   COST_NATURE_LABEL,
   BENEFIT_TYPE_LABEL,
   DAY_OF_WEEK_LABEL,
@@ -18,15 +19,18 @@ import {
   FINANCIADOR_LABEL,
   MULTIPLIER_RESOLUTION_MODE_LABEL,
   NON_TRANSACTIONAL_BENEFIT_TYPE_LABEL,
+  PIECE_SELECTION_CRITERION_LABEL,
   POINTS_DEBIT_TIMING_LABEL,
   PRICE_BASIS_LABEL,
   PROMOTION_TYPE_LABEL,
+  RETURN_EFFECT_LABEL,
   RX_APPLICABILITY_LABEL,
   SETTLEMENT_PERIOD_LABEL,
   STACKING_MODE_LABEL,
   STORE_FORMAT_LABEL,
   TIER_NAME_LABEL,
   TRIGGER_EVENT_LABEL,
+  formatContinuityTier,
   formatDiscountTier,
   formatLimitRow,
 } from "../lib/labels"
@@ -77,11 +81,18 @@ function conditionLeafSummary(
   categoryNameById: Map<string, string>,
   segmentNameById: Map<string, string>,
   couponBatchNameById: Map<string, string>,
-  tierNameById: Map<string, string>
+  tierNameById: Map<string, string>,
+  productNameById: Map<string, string>
 ): string {
   if (condition.campo === "categoria") {
     return (
       condition.valor.map((id) => categoryNameById.get(id) ?? id).join(", ") ||
+      "—"
+    )
+  }
+  if (condition.campo === "producto") {
+    return (
+      condition.valor.map((id) => productNameById.get(id) ?? id).join(", ") ||
       "—"
     )
   }
@@ -131,6 +142,7 @@ function ConditionNodeSummary({
   segmentNameById,
   couponBatchNameById,
   tierNameById,
+  productNameById,
 }: {
   node: ConditionNodeValues
   depth: number
@@ -138,6 +150,7 @@ function ConditionNodeSummary({
   segmentNameById: Map<string, string>
   couponBatchNameById: Map<string, string>
   tierNameById: Map<string, string>
+  productNameById: Map<string, string>
 }) {
   const paddingLeft = depth * 12
 
@@ -153,7 +166,8 @@ function ConditionNodeSummary({
             categoryNameById,
             segmentNameById,
             couponBatchNameById,
-            tierNameById
+            tierNameById,
+            productNameById
           )}
         </span>
       </p>
@@ -187,6 +201,7 @@ function ConditionNodeSummary({
           segmentNameById={segmentNameById}
           couponBatchNameById={couponBatchNameById}
           tierNameById={tierNameById}
+          productNameById={productNameById}
         />
       ))}
     </div>
@@ -253,6 +268,7 @@ export function PromotionReviewSummary({
             segmentNameById={segmentNameById}
             couponBatchNameById={couponBatchNameById}
             tierNameById={tierNameById}
+            productNameById={productNameById}
           />
         )}
       </SummaryGroup>
@@ -698,6 +714,62 @@ export function PromotionReviewSummary({
               }
             />
           </>
+        ) : values.benefitType === "descuento_continuidad" ? (
+          <>
+            {(values.discountTiers ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Sin escalones definidos.
+              </p>
+            ) : (
+              [...(values.discountTiers ?? [])]
+                .sort((a, b) => a.umbral - b.umbral)
+                .map((tier, index) => (
+                  <SummaryRow
+                    key={index}
+                    label={`Escalón ${index + 1}`}
+                    value={formatContinuityTier(tier)}
+                  />
+                ))
+            )}
+            <SummaryRow
+              label="Ventana de continuidad"
+              value={
+                values.ventanaContinuidadDias
+                  ? `${values.ventanaContinuidadDias} días`
+                  : "—"
+              }
+            />
+            <SummaryRow
+              label="Al exceder la ventana"
+              value={
+                values.alRomperContinuidad
+                  ? CONTINUITY_BREAK_BEHAVIOR_LABEL[values.alRomperContinuidad]
+                  : "—"
+              }
+            />
+            <SummaryRow
+              label="Acumula compras retroactivas"
+              value={values.acumulaRetroactivo ? "Sí" : "No"}
+            />
+            <SummaryRow
+              label="Efecto de una devolución"
+              value={
+                values.efectoDevolucion
+                  ? RETURN_EFFECT_LABEL[values.efectoDevolucion]
+                  : "—"
+              }
+            />
+            <SummaryRow
+              label="Piezas que reciben el beneficio"
+              value={
+                values.criterioSeleccionPiezas
+                  ? PIECE_SELECTION_CRITERION_LABEL[
+                      values.criterioSeleccionPiezas
+                    ]
+                  : "—"
+              }
+            />
+          </>
         ) : null}
       </SummaryGroup>
 
@@ -812,12 +884,6 @@ export function PromotionReviewSummary({
           }
         />
         <SummaryRow
-          label="Autorización venta bajo costo"
-          value={
-            values.autorizacionVentaBajoCosto ? "Autorizada" : "No autorizada"
-          }
-        />
-        <SummaryRow
           label="Nivel de aplicación"
           value={
             values.nivelAplicacion
@@ -846,10 +912,6 @@ export function PromotionReviewSummary({
         <SummaryRow
           label="Aprobación regulatoria"
           value={values.aprobacionRegulatoria ? "Aprobada" : "No aprobada"}
-        />
-        <SummaryRow
-          label="Simulación ejecutada"
-          value={values.simulacionEjecutada ? "Sí" : "No"}
         />
       </SummaryGroup>
     </div>

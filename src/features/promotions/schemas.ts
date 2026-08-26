@@ -9,6 +9,7 @@ import {
   BALANCE_TYPES,
   BXGY_SCOPES,
   CONDITION_COMBINATORS,
+  CONTINUITY_BREAK_BEHAVIORS,
   COST_NATURES,
   DAYS_OF_WEEK,
   DISCOUNT_TIER_CALCULATION_MODES,
@@ -21,11 +22,13 @@ import {
   LIMIT_WINDOWS,
   MULTIPLIER_RESOLUTION_MODES,
   NON_TRANSACTIONAL_BENEFIT_TYPES,
+  PIECE_SELECTION_CRITERIA,
   POINTS_DEBIT_TIMINGS,
   PRICE_BASES,
   PROMOTION_PUBLICATION_STATUSES,
   BENEFIT_TYPES,
   PROMOTION_TYPES,
+  RETURN_EFFECTS,
   RX_APPLICABILITIES,
   SETTLEMENT_PERIODS,
   STACKING_MODES,
@@ -43,6 +46,13 @@ export const conditionSchema = z.discriminatedUnion("campo", [
   z.object({
     campo: z.literal("categoria"),
     valor: z.array(z.string().uuid()).min(1, "Elige al menos una categoría"),
+  }),
+  // Referencia directa a `productos.id` (no un atributo del producto como
+  // `categoria`/`producto_marca`) — para acotar la promoción a uno o
+  // varios SKU puntuales desde el árbol de condiciones.
+  z.object({
+    campo: z.literal("producto"),
+    valor: z.array(z.string().uuid()).min(1, "Elige al menos un producto"),
   }),
   z.object({
     campo: z.literal("tienda"),
@@ -409,6 +419,22 @@ const promotionBaseSchema = z.object({
     .optional(),
   montoMinimoCanje: z.number().positive().optional(),
 
+  // descuento_continuidad — escalera de continuidad (reusa `discountTiers`
+  // de arriba: aquí `umbral` es el ordinal de compra consecutiva, 1, 2,
+  // 3…, no unidades/monto del carrito).
+  ventanaContinuidadDias: z
+    .number("Ingresa los días de la ventana de continuidad")
+    .int("Debe ser un número entero")
+    .positive()
+    .max(365)
+    .optional(),
+  alRomperContinuidad: z.enum(CONTINUITY_BREAK_BEHAVIORS).optional(),
+  // "La acumulación de compras inicia con el lanzamiento del programa — no
+  // cuenta compras retroactivas anteriores" del caso de referencia.
+  acumulaRetroactivo: z.boolean(),
+  efectoDevolucion: z.enum(RETURN_EFFECTS).optional(),
+  criterioSeleccionPiezas: z.enum(PIECE_SELECTION_CRITERIA).optional(),
+
   validFrom: z.string().min(1, "Elige la fecha de inicio"),
   validUntil: z.string().optional(),
   // Vigencia (07.5, 1399:6) — vacío/sin selección = todos los días, sin horario = todo el día.
@@ -424,7 +450,7 @@ const promotionBaseSchema = z.object({
   exclusionGroup: z.string().max(60, "Máximo 60 caracteres").optional(),
   stackingMode: z.enum(STACKING_MODES),
 
-  // Economía (paso "Economía", F01–F12 + S06) — naturaleza contable del
+  // Economía (paso "Economía", F01–F11 + S06) — naturaleza contable del
   // costo y quién lo financia. El bloque de proveedor (proveedorId/
   // contratoId/porcentajeCostoProveedor/periodoLiquidacion) solo se pide
   // cuando `financiador !== "retailer"` (ver `refineEconomics`).
@@ -435,10 +461,6 @@ const promotionBaseSchema = z.object({
   porcentajeCostoProveedor: z.number().min(0).max(100).optional(),
   periodoLiquidacion: z.enum(SETTLEMENT_PERIODS).optional(),
   umbralAlertaPresupuestoPct: z.number().min(0).max(100).optional(),
-  // F12: "ninguna promoción vende por debajo del costo sin autorización" —
-  // el cómputo real contra `productos.costo_unitario` es un gate del paso
-  // Resumen (fuera de esta fase); aquí queda declarado y persistido.
-  autorizacionVentaBajoCosto: z.boolean(),
 
   // Base de cálculo (S01, S16) — sobre qué monto se calcula el
   // descuento, y si ese monto sigue acumulando puntos.
@@ -451,11 +473,6 @@ const promotionBaseSchema = z.object({
   // no una derivada del catálogo real.
   aplicaARx: z.enum(RX_APPLICABILITIES),
   aprobacionRegulatoria: z.boolean(),
-
-  // Gobierno (S15) — no es un control del formulario: lo enciende
-  // "Simular con datos reales" del panel lateral al correr con éxito, y
-  // `refineCompliance` lo exige antes de poder activar.
-  simulacionEjecutada: z.boolean(),
 
   publicationStatus: z.enum(PROMOTION_PUBLICATION_STATUSES),
 })
@@ -711,6 +728,68 @@ function refineByBenefitType(
       "El porcentaje va de 1 a 100"
     )
   }
+
+  // --- descuento_continuidad (escalera de continuidad) ---
+  if (type === "descuento_continuidad") {
+    need(
+      v.discountTiers.length < 2,
+      ["discountTiers"],
+      "Una escalera de continuidad necesita al menos 2 escalones"
+    )
+    // Mismo criterio "compra más, ahorra más" que `descuento_escalonado`,
+    // más la regla propia de esta mecánica: los escalones son compras
+    // consecutivas (1, 2, 3…), no umbrales libres — un hueco o un umbral
+    // repetido no es interpretable como "compra N".
+    const ordered = v.discountTiers
+      .map((tier, index) => ({ ...tier, index }))
+      .sort((a, b) => a.umbral - b.umbral)
+    ordered.forEach((tier, i) => {
+      need(
+        !Number.isInteger(tier.umbral),
+        ["discountTiers", tier.index, "umbral"],
+        "El ordinal de compra debe ser un número entero"
+      )
+      need(
+        tier.umbral !== i + 1,
+        ["discountTiers", tier.index, "umbral"],
+        "Los escalones deben ser compras consecutivas sin huecos: 1, 2, 3…"
+      )
+      if (i > 0) {
+        need(
+          tier.beneficio_valor <= ordered[i - 1].beneficio_valor,
+          ["discountTiers", tier.index, "beneficio_valor"],
+          "Cada compra consecutiva debe dar más descuento que la anterior"
+        )
+      }
+    })
+    need(
+      v.ventanaContinuidadDias === undefined,
+      ["ventanaContinuidadDias"],
+      "Ingresa los días de la ventana de continuidad"
+    )
+    need(
+      v.alRomperContinuidad === undefined,
+      ["alRomperContinuidad"],
+      "Elige qué pasa al exceder la ventana de continuidad"
+    )
+    need(
+      v.efectoDevolucion === undefined,
+      ["efectoDevolucion"],
+      "Elige el efecto de una devolución sobre el escalón"
+    )
+    need(
+      v.criterioSeleccionPiezas === undefined,
+      ["criterioSeleccionPiezas"],
+      "Elige qué piezas elegibles reciben el beneficio"
+    )
+    // Análogo a S03 (`por_piezas`/`producto_gratis`): sin un tope de piezas
+    // por socio, una escalera de continuidad no tiene techo de unidades.
+    need(
+      !v.limites.some((l) => l.unidad === "piezas" && l.sujeto === "socio"),
+      ["limites"],
+      "Una escalera de continuidad exige un límite de piezas por socio en el paso Límites"
+    )
+  }
 }
 
 /**
@@ -772,12 +851,6 @@ function refineCompliance(
     v.aplicaARx !== "permitido" && !v.aprobacionRegulatoria,
     ["aprobacionRegulatoria"],
     "Esta promoción toca productos con receta — confirma la aprobación regulatoria"
-  )
-  // S15 · publicar (no borrador) exige haber corrido la simulación.
-  need(
-    v.publicationStatus === "activa" && !v.simulacionEjecutada,
-    ["simulacionEjecutada"],
-    "Corre «Simular con datos reales» antes de activar"
   )
 }
 

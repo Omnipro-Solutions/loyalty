@@ -60,6 +60,8 @@ export function defaultConditionFor(field: ConditionField): ConditionValues {
   switch (field) {
     case "categoria":
       return { campo: field, valor: [] }
+    case "producto":
+      return { campo: field, valor: [] }
     case "tienda":
       return { campo: field, valor: "" }
     case "segmento":

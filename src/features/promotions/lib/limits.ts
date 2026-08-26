@@ -105,6 +105,19 @@ const MECHANIC_LIMIT_TEMPLATES: Record<string, LimitValues[]> = {
       alExceder: "aplicar_parcial",
     },
   ],
+  // "Máximo 2 piezas por cliente cada 30 días" del caso de referencia
+  // (docs/promociones.md) — sin este tope, una escalera de continuidad no
+  // tiene techo de unidades por período.
+  descuento_continuidad: [
+    {
+      unidad: "piezas",
+      sujeto: "socio",
+      ventana: "rolling",
+      ventanaDias: 30,
+      tope: 2,
+      alExceder: "aplicar_parcial",
+    },
+  ],
 }
 
 /** Sugerencias de la mecánica elegida, con el genérico siempre al final. */

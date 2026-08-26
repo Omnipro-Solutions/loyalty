@@ -3,6 +3,7 @@
 import { X } from "lucide-react"
 
 import { CurrencyInput } from "@/components/form/currency-input"
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { Multiselect } from "@/components/form/multiselect"
 import { Input } from "@/components/ui/input"
 import {
@@ -29,6 +30,12 @@ import {
   CONDITION_FIELD_LABEL,
   CONDITION_FIELD_OPERATOR,
 } from "../lib/labels"
+import {
+  ProductPickerRow,
+  productBrandFacet,
+  productPickerChipLabel,
+  productPickerSearchText,
+} from "../lib/product-picker"
 import type { ConditionOptions } from "../lib/queries"
 import { conditionSchema, type ConditionValues } from "../schemas"
 
@@ -57,7 +64,7 @@ export function ConditionLeafRow({
   onRemove,
 }: ConditionLeafRowProps) {
   const enabled = ENABLED_CONDITION_FIELDS.includes(condition.campo)
-  const { categories, cities, segments, couponBatches } = options
+  const { categories, products, cities, segments, couponBatches } = options
   // Sin esto, una condición sin valor bloquea "Siguiente" en silencio — el
   // `trigger()` del wizard sí la detecta (comparte esquema con `conditionSchema`),
   // pero nada en este árbol mostraba jamás el porqué. Reusa el mismo esquema
@@ -122,6 +129,25 @@ export function ConditionLeafRow({
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
               value={condition.valor}
               onValueChange={(valor) => onChange({ campo: "categoria", valor })}
+            />
+          )}
+          {condition.campo === "producto" && (
+            <EntityPickerField
+              size="chip"
+              className="min-w-[160px]"
+              title="Producto"
+              description="Busca por nombre, SKU o marca."
+              mode="multiple"
+              items={products}
+              getId={(p) => p.id}
+              getSearchText={productPickerSearchText}
+              getChipLabel={productPickerChipLabel}
+              renderRow={(p) => <ProductPickerRow product={p} />}
+              facets={[productBrandFacet(products)]}
+              placeholder="Elige uno o varios productos"
+              confirmLabel="Elegir productos"
+              value={condition.valor}
+              onValueChange={(valor) => onChange({ campo: "producto", valor })}
             />
           )}
           {condition.campo === "tienda" && (

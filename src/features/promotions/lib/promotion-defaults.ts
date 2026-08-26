@@ -70,6 +70,12 @@ export function createPromotionDefaults(
     disponibilidadDias: undefined,
     vigenciaSaldoDias: undefined,
     montoMinimoCanje: undefined,
+    // descuento_continuidad
+    ventanaContinuidadDias: undefined,
+    alRomperContinuidad: undefined,
+    acumulaRetroactivo: false,
+    efectoDevolucion: undefined,
+    criterioSeleccionPiezas: undefined,
     validFrom: new Date().toISOString().slice(0, 10),
     validUntil: undefined,
     daysOfWeek: [],
@@ -86,13 +92,11 @@ export function createPromotionDefaults(
     porcentajeCostoProveedor: undefined,
     periodoLiquidacion: undefined,
     umbralAlertaPresupuestoPct: undefined,
-    autorizacionVentaBajoCosto: false,
     nivelAplicacion: "ticket",
     aplicaSobrePrecio: "vigente",
     descuentoAcumulaPuntos: true,
     aplicaARx: "permitido",
     aprobacionRegulatoria: false,
-    simulacionEjecutada: false,
     publicationStatus: "borrador",
   }
 }

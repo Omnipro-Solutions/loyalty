@@ -2,6 +2,7 @@
 
 import { Segmented } from "@/components/filters/segmented"
 import { CurrencyInput } from "@/components/form/currency-input"
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { Field } from "@/components/form/field"
 import { Multiselect } from "@/components/form/multiselect"
 import { Row } from "@/components/form/row"
@@ -27,6 +28,12 @@ import {
   COUPON_DELIVERY_CHANNEL_LABEL,
   COUPON_DISCOUNT_TYPE_LABEL,
 } from "../lib/labels"
+import {
+  ProductPickerRow,
+  productBrandFacet,
+  productPickerChipLabel,
+  productPickerSearchText,
+} from "../lib/product-picker"
 import type { CatalogOption, ProductOption } from "../lib/queries"
 import { CollapsibleSummaryField } from "./collapsible-summary-field"
 
@@ -149,26 +156,21 @@ export function StepCoupon({
 
       {values.discountType === "free_product" ? (
         <Field label="Producto de regalo" error={errors.freeProductId} required>
-          <Select
-            value={values.freeProductId ?? ""}
-            onValueChange={(v) => v && onChange("freeProductId", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Elige un producto">
-                {(v: string) => {
-                  const product = products.find((p) => p.id === v)
-                  return product ? `${product.name} · ${product.sku}` : v
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} · {p.sku}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EntityPickerField
+            title="Producto de regalo"
+            description="Busca por nombre, SKU o marca."
+            mode="single"
+            items={products}
+            getId={(p) => p.id}
+            getSearchText={productPickerSearchText}
+            getChipLabel={productPickerChipLabel}
+            renderRow={(p) => <ProductPickerRow product={p} />}
+            facets={[productBrandFacet(products)]}
+            placeholder="Elige un producto"
+            confirmLabel="Elegir producto"
+            value={values.freeProductId ? [values.freeProductId] : []}
+            onValueChange={([id]) => onChange("freeProductId", id)}
+          />
         </Field>
       ) : (
         <Row>
@@ -318,30 +320,24 @@ export function StepCoupon({
       </Row>
 
       <Field label="Promoción vinculada (opcional)">
-        <Select
-          value={values.promotionId ?? "none"}
-          onValueChange={(v) =>
-            onChange("promotionId", !v || v === "none" ? undefined : v)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sin vincular">
-              {(v: string) =>
-                v === "none"
-                  ? "Sin vincular"
-                  : (promotions.find((p) => p.id === v)?.name ?? v)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Sin vincular</SelectItem>
-            {promotions.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <EntityPickerField
+          title="Promoción vinculada"
+          description="Busca por nombre."
+          mode="single"
+          items={promotions}
+          getId={(p) => p.id}
+          getSearchText={(p) => p.name}
+          getChipLabel={(p) => p.name}
+          renderRow={(p) => (
+            <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+              {p.name}
+            </div>
+          )}
+          placeholder="Sin vincular"
+          confirmLabel="Vincular promoción"
+          value={values.promotionId ? [values.promotionId] : []}
+          onValueChange={([id]) => onChange("promotionId", id)}
+        />
       </Field>
 
       <CollapsibleSummaryField

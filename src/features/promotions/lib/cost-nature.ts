@@ -20,6 +20,9 @@ import type { BenefitType, CostNature } from "@/types/domain"
  * - `precio_especial` (T03) es margen sacrificado, igual que un descuento
  *   directo. `cashback` (T13) es el único con pasivo en efectivo real
  *   (saldo del monedero, exigible en dinero).
+ * - `descuento_continuidad` es margen sacrificado, igual que los otros 3
+ *   descuentos variables — misma cuenta contable que T18 "Adherencia a
+ *   tratamiento" (docs/modalidades-promocion-contexto.md:2449).
  */
 export const COST_NATURE_BY_MECHANIC: Record<BenefitType, CostNature> = {
   descuento_porcentual: "margen_sacrificado",
@@ -34,6 +37,7 @@ export const COST_NATURE_BY_MECHANIC: Record<BenefitType, CostNature> = {
   emitir_cupon: "margen_sacrificado",
   precio_especial: "margen_sacrificado",
   cashback: "saldo_efectivo",
+  descuento_continuidad: "margen_sacrificado",
 }
 
 export function suggestedCostNature(benefitType: BenefitType): CostNature {

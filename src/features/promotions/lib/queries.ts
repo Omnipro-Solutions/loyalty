@@ -1,19 +1,26 @@
+import { formatShortDate } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import type {
+  ChannelScope,
   ConditionCombinator,
+  Financiador,
   LimitExcessBehavior,
   LimitSubject,
   LimitUnit,
   LimitWindow,
+  PromotionEventType,
+  PromotionType,
 } from "@/types/domain"
 
+import { toDateParam, type DateWindow } from "./dashboard-filters"
 import { promotionStatus } from "./status"
 
 export type PromotionRow = Database["public"]["Tables"]["promociones"]["Row"]
 
 export type Condition =
   | { campo: "categoria"; valor: string[] }
+  | { campo: "producto"; valor: string[] }
   | { campo: "tienda"; valor: string }
   | { campo: "segmento"; valor: string }
   | { campo: "monto_carrito"; valor: number }
@@ -46,6 +53,16 @@ export type ConditionGroup = {
   condiciones: ConditionNode[]
 }
 export type ConditionNode = Condition | ConditionGroup
+
+function isConditionGroup(node: ConditionNode): node is ConditionGroup {
+  return "condiciones" in node
+}
+
+/** Recolecta todas las hojas del árbol sin importar la anidación — mismo criterio que `flattenConditionTree` de `../lib/condition-tree.ts` (cliente), redeclarado aquí server-only por la misma razón que `ConditionGroup` arriba. Usado para resolver, ej., qué IDs de producto quedaron guardados en una condición `producto` (ver `[id]/editar/page.tsx`). */
+export function flattenConditionNodes(node: ConditionNode): Condition[] {
+  if (!isConditionGroup(node)) return [node]
+  return node.condiciones.flatMap(flattenConditionNodes)
+}
 
 /** Elemento de `promociones.escalones` — solo con `tipo_beneficio = 'descuento_escalonado'` (docs §7.1a). */
 export type Escalon = { umbral: number; beneficio_valor: number }
@@ -210,6 +227,559 @@ export async function getFeaturedPromotions(limit = 3): Promise<Promotion[]> {
     .slice(0, limit)
 }
 
+export type PromotionsDashboardFilters = {
+  window?: DateWindow
+  tipos?: PromotionType[]
+  canales?: ChannelScope[]
+  financiadores?: Financiador[]
+  promocionIds?: string[]
+}
+
+/**
+ * Filtros de "Panel de promociones" compartidos por todas sus consultas —
+ * una sola fuente de verdad para que nunca se desincronicen entre widgets.
+ * La vigencia filtra por solape con la ventana (`vigente_desde < hasta` y
+ * `vigente_hasta` nulo o `>= desde`), no por fecha de creación: no hay
+ * evento con fecha real detrás, solo la vigencia de la fila (ver
+ * `dashboard-filters.ts`).
+ */
+function applyDashboardFilters<
+  T extends {
+    in(column: string, values: readonly string[]): T
+    lt(column: string, value: string): T
+    or(filters: string): T
+  },
+>(query: T, filters: PromotionsDashboardFilters): T {
+  let q = query
+  if (filters.tipos && filters.tipos.length > 0) {
+    q = q.in("tipo", filters.tipos)
+  }
+  if (filters.canales && filters.canales.length > 0) {
+    q = q.in("canal_aplicacion", filters.canales)
+  }
+  if (filters.financiadores && filters.financiadores.length > 0) {
+    q = q.in("financiador", filters.financiadores)
+  }
+  if (filters.promocionIds && filters.promocionIds.length > 0) {
+    q = q.in("id", filters.promocionIds)
+  }
+  if (filters.window) {
+    q = q.lt("vigente_desde", toDateParam(filters.window.to))
+    q = q.or(
+      `vigente_hasta.is.null,vigente_hasta.gte.${toDateParam(filters.window.from)}`
+    )
+  }
+  return q
+}
+
+export type PromotionsDashboardKpis = {
+  statusCounts: {
+    activa: number
+    programada: number
+    borrador: number
+    finalizada: number
+  }
+  assignedBudget: number
+  consumedBudget: number
+  consumedBudgetPct: number
+  totalRedemptions: number
+  avgCostPerRedemption: number | null
+  alertCount: number
+  avgRoi: number | null
+  roiSampleSize: number
+}
+
+/**
+ * KPIs de "Panel de promociones" (sin nodo Figma — nueva a pedido del
+ * usuario). Todo sale de columnas reales de `promociones`: no hay tabla de
+ * eventos de canje, así que esto es un corte transversal (snapshot), no una
+ * serie de tiempo — mismo criterio que `getPromotionsSummary`.
+ */
+export async function getPromotionsDashboardKpis(
+  filters: PromotionsDashboardFilters = {}
+): Promise<PromotionsDashboardKpis> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select(
+        "estado_publicacion, vigente_desde, vigente_hasta, presupuesto_asignado, presupuesto_consumido, canjes, umbral_alerta_presupuesto_pct, roi"
+      ),
+    filters
+  )
+  if (error) throw error
+
+  const statusCounts = { activa: 0, programada: 0, borrador: 0, finalizada: 0 }
+  let assignedBudget = 0
+  let consumedBudget = 0
+  let totalRedemptions = 0
+  let alertCount = 0
+  let roiSum = 0
+  let roiSampleSize = 0
+
+  for (const row of data ?? []) {
+    statusCounts[promotionStatus(row)] += 1
+    assignedBudget += row.presupuesto_asignado
+    consumedBudget += row.presupuesto_consumido
+    totalRedemptions += row.canjes
+    if (
+      row.umbral_alerta_presupuesto_pct != null &&
+      row.presupuesto_asignado > 0 &&
+      row.presupuesto_consumido / row.presupuesto_asignado >=
+        row.umbral_alerta_presupuesto_pct / 100
+    ) {
+      alertCount += 1
+    }
+    if (row.roi != null) {
+      roiSum += row.roi
+      roiSampleSize += 1
+    }
+  }
+
+  return {
+    statusCounts,
+    assignedBudget,
+    consumedBudget,
+    consumedBudgetPct: assignedBudget > 0 ? consumedBudget / assignedBudget : 0,
+    totalRedemptions,
+    avgCostPerRedemption:
+      totalRedemptions > 0 ? consumedBudget / totalRedemptions : null,
+    alertCount,
+    avgRoi: roiSampleSize > 0 ? roiSum / roiSampleSize : null,
+    roiSampleSize,
+  }
+}
+
+export type TopPromotionByRedemptions = {
+  id: string
+  nombre: string
+  canjes: number
+}
+
+/** Top N por `canjes` real (columna de fila, ver comentario de `getPromotionsDashboardKpis`) — excluye promociones sin canjes para no diluir el ranking. */
+export async function getTopPromotionsByRedemptions(
+  limit = 5,
+  filters: PromotionsDashboardFilters = {}
+): Promise<TopPromotionByRedemptions[]> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("id, nombre, canjes"),
+    filters
+  )
+    .gt("canjes", 0)
+    .order("canjes", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
+}
+
+export type BudgetByFinancier = {
+  financiador: Financiador
+  amount: number
+  /** 0-100, no una fracción — mismo criterio que `RealChannelAttribution.pct` de `features/dashboard/lib/queries.ts`. */
+  pct: number
+  colorVar: string
+}
+
+/** Mismas 4 series de `--data-*` que `ChannelAttributionWidget`, en el orden en que aparecen (mayor a menor presupuesto). */
+const FINANCIER_COLOR_VARS = [
+  "--data-indigo",
+  "--data-teal",
+  "--data-amber",
+  "--data-violet",
+]
+
+/** Suma de `presupuesto_asignado` agrupada por `financiador` (retailer/laboratorio/compartido/marca propia) — quién financia el presupuesto, no un dato fabricado. */
+export async function getBudgetByFinancier(
+  filters: PromotionsDashboardFilters = {}
+): Promise<BudgetByFinancier[]> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("financiador, presupuesto_asignado"),
+    filters
+  )
+  if (error) throw error
+
+  const totals = new Map<Financiador, number>()
+  for (const row of data ?? []) {
+    const financiador = row.financiador as Financiador
+    totals.set(
+      financiador,
+      (totals.get(financiador) ?? 0) + row.presupuesto_asignado
+    )
+  }
+  const total = [...totals.values()].reduce((acc, v) => acc + v, 0)
+  return [...totals.entries()]
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([financiador, amount], index) => ({
+      financiador,
+      amount,
+      pct: total > 0 ? Math.round((amount / total) * 1000) / 10 : 0,
+      colorVar: FINANCIER_COLOR_VARS[index % FINANCIER_COLOR_VARS.length],
+    }))
+}
+
+export type PromotionRoiRankingItem = {
+  id: string
+  nombre: string
+  tipo: PromotionType
+  canalAplicacion: ChannelScope
+  canjes: number
+  presupuestoConsumido: number
+  roi: number
+}
+
+/**
+ * Extremos de `roi` (columna real, contador manual — ver comentario de
+ * `getPromotionsDashboardKpis`): las de mayor y menor retorno, excluyendo
+ * las que todavía no tienen `roi` capturado.
+ */
+export async function getPromotionsRoiRanking(
+  filters: PromotionsDashboardFilters = {}
+): Promise<{
+  top: PromotionRoiRankingItem[]
+  bottom: PromotionRoiRankingItem[]
+}> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select(
+        "id, nombre, tipo, canal_aplicacion, canjes, presupuesto_consumido, roi"
+      ),
+    filters
+  )
+    .not("roi", "is", null)
+    .order("roi", { ascending: false })
+  if (error) throw error
+
+  const rows = (data ?? []).map((row) => ({
+    id: row.id,
+    nombre: row.nombre,
+    tipo: row.tipo as PromotionType,
+    canalAplicacion: row.canal_aplicacion as ChannelScope,
+    canjes: row.canjes,
+    presupuestoConsumido: row.presupuesto_consumido,
+    roi: row.roi as number,
+  }))
+
+  const top = rows.slice(0, 4)
+  const rest = rows.slice(top.length)
+  const bottom = rest.slice(Math.max(0, rest.length - 3))
+  return { top, bottom }
+}
+
+export type PromotionAlert =
+  | {
+      id: string
+      severity: "warning"
+      type: "presupuesto"
+      nombre: string
+      consumedPct: number
+      thresholdPct: number
+    }
+  | {
+      id: string
+      severity: "destructive"
+      type: "roi"
+      nombre: string
+      roi: number
+    }
+
+/**
+ * Alertas reales (sin motor de reglas detrás, solo dos condiciones sobre
+ * columnas existentes): sobreconsumo contra `umbral_alerta_presupuesto_pct`,
+ * y `roi < 1` (el retorno registrado no cubre lo invertido).
+ */
+export async function getPromotionAlerts(
+  limit = 4,
+  filters: PromotionsDashboardFilters = {}
+): Promise<PromotionAlert[]> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select(
+        "id, nombre, presupuesto_asignado, presupuesto_consumido, umbral_alerta_presupuesto_pct, roi"
+      ),
+    filters
+  )
+  if (error) throw error
+
+  const alerts: PromotionAlert[] = []
+  for (const row of data ?? []) {
+    if (
+      row.umbral_alerta_presupuesto_pct != null &&
+      row.presupuesto_asignado > 0
+    ) {
+      const consumedPct = row.presupuesto_consumido / row.presupuesto_asignado
+      if (consumedPct >= row.umbral_alerta_presupuesto_pct / 100) {
+        alerts.push({
+          id: `${row.id}-presupuesto`,
+          severity: "warning",
+          type: "presupuesto",
+          nombre: row.nombre,
+          consumedPct,
+          thresholdPct: row.umbral_alerta_presupuesto_pct,
+        })
+      }
+    }
+    if (row.roi != null && row.roi < 1) {
+      alerts.push({
+        id: `${row.id}-roi`,
+        severity: "destructive",
+        type: "roi",
+        nombre: row.nombre,
+        roi: row.roi,
+      })
+    }
+  }
+  return alerts.slice(0, limit)
+}
+
+export type PromotionEventItem = {
+  id: string
+  promocionId: string
+  promocionNombre: string
+  tipo: PromotionEventType
+  titulo: string
+  detalle: string | null
+  actorEtiqueta: string
+  canal: ChannelScope | null
+  codigoMotivo: string | null
+  notaMotivo: string | null
+  metadatos: Record<string, unknown>
+  ocurridoEn: string
+}
+
+/**
+ * Bitácora de "Panel de promociones · Logs" — todos los eventos de
+ * `promocion_eventos` de la org, más recientes primero. Es una muestra
+ * representativa de actividad reciente, no un ledger reconciliado con
+ * `canjes`/`presupuesto_consumido` (ver comentario de la migración
+ * `20260826160000_promociones_eventos.sql`). Sin límite: a esta escala de
+ * datos demo no hace falta paginar server-side — el filtro y el "cargar
+ * más" corren en cliente, igual que `ProductHistoryCard`.
+ */
+export async function listPromotionEvents(): Promise<PromotionEventItem[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("promocion_eventos")
+    .select(
+      "id, promocion_id, tipo, titulo, detalle, actor_etiqueta, canal, codigo_motivo, nota_motivo, metadatos, ocurrido_en"
+    )
+    .order("ocurrido_en", { ascending: false })
+  if (error) throw error
+
+  const promocionIds = [...new Set((data ?? []).map((row) => row.promocion_id))]
+  const nameById = new Map<string, string>()
+  if (promocionIds.length > 0) {
+    const { data: promos, error: promosError } = await supabase
+      .from("promociones")
+      .select("id, nombre")
+      .in("id", promocionIds)
+    if (promosError) throw promosError
+    for (const promo of promos ?? []) nameById.set(promo.id, promo.nombre)
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    promocionId: row.promocion_id,
+    promocionNombre: nameById.get(row.promocion_id) ?? "—",
+    tipo: row.tipo as PromotionEventType,
+    titulo: row.titulo,
+    detalle: row.detalle,
+    actorEtiqueta: row.actor_etiqueta,
+    canal: row.canal as ChannelScope | null,
+    codigoMotivo: row.codigo_motivo,
+    notaMotivo: row.nota_motivo,
+    metadatos: (row.metadatos as Record<string, unknown>) ?? {},
+    ocurridoEn: row.ocurrido_en,
+  }))
+}
+
+export type PromotionCanjesTrendRow = {
+  weekKey: string
+  weekLabel: string
+  counts: Partial<Record<PromotionType, number>>
+}
+
+/**
+ * "Canjes por semana" real, agrupado por `promociones.tipo` — a diferencia
+ * de `canjes`/`presupuesto_consumido` (contadores de fila), esto sí tiene
+ * fecha real detrás (`promocion_eventos.ocurrido_en`). Volumen de la
+ * muestra sembrada, no de producción — ver comentario de
+ * `20260826190000_promociones_eventos_demo_extra.sql`.
+ */
+export async function getPromotionCanjesTrend(
+  promocionIds?: string[]
+): Promise<{
+  rows: PromotionCanjesTrendRow[]
+  tipos: PromotionType[]
+}> {
+  const supabase = await createClient()
+  let query = supabase
+    .from("promocion_eventos")
+    .select("ocurrido_en, promocion_id")
+    .eq("tipo", "canje")
+  if (promocionIds && promocionIds.length > 0) {
+    query = query.in("promocion_id", promocionIds)
+  }
+  const { data, error } = await query
+  if (error) throw error
+
+  const eventPromocionIds = [
+    ...new Set((data ?? []).map((row) => row.promocion_id)),
+  ]
+  const tipoById = new Map<string, PromotionType>()
+  if (eventPromocionIds.length > 0) {
+    const { data: promos, error: promosError } = await supabase
+      .from("promociones")
+      .select("id, tipo")
+      .in("id", eventPromocionIds)
+    if (promosError) throw promosError
+    for (const promo of promos ?? [])
+      tipoById.set(promo.id, promo.tipo as PromotionType)
+  }
+
+  const buckets = new Map<string, Partial<Record<PromotionType, number>>>()
+  const mondayByWeekKey = new Map<string, Date>()
+  for (const row of data ?? []) {
+    const tipo = tipoById.get(row.promocion_id)
+    if (!tipo) continue
+    const occurred = new Date(row.ocurrido_en)
+    const monday = new Date(occurred)
+    const day = monday.getDay()
+    const diffToMonday = day === 0 ? 6 : day - 1
+    monday.setDate(monday.getDate() - diffToMonday)
+    monday.setHours(0, 0, 0, 0)
+    const weekKey = toDateParam(monday)
+    mondayByWeekKey.set(weekKey, monday)
+
+    const bucket = buckets.get(weekKey) ?? {}
+    bucket[tipo] = (bucket[tipo] ?? 0) + 1
+    buckets.set(weekKey, bucket)
+  }
+
+  const weekKeys = [...buckets.keys()].sort()
+  const rows = weekKeys.map((weekKey) => ({
+    weekKey,
+    weekLabel: formatShortDate(mondayByWeekKey.get(weekKey)!),
+    counts: buckets.get(weekKey)!,
+  }))
+  const tipos = [...new Set(tipoById.values())]
+  return { rows, tipos }
+}
+
+export type PromotionChannelAttributionItem = {
+  canal: ChannelScope
+  count: number
+  pct: number
+}
+
+/**
+ * Atribución real de `canje`/`canje_rechazado` por `canal` del evento (no
+ * `promociones.canal_aplicacion`, que es config de la promoción). Excluye
+ * eventos sin `canal` (los de ciclo de vida no lo tienen).
+ */
+export async function getPromotionChannelAttribution(
+  promocionIds?: string[]
+): Promise<PromotionChannelAttributionItem[]> {
+  const supabase = await createClient()
+  let query = supabase
+    .from("promocion_eventos")
+    .select("canal")
+    .in("tipo", ["canje", "canje_rechazado"])
+    .not("canal", "is", null)
+  if (promocionIds && promocionIds.length > 0) {
+    query = query.in("promocion_id", promocionIds)
+  }
+  const { data, error } = await query
+  if (error) throw error
+
+  const totals = new Map<ChannelScope, number>()
+  for (const row of data ?? []) {
+    const canal = row.canal as ChannelScope
+    totals.set(canal, (totals.get(canal) ?? 0) + 1)
+  }
+  const total = [...totals.values()].reduce((acc, v) => acc + v, 0)
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([canal, count]) => ({
+      canal,
+      count,
+      pct: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+    }))
+}
+
+export type PromotionOption = { id: string; name: string }
+
+/** Opciones para el filtro "Promoción" de "Panel de promociones" — todas, sin importar estado/vigencia (el usuario puede querer aislar una que ya venció o una en borrador). */
+export async function listPromotionOptions(): Promise<PromotionOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("promociones")
+    .select("id, nombre")
+    .order("nombre")
+  if (error) throw error
+  return (data ?? []).map((row) => ({ id: row.id, name: row.nombre }))
+}
+
+export type ExpiringPromotion = {
+  id: string
+  nombre: string
+  diasRestantes: number
+}
+
+/** Día calendario en UTC como entero comparable — mismo criterio que `dateOnly` de `./status.ts` (evita que la hora del día o el huso corran el límite). */
+function daysUntil(dateStr: string): number {
+  const target = new Date(dateStr)
+  const targetUTC = Date.UTC(
+    target.getUTCFullYear(),
+    target.getUTCMonth(),
+    target.getUTCDate()
+  )
+  const now = new Date()
+  const todayUTC = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  )
+  return Math.round((targetUTC - todayUTC) / 86_400_000)
+}
+
+/**
+ * Promociones activas (de verdad activas hoy, no solo `estado_publicacion`)
+ * cuya `vigente_hasta` cae dentro de `withinDays` — real, de la misma
+ * columna que ya usa `validitySummary`. Rellena la barra lateral del panel
+ * con una alerta operativa real en vez de dejarla vacía.
+ */
+export async function getPromotionsExpiringSoon(
+  filters: PromotionsDashboardFilters = {},
+  withinDays = 7
+): Promise<ExpiringPromotion[]> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select("id, nombre, estado_publicacion, vigente_desde, vigente_hasta"),
+    filters
+  )
+  if (error) throw error
+
+  const results: ExpiringPromotion[] = []
+  for (const row of data ?? []) {
+    if (!row.vigente_hasta) continue
+    if (promotionStatus(row) !== "activa") continue
+    const diasRestantes = daysUntil(row.vigente_hasta)
+    if (diasRestantes >= 0 && diasRestantes <= withinDays) {
+      results.push({ id: row.id, nombre: row.nombre, diasRestantes })
+    }
+  }
+  return results.sort((a, b) => a.diasRestantes - b.diasRestantes)
+}
+
 export type ConditionCategory = { id: string; name: string }
 
 /**
@@ -363,12 +933,17 @@ export async function listSuppliers(): Promise<SupplierOption[]> {
   return (data ?? []).map((p) => ({ id: p.id, name: p.nombre }))
 }
 
-/** `costUnit` (`productos.costo_unitario`) alimenta el aviso de venta bajo costo de `precio_especial` (F12) — el bloqueo real corre en servidor, esto es solo el aviso en vivo del formulario. */
+/**
+ * `brand`/`price` (`marca`, `precio`) alimentan las columnas del picker de
+ * productos (`ProductPickerRow`) — no requieren un join, ya son columnas
+ * de `productos`.
+ */
 export type ProductOption = {
   id: string
   name: string
   sku: string
-  costUnit: number | null
+  brand: string | null
+  price: number
 }
 
 /**
@@ -386,7 +961,7 @@ export async function listProductOptionsForPromotions(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("productos")
-    .select("id, nombre, sku, costo_unitario")
+    .select("id, nombre, sku, marca, precio")
     .eq("estado", "activo")
     .order("nombre")
     .limit(50)
@@ -398,7 +973,7 @@ export async function listProductOptionsForPromotions(
   if (missingIds.length > 0) {
     const { data: extraData, error: extraError } = await supabase
       .from("productos")
-      .select("id, nombre, sku, costo_unitario")
+      .select("id, nombre, sku, marca, precio")
       .in("id", missingIds)
     if (extraError) throw extraError
     extra = extraData ?? []
@@ -408,7 +983,8 @@ export async function listProductOptionsForPromotions(
     id: p.id,
     name: p.nombre,
     sku: p.sku,
-    costUnit: p.costo_unitario,
+    brand: p.marca,
+    price: p.precio,
   }))
 }
 
@@ -441,6 +1017,12 @@ export async function listCouponBatchesForPromotions(): Promise<
  */
 export type ConditionOptions = {
   categories: ConditionCategory[]
+  // El campo condición `producto` reusa `ProductOption[]` (no un
+  // `ConditionOption[]` de `{id, name}`) porque necesita buscador por
+  // nombre/SKU/marca — el mismo `EntityPickerField` que ya usan
+  // `producto_gratis`/`por_piezas`/`precio_especial` en el paso
+  // Configuración, no el `Multiselect` en memoria de `categoria`/`brands`.
+  products: ProductOption[]
   cities: ConditionCity[]
   segments: ConditionSegment[]
   couponBatches: CouponBatchOption[]

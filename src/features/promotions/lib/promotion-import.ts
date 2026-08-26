@@ -432,7 +432,7 @@ export type ImportFailure = {
 }
 export type ImportReadyRow = { rowNumber: number; values: PromotionValues }
 
-/** Traduce un `path` de `promotionSchema` (las reglas cruzadas de F12/S05/etc.) de vuelta a la columna del CSV que lo originó, para que el error se vea en la tabla de validación en la columna correcta. */
+/** Traduce un `path` de `promotionSchema` (las reglas cruzadas de S05/S06/etc.) de vuelta a la columna del CSV que lo originó, para que el error se vea en la tabla de validación en la columna correcta. */
 const SCHEMA_FIELD_TO_COLUMN: Partial<
   Record<string, PromotionImportColumnKey>
 > = {

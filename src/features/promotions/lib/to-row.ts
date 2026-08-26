@@ -7,6 +7,7 @@ const PRODUCT_LEVEL_BENEFIT_TYPES = new Set<PromotionValues["benefitType"]>([
   "producto_gratis",
   "precio_fijo_bundle",
   "por_piezas",
+  "descuento_continuidad",
 ])
 
 /**
@@ -108,6 +109,11 @@ export function toRow(values: PromotionValues) {
     disponibilidad_dias: pick("disponibilidadDias"),
     vigencia_saldo_dias: pick("vigenciaSaldoDias"),
     monto_minimo_canje: pick("montoMinimoCanje"),
+    ventana_continuidad_dias: pick("ventanaContinuidadDias"),
+    al_romper_continuidad: pick("alRomperContinuidad"),
+    acumula_retroactivo: pick("acumulaRetroactivo", false),
+    efecto_devolucion: pick("efectoDevolucion"),
+    criterio_seleccion_piezas: pick("criterioSeleccionPiezas"),
     vigente_desde: values.validFrom,
     vigente_hasta: values.validUntil || null,
     dias_semana: values.daysOfWeek.length > 0 ? values.daysOfWeek : null,
@@ -135,13 +141,11 @@ export function toRow(values: PromotionValues) {
         ? null
         : (values.periodoLiquidacion ?? null),
     umbral_alerta_presupuesto_pct: values.umbralAlertaPresupuestoPct ?? null,
-    autorizacion_venta_bajo_costo: values.autorizacionVentaBajoCosto,
     nivel_aplicacion: values.nivelAplicacion,
     aplica_sobre_precio: values.aplicaSobrePrecio,
     descuento_acumula_puntos: values.descuentoAcumulaPuntos,
     aplica_a_rx: values.aplicaARx,
     aprobacion_regulatoria: values.aprobacionRegulatoria,
-    simulacion_ejecutada: values.simulacionEjecutada,
     estado_publicacion: values.publicationStatus,
   }
 }

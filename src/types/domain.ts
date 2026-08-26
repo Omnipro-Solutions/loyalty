@@ -323,7 +323,7 @@ export const PROMOTION_TYPES = [
 ] as const
 export type PromotionType = (typeof PROMOTION_TYPES)[number]
 
-// Field of an IF condition (07.1 "Condiciones (SI)"). All 18 have a real
+// Field of an IF condition (07.1 "Condiciones (SI)"). All 19 have a real
 // table/column behind them — 'categoria'/'tienda' from the start,
 // 'segmento' since 11 · Audiencias (`segments`), 'monto_carrito' since
 // `pedidos` exists, 'cupon_codigo' since `coupon_batch` exists (T15 del
@@ -335,12 +335,18 @@ export type PromotionType = (typeof PROMOTION_TYPES)[number]
 // (`members`, ver `features/members/components/member-hero.tsx`) — y
 // 'producto_receta' desde que existe `productos.requiere_receta`
 // (docs/promociones.md §8, migración `20260826153000_productos_receta`).
+// 'producto' referencia directamente `productos.id` (a diferencia de
+// 'categoria'/'producto_marca', que son atributos del producto, no el
+// producto en sí) — para acotar la promoción a uno o varios SKU puntuales
+// sin pasar por una mecánica que ya tenga su propio picker (ej.
+// `precio_especial`).
 // Deliberately left out: any "ticket"/"linea"/"contexto" field (día, hora,
 // medio de pago, feriados) — none of those have a real column anywhere in
 // the schema, so adding them would be inventing UI for data that doesn't
 // exist.
 export const CONDITION_FIELDS = [
   "categoria",
+  "producto",
   "tienda",
   "segmento",
   "monto_carrito",
@@ -381,12 +387,15 @@ export type ConditionCombinator = (typeof CONDITION_COMBINATORS)[number]
 // Reward benefit type (07.1 "Recompensa (ENTONCES)" → paso "Mecánica").
 // `descuento_escalonado` es la única de las 3 mecánicas de descuento con
 // un beneficio multi-fila (`escalones`) en vez de un valor único — ver
-// docs/promociones.md §7.1a. Todas son la versión transaccional (evaluada
-// contra un solo carrito); la variante acumulada en el tiempo (§7.1b), la
-// acumulación multi-ticket (T07) y la línea de farmacia clínica (T18-T21)
-// de docs/modalidades-promocion-contexto.md quedan fuera — exigen,
-// respectivamente, un contador vivo entre tickets y un dominio regulado
-// de datos de salud aparte (ver docs/promociones.md §18).
+// docs/promociones.md §7.1a. La mayoría son la versión transaccional
+// (evaluada contra un solo carrito); `descuento_continuidad` es la
+// excepción deliberada — reusa `escalones` con `umbral` como ordinal de
+// compra consecutiva, no unidades/monto del carrito (ver
+// `CONTINUITY_BREAK_BEHAVIORS` abajo y
+// `20260826180000_promociones_continuidad.sql`). La acumulación
+// multi-ticket genérica (T07) y la línea de farmacia clínica (T18-T21,
+// dominio regulado de datos de salud) de docs/modalidades-promocion-
+// contexto.md siguen fuera (ver docs/promociones.md §18).
 export const BENEFIT_TYPES = [
   "descuento_porcentual",
   "descuento_monto_fijo",
@@ -400,6 +409,7 @@ export const BENEFIT_TYPES = [
   "emitir_cupon",
   "precio_especial",
   "cashback",
+  "descuento_continuidad",
 ] as const
 export type BenefitType = (typeof BENEFIT_TYPES)[number]
 
@@ -418,6 +428,34 @@ export const DISCOUNT_TIER_CALCULATION_MODES = [
 ] as const
 export type DiscountTierCalculationMode =
   (typeof DISCOUNT_TIER_CALCULATION_MODES)[number]
+
+// Sub-choices de `descuento_continuidad` — la escalera de continuidad
+// (variante V11 de docs/modalidades-promocion-contexto.md:1962-1978, no
+// T18: sin inscripción ni padrón de pacientes). `umbral` de `escalones` es
+// el ordinal de compra consecutiva; estos 3 campos declaran qué pasa
+// cuando el cliente excede la ventana de continuidad entre compras.
+export const CONTINUITY_BREAK_BEHAVIORS = [
+  "reiniciar",
+  "retroceder_un_escalon",
+  "mantener",
+] as const
+export type ContinuityBreakBehavior =
+  (typeof CONTINUITY_BREAK_BEHAVIORS)[number]
+
+/** Efecto de una devolución sobre el escalón alcanzado (campo pedido por la ficha T07, docs/modalidades-promocion-contexto.md:3235). */
+export const RETURN_EFFECTS = [
+  "no_afecta",
+  "rompe_racha",
+  "retrocede_escalon",
+] as const
+export type ReturnEffect = (typeof RETURN_EFFECTS)[number]
+
+/** Sobre qué piezas elegibles recae el beneficio cuando el límite de piezas del paso "Límites" topa el número de unidades. */
+export const PIECE_SELECTION_CRITERIA = [
+  "menor_precio",
+  "mayor_precio",
+] as const
+export type PieceSelectionCriterion = (typeof PIECE_SELECTION_CRITERIA)[number]
 
 // Alcance de `por_piezas` (BxGy) — qué universo de producto cuenta para
 // "compra N". `producto_especifico` reusa `productoCompradoId` (el mismo
@@ -750,3 +788,26 @@ export const ENROLLMENT_REQUIREMENTS = [
   "primera_compra",
 ] as const
 export type EnrollmentRequirement = (typeof ENROLLMENT_REQUIREMENTS)[number]
+
+/** Vocabulario de `tipo` en `promocion_eventos` — ciclo de vida + canjes, ver comentario de la migración `20260826160000_promociones_eventos.sql`. */
+export const PROMOTION_EVENT_TYPES = [
+  "creada",
+  "activada",
+  "pausada",
+  "presupuesto_incrementado",
+  "presupuesto_agotado",
+  "vencida",
+  "cancelada",
+  "canje",
+  "canje_rechazado",
+] as const
+export type PromotionEventType = (typeof PROMOTION_EVENT_TYPES)[number]
+
+export const PROMOTION_EVENT_ACTOR_TYPES = [
+  "usuario",
+  "sistema",
+  "regla",
+  "tienda",
+] as const
+export type PromotionEventActorType =
+  (typeof PROMOTION_EVENT_ACTOR_TYPES)[number]

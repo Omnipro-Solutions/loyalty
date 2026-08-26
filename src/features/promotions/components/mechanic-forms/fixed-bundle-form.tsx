@@ -9,9 +9,15 @@ import {
 } from "react-hook-form"
 
 import { CurrencyInput } from "@/components/form/currency-input"
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { Field } from "@/components/form/field"
-import { Multiselect } from "@/components/form/multiselect"
 
+import {
+  ProductPickerRow,
+  productBrandFacet,
+  productPickerChipLabel,
+  productPickerSearchText,
+} from "../../lib/product-picker"
 import type { ProductOption } from "../../lib/queries"
 import type { PromotionValues } from "../../schemas"
 
@@ -49,13 +55,20 @@ export function FixedBundleForm({
         hint="Elige al menos 2 productos."
         error={bundleError}
       >
-        <Multiselect
-          options={products.map((p) => ({
-            value: p.id,
-            label: `${p.name} · ${p.sku}`,
-          }))}
+        <EntityPickerField
+          title="Productos del bundle"
+          description="Agrega condiciones sobre los atributos del producto, busca y agrega lo que coincida."
+          mode="multiple"
+          items={products}
+          getId={(p) => p.id}
+          getSearchText={productPickerSearchText}
+          getChipLabel={productPickerChipLabel}
+          renderRow={(p) => <ProductPickerRow product={p} />}
+          facets={[productBrandFacet(products)]}
+          placeholder="Elige los productos del bundle"
+          confirmLabel="Agregar al bundle"
           value={productosBundleIds}
-          onValueChange={(v) => setValue("productosBundleIds", v)}
+          onValueChange={(ids) => setValue("productosBundleIds", ids)}
         />
       </Field>
       <Field

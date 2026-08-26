@@ -8,18 +8,18 @@ import {
   type UseFormSetValue,
 } from "react-hook-form"
 
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { Field } from "@/components/form/field"
 import { Row } from "@/components/form/row"
 import { Stepper } from "@/components/form/stepper"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
+import {
+  ProductPickerRow,
+  productBrandFacet,
+  productPickerChipLabel,
+  productPickerSearchText,
+} from "../../lib/product-picker"
 import type { ProductOption } from "../../lib/queries"
 import type { PromotionValues } from "../../schemas"
 
@@ -29,11 +29,6 @@ type FreeProductFormProps = {
   errors: FieldErrors<PromotionValues>
   setValue: UseFormSetValue<PromotionValues>
   products: ProductOption[]
-}
-
-function productLabel(products: ProductOption[], id: string): string {
-  const product = products.find((p) => p.id === id)
-  return product ? `${product.name} · ${product.sku}` : id
 }
 
 /**
@@ -67,23 +62,22 @@ export function FreeProductForm({
           required
           error={errors.productoCompradoId?.message}
         >
-          <Select
-            value={productoCompradoId ?? ""}
-            onValueChange={(v) => v && setValue("productoCompradoId", v)}
-          >
-            <SelectTrigger id="productoCompradoId">
-              <SelectValue placeholder="Elige un producto">
-                {(v: string) => productLabel(products, v)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} · {p.sku}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EntityPickerField
+            id="productoCompradoId"
+            title="Producto comprado"
+            description="Busca por nombre, SKU o marca."
+            mode="single"
+            items={products}
+            getId={(p) => p.id}
+            getSearchText={productPickerSearchText}
+            getChipLabel={productPickerChipLabel}
+            renderRow={(p) => <ProductPickerRow product={p} />}
+            facets={[productBrandFacet(products)]}
+            placeholder="Elige un producto"
+            confirmLabel="Elegir producto"
+            value={productoCompradoId ? [productoCompradoId] : []}
+            onValueChange={([id]) => setValue("productoCompradoId", id)}
+          />
         </Field>
         <Field
           label="Cantidad mínima comprada"
@@ -108,23 +102,22 @@ export function FreeProductForm({
           hint="Puede ser el mismo producto comprado (2x1) u otro distinto."
           error={errors.productoRegaloId?.message}
         >
-          <Select
-            value={productoRegaloId ?? ""}
-            onValueChange={(v) => v && setValue("productoRegaloId", v)}
-          >
-            <SelectTrigger id="productoRegaloId">
-              <SelectValue placeholder="Elige un producto">
-                {(v: string) => productLabel(products, v)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} · {p.sku}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EntityPickerField
+            id="productoRegaloId"
+            title="Producto de regalo"
+            description="Busca por nombre, SKU o marca."
+            mode="single"
+            items={products}
+            getId={(p) => p.id}
+            getSearchText={productPickerSearchText}
+            getChipLabel={productPickerChipLabel}
+            renderRow={(p) => <ProductPickerRow product={p} />}
+            facets={[productBrandFacet(products)]}
+            placeholder="Elige un producto"
+            confirmLabel="Elegir producto"
+            value={productoRegaloId ? [productoRegaloId] : []}
+            onValueChange={([id]) => setValue("productoRegaloId", id)}
+          />
         </Field>
         <Field
           label="Cantidad de regalo"
