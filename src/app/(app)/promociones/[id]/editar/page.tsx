@@ -15,10 +15,15 @@ import {
   listConditionTiers,
   listCouponBatchesForPromotions,
   listProductOptionsForPromotions,
+  listSuppliers,
   type ConditionOptions,
 } from "@/features/promotions/lib/queries"
-import { STORE_FORMAT_LABEL } from "@/features/promotions/lib/labels"
-import { STORE_FORMATS } from "@/types/domain"
+import {
+  GENDER_LABEL,
+  MARITAL_STATUS_LABEL,
+  STORE_FORMAT_LABEL,
+} from "@/features/promotions/lib/labels"
+import { GENDERS, MARITAL_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 /** Reutiliza el mismo wizard de creación (07.1 adaptado) precargado con los valores existentes. */
 export default async function EditPromotionPage({
@@ -35,6 +40,7 @@ export default async function EditPromotionPage({
     provinces,
     storeRegions,
     brands,
+    conditionSuppliers,
     suppliers,
   ] = await Promise.all([
     getPromotionById(id),
@@ -47,6 +53,7 @@ export default async function EditPromotionPage({
     listConditionStoreRegions(),
     listConditionBrands(),
     listConditionSuppliers(),
+    listSuppliers(),
   ])
   if (!promotion) notFound()
 
@@ -72,7 +79,12 @@ export default async function EditPromotionPage({
       label: STORE_FORMAT_LABEL[f],
     })),
     brands,
-    suppliers,
+    suppliers: conditionSuppliers,
+    genders: GENDERS.map((g) => ({ value: g, label: GENDER_LABEL[g] })),
+    maritalStatuses: MARITAL_STATUSES.map((m) => ({
+      value: m,
+      label: MARITAL_STATUS_LABEL[m],
+    })),
   }
 
   return (
@@ -84,6 +96,7 @@ export default async function EditPromotionPage({
       <PromotionForm
         options={options}
         products={products}
+        suppliers={suppliers}
         promotion={promotion}
       />
     </AppPage>

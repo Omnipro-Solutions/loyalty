@@ -22,10 +22,15 @@ export type Condition =
   | { campo: "socio_provincia"; valor: string[] }
   | { campo: "socio_antiguedad"; valor: number }
   | { campo: "socio_edad"; valor: number }
+  | { campo: "genero"; valor: string[] }
+  | { campo: "estado_civil"; valor: string[] }
+  | { campo: "tiene_hijos"; valor: boolean }
+  | { campo: "tiene_mascotas"; valor: boolean }
   | { campo: "tienda_region"; valor: string[] }
   | { campo: "tienda_formato"; valor: string[] }
   | { campo: "producto_marca"; valor: string[] }
   | { campo: "producto_proveedor"; valor: string[] }
+  | { campo: "producto_receta"; valor: boolean }
 
 /**
  * Árbol de condiciones (jsonb de `promociones.condiciones`) — grupos Y/O
@@ -340,6 +345,24 @@ export async function listConditionSuppliers(): Promise<ConditionOption[]> {
   return distinctTextValues((data ?? []).map((p) => p.proveedor))
 }
 
+export type SupplierOption = { id: string; name: string }
+
+/**
+ * Catálogo `proveedores` (nombre + RFC), para el select "Proveedor" del
+ * paso Economía — quién cofinancia la promoción. Sin relación con
+ * `listConditionSuppliers` (texto libre de `productos.proveedor`, "quién
+ * fabrica este SKU"): son dos conceptos distintos.
+ */
+export async function listSuppliers(): Promise<SupplierOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("proveedores")
+    .select("id, nombre")
+    .order("nombre")
+  if (error) throw error
+  return (data ?? []).map((p) => ({ id: p.id, name: p.nombre }))
+}
+
 /** `costUnit` (`productos.costo_unitario`) alimenta el aviso de venta bajo costo de `precio_especial` (F12) — el bloqueo real corre en servidor, esto es solo el aviso en vivo del formulario. */
 export type ProductOption = {
   id: string
@@ -412,7 +435,9 @@ export async function listCouponBatchesForPromotions(): Promise<
  * props sueltas para 10 listas ya no escalaba. `storeFormats` no viene de
  * una consulta — `tiendas.formato` está acotado por el mismo `check` que
  * la tupla `STORE_FORMATS` de `@/types/domain`, así que se pasa el
- * catálogo fijo, no un `SELECT DISTINCT`.
+ * catálogo fijo, no un `SELECT DISTINCT` — mismo criterio para `genders`/
+ * `maritalStatuses` (`members.genero`/`members.estado_civil`, acotados por
+ * `GENDERS`/`MARITAL_STATUSES`).
  */
 export type ConditionOptions = {
   categories: ConditionCategory[]
@@ -425,4 +450,6 @@ export type ConditionOptions = {
   storeFormats: ConditionOption[]
   brands: ConditionOption[]
   suppliers: ConditionOption[]
+  genders: ConditionOption[]
+  maritalStatuses: ConditionOption[]
 }

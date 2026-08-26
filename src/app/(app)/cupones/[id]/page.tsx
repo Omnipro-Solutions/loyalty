@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
+import { BackLink } from "@/components/layout/back-link"
 import { CouponAssignmentsList } from "@/features/coupons/components/coupon-assignments-list"
 import { CouponDetailActions } from "@/features/coupons/components/coupon-detail-actions"
 import {
@@ -174,6 +175,8 @@ export default async function CouponDetailPage({
       breadcrumb={`Comercial  ›  Cupones  ›  ${coupon.code}`}
       title={coupon.code}
     >
+      <BackLink href="/cupones?vista=coupons">Volver</BackLink>
+
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">

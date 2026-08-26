@@ -12,10 +12,15 @@ import {
   listConditionTiers,
   listCouponBatchesForPromotions,
   listProductOptionsForPromotions,
+  listSuppliers,
   type ConditionOptions,
 } from "@/features/promotions/lib/queries"
-import { STORE_FORMAT_LABEL } from "@/features/promotions/lib/labels"
-import { STORE_FORMATS } from "@/types/domain"
+import {
+  GENDER_LABEL,
+  MARITAL_STATUS_LABEL,
+  STORE_FORMAT_LABEL,
+} from "@/features/promotions/lib/labels"
+import { GENDERS, MARITAL_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 /** Adaptado de Figma "07.1 · Regla · configuración" (633:658) — ver nota en la migración. */
 export default async function NewPromotionPage() {
@@ -29,6 +34,7 @@ export default async function NewPromotionPage() {
     provinces,
     storeRegions,
     brands,
+    conditionSuppliers,
     suppliers,
   ] = await Promise.all([
     listConditionCategories(),
@@ -41,6 +47,7 @@ export default async function NewPromotionPage() {
     listConditionStoreRegions(),
     listConditionBrands(),
     listConditionSuppliers(),
+    listSuppliers(),
   ])
 
   const options: ConditionOptions = {
@@ -56,7 +63,12 @@ export default async function NewPromotionPage() {
       label: STORE_FORMAT_LABEL[f],
     })),
     brands,
-    suppliers,
+    suppliers: conditionSuppliers,
+    genders: GENDERS.map((g) => ({ value: g, label: GENDER_LABEL[g] })),
+    maritalStatuses: MARITAL_STATUSES.map((m) => ({
+      value: m,
+      label: MARITAL_STATUS_LABEL[m],
+    })),
   }
 
   return (
@@ -65,7 +77,11 @@ export default async function NewPromotionPage() {
       title="Nueva promoción"
     >
       <BackLink href="/promociones">Volver a Promociones</BackLink>
-      <PromotionForm options={options} products={products} />
+      <PromotionForm
+        options={options}
+        products={products}
+        suppliers={suppliers}
+      />
     </AppPage>
   )
 }

@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { DAYS_OF_WEEK, type DayOfWeek } from "@/types/domain"
 
 import { previewConditionAction } from "./actions"
 import {
@@ -85,6 +86,21 @@ const YES_NO = [
   { name: "true", label: "Sí" },
   { name: "false", label: "No" },
 ]
+
+/** Igual que `features/promotions/lib/labels.ts` `DAY_OF_WEEK_LABEL` — duplicado a propósito (features aisladas, CLAUDE.md §2). */
+const DAY_OF_WEEK_LABEL: Record<DayOfWeek, string> = {
+  lunes: "Lunes",
+  martes: "Martes",
+  miercoles: "Miércoles",
+  jueves: "Jueves",
+  viernes: "Viernes",
+  sabado: "Sábado",
+  domingo: "Domingo",
+}
+const DAY_OPTIONS = DAYS_OF_WEEK.map((d) => ({
+  name: d,
+  label: DAY_OF_WEEK_LABEL[d],
+}))
 
 /**
  * Atributos expuestos para segmentar (criterio de producto: los campos de
@@ -186,6 +202,31 @@ const FIELDS: Field[] = [
     inputType: "text",
     operators: COMPARISON_OPERATORS,
   },
+  {
+    name: "edad",
+    label: "Edad",
+    inputType: "number",
+    operators: NUMERIC_OPERATORS,
+  },
+  {
+    name: "estado_civil",
+    label: "Estado civil",
+    valueEditorType: "select",
+    values: [
+      { name: "soltero", label: "Soltero" },
+      { name: "casado", label: "Casado" },
+      { name: "union_libre", label: "Unión libre" },
+      { name: "divorciado", label: "Divorciado" },
+      { name: "viudo", label: "Viudo" },
+    ],
+    operators: COMPARISON_OPERATORS,
+  },
+  {
+    name: "preferencia_compra",
+    label: "Preferencia de compra",
+    inputType: "text",
+    operators: COMPARISON_OPERATORS,
+  },
 ]
 
 const MEMBER_FIELD_GROUP = "Atributos del socio"
@@ -206,9 +247,38 @@ const AUTOCOMPLETE_FIELDS = FIELDS.map((f) => ({
  * del formulario. El tipo de dato se infiere por nombre (`inferType`, mismo
  * criterio que ya usa `DataTab`) — no hay un tipo declarado explícito por
  * variable en el catálogo de bloques.
+ *
+ * Dos casos puntuales sí reciben un editor real en vez de texto libre:
+ * booleano (`inferType` ya distingue `abierto`/`evaluadas`/`requiere_receta`)
+ * y el sufijo `dia_semana` (`compra.dia_semana`, valores reales de
+ * `DAYS_OF_WEEK`). No se generaliza a todo el bucket "enum" de `inferType`
+ * (`estado`, `nivel`, `segmento`…) porque esos sí varían de valores según la
+ * variable — no hay una sola lista que darles, a diferencia de un booleano o
+ * de un día de la semana, que son siempre los mismos 2 o 7 valores.
  */
 function fieldForGraphVariable(v: GraphVariable): Field {
   const kind = inferType(v.name)
+  const suffix = v.name.split(".").pop() ?? ""
+
+  if (kind === "booleano") {
+    return {
+      name: v.name,
+      label: v.name,
+      valueEditorType: "select",
+      values: YES_NO,
+      operators: COMPARISON_OPERATORS,
+    }
+  }
+  if (suffix === "dia_semana") {
+    return {
+      name: v.name,
+      label: v.name,
+      valueEditorType: "select",
+      values: DAY_OPTIONS,
+      operators: COMPARISON_OPERATORS,
+    }
+  }
+
   const numeric = kind === "número" || kind === "fecha"
   return {
     name: v.name,

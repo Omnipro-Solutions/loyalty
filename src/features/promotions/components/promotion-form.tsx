@@ -68,11 +68,11 @@ import {
   updatePromotionAction,
   createPromotionAction,
 } from "../actions/promotions"
-import { suggestedCostNature } from "../lib/cost-nature"
 import {
   BENEFIT_TYPES_WITH_APPLY_TO,
   MECHANIC_FIELDS,
 } from "../lib/mechanic-fields"
+import { createPromotionDefaults } from "../lib/promotion-defaults"
 import { ConditionsBuilder } from "./conditions-builder"
 import { DiscountTiersBuilder } from "./discount-tiers-builder"
 import { LimitsBuilder } from "./limits-builder"
@@ -101,6 +101,7 @@ import type {
   ConditionOptions,
   Promotion,
   ProductOption,
+  SupplierOption,
 } from "../lib/queries"
 import { promotionSchema, type PromotionValues } from "../schemas"
 
@@ -147,7 +148,7 @@ function fieldsForStep(
       return [
         "naturalezaCosto",
         "financiador",
-        "proveedor",
+        "proveedorId",
         "contratoId",
         "porcentajeCostoProveedor",
         "periodoLiquidacion",
@@ -167,6 +168,7 @@ function fieldsForStep(
 type PromotionFormProps = {
   options: ConditionOptions
   products: ProductOption[]
+  suppliers: SupplierOption[]
   promotion?: Promotion
 }
 
@@ -187,6 +189,7 @@ type PromotionFormProps = {
 export function PromotionForm({
   options,
   products,
+  suppliers,
   promotion,
 }: PromotionFormProps) {
   const router = useRouter()
@@ -321,7 +324,7 @@ export function PromotionForm({
             (promotion.modo_multiple as StackingMode) ?? "mejor_beneficio",
           naturalezaCosto: promotion.naturaleza_costo as CostNature,
           financiador: promotion.financiador as Financiador,
-          proveedor: promotion.proveedor ?? undefined,
+          proveedorId: promotion.proveedor_id ?? undefined,
           contratoId: promotion.contrato_id ?? undefined,
           porcentajeCostoProveedor:
             promotion.porcentaje_costo_proveedor ?? undefined,
@@ -341,88 +344,7 @@ export function PromotionForm({
           publicationStatus:
             promotion.estado_publicacion as PromotionPublicationStatus,
         }
-      : {
-          name: "",
-          code: "",
-          type: "categoria",
-          priority: 5,
-          stackable: false,
-          channelScope: "pos_ecommerce",
-          conditions: { combinador: "todas", condiciones: [] },
-          benefitType: "descuento_porcentual",
-          benefitValue: 10,
-          maxCap: undefined,
-          discountTiers: [],
-          thresholdType: "unidades",
-          tierCalculationMode: "escalon_unico",
-          applyTo: "subtotal_carrito",
-          compraCantidad: undefined,
-          pagaCantidad: undefined,
-          alcancePiezas: undefined,
-          descuentoUnidadExtraPct: undefined,
-          mezclaEnUniverso: true,
-          productoCompradoId: undefined,
-          productoRegaloId: undefined,
-          cantidadRegalo: undefined,
-          cantidadMinimaComprada: 1,
-          beneficioSobreRegaloPct: 100,
-          productosBundleIds: [],
-          multiplicadorPuntos: undefined,
-          nivelesRequeridos: [],
-          modoResolucionMultiplicador: "gana_mayor",
-          tipoSaldo: "canjeable",
-          momentoAcreditacion: "inmediato",
-          estadoInicial: "disponible",
-          bonoPuntos: undefined,
-          montoMinimoDisparo: undefined,
-          tipoBeneficioNoTransaccional: "envio_gratis",
-          validacionRequerida: undefined,
-          cupoDisponible: undefined,
-          registraUso: false,
-          couponBatchId: undefined,
-          motivoEmision: undefined,
-          umbralPuntos: undefined,
-          duracionCuponDias: undefined,
-          momentoDebitoPuntos: undefined,
-          devolucionSiVence: false,
-          eventoGatillo: undefined,
-          momentoResolucion: undefined,
-          frecuenciaDisparo: undefined,
-          requisitoAlta: undefined,
-          elegibleEnInactividad: false,
-          precioPromocional: undefined,
-          precioReferencia: undefined,
-          hastaAgotarExistencias: false,
-          respetaPrecioMinimoLegal: true,
-          tipoMonedero: "porcentaje",
-          disponibilidadDias: undefined,
-          vigenciaSaldoDias: undefined,
-          montoMinimoCanje: undefined,
-          validFrom: new Date().toISOString().slice(0, 10),
-          validUntil: undefined,
-          daysOfWeek: [],
-          horaInicio: undefined,
-          horaFin: undefined,
-          limites: [],
-          assignedBudget: 0,
-          exclusionGroup: undefined,
-          stackingMode: "mejor_beneficio",
-          naturalezaCosto: suggestedCostNature("descuento_porcentual"),
-          financiador: "retailer",
-          proveedor: undefined,
-          contratoId: undefined,
-          porcentajeCostoProveedor: undefined,
-          periodoLiquidacion: undefined,
-          umbralAlertaPresupuestoPct: undefined,
-          autorizacionVentaBajoCosto: false,
-          nivelAplicacion: "ticket",
-          aplicaSobrePrecio: "vigente",
-          descuentoAcumulaPuntos: true,
-          aplicaARx: "permitido",
-          aprobacionRegulatoria: false,
-          simulacionEjecutada: false,
-          publicationStatus: "borrador",
-        },
+      : createPromotionDefaults("descuento_porcentual"),
   })
 
   const values = useWatch({ control })
@@ -995,14 +917,28 @@ export function PromotionForm({
                 <Row>
                   <Field
                     label="Proveedor"
-                    htmlFor="proveedor"
-                    error={errors.proveedor?.message}
+                    htmlFor="proveedorId"
+                    error={errors.proveedorId?.message}
                   >
-                    <Input
-                      id="proveedor"
-                      placeholder="Ej.: Laboratorios Lilly"
-                      {...register("proveedor")}
-                    />
+                    <Select
+                      value={values.proveedorId ?? ""}
+                      onValueChange={(v) => v && setValue("proveedorId", v)}
+                    >
+                      <SelectTrigger id="proveedorId">
+                        <SelectValue placeholder="Elige un proveedor">
+                          {(v: string) =>
+                            suppliers.find((s) => s.id === v)?.name ?? v
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </Field>
                   <Field
                     label="Contrato"
@@ -1242,6 +1178,7 @@ export function PromotionForm({
                 products={products}
                 couponBatches={options.couponBatches}
                 tiers={options.tiers}
+                suppliers={suppliers}
               />
             </Section>
           )}

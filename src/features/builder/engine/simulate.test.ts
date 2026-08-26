@@ -77,13 +77,13 @@ describe("simulateWorkflow", () => {
     ])
   })
 
-  it("acumular_puntos separa el tope alcanzado del resto", () => {
+  it("acumular_puntos separa el tope alcanzado y el sin-puntos del resto (3 puertos, docs/builder.md §16)", () => {
     const nodes: SimNode[] = [
       { id: "a", tipo: "evento_compra", config: {} },
       {
         id: "pts",
         tipo: "acumular_puntos",
-        config: { tasa_tope_estimada: 10 },
+        config: { tasa_tope_estimada: 10, tasa_sin_puntos_estimada: 4 },
       },
     ]
     const edges: SimEdge[] = [
@@ -91,8 +91,49 @@ describe("simulateWorkflow", () => {
     ]
     const steps = simulateWorkflow(nodes, edges, 500)
     expect(steps.find((p) => p.nodeId === "pts")?.outputs).toEqual([
-      { port: "out", count: 450 },
+      { port: "out", count: 430 },
       { port: "tope_alcanzado", count: 50 },
+      { port: "sin_puntos", count: 20 },
+    ])
+  })
+
+  it("acumular_puntos usa 8% de tope y 3% de sin-puntos por defecto si no hay configuración", () => {
+    const nodes: SimNode[] = [
+      { id: "a", tipo: "evento_compra", config: {} },
+      { id: "pts", tipo: "acumular_puntos", config: {} },
+    ]
+    const edges: SimEdge[] = [
+      { source_node_id: "a", source_port: "out", target_node_id: "pts" },
+    ]
+    const steps = simulateWorkflow(nodes, edges, 1000)
+    expect(steps.find((p) => p.nodeId === "pts")?.outputs).toEqual([
+      { port: "out", count: 890 },
+      { port: "tope_alcanzado", count: 80 },
+      { port: "sin_puntos", count: 30 },
+    ])
+  })
+
+  it("acota tasa_sin_puntos_estimada para que los 3 puertos nunca sumen más del 100% de la cohorte", () => {
+    const nodes: SimNode[] = [
+      { id: "a", tipo: "evento_compra", config: {} },
+      {
+        id: "pts",
+        tipo: "acumular_puntos",
+        // 70 + 60 excedería el 100% si no se acotara
+        config: { tasa_tope_estimada: 70, tasa_sin_puntos_estimada: 60 },
+      },
+    ]
+    const edges: SimEdge[] = [
+      { source_node_id: "a", source_port: "out", target_node_id: "pts" },
+    ]
+    const steps = simulateWorkflow(nodes, edges, 1000)
+    const outputs = steps.find((p) => p.nodeId === "pts")?.outputs
+    const total = outputs?.reduce((acc, o) => acc + o.count, 0)
+    expect(total).toBe(1000)
+    expect(outputs).toEqual([
+      { port: "out", count: 0 },
+      { port: "tope_alcanzado", count: 700 },
+      { port: "sin_puntos", count: 300 },
     ])
   })
 

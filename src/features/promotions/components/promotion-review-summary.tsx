@@ -38,6 +38,7 @@ import type {
   ConditionTier,
   CouponBatchOption,
   ProductOption,
+  SupplierOption,
 } from "../lib/queries"
 import type {
   ConditionNodeValues,
@@ -199,6 +200,7 @@ type PromotionReviewSummaryProps = {
   products: ProductOption[]
   couponBatches: CouponBatchOption[]
   tiers: ConditionTier[]
+  suppliers: SupplierOption[]
 }
 
 /** Paso 6 "Resumen" del stepper — revisión de todo lo capturado antes de guardar (no diseñado en el Figma de la regla). */
@@ -209,12 +211,14 @@ export function PromotionReviewSummary({
   products,
   couponBatches,
   tiers,
+  suppliers,
 }: PromotionReviewSummaryProps) {
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
   const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
   const productNameById = new Map(products.map((p) => [p.id, p.name]))
   const tierNameById = new Map(tiers.map((t) => [t.id, t.name]))
   const couponBatchNameById = new Map(couponBatches.map((b) => [b.id, b.name]))
+  const supplierNameById = new Map(suppliers.map((s) => [s.id, s.name]))
   const conditionsTree = values.conditions
 
   return (
@@ -771,7 +775,15 @@ export function PromotionReviewSummary({
         />
         {values.financiador && values.financiador !== "retailer" && (
           <>
-            <SummaryRow label="Proveedor" value={values.proveedor || "—"} />
+            <SummaryRow
+              label="Proveedor"
+              value={
+                values.proveedorId
+                  ? (supplierNameById.get(values.proveedorId) ??
+                    values.proveedorId)
+                  : "—"
+              }
+            />
             <SummaryRow label="Contrato" value={values.contratoId || "—"} />
             <SummaryRow
               label="% que absorbe el proveedor"

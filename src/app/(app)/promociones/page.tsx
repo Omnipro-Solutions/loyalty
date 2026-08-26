@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { Plus, Upload } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 
@@ -60,9 +60,11 @@ export default async function PromotionsPage({
     page,
   })
 
-  // El texto de búsqueda queda fuera de la key a propósito (debounce de
-  // 300ms) — sí remonta al cambiar estado/canal/página.
-  const dataKey = `${publicationStatus ?? ""}|${channel ?? ""}|${page}`
+  // `search` ya llega debounced (300ms) desde `PromotionsFiltersBar` antes
+  // de tocar la URL, así que incluirla aquí no remonta por cada tecla — solo
+  // cuando la búsqueda se asienta. Remonta también al cambiar estado/canal/
+  // página, mostrando el `TableSkeleton` en los tres casos.
+  const dataKey = `${search ?? ""}|${publicationStatus ?? ""}|${channel ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
@@ -76,13 +78,22 @@ export default async function PromotionsPage({
             presupuesto asignado {formatUSD(summary.assignedBudget)}
           </p>
         </div>
-        <Link
-          href="/promociones/nueva"
-          className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
-        >
-          <Plus className="size-4" />
-          Crear promoción
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/promociones/importar"
+            className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-2.5 pr-4 pl-3.5 text-sm font-medium text-secondary-foreground"
+          >
+            <Upload className="size-4" />
+            Importar
+          </Link>
+          <Link
+            href="/promociones/nueva"
+            className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
+          >
+            <Plus className="size-4" />
+            Crear promoción
+          </Link>
+        </div>
       </div>
 
       {featured.length > 0 && (

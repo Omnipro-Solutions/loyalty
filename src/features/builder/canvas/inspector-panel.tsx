@@ -11,6 +11,7 @@ import { MultiConditionForm } from "@/features/builder/inspector/multi-condition
 import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
+import { entryTriggerFor } from "@/features/builder/inspector/entry-triggers"
 import { IntegrationMessageForm } from "@/features/builder/inspector/integration-message-form"
 import {
   resolveAvailableVariables,
@@ -84,6 +85,7 @@ export function InspectorPanel({
   const groupMeta = BUILDER_GROUP_META[meta.group]
   const Icon = meta.icon
   const tipo = node.data.tipo
+  const trigger = entryTriggerFor(tipo as never, node.data.config)
 
   function update(config: Record<string, unknown>) {
     onConfigChange(node!.id, config)
@@ -107,6 +109,14 @@ export function InspectorPanel({
           <p className="truncate text-[14px] leading-5 font-semibold text-foreground">
             {node.data.etiqueta}
           </p>
+          {trigger && (
+            <p
+              title={`Trigger: ${trigger}`}
+              className="truncate font-mono text-[11px] text-muted-foreground"
+            >
+              Trigger: {trigger}
+            </p>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -142,6 +152,7 @@ export function InspectorPanel({
             <AccumulatePointsForm
               config={node.data.config}
               tiers={tiers}
+              graphVariables={graphVariables}
               onChange={update}
             />
           ) : tipo === "condicion_multiple" ? (

@@ -4,12 +4,17 @@ import { validateNodeConfig } from "./schemas"
 
 describe("validateNodeConfig", () => {
   it("reporta los labels de los campos obligatorios sin completar", () => {
-    expect(validateNodeConfig("evento_compra", {})).toEqual(["Fuente de datos"])
+    expect(validateNodeConfig("evento_compra", {})).toEqual(
+      expect.arrayContaining(["Disparador técnico", "Fuente de datos"])
+    )
   })
 
   it("no reporta nada cuando los campos obligatorios están completos", () => {
     expect(
-      validateNodeConfig("evento_compra", { fuente_datos: "pos" })
+      validateNodeConfig("evento_compra", {
+        trigger: "order.completed",
+        fuente_datos: "pos",
+      })
     ).toEqual([])
   })
 

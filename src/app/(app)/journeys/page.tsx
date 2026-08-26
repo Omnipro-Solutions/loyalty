@@ -36,9 +36,11 @@ export default async function JourneysPage({
     q,
   })
 
-  // `q` queda fuera de la key a propósito (ver el docblock de
-  // `JourneysContent`); `estado`/`page` sí la cambian.
-  const dataKey = `${status ?? ""}|${page}`
+  // `q` ya llega debounced (350ms) desde `JourneysToolbar` antes de tocar la
+  // URL, así que incluirla aquí no remonta por cada tecla — solo cuando la
+  // búsqueda se asienta (el input, no controlado, no pierde texto al
+  // remontar — ver el docblock de `JourneysContent`).
+  const dataKey = `${q ?? ""}|${status ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Loyalty Builder" title="Loyalty Builder">

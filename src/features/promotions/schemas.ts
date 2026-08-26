@@ -84,6 +84,27 @@ export const conditionSchema = z.discriminatedUnion("campo", [
     campo: z.literal("socio_edad"),
     valor: z.number().int().nonnegative(),
   }),
+  // Atributos demográficos del socio — los mismos que ya muestra el
+  // detalle de cliente (`member-hero.tsx`, "Ver más"). `genero`/
+  // `estado_civil` en array plano (no `z.enum`), mismo criterio que
+  // `socio_provincia`/`tienda_formato`: la forma acotada la impone el
+  // selector en la UI, no el schema.
+  z.object({
+    campo: z.literal("genero"),
+    valor: z.array(z.string()).min(1, "Elige al menos un género"),
+  }),
+  z.object({
+    campo: z.literal("estado_civil"),
+    valor: z.array(z.string()).min(1, "Elige al menos un estado civil"),
+  }),
+  z.object({
+    campo: z.literal("tiene_hijos"),
+    valor: z.boolean(),
+  }),
+  z.object({
+    campo: z.literal("tiene_mascotas"),
+    valor: z.boolean(),
+  }),
   z.object({
     campo: z.literal("tienda_region"),
     valor: z.array(z.string()).min(1, "Elige al menos una región"),
@@ -99,6 +120,12 @@ export const conditionSchema = z.discriminatedUnion("campo", [
   z.object({
     campo: z.literal("producto_proveedor"),
     valor: z.array(z.string()).min(1, "Elige al menos un proveedor"),
+  }),
+  // `productos.requiere_receta` (docs/promociones.md §8) — booleano real
+  // del catálogo, mismo patrón que `tiene_hijos`/`tiene_mascotas`.
+  z.object({
+    campo: z.literal("producto_receta"),
+    valor: z.boolean(),
   }),
 ])
 
@@ -398,12 +425,12 @@ const promotionBaseSchema = z.object({
   stackingMode: z.enum(STACKING_MODES),
 
   // Economía (paso "Economía", F01–F12 + S06) — naturaleza contable del
-  // costo y quién lo financia. El bloque de proveedor (proveedor/
+  // costo y quién lo financia. El bloque de proveedor (proveedorId/
   // contratoId/porcentajeCostoProveedor/periodoLiquidacion) solo se pide
   // cuando `financiador !== "retailer"` (ver `refineEconomics`).
   naturalezaCosto: z.enum(COST_NATURES),
   financiador: z.enum(FINANCIADORES),
-  proveedor: z.string().optional(),
+  proveedorId: z.string().optional(),
   contratoId: z.string().optional(),
   porcentajeCostoProveedor: z.number().min(0).max(100).optional(),
   periodoLiquidacion: z.enum(SETTLEMENT_PERIODS).optional(),

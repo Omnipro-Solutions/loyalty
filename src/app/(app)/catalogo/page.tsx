@@ -52,10 +52,11 @@ export default async function CatalogPage({
   // una sola consulta a `listProducts`.
   const productsPromise = listProducts({ search, categoryIds, status, page })
 
-  // `q` queda fuera de la key (ya tiene debounce, ver `/clientes`).
+  // `search` ya llega debounced (300ms) desde el filtro de búsqueda, así que
+  // incluirla aquí no remonta por cada tecla — solo cuando se asienta.
   // `categoria` es multivalor — se ordena antes de unir para que reordenar
   // el mismo conjunto no dispare un remount falso.
-  const dataKey = `${[...categoryIds].sort().join(",")}|${status ?? ""}|${page}`
+  const dataKey = `${search ?? ""}|${[...categoryIds].sort().join(",")}|${status ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Productos" title="Catálogo de productos">

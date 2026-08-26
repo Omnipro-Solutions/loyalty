@@ -323,16 +323,20 @@ export const PROMOTION_TYPES = [
 ] as const
 export type PromotionType = (typeof PROMOTION_TYPES)[number]
 
-// Field of an IF condition (07.1 "Condiciones (SI)"). All 13 have a real
+// Field of an IF condition (07.1 "Condiciones (SI)"). All 18 have a real
 // table/column behind them — 'categoria'/'tienda' from the start,
 // 'segmento' since 11 · Audiencias (`segments`), 'monto_carrito' since
 // `pedidos` exists, 'cupon_codigo' since `coupon_batch` exists (T15 del
-// documento de modalidades: "Cupón con código"), and the 8
+// documento de modalidades: "Cupón con código"), the 8
 // socio_*/tienda_*/producto_* fields added to let a promotion condition
 // on member/store/product attributes (`members`, `tiers`, `tiendas`,
-// `productos`) — the creation form lets you add all 13. Deliberately
-// left out: any "ticket"/"linea"/"contexto" field (día, hora, medio de
-// pago, receta, feriados) — none of those have a real column anywhere in
+// `productos`), 'genero'/'estado_civil'/'tiene_hijos'/'tiene_mascotas' —
+// los mismos atributos demográficos que ya muestra el detalle de cliente
+// (`members`, ver `features/members/components/member-hero.tsx`) — y
+// 'producto_receta' desde que existe `productos.requiere_receta`
+// (docs/promociones.md §8, migración `20260826153000_productos_receta`).
+// Deliberately left out: any "ticket"/"linea"/"contexto" field (día, hora,
+// medio de pago, feriados) — none of those have a real column anywhere in
 // the schema, so adding them would be inventing UI for data that doesn't
 // exist.
 export const CONDITION_FIELDS = [
@@ -345,14 +349,19 @@ export const CONDITION_FIELDS = [
   "socio_provincia",
   "socio_antiguedad",
   "socio_edad",
+  "genero",
+  "estado_civil",
+  "tiene_hijos",
+  "tiene_mascotas",
   "tienda_region",
   "tienda_formato",
   "producto_marca",
   "producto_proveedor",
+  "producto_receta",
 ] as const
 export type ConditionField = (typeof CONDITION_FIELDS)[number]
 
-/** Gradual rollout mechanism (not every field had a real table from day 1) — today all 13 are enabled, kept in case a new field is added before it has a data source. */
+/** Gradual rollout mechanism (not every field had a real table from day 1) — today all 18 are enabled, kept in case a new field is added before it has a data source. */
 export const ENABLED_CONDITION_FIELDS: readonly ConditionField[] =
   CONDITION_FIELDS
 
@@ -420,11 +429,7 @@ export const BXGY_SCOPES = [
 ] as const
 export type BxgyScope = (typeof BXGY_SCOPES)[number]
 
-export const APPLY_TO_OPTIONS = [
-  "subtotal_carrito",
-  "producto",
-  "envio",
-] as const
+export const APPLY_TO_OPTIONS = ["subtotal_carrito", "envio"] as const
 export type ApplyTo = (typeof APPLY_TO_OPTIONS)[number]
 
 // Días de la semana en que corre la regla (07.5 "Vigencia" — vacío/sin
@@ -724,7 +729,13 @@ export type BalanceInitialState = (typeof BALANCE_INITIAL_STATES)[number]
 export const POINTS_DEBIT_TIMINGS = ["al_emitir", "al_redimir"] as const
 export type PointsDebitTiming = (typeof POINTS_DEBIT_TIMINGS)[number]
 
-/** S12: si la promoción puede tocar productos con receta — "permitido" es el default, sin implicar que el catálogo ya distinga receta/no receta (ver docs/promociones.md §8, todavía sin construir). */
+/**
+ * S12: si la promoción puede tocar productos con receta — "permitido" es
+ * el default. Sigue siendo una declaración manual del operador a nivel de
+ * promoción completa, distinta de la condición `producto_receta`
+ * (`CONDITION_FIELDS`) que sí filtra por `productos.requiere_receta` real
+ * — ambas conviven a propósito, ver docs/promociones.md §8.
+ */
 export const RX_APPLICABILITIES = [
   "permitido",
   "revisar",

@@ -74,9 +74,14 @@ export const OUTPUT_HANDLES: Partial<
     { id: "rama_1", label: "Variante A" },
     { id: "por_defecto", label: "Variante B" },
   ],
+  // Resultado tipado (docs/builder.md §16-17): solo POINTS_GRANTED (`out`),
+  // CAP_REACHED (`tope_alcanzado`) y ZERO_POINTS (`sin_puntos`) — los
+  // únicos 3 códigos que este bloque puede determinar de verdad hoy (ver
+  // `resultCodeFor` en `inspector/accumulate-points-engine.ts`).
   acumular_puntos: [
-    { id: "out", label: "Siguiente" },
+    { id: "out", label: "Puntos otorgados" },
     { id: "tope_alcanzado", label: "Tope alcanzado" },
+    { id: "sin_puntos", label: "Sin puntos" },
   ],
   fin_workflow: [],
 }

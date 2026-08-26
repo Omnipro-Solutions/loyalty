@@ -76,6 +76,14 @@ export function defaultConditionFor(field: ConditionField): ConditionValues {
       return { campo: field, valor: 0 }
     case "socio_edad":
       return { campo: field, valor: 0 }
+    case "genero":
+      return { campo: field, valor: [] }
+    case "estado_civil":
+      return { campo: field, valor: [] }
+    case "tiene_hijos":
+      return { campo: field, valor: true }
+    case "tiene_mascotas":
+      return { campo: field, valor: true }
     case "tienda_region":
       return { campo: field, valor: [] }
     case "tienda_formato":
@@ -84,6 +92,8 @@ export function defaultConditionFor(field: ConditionField): ConditionValues {
       return { campo: field, valor: [] }
     case "producto_proveedor":
       return { campo: field, valor: [] }
+    case "producto_receta":
+      return { campo: field, valor: false }
   }
 }
 

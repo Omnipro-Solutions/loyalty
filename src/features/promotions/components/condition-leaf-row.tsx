@@ -67,11 +67,16 @@ export function ConditionLeafRow({
   return (
     <div
       className={cn(
-        "flex w-full flex-col gap-1 rounded-[9px] border bg-background px-[9px] py-2",
+        // `w-fit`, no `w-full`: una condición simple ("Tienda está en
+        // Bogotá") no debe estirar su caja al ancho completo de la tarjeta
+        // dejando un vacío enorme antes del botón de eliminar — cada chip
+        // se ajusta a su propio contenido, como el resto de píldoras del
+        // árbol (grupo, conector Y/O).
+        "flex w-fit max-w-full flex-col gap-1 rounded-[9px] border bg-background px-[9px] py-2",
         isComplete ? "border-border" : "border-destructive"
       )}
     >
-      <div className="flex w-full items-start justify-between gap-2">
+      <div className="flex items-start gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-[5px]">
           <Select
             value={condition.campo}
@@ -84,7 +89,7 @@ export function ConditionLeafRow({
                 {(v: ConditionField) => CONDITION_FIELD_LABEL[v]}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="w-max">
               {CONDITION_FIELD_DOMAINS.map((domain) => (
                 <SelectGroup key={domain}>
                   <SelectLabel>{domain}</SelectLabel>
@@ -112,6 +117,7 @@ export function ConditionLeafRow({
 
           {condition.campo === "categoria" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
               value={condition.valor}
@@ -133,7 +139,7 @@ export function ConditionLeafRow({
                   }}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-max">
                 {cities.map((c) => (
                   <SelectItem key={c.city} value={c.city}>
                     {c.city} ({c.totalStores})
@@ -160,7 +166,7 @@ export function ConditionLeafRow({
                   }}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-max">
                 {segments.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
@@ -198,7 +204,7 @@ export function ConditionLeafRow({
                   }}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-max">
                 {couponBatches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name} · {b.reference}
@@ -209,6 +215,7 @@ export function ConditionLeafRow({
           )}
           {condition.campo === "socio_nivel" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={options.tiers.map((t) => ({
                 value: t.id,
@@ -222,6 +229,7 @@ export function ConditionLeafRow({
           )}
           {condition.campo === "socio_provincia" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={options.provinces}
               value={condition.valor}
@@ -264,8 +272,65 @@ export function ConditionLeafRow({
               <span className="text-[10.5px] text-muted-foreground">años</span>
             </div>
           )}
+          {condition.campo === "genero" && (
+            <Multiselect
+              size="chip"
+              className="w-fit min-w-[160px]"
+              options={options.genders}
+              value={condition.valor}
+              onValueChange={(valor) => onChange({ campo: "genero", valor })}
+            />
+          )}
+          {condition.campo === "estado_civil" && (
+            <Multiselect
+              size="chip"
+              className="w-fit min-w-[160px]"
+              options={options.maritalStatuses}
+              value={condition.valor}
+              onValueChange={(valor) =>
+                onChange({ campo: "estado_civil", valor })
+              }
+            />
+          )}
+          {condition.campo === "tiene_hijos" && (
+            <Select
+              value={condition.valor ? "si" : "no"}
+              onValueChange={(v) =>
+                onChange({ campo: "tiene_hijos", valor: v === "si" })
+              }
+            >
+              <SelectTrigger className={cn(CHIP_TRIGGER, "min-w-[68px]")}>
+                <SelectValue>
+                  {(v: "si" | "no") => (v === "si" ? "Sí" : "No")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="w-max">
+                <SelectItem value="si">Sí</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {condition.campo === "tiene_mascotas" && (
+            <Select
+              value={condition.valor ? "si" : "no"}
+              onValueChange={(v) =>
+                onChange({ campo: "tiene_mascotas", valor: v === "si" })
+              }
+            >
+              <SelectTrigger className={cn(CHIP_TRIGGER, "min-w-[68px]")}>
+                <SelectValue>
+                  {(v: "si" | "no") => (v === "si" ? "Sí" : "No")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="w-max">
+                <SelectItem value="si">Sí</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           {condition.campo === "tienda_region" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={options.storeRegions}
               value={condition.valor}
@@ -276,6 +341,7 @@ export function ConditionLeafRow({
           )}
           {condition.campo === "tienda_formato" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={options.storeFormats}
               value={condition.valor}
@@ -286,6 +352,7 @@ export function ConditionLeafRow({
           )}
           {condition.campo === "producto_marca" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={options.brands}
               value={condition.valor}
@@ -296,6 +363,7 @@ export function ConditionLeafRow({
           )}
           {condition.campo === "producto_proveedor" && (
             <Multiselect
+              size="chip"
               className="w-fit min-w-[160px]"
               options={options.suppliers}
               value={condition.valor}
@@ -303,6 +371,24 @@ export function ConditionLeafRow({
                 onChange({ campo: "producto_proveedor", valor })
               }
             />
+          )}
+          {condition.campo === "producto_receta" && (
+            <Select
+              value={condition.valor ? "si" : "no"}
+              onValueChange={(v) =>
+                onChange({ campo: "producto_receta", valor: v === "si" })
+              }
+            >
+              <SelectTrigger className={cn(CHIP_TRIGGER, "min-w-[68px]")}>
+                <SelectValue>
+                  {(v: "si" | "no") => (v === "si" ? "Sí" : "No")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="w-max">
+                <SelectItem value="si">Sí</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
           )}
           {!enabled && (
             <p className="truncate text-[10.5px] text-muted-foreground italic">

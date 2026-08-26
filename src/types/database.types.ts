@@ -1585,6 +1585,7 @@ export type Database = {
           presentacion: string | null
           proveedor: string | null
           puntos: number
+          requiere_receta: boolean
           sku: string
           tipo_producto: string | null
         }
@@ -1606,6 +1607,7 @@ export type Database = {
           presentacion?: string | null
           proveedor?: string | null
           puntos?: number
+          requiere_receta?: boolean
           sku: string
           tipo_producto?: string | null
         }
@@ -1627,6 +1629,7 @@ export type Database = {
           presentacion?: string | null
           proveedor?: string | null
           puntos?: number
+          requiere_receta?: boolean
           sku?: string
           tipo_producto?: string | null
         }
@@ -1820,7 +1823,7 @@ export type Database = {
           producto_comprado_id: string | null
           producto_regalo_id: string | null
           productos_bundle_ids: string[] | null
-          proveedor: string | null
+          proveedor_id: string | null
           registra_uso: boolean
           requisito_alta: string | null
           respeta_precio_minimo_legal: boolean
@@ -1909,7 +1912,7 @@ export type Database = {
           producto_comprado_id?: string | null
           producto_regalo_id?: string | null
           productos_bundle_ids?: string[] | null
-          proveedor?: string | null
+          proveedor_id?: string | null
           registra_uso?: boolean
           requisito_alta?: string | null
           respeta_precio_minimo_legal?: boolean
@@ -1998,7 +2001,7 @@ export type Database = {
           producto_comprado_id?: string | null
           producto_regalo_id?: string | null
           productos_bundle_ids?: string[] | null
-          proveedor?: string | null
+          proveedor_id?: string | null
           registra_uso?: boolean
           requisito_alta?: string | null
           respeta_precio_minimo_legal?: boolean
@@ -2046,6 +2049,45 @@ export type Database = {
             columns: ["coupon_batch_id"]
             isOneToOne: false
             referencedRelation: "coupon_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promociones_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proveedores: {
+        Row: {
+          creado_en: string
+          id: string
+          nombre: string
+          org_id: string
+          rfc: string | null
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          nombre: string
+          org_id: string
+          rfc?: string | null
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          rfc?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedores_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

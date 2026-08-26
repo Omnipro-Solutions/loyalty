@@ -21,6 +21,33 @@ export type MemberPreview = {
   tiene_mascotas: boolean | null
   consentimiento_marketing: boolean
   provincia: string | null
+  /** Derivada de `fecha_nacimiento` (ver `calculateAge`), no un valor guardado — así nunca queda desactualizada. */
+  edad: number | null
+  estado_civil: string | null
+  preferencia_compra: string | null
+}
+
+/**
+ * `cliente.edad` no se guarda como valor fijo en la regla — se deriva de
+ * `fecha_nacimiento` en el momento de evaluar (`docs/builder.md` §5.2: "no
+ * debería almacenarse como un valor fijo dentro de la regla"). `now` es
+ * inyectable para pruebas deterministas; el llamador real (`actions.ts`)
+ * siempre pasa la fecha actual.
+ */
+export function calculateAge(
+  fechaNacimiento: string | null,
+  now: Date = new Date()
+): number | null {
+  if (!fechaNacimiento) return null
+  const birth = new Date(fechaNacimiento)
+  if (Number.isNaN(birth.getTime())) return null
+
+  let age = now.getFullYear() - birth.getFullYear()
+  const hasHadBirthdayThisYear =
+    now.getMonth() > birth.getMonth() ||
+    (now.getMonth() === birth.getMonth() && now.getDate() >= birth.getDate())
+  if (!hasHadBirthdayThisYear) age -= 1
+  return age
 }
 
 export type ConditionRule = {
@@ -83,6 +110,9 @@ const FIELD_CONFIG: Record<
     getValue: (m) => m.consentimiento_marketing,
   },
   provincia: { type: "texto", getValue: (m) => m.provincia },
+  edad: { type: "numero", getValue: (m) => m.edad },
+  estado_civil: { type: "texto", getValue: (m) => m.estado_civil },
+  preferencia_compra: { type: "texto", getValue: (m) => m.preferencia_compra },
 }
 
 /** `fecha_alta` en `members` es un timestamp completo — se compara solo por fecha (los 10 primeros caracteres ISO), que es la granularidad que ofrece el `<input type="date">` del valor. */

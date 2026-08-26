@@ -5,46 +5,10 @@
  * Action recibe filas ya normalizadas, no el archivo.
  */
 
-export type ParsedCsv = { headers: string[]; rows: string[][] }
+import { parseCsv, type ParsedCsv } from "@/lib/csv"
 
-/** Parser mínimo (no RFC 4180 completo): soporta comillas dobles y comas dentro de campos citados, que cubre lo que exporta cualquier hoja de cálculo común. */
-export function parseCsv(text: string): ParsedCsv {
-  const lines = text
-    .split(/\r\n|\n|\r/)
-    .filter((line) => line.trim().length > 0)
-  const rows = lines.map(parseCsvLine)
-  const [headers = [], ...body] = rows
-  return { headers, rows: body }
-}
-
-function parseCsvLine(line: string): string[] {
-  const cells: string[] = []
-  let current = ""
-  let inQuotes = false
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i]
-    if (inQuotes) {
-      if (char === '"' && line[i + 1] === '"') {
-        current += '"'
-        i += 1
-      } else if (char === '"') {
-        inQuotes = false
-      } else {
-        current += char
-      }
-    } else if (char === '"') {
-      inQuotes = true
-    } else if (char === ",") {
-      cells.push(current.trim())
-      current = ""
-    } else {
-      current += char
-    }
-  }
-  cells.push(current.trim())
-  return cells
-}
+export { parseCsv }
+export type { ParsedCsv }
 
 export const COUPON_IMPORT_COLUMNS = [
   { key: "email", label: "Email del socio" },

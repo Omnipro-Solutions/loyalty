@@ -79,10 +79,21 @@ function distribute(
       100,
       Math.max(0, configNumber(node.config, "tasa_tope_estimada", 8))
     )
+    // Tercer puerto tipado (ZERO_POINTS, docs/builder.md §16) — misma
+    // estimación "razonable por defecto, no configurable en el inspector"
+    // que ya usa `tasa_tope_estimada`. Acotado a lo que le queda a
+    // `capPct` para que los 3 puertos nunca sumen más del 100% de la
+    // cohorte.
+    const zeroPct = Math.min(
+      100 - capPct,
+      Math.max(0, configNumber(node.config, "tasa_sin_puntos_estimada", 3))
+    )
     const cap = Math.round((entrada * capPct) / 100)
+    const zero = Math.round((entrada * zeroPct) / 100)
     return [
-      { port: "out", count: entrada - cap },
+      { port: "out", count: entrada - cap - zero },
       { port: "tope_alcanzado", count: cap },
+      { port: "sin_puntos", count: zero },
     ]
   }
 

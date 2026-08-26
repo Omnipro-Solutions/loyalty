@@ -20,10 +20,33 @@ import type { BuilderNodeType } from "@/types/domain"
  * llegan hasta ese nodo.
  */
 export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
+  // `compra.canal`, `compra.fecha`, `compra.dia_semana` (derivada de
+  // `compra.fecha`, mismo criterio que `cliente.edad` en
+  // `condition-preview.ts`) y `compra.items[].*` (a diferencia del resto de
+  // la lista) sí tienen tabla real detrás: `pedidos.canal`/`creado_en` y
+  // `pedido_items` ↔ `productos`/`categorias` (`sku`, `marca`,
+  // `tipo_producto`/`categoria_id`.nombre, `cantidad`, `precio_unitario`) —
+  // ver `docs/builder.md` §5.3-5.4. Se agregan aquí como catálogo (mismo
+  // trato que el resto de variables "expuestas"); no hay todavía un
+  // simulador que evalúe reglas de evento contra un caso concreto, eso es
+  // un motor aparte (ver `AccumulatePointsForm` — sus modificadores/bonos
+  // sobre estas variables se marcan "activos" a mano en el ejemplo).
   evento_compra: [
     "compra.monto",
     "compra.tienda",
+    "compra.canal",
+    "compra.fecha",
+    "compra.dia_semana",
     "compra.items",
+    "compra.items[].sku",
+    "compra.items[].marca",
+    "compra.items[].categoria",
+    "compra.items[].cantidad",
+    "compra.items[].precio_unitario",
+    // RX/OTC (docs/promociones.md §8) — `productos.requiere_receta`,
+    // mismo criterio que el resto de `compra.items[].*`: catálogo real,
+    // sin motor de evaluación en vivo todavía.
+    "compra.items[].requiere_receta",
     "cliente.id",
   ],
   entra_segmento: ["audiencia.id", "cliente.segmento", "cliente.nivel"],
@@ -55,11 +78,15 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
  */
 export function inferType(variable: string): string {
   const suffix = variable.split(".").pop() ?? ""
-  if (/^(monto|saldo|valor|progreso|meta|descontados|otorgados)$/.test(suffix))
+  if (
+    /^(monto|saldo|valor|progreso|meta|descontados|otorgados|cantidad|precio_unitario)$/.test(
+      suffix
+    )
+  )
     return "número"
   if (/^(fecha|vence|vigencia|inicio|fin|duracion|cumpleanos)$/.test(suffix))
     return "fecha"
-  if (/^(abierto|evaluadas)$/.test(suffix)) return "booleano"
+  if (/^(abierto|evaluadas|requiere_receta)$/.test(suffix)) return "booleano"
   if (
     /^(estado|resultado|tier|nivel|actual|anterior|segmento|grupo|variante|nombre)$/.test(
       suffix
