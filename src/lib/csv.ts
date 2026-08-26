@@ -94,6 +94,28 @@ export function csvCell(value: string): string {
   return `"${value.replaceAll('"', '""')}"`
 }
 
+/**
+ * Índice de columna para cada clave: pasada opcional de coincidencia exacta
+ * normalizada primero, luego una pista regex por clave. Heurística
+ * compartida por todos los importadores CSV del proyecto (cupones,
+ * promociones) para que solo viva en un lugar.
+ */
+export function inferHeaderMapping<K extends string>(
+  headers: string[],
+  keys: readonly K[],
+  hints: Record<K, RegExp>,
+  normalize?: (header: string) => string
+): Partial<Record<K, number>> {
+  const normalized = normalize ? headers.map(normalize) : null
+  const mapping: Partial<Record<K, number>> = {}
+  for (const key of keys) {
+    let index = normalized ? normalized.findIndex((h) => h === key) : -1
+    if (index < 0) index = headers.findIndex((h) => hints[key].test(h))
+    if (index >= 0) mapping[key] = index
+  }
+  return mapping
+}
+
 /** Descarga un CSV generado en el navegador — sin bucket de Storage en este proyecto, todo vive en memoria hasta el momento de la descarga. Las filas ya deben venir con cada celda pasada por `csvCell`. */
 export function downloadCsv(filename: string, rows: string[][]) {
   const blob = new Blob([rows.map((r) => r.join(",")).join("\r\n")], {

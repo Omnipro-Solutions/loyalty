@@ -65,6 +65,7 @@ export const previewConditionAction = builderActionClient
       return { ok: false as const, message: "No se pudo consultar socios." }
     }
 
+    const now = new Date()
     const memberPreviews: MemberPreview[] = (members ?? []).map((m) => ({
       tier: m.tiers?.nombre ?? null,
       saldo_puntos: m.saldo_puntos,
@@ -76,7 +77,7 @@ export const previewConditionAction = builderActionClient
       tiene_mascotas: m.tiene_mascotas,
       consentimiento_marketing: m.consentimiento_marketing,
       provincia: m.provincia,
-      edad: calculateAge(m.fecha_nacimiento),
+      edad: calculateAge(m.fecha_nacimiento, now),
       estado_civil: m.estado_civil,
       preferencia_compra: m.preferencia_compra,
     }))

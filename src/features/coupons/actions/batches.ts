@@ -121,20 +121,7 @@ export async function generateBatchChunks(
   // El RPC solo materializa `coupon.member_id` — completa aquí
   // `coupon_assignment` para que "Personas asociadas" tenga historial.
   if (origin === "batch_audience") {
-    const assignedCoupons = (generatedCoupons ?? []).filter(
-      (c) => c.member_id != null
-    )
-    if (assignedCoupons.length > 0) {
-      await supabase.from("coupon_assignment").insert(
-        assignedCoupons.map((c) => ({
-          org_id: orgId,
-          coupon_id: c.id,
-          member_id: c.member_id as string,
-          role: "holder" as const,
-          source: "manual" as const,
-        }))
-      )
-    }
+    await insertHolderAssignments(supabase, orgId, generatedCoupons ?? [])
   }
 
   return { ok: true }
@@ -285,6 +272,32 @@ export async function insertIssuedCouponEvents(
   })
 
   await supabase.from("coupon_event").insert(events)
+}
+
+/**
+ * Completa `coupon_assignment` (rol "holder", origen "manual") para los
+ * cupones ya asignados a un socio — la usan `generateBatchChunks` y
+ * `generateNextChunkAction` tras un chunk `batch_audience`, donde el RPC
+ * solo materializa `coupon.member_id`.
+ */
+async function insertHolderAssignments(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  coupons: { id: string; member_id: string | null }[]
+) {
+  const assigned = coupons.filter(
+    (c): c is { id: string; member_id: string } => c.member_id != null
+  )
+  if (assigned.length === 0) return
+  await supabase.from("coupon_assignment").insert(
+    assigned.map((c) => ({
+      org_id: orgId,
+      coupon_id: c.id,
+      member_id: c.member_id,
+      role: "holder" as const,
+      source: "manual" as const,
+    }))
+  )
 }
 
 export const emitCouponBatchAction = couponsActionClient
@@ -587,20 +600,11 @@ export const generateNextChunkAction = couponsActionClient
       )
 
       if (batch.origin === "batch_audience") {
-        const assignedCoupons = (generatedCoupons ?? []).filter(
-          (c) => c.member_id != null
+        await insertHolderAssignments(
+          ctx.supabase,
+          ctx.orgId,
+          generatedCoupons ?? []
         )
-        if (assignedCoupons.length > 0) {
-          await ctx.supabase.from("coupon_assignment").insert(
-            assignedCoupons.map((c) => ({
-              org_id: ctx.orgId,
-              coupon_id: c.id,
-              member_id: c.member_id as string,
-              role: "holder" as const,
-              source: "manual" as const,
-            }))
-          )
-        }
       }
     }
 

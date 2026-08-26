@@ -1,4 +1,4 @@
-import type { ParsedCsv } from "@/lib/csv"
+import { inferHeaderMapping, type ParsedCsv } from "@/lib/csv"
 import {
   BENEFIT_TYPES,
   CHANNEL_SCOPES,
@@ -202,16 +202,14 @@ const HEADER_HINTS: Record<PromotionImportColumnKey, RegExp> = {
   cond_monto_minimo: /monto.*minimo|monto_carrito|carrito/i,
 }
 
-/** Heurística por nombre de columna — coincidencia exacta normalizada primero, luego regex por pista. Mismo criterio que `features/coupons/lib/csv-import.ts`. */
+/** Heurística por nombre de columna — coincidencia exacta normalizada primero, luego regex por pista. Mismo mecanismo que `features/coupons/lib/csv-import.ts` (`inferHeaderMapping` en `@/lib/csv`). */
 export function inferImportMapping(headers: string[]): ColumnMapping {
-  const normalized = headers.map(normalizeToken)
-  const mapping: ColumnMapping = {}
-  for (const { key } of PROMOTION_IMPORT_COLUMNS) {
-    let index = normalized.findIndex((h) => h === key)
-    if (index < 0) index = headers.findIndex((h) => HEADER_HINTS[key].test(h))
-    if (index >= 0) mapping[key] = index
-  }
-  return mapping
+  return inferHeaderMapping(
+    headers,
+    PROMOTION_IMPORT_COLUMNS.map((c) => c.key),
+    HEADER_HINTS,
+    normalizeToken
+  )
 }
 
 export function missingRequiredColumns(

@@ -25,6 +25,12 @@ const PRODUCT_LEVEL_BENEFIT_TYPES = new Set<PromotionValues["benefitType"]>([
 export function toRow(values: PromotionValues) {
   const relevant = new Set(MECHANIC_FIELDS[values.benefitType] ?? [])
   const has = (field: keyof PromotionValues) => relevant.has(field)
+  /** Columna específica de mecánica: el valor del formulario si aplica a esta mecánica, si no el fallback (por defecto `null`). */
+  const pick = <K extends keyof PromotionValues, F = null>(
+    field: K,
+    fallback: F = null as F
+  ): NonNullable<PromotionValues[K]> | F =>
+    has(field) ? (values[field] ?? fallback) : fallback
 
   return {
     nombre: values.name,
@@ -35,8 +41,8 @@ export function toRow(values: PromotionValues) {
     canal_aplicacion: values.channelScope,
     condiciones: values.conditions as unknown as Json,
     tipo_beneficio: values.benefitType,
-    valor_beneficio: has("benefitValue") ? (values.benefitValue ?? null) : null,
-    tope_maximo: has("maxCap") ? (values.maxCap ?? null) : null,
+    valor_beneficio: pick("benefitValue"),
+    tope_maximo: pick("maxCap"),
     // `aplicar_sobre` es `not null` en la base — para las mecánicas donde
     // el campo no se muestra, se fuerza el valor correcto en vez de dejar
     // el default genérico "subtotal_carrito" guardado por accidente.
@@ -49,126 +55,59 @@ export function toRow(values: PromotionValues) {
           : "subtotal_carrito",
     // Mismo cast que `condiciones` — sin mapeo de claves porque las
     // claves del jsonb ya están en español (ver schemas.ts).
-    escalones: has("discountTiers")
-      ? (values.discountTiers as unknown as Json)
-      : null,
-    umbral_tipo: has("thresholdType") ? values.thresholdType : null,
-    modo_calculo: has("tierCalculationMode")
-      ? values.tierCalculationMode
-      : null,
-    compra_cantidad: has("compraCantidad")
-      ? (values.compraCantidad ?? null)
-      : null,
-    paga_cantidad: has("pagaCantidad") ? (values.pagaCantidad ?? null) : null,
-    alcance_piezas: has("alcancePiezas")
-      ? (values.alcancePiezas ?? null)
-      : null,
-    descuento_unidad_extra_pct: has("descuentoUnidadExtraPct")
-      ? (values.descuentoUnidadExtraPct ?? null)
-      : null,
-    mezcla_en_universo: has("mezclaEnUniverso")
-      ? values.mezclaEnUniverso
-      : true,
-    producto_comprado_id: has("productoCompradoId")
-      ? (values.productoCompradoId ?? null)
-      : null,
-    producto_regalo_id: has("productoRegaloId")
-      ? (values.productoRegaloId ?? null)
-      : null,
-    cantidad_regalo: has("cantidadRegalo")
-      ? (values.cantidadRegalo ?? null)
-      : null,
-    cantidad_minima_comprada: has("cantidadMinimaComprada")
-      ? (values.cantidadMinimaComprada ?? null)
-      : null,
-    beneficio_sobre_regalo_pct: has("beneficioSobreRegaloPct")
-      ? (values.beneficioSobreRegaloPct ?? null)
-      : null,
-    productos_bundle_ids: has("productosBundleIds")
-      ? values.productosBundleIds
-      : null,
-    multiplicador_puntos: has("multiplicadorPuntos")
-      ? (values.multiplicadorPuntos ?? null)
-      : null,
+    escalones: pick("discountTiers") as unknown as Json,
+    umbral_tipo: pick("thresholdType"),
+    modo_calculo: pick("tierCalculationMode"),
+    compra_cantidad: pick("compraCantidad"),
+    paga_cantidad: pick("pagaCantidad"),
+    alcance_piezas: pick("alcancePiezas"),
+    descuento_unidad_extra_pct: pick("descuentoUnidadExtraPct"),
+    mezcla_en_universo: pick("mezclaEnUniverso", true),
+    producto_comprado_id: pick("productoCompradoId"),
+    producto_regalo_id: pick("productoRegaloId"),
+    cantidad_regalo: pick("cantidadRegalo"),
+    cantidad_minima_comprada: pick("cantidadMinimaComprada"),
+    beneficio_sobre_regalo_pct: pick("beneficioSobreRegaloPct"),
+    productos_bundle_ids: pick("productosBundleIds"),
+    multiplicador_puntos: pick("multiplicadorPuntos"),
     niveles_requeridos:
       has("nivelesRequeridos") && values.nivelesRequeridos.length > 0
         ? values.nivelesRequeridos
         : null,
-    modo_resolucion_multiplicador: has("modoResolucionMultiplicador")
-      ? values.modoResolucionMultiplicador
-      : null,
-    tipo_saldo: has("tipoSaldo") ? values.tipoSaldo : "canjeable",
-    momento_acreditacion: has("momentoAcreditacion")
-      ? values.momentoAcreditacion
-      : "inmediato",
-    estado_inicial: has("estadoInicial") ? values.estadoInicial : "disponible",
-    bono_puntos: has("bonoPuntos") ? (values.bonoPuntos ?? null) : null,
-    monto_minimo_disparo: has("montoMinimoDisparo")
-      ? (values.montoMinimoDisparo ?? null)
-      : null,
-    tipo_beneficio_no_transaccional: has("tipoBeneficioNoTransaccional")
-      ? values.tipoBeneficioNoTransaccional
-      : "envio_gratis",
+    modo_resolucion_multiplicador: pick("modoResolucionMultiplicador"),
+    tipo_saldo: pick("tipoSaldo", "canjeable"),
+    momento_acreditacion: pick("momentoAcreditacion", "inmediato"),
+    estado_inicial: pick("estadoInicial", "disponible"),
+    bono_puntos: pick("bonoPuntos"),
+    monto_minimo_disparo: pick("montoMinimoDisparo"),
+    tipo_beneficio_no_transaccional: pick(
+      "tipoBeneficioNoTransaccional",
+      "envio_gratis"
+    ),
     validacion_requerida: has("validacionRequerida")
       ? values.validacionRequerida || null
       : null,
-    cupo_disponible: has("cupoDisponible")
-      ? (values.cupoDisponible ?? null)
-      : null,
-    registra_uso: has("registraUso") ? values.registraUso : false,
-    coupon_batch_id: has("couponBatchId")
-      ? (values.couponBatchId ?? null)
-      : null,
-    motivo_emision: has("motivoEmision")
-      ? (values.motivoEmision ?? null)
-      : null,
-    umbral_puntos: has("umbralPuntos") ? (values.umbralPuntos ?? null) : null,
-    duracion_cupon_dias: has("duracionCuponDias")
-      ? (values.duracionCuponDias ?? null)
-      : null,
-    momento_debito_puntos: has("momentoDebitoPuntos")
-      ? (values.momentoDebitoPuntos ?? null)
-      : null,
-    devolucion_si_vence: has("devolucionSiVence")
-      ? values.devolucionSiVence
-      : false,
-    evento_gatillo: has("eventoGatillo")
-      ? (values.eventoGatillo ?? null)
-      : null,
-    momento_resolucion: has("momentoResolucion")
-      ? (values.momentoResolucion ?? null)
-      : null,
-    frecuencia_disparo: has("frecuenciaDisparo")
-      ? (values.frecuenciaDisparo ?? null)
-      : null,
-    requisito_alta: has("requisitoAlta")
-      ? (values.requisitoAlta ?? null)
-      : null,
-    elegible_en_inactividad: has("elegibleEnInactividad")
-      ? values.elegibleEnInactividad
-      : false,
-    precio_promocional: has("precioPromocional")
-      ? (values.precioPromocional ?? null)
-      : null,
-    precio_referencia: has("precioReferencia")
-      ? (values.precioReferencia ?? null)
-      : null,
-    hasta_agotar_existencias: has("hastaAgotarExistencias")
-      ? values.hastaAgotarExistencias
-      : false,
-    respeta_precio_minimo_legal: has("respetaPrecioMinimoLegal")
-      ? values.respetaPrecioMinimoLegal
-      : true,
-    tipo_monedero: has("tipoMonedero") ? values.tipoMonedero : "porcentaje",
-    disponibilidad_dias: has("disponibilidadDias")
-      ? (values.disponibilidadDias ?? null)
-      : null,
-    vigencia_saldo_dias: has("vigenciaSaldoDias")
-      ? (values.vigenciaSaldoDias ?? null)
-      : null,
-    monto_minimo_canje: has("montoMinimoCanje")
-      ? (values.montoMinimoCanje ?? null)
-      : null,
+    cupo_disponible: pick("cupoDisponible"),
+    registra_uso: pick("registraUso", false),
+    coupon_batch_id: pick("couponBatchId"),
+    motivo_emision: pick("motivoEmision"),
+    umbral_puntos: pick("umbralPuntos"),
+    duracion_cupon_dias: pick("duracionCuponDias"),
+    momento_debito_puntos: pick("momentoDebitoPuntos"),
+    devolucion_si_vence: pick("devolucionSiVence", false),
+    evento_gatillo: pick("eventoGatillo"),
+    momento_resolucion: pick("momentoResolucion"),
+    frecuencia_disparo: pick("frecuenciaDisparo"),
+    requisito_alta: pick("requisitoAlta"),
+    elegible_en_inactividad: pick("elegibleEnInactividad", false),
+    precio_promocional: pick("precioPromocional"),
+    precio_referencia: pick("precioReferencia"),
+    hasta_agotar_existencias: pick("hastaAgotarExistencias", false),
+    respeta_precio_minimo_legal: pick("respetaPrecioMinimoLegal", true),
+    tipo_monedero: pick("tipoMonedero", "porcentaje"),
+    disponibilidad_dias: pick("disponibilidadDias"),
+    vigencia_saldo_dias: pick("vigenciaSaldoDias"),
+    monto_minimo_canje: pick("montoMinimoCanje"),
     vigente_desde: values.validFrom,
     vigente_hasta: values.validUntil || null,
     dias_semana: values.daysOfWeek.length > 0 ? values.daysOfWeek : null,
