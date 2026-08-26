@@ -864,12 +864,18 @@ function promotionValidity(promotion: {
   estado_publicacion: string
   vigente_desde: string
   vigente_hasta: string | null
-}): "borrador" | "programada" | "activa" | "finalizada" {
+}): "borrador" | "programada" | "activa" | "inactiva" | "finalizada" {
   const dateOnly = (value: string | Date) => {
     const d = typeof value === "string" ? new Date(value) : value
     return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
   }
-  if (promotion.estado_publicacion === "borrador") return "borrador"
+  // Solo 'activa' se cruza con las fechas: `borrador`/`inactiva`/
+  // `finalizada` son decisiones explícitas del operador y esta tarjeta las
+  // descarta igual (filtra a activa/programada más abajo).
+  if (promotion.estado_publicacion !== "activa") {
+    return promotion.estado_publicacion as
+      "borrador" | "inactiva" | "finalizada"
+  }
   const today = dateOnly(new Date())
   const start = dateOnly(promotion.vigente_desde)
   const end = promotion.vigente_hasta ? dateOnly(promotion.vigente_hasta) : null

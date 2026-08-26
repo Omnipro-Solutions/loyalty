@@ -4,6 +4,7 @@ import {
   normalizeContinuityTiers,
   type ContinuityTier,
 } from "./continuity-discount"
+import type { PromotionStatus } from "./status"
 import type {
   AccrualTiming,
   ApplicationLevel,
@@ -16,6 +17,7 @@ import type {
   ConditionFieldDomain,
   ConditionCombinator,
   ContinuityBreakBehavior,
+  ContinuityWindowUnit,
   CostNature,
   BenefitType,
   DayOfWeek,
@@ -35,6 +37,8 @@ import type {
   PointsDebitTiming,
   PriceBasis,
   PromotionEventType,
+  PromotionPublicationStatus,
+  PromotionStatusChangeReason,
   PromotionType,
   ReturnEffect,
   RxApplicability,
@@ -53,6 +57,39 @@ export const CHANNEL_SCOPE_LABEL: Record<ChannelScope, string> = {
   pos: "POS",
   ecommerce: "E-commerce",
   pos_ecommerce: "POS + E-commerce",
+}
+
+/**
+ * Estado de la promoción — el del campo "Estado" del formulario y el de la
+ * columna ESTADO de 06.1. Cubre los cuatro estados guardados más
+ * `programada`, que se deriva (ver `lib/status.ts`).
+ */
+export const PROMOTION_STATUS_LABEL: Record<PromotionStatus, string> = {
+  borrador: "Borrador",
+  activa: "Activa",
+  programada: "Programada",
+  inactiva: "Inactiva",
+  finalizada: "Finalizada",
+}
+
+/** Descripción de cada estado elegible, para el hint del campo "Estado". */
+export const PROMOTION_PUBLICATION_STATUS_DESCRIPTION: Record<
+  PromotionPublicationStatus,
+  string
+> = {
+  borrador: "Aún no publicada — se puede seguir editando.",
+  activa: "Publicada: el motor la evalúa dentro de su vigencia.",
+  inactiva: "Publicada pero suspendida — el motor la ignora.",
+  finalizada: "Cerrada: no vuelve a aplicarse mientras siga en este estado.",
+}
+
+/** Punto de color del estado (columna ESTADO de 06.1 y tarjeta de estado). */
+export const PROMOTION_STATUS_DOT: Record<PromotionStatus, string> = {
+  activa: "bg-success",
+  programada: "bg-warning",
+  finalizada: "bg-border-strong",
+  inactiva: "bg-destructive",
+  borrador: "bg-muted-foreground",
 }
 
 /** Prefijo del subtítulo en 06.1 ("Cantidad · todas las tiendas", "Cupón · nuevos clientes"…). */
@@ -85,6 +122,33 @@ export const CONDITION_FIELD_LABEL: Record<ConditionField, string> = {
   producto_marca: "Marca del producto",
   producto_proveedor: "Proveedor / laboratorio",
   producto_receta: "Requiere receta",
+}
+
+/**
+ * Nombre corto para las etiquetas de la columna ALCANCE (06.1): ahí caben
+ * ~90px, así que "Categoría del producto" tiene que ser "Categoría". El
+ * nombre largo sigue usándose en el formulario y en el árbol del hover.
+ */
+export const CONDITION_FIELD_SHORT_LABEL: Record<ConditionField, string> = {
+  categoria: "Categoría",
+  producto: "Producto",
+  tienda: "Ciudad",
+  segmento: "Segmento",
+  monto_carrito: "Carrito",
+  cupon_codigo: "Cupón",
+  socio_nivel: "Nivel",
+  socio_provincia: "Provincia",
+  socio_antiguedad: "Antigüedad",
+  socio_edad: "Edad",
+  genero: "Género",
+  estado_civil: "Estado civil",
+  tiene_hijos: "Hijos",
+  tiene_mascotas: "Mascotas",
+  tienda_region: "Región",
+  tienda_formato: "Formato",
+  producto_marca: "Marca",
+  producto_proveedor: "Proveedor",
+  producto_receta: "Receta",
 }
 
 /** Operador implícito por campo (07.1: cada campo del mock trae siempre el mismo operador). */
@@ -318,11 +382,15 @@ export function formatContinuityTier(tier: {
  */
 export function describeContinuityRule(
   tiers: ContinuityTier[],
-  windowDays: number | undefined,
-  breakBehavior: ContinuityBreakBehavior | undefined
+  window: {
+    amount: number | undefined
+    unit: ContinuityWindowUnit | undefined
+  },
+  breakBehavior: ContinuityBreakBehavior | undefined,
+  evaluatesHistory?: boolean
 ): string | null {
   const sorted = normalizeContinuityTiers(tiers)
-  if (sorted.length < 2 || !windowDays) return null
+  if (sorted.length < 2 || !window.amount) return null
 
   const ladder = sorted
     .map((tier, i) => `${i + 1}.ª compra ${tier.beneficio_valor} %`)
@@ -335,7 +403,43 @@ export function describeContinuityRule(
         ? "la racha retrocede un escalón"
         : `la racha se reinicia y la siguiente compra vuelve a valer ${sorted[0].beneficio_valor} %`
 
-  return `${ladder}. Si la siguiente compra ocurre dentro de ${windowDays} días, sube al siguiente escalón; si pasan más días, ${breakPhrase}.`
+  const historyPhrase = evaluatesHistory
+    ? " Cuenta también las compras anteriores al inicio de la promoción."
+    : " La racha empieza a contar desde el inicio de la promoción."
+
+  return `${ladder}. Si la siguiente compra ocurre dentro de ${formatContinuityWindow(window.amount, window.unit)}, sube al siguiente escalón; si pasan más, ${breakPhrase}.${historyPhrase}`
+}
+
+export const CONTINUITY_WINDOW_UNIT_LABEL: Record<
+  ContinuityWindowUnit,
+  string
+> = {
+  dias: "días",
+  semanas: "semanas",
+  meses: "meses",
+  bimestres: "bimestres",
+}
+
+/** Singular explícito, no `replace(/s$/)`: eso convierte "meses" en "mese". */
+const CONTINUITY_WINDOW_UNIT_SINGULAR: Record<ContinuityWindowUnit, string> = {
+  dias: "día",
+  semanas: "semana",
+  meses: "mes",
+  bimestres: "bimestre",
+}
+
+/** "35 días" / "2 meses" / "1 mes". */
+export function formatContinuityWindow(
+  amount: number | undefined,
+  unit: ContinuityWindowUnit | undefined
+): string {
+  if (!amount) return "—"
+  const key = unit ?? "dias"
+  return `${amount} ${
+    amount === 1
+      ? CONTINUITY_WINDOW_UNIT_SINGULAR[key]
+      : CONTINUITY_WINDOW_UNIT_LABEL[key]
+  }`
 }
 
 export const APPLY_TO_LABEL: Record<ApplyTo, string> = {
@@ -562,12 +666,27 @@ export const ENROLLMENT_REQUIREMENT_LABEL: Record<
 /** Bitácora de "Panel de promociones · Logs" (`promocion_eventos.tipo`). */
 export const PROMOTION_EVENT_TYPE_LABEL: Record<PromotionEventType, string> = {
   creada: "Creada",
+  editada: "Editada",
   activada: "Activada",
-  pausada: "Pausada",
+  inactivada: "Inactivada",
+  finalizada: "Finalizada",
   presupuesto_incrementado: "Presupuesto incrementado",
   presupuesto_agotado: "Presupuesto agotado",
   vencida: "Vencida",
   cancelada: "Cancelada",
   canje: "Canje",
   canje_rechazado: "Canje rechazado",
+}
+
+/** Motivo del cambio de estado (`promocion_eventos.codigo_motivo`). */
+export const PROMOTION_STATUS_CHANGE_REASON_LABEL: Record<
+  PromotionStatusChangeReason,
+  string
+> = {
+  decision_comercial: "Decisión comercial",
+  presupuesto: "Presupuesto",
+  error_configuracion: "Error de configuración",
+  bajo_rendimiento: "Bajo rendimiento",
+  fin_de_campana: "Fin de campaña",
+  otro: "Otro (especificar)",
 }

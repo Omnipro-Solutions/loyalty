@@ -71,7 +71,8 @@ export function createPromotionDefaults(
     vigenciaSaldoDias: undefined,
     montoMinimoCanje: undefined,
     // descuento_continuidad
-    ventanaContinuidadDias: undefined,
+    ventanaContinuidadCantidad: undefined,
+    ventanaContinuidadUnidad: "dias",
     alRomperContinuidad: undefined,
     acumulaRetroactivo: false,
     efectoDevolucion: undefined,

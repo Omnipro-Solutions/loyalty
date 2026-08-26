@@ -7,25 +7,11 @@ import { EmptyState } from "@/components/feedback/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { formatEventDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { PROMOTION_EVENT_TYPES, type PromotionEventType } from "@/types/domain"
+import { PROMOTION_EVENT_TYPES } from "@/types/domain"
 
+import { PROMOTION_EVENT_BADGE_VARIANT } from "../lib/event-icon"
 import { CHANNEL_SCOPE_LABEL, PROMOTION_EVENT_TYPE_LABEL } from "../lib/labels"
 import type { PromotionEventItem } from "../lib/queries"
-
-const EVENT_BADGE_VARIANT: Record<
-  PromotionEventType,
-  "neutral" | "success" | "warning" | "error" | "info"
-> = {
-  creada: "neutral",
-  activada: "success",
-  pausada: "warning",
-  presupuesto_incrementado: "info",
-  presupuesto_agotado: "warning",
-  vencida: "neutral",
-  cancelada: "neutral",
-  canje: "success",
-  canje_rechazado: "error",
-}
 
 const FILTERS = ["todos", ...PROMOTION_EVENT_TYPES] as const
 type Filter = (typeof FILTERS)[number]
@@ -60,7 +46,7 @@ function EventRow({
           {formatEventDate(event.ocurridoEn)}
         </span>
         <Badge
-          variant={EVENT_BADGE_VARIANT[event.tipo]}
+          variant={PROMOTION_EVENT_BADGE_VARIANT[event.tipo]}
           className="w-fit shrink-0"
         >
           {PROMOTION_EVENT_TYPE_LABEL[event.tipo]}

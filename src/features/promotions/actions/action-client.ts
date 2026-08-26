@@ -17,7 +17,7 @@ export const promotionsActionClient = actionClient.use(async ({ next }) => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role_id")
+    .select("org_id, role_id, nombre")
     .eq("id", user.id)
     .single()
   if (!profile) throw new Error("Perfil no encontrado.")
@@ -32,6 +32,14 @@ export const promotionsActionClient = actionClient.use(async ({ next }) => {
   )
 
   return next({
-    ctx: { supabase, userId: user.id, orgId: profile.org_id, permissionsSet },
+    ctx: {
+      supabase,
+      userId: user.id,
+      orgId: profile.org_id,
+      permissionsSet,
+      // Con qué nombre firma esta persona los eventos de `promocion_eventos`
+      // (mismo criterio que `actorLabel` del cliente de cupones).
+      actorLabel: profile.nombre ?? "Usuario",
+    },
   })
 })

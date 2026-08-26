@@ -14,13 +14,6 @@ import { Field } from "@/components/form/field"
 import { Row } from "@/components/form/row"
 import { Stepper } from "@/components/form/stepper"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { BXGY_SCOPES, type BxgyScope } from "@/types/domain"
 
 import { BXGY_SCOPE_LABEL } from "../../lib/labels"
@@ -63,7 +56,6 @@ export function BxgyForm({
   const pagaCantidad = useWatch({ control, name: "pagaCantidad" }) ?? 1
   const alcancePiezas = useWatch({ control, name: "alcancePiezas" })
   const productoCompradoId = useWatch({ control, name: "productoCompradoId" })
-  const mezclaEnUniverso = useWatch({ control, name: "mezclaEnUniverso" })
 
   return (
     <div className="flex w-full flex-col gap-3.5">
@@ -160,28 +152,14 @@ export function BxgyForm({
         </p>
       )}
 
-      {alcancePiezas !== "producto_especifico" && (
-        <Field
-          label="Mezclar SKUs distintos del universo"
-          htmlFor="mezclaEnUniverso"
-          hint="No, si «compra N» exige que las N piezas sean del mismo producto."
-        >
-          <Select
-            value={mezclaEnUniverso ? "si" : "no"}
-            onValueChange={(v) => setValue("mezclaEnUniverso", v === "si")}
-          >
-            <SelectTrigger id="mezclaEnUniverso">
-              <SelectValue>
-                {(v: "si" | "no") => (v === "si" ? "Sí" : "No")}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="no">No</SelectItem>
-              <SelectItem value="si">Sí</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-      )}
+      {/*
+        "Mezclar SKUs distintos del universo" (`mezclaEnUniverso`) ya no se
+        muestra ni se exige — decisión del usuario. El campo sigue
+        existiendo y persistiéndose con su default (`true`, mismo que el
+        `default` de la columna) para no perder el dato de las promociones
+        que ya lo tenían guardado; simplemente dejó de ser una decisión
+        del formulario.
+      */}
     </div>
   )
 }

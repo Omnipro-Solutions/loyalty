@@ -494,11 +494,23 @@ export const STACKING_MODES = [
 ] as const
 export type StackingMode = (typeof STACKING_MODES)[number]
 
-// Publication flag (07.1 "Guardar y activar" / "Guardar como borrador"). The
-// status shown in the listing (Activa/Programada/Finalizada) is computed by
-// crossing this with vigente_desde/vigente_hasta — see
-// `features/promotions/lib/status.ts` — instead of being stored separately.
-export const PROMOTION_PUBLICATION_STATUSES = ["borrador", "activa"] as const
+// Lifecycle of a promotion. It is picked explicitly when creating it (step
+// "Resumen" of 07.1 — "con qué estado se cierra el formulario") and, once
+// created, it is the ONLY field that stays editable: everything else becomes
+// read-only. Allowed transitions live in `features/promotions/lib/status.ts`.
+//
+// `activa`/`inactiva` keep the feminine form of the stored value because it
+// agrees with "promoción" and is what `estado_publicacion` already holds in
+// the seed and in every `.eq("estado_publicacion", "activa")` query.
+//
+// `programada` is NOT part of this set: it is derived by crossing the status
+// with vigente_desde/vigente_hasta instead of being stored separately.
+export const PROMOTION_PUBLICATION_STATUSES = [
+  "borrador",
+  "activa",
+  "inactiva",
+  "finalizada",
+] as const
 export type PromotionPublicationStatus =
   (typeof PROMOTION_PUBLICATION_STATUSES)[number]
 
@@ -789,11 +801,28 @@ export const ENROLLMENT_REQUIREMENTS = [
 ] as const
 export type EnrollmentRequirement = (typeof ENROLLMENT_REQUIREMENTS)[number]
 
+/**
+ * Unidad de la ventana de continuidad (`descuento_continuidad`). Se guarda
+ * la unidad elegida y no solo su equivalente en días porque "2 meses" y
+ * "60 días" no son la misma regla de negocio, aunque hoy se aproximen
+ * igual (ver `CONTINUITY_WINDOW_UNIT_DAYS` en
+ * `features/promotions/lib/continuity-discount.ts`).
+ */
+export const CONTINUITY_WINDOW_UNITS = [
+  "dias",
+  "semanas",
+  "meses",
+  "bimestres",
+] as const
+export type ContinuityWindowUnit = (typeof CONTINUITY_WINDOW_UNITS)[number]
+
 /** Vocabulario de `tipo` en `promocion_eventos` — ciclo de vida + canjes, ver comentario de la migración `20260826160000_promociones_eventos.sql`. */
 export const PROMOTION_EVENT_TYPES = [
   "creada",
+  "editada",
   "activada",
-  "pausada",
+  "inactivada",
+  "finalizada",
   "presupuesto_incrementado",
   "presupuesto_agotado",
   "vencida",
@@ -802,6 +831,23 @@ export const PROMOTION_EVENT_TYPES = [
   "canje_rechazado",
 ] as const
 export type PromotionEventType = (typeof PROMOTION_EVENT_TYPES)[number]
+
+/**
+ * Motivo obligatorio al cambiar el estado de una promoción publicada — se
+ * guarda en `promocion_eventos.codigo_motivo` y es lo que hace auditable la
+ * bitácora ("quién, cuándo y por qué"). `otro` exige además una nota
+ * libre en `nota_motivo`.
+ */
+export const PROMOTION_STATUS_CHANGE_REASONS = [
+  "decision_comercial",
+  "presupuesto",
+  "error_configuracion",
+  "bajo_rendimiento",
+  "fin_de_campana",
+  "otro",
+] as const
+export type PromotionStatusChangeReason =
+  (typeof PROMOTION_STATUS_CHANGE_REASONS)[number]
 
 export const PROMOTION_EVENT_ACTOR_TYPES = [
   "usuario",

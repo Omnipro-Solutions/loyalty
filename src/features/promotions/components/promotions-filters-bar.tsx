@@ -5,14 +5,19 @@ import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
-import { CHANNEL_SCOPES } from "@/types/domain"
+import { CHANNEL_SCOPES, PROMOTION_PUBLICATION_STATUSES } from "@/types/domain"
 
-import { CHANNEL_SCOPE_LABEL } from "../lib/labels"
+import { CHANNEL_SCOPE_LABEL, PROMOTION_STATUS_LABEL } from "../lib/labels"
 
-const STATUS_OPTIONS = [
-  { value: "activa", label: "Activas" },
-  { value: "borrador", label: "Borradores" },
-]
+/**
+ * Filtra por `estado_publicacion` (el valor guardado), así que no incluye
+ * "Programada": ese estado se deriva de las fechas y no existe en la
+ * columna — ver `lib/status.ts`.
+ */
+const STATUS_OPTIONS = PROMOTION_PUBLICATION_STATUSES.map((status) => ({
+  value: status,
+  label: PROMOTION_STATUS_LABEL[status],
+}))
 
 /** Búsqueda + filtros de 06.1 — cada cambio actualiza los searchParams y la página server-side vuelve a consultar. */
 export function PromotionsFiltersBar() {

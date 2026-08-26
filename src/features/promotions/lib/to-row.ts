@@ -63,7 +63,11 @@ export function toRow(values: PromotionValues) {
     paga_cantidad: pick("pagaCantidad"),
     alcance_piezas: pick("alcancePiezas"),
     descuento_unidad_extra_pct: pick("descuentoUnidadExtraPct"),
-    mezcla_en_universo: pick("mezclaEnUniverso", true),
+    // Sin `pick`: `mezclaEnUniverso` ya no está en `MECHANIC_FIELDS` (dejó
+    // de ser un campo del formulario), así que `pick` lo forzaría a `true`
+    // y borraría un `false` ya guardado al volver a guardar la promoción.
+    // La columna es `not null default true`, de ahí el `?? true`.
+    mezcla_en_universo: values.mezclaEnUniverso ?? true,
     producto_comprado_id: pick("productoCompradoId"),
     producto_regalo_id: pick("productoRegaloId"),
     cantidad_regalo: pick("cantidadRegalo"),
@@ -109,7 +113,8 @@ export function toRow(values: PromotionValues) {
     disponibilidad_dias: pick("disponibilidadDias"),
     vigencia_saldo_dias: pick("vigenciaSaldoDias"),
     monto_minimo_canje: pick("montoMinimoCanje"),
-    ventana_continuidad_dias: pick("ventanaContinuidadDias"),
+    ventana_continuidad_cantidad: pick("ventanaContinuidadCantidad"),
+    ventana_continuidad_unidad: pick("ventanaContinuidadUnidad"),
     al_romper_continuidad: pick("alRomperContinuidad"),
     acumula_retroactivo: pick("acumulaRetroactivo", false),
     efecto_devolucion: pick("efectoDevolucion"),
