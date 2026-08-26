@@ -99,19 +99,26 @@ export const importPromotionsAction = promotionsActionClient
 
     const { ready, failures } = validateImportBatch(parsedInput.rows, catalogs)
 
+    function finish(created: number): ImportPromotionsResult {
+      if (created > 0) revalidatePath("/promociones")
+      return { ok: true, created, failed: failures.sort(sortByRow) }
+    }
+
     // Duplicados contra la BD — la unicidad real es (org_id, codigo); RLS ya
-    // acota por org_id, así que basta con comparar por código.
+    // acota por org_id, así que basta con comparar por código. Los chunks son
+    // consultas independientes entre sí — se lanzan en paralelo.
     let survivors = ready
     if (ready.length > 0) {
       const existing = new Set<string>()
-      for (const group of chunk(
-        ready.map((r) => r.values.code),
-        DB_CODE_CHUNK_SIZE
-      )) {
-        const { data } = await ctx.supabase
-          .from("promociones")
-          .select("codigo")
-          .in("codigo", group)
+      const chunkResults = await Promise.all(
+        chunk(
+          ready.map((r) => r.values.code),
+          DB_CODE_CHUNK_SIZE
+        ).map((group) =>
+          ctx.supabase.from("promociones").select("codigo").in("codigo", group)
+        )
+      )
+      for (const { data } of chunkResults) {
         for (const row of data ?? []) existing.add(row.codigo)
       }
 
@@ -134,7 +141,7 @@ export const importPromotionsAction = promotionsActionClient
     }
 
     if (survivors.length === 0) {
-      return { ok: true, created: 0, failed: failures.sort(sortByRow) }
+      return finish(0)
     }
 
     const { data: inserted, error } = await ctx.supabase
@@ -143,16 +150,24 @@ export const importPromotionsAction = promotionsActionClient
       .select("id")
 
     if (!error) {
-      const created = inserted?.length ?? 0
-      if (created > 0) revalidatePath("/promociones")
-      return { ok: true, created, failed: failures.sort(sortByRow) }
+      return finish(inserted?.length ?? 0)
     }
 
+    // El insert masivo falló (típicamente una carrera sobre el índice único
+    // de `codigo`) — cada fila apunta a un `codigo` distinto, así que los
+    // reintentos fila-por-fila son independientes entre sí y se lanzan en
+    // paralelo en vez de esperar uno por uno.
+    const rowResults = await Promise.all(
+      survivors.map(async (survivor) => {
+        const { error: rowError } = await ctx.supabase
+          .from("promociones")
+          .insert({ org_id: ctx.orgId, ...toRow(survivor.values) })
+        return { survivor, rowError }
+      })
+    )
+
     let created = 0
-    for (const survivor of survivors) {
-      const { error: rowError } = await ctx.supabase
-        .from("promociones")
-        .insert({ org_id: ctx.orgId, ...toRow(survivor.values) })
+    for (const { survivor, rowError } of rowResults) {
       if (!rowError) {
         created += 1
         continue
@@ -174,6 +189,5 @@ export const importPromotionsAction = promotionsActionClient
       })
     }
 
-    if (created > 0) revalidatePath("/promociones")
-    return { ok: true, created, failed: failures.sort(sortByRow) }
+    return finish(created)
   })

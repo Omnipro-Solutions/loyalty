@@ -87,6 +87,12 @@ export function formatInitials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase()
 }
 
+/** "482 B" / "12.4 KB" — tamaño de archivo para previsualizaciones de upload. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  return `${(bytes / 1024).toFixed(1)} KB`
+}
+
 const SHORT_MONTHS = [
   "ene",
   "feb",

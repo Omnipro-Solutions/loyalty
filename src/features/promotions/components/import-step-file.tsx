@@ -8,7 +8,7 @@ import { Message } from "@/components/form/message"
 import { Section } from "@/components/form/section"
 import { Button } from "@/components/ui/button"
 import { csvCell, downloadCsv, parseCsv, type ParsedCsv } from "@/lib/csv"
-import { formatNumber } from "@/lib/format"
+import { formatBytes, formatNumber } from "@/lib/format"
 
 import { MAX_IMPORT_ROWS, buildTemplateCsv } from "../lib/promotion-import"
 
@@ -16,11 +16,6 @@ type ImportStepFileProps = {
   file: { name: string; size: string } | null
   onFileParsed: (name: string, size: string, parsed: ParsedCsv) => void
   onRemove: () => void
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  return `${(bytes / 1024).toFixed(1)} KB`
 }
 
 /** Paso "Archivo": una fila = una promoción. Todo se parsea en el navegador — no hay bucket de Storage en este proyecto, mismo motivo que `features/coupons/lib/csv-import.ts`. */

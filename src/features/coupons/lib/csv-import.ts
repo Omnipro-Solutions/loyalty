@@ -5,7 +5,7 @@
  * Action recibe filas ya normalizadas, no el archivo.
  */
 
-import { parseCsv, type ParsedCsv } from "@/lib/csv"
+import { inferHeaderMapping, parseCsv, type ParsedCsv } from "@/lib/csv"
 
 export { parseCsv }
 export type { ParsedCsv }
@@ -28,12 +28,11 @@ const HEADER_HINTS: Record<CouponImportColumnKey, RegExp> = {
 
 /** Heurística por nombre de columna — igual criterio que usaría alguien leyendo el header a simple vista. */
 export function inferColumnMapping(headers: string[]): ColumnMapping {
-  const mapping: ColumnMapping = {}
-  for (const { key } of COUPON_IMPORT_COLUMNS) {
-    const index = headers.findIndex((h) => HEADER_HINTS[key].test(h))
-    if (index >= 0) mapping[key] = index
-  }
-  return mapping
+  return inferHeaderMapping(
+    headers,
+    COUPON_IMPORT_COLUMNS.map((c) => c.key),
+    HEADER_HINTS
+  )
 }
 
 export type CouponImportRow = {

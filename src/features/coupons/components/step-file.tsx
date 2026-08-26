@@ -5,7 +5,7 @@ import { useState } from "react"
 import { FileUpload } from "@/components/form/file-upload"
 import { Message } from "@/components/form/message"
 import { Section } from "@/components/form/section"
-import { formatNumber } from "@/lib/format"
+import { formatBytes, formatNumber } from "@/lib/format"
 
 import {
   inferColumnMapping,
@@ -20,11 +20,6 @@ type StepFileProps = {
   error?: string
   onChange: (filename: string, rows: CouponImportRow[]) => void
   onRemove: () => void
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  return `${(bytes / 1024).toFixed(1)} KB`
 }
 
 /** Paso "Archivo" (csv_import): una fila = un cupón; sin coincidencia se emite al portador (doc §3.6). Todo se parsea en el navegador. */
