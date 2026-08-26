@@ -367,3 +367,23 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  /* Scrollbar delgado y discreto (sidebar de navegación, listas largas) —
+     grosor propio vía pseudo-elementos webkit, ya que Tailwind no expone
+     una utilidad para esto. `scrollbar-color` cubre Firefox. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+  }
+}
