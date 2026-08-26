@@ -15,28 +15,19 @@ import { formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { PromotionType } from "@/types/domain"
 
-import { shortScope, scopeSummary } from "../lib/scope"
+import { shortScope, scopeSummary, scopeTags } from "../lib/scope"
+import { ScopeTags } from "./scope-tags"
 import { promotionStatus } from "../lib/status"
-import { PROMOTION_TYPE_LABEL } from "../lib/labels"
+import {
+  PROMOTION_STATUS_DOT,
+  PROMOTION_STATUS_LABEL,
+  PROMOTION_TYPE_LABEL,
+} from "../lib/labels"
 import type { Promotion } from "../lib/queries"
 import { PROMOTION_TYPE_COLOR, PROMOTION_TYPE_ICON } from "../lib/type-icon"
 
 const features = tableFeatures({ columnSizingFeature })
 const helper = createColumnHelper<typeof features, Promotion>()
-
-const STATUS_LABEL: Record<string, string> = {
-  activa: "Activa",
-  programada: "Programada",
-  finalizada: "Finalizada",
-  borrador: "Borrador",
-}
-
-const STATUS_DOT: Record<string, string> = {
-  activa: "bg-success",
-  programada: "bg-warning",
-  finalizada: "bg-border-strong",
-  borrador: "bg-muted-foreground",
-}
 
 type PromotionsTableProps = {
   promotions: Promotion[]
@@ -96,11 +87,17 @@ export function PromotionsTable({
           id: "scope",
           size: 130,
           header: () => "ALCANCE",
-          cell: (info) => (
-            <span className="truncate text-secondary-foreground">
-              {scopeSummary(info.row.original, ctx)}
-            </span>
-          ),
+          cell: (info) => {
+            const promotion = info.row.original
+            return (
+              <ScopeTags
+                tags={scopeTags(promotion)}
+                conditions={promotion.condiciones}
+                names={ctx}
+                fallback={scopeSummary(promotion, ctx)}
+              />
+            )
+          },
         }),
         helper.accessor("canjes", {
           size: 90,
@@ -181,10 +178,12 @@ export function PromotionsTable({
                 <span
                   className={cn(
                     "size-[7px] shrink-0 rounded-full",
-                    STATUS_DOT[status]
+                    PROMOTION_STATUS_DOT[status]
                   )}
                 />
-                <span className="text-xs">{STATUS_LABEL[status]}</span>
+                <span className="text-xs">
+                  {PROMOTION_STATUS_LABEL[status]}
+                </span>
               </div>
             )
           },

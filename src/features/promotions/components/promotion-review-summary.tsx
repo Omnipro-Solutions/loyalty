@@ -1,4 +1,19 @@
+"use client"
+
+import {
+  CalendarRange,
+  ChevronDown,
+  Coins,
+  Filter,
+  Fingerprint,
+  Gauge,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react"
+import { useState } from "react"
+
 import { formatUSD, formatDate } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 import {
   ACCRUAL_TIMING_LABEL,
@@ -19,23 +34,26 @@ import {
   FINANCIADOR_LABEL,
   MULTIPLIER_RESOLUTION_MODE_LABEL,
   NON_TRANSACTIONAL_BENEFIT_TYPE_LABEL,
-  PIECE_SELECTION_CRITERION_LABEL,
   POINTS_DEBIT_TIMING_LABEL,
   PRICE_BASIS_LABEL,
   PROMOTION_TYPE_LABEL,
-  RETURN_EFFECT_LABEL,
   RX_APPLICABILITY_LABEL,
   SETTLEMENT_PERIOD_LABEL,
   STACKING_MODE_LABEL,
-  STORE_FORMAT_LABEL,
   TIER_NAME_LABEL,
   TRIGGER_EVENT_LABEL,
   formatContinuityTier,
+  formatContinuityWindow,
   formatDiscountTier,
   formatLimitRow,
 } from "../lib/labels"
 import { isConditionGroup } from "../lib/condition-tree"
 import { BENEFIT_TYPES_WITH_APPLY_TO } from "../lib/mechanic-fields"
+import {
+  buildRuleReadingNames,
+  formatConditionValue,
+  type RuleReadingNames,
+} from "../lib/rule-reading"
 import type {
   ConditionCategory,
   ConditionSegment,
@@ -44,132 +62,107 @@ import type {
   ProductOption,
   SupplierOption,
 } from "../lib/queries"
-import type {
-  ConditionNodeValues,
-  ConditionValues,
-  PromotionValues,
-} from "../schemas"
+import type { ConditionNodeValues, PromotionValues } from "../schemas"
 
+/**
+ * Un dato = un cuadro con la etiqueta arriba y el valor abajo, dos por
+ * fila (ver el `grid` de `SummaryGroup`). Casi ningún valor del Resumen
+ * pasa de dos palabras, así que la fila etiqueta-…-valor a todo el ancho
+ * dejaba un hueco enorme en medio y obligaba a leer por proximidad; en
+ * cuadros el par se lee junto y caben el doble de datos a la vista.
+ */
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-xs">
-      <span className="shrink-0 text-secondary-foreground">{label}</span>
-      <span className="text-right font-medium text-foreground">{value}</span>
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-xl border border-border bg-background px-3 py-2">
+      <span className="truncate text-[10px] leading-[14px] tracking-[0.02em] text-muted-foreground uppercase">
+        {label}
+      </span>
+      <span className="text-[13px] leading-[18px] font-medium break-words text-foreground">
+        {value}
+      </span>
     </div>
   )
 }
 
 function SummaryGroup({
   title,
+  icon: Icon,
+  /** `flow` para contenido que no son pares etiqueta/valor (el árbol de condiciones), que necesita todo el ancho. */
+  layout = "grid",
   children,
 }: {
   title: string
+  icon: LucideIcon
+  layout?: "grid" | "flow"
   children: React.ReactNode
 }) {
+  // Colapsadas al abrir el paso: la lectura lógica de arriba ("Cómo lee el
+  // motor esta promoción") ya da el resumen completo, así que estas
+  // tarjetas son para bajar al detalle del campo que interese, no para
+  // scrollear 40 datos antes de llegar al botón de guardar.
+  const [open, setOpen] = useState(false)
+
   return (
-    <div className="flex flex-col gap-2 border-b border-border pb-4 last:border-0 last:pb-0">
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </p>
-      <div className="flex flex-col gap-1.5">{children}</div>
+    <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-muted/25">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-3.5 py-3 text-left hover:bg-muted/50"
+      >
+        <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-background">
+          <Icon className="size-3.5 text-muted-foreground" />
+        </div>
+        <p className="flex-1 text-[11px] font-semibold tracking-[0.05em] text-secondary-foreground uppercase">
+          {title}
+        </p>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            !open && "-rotate-90"
+          )}
+        />
+      </button>
+      {open && (
+        <div
+          className={cn(
+            "px-3.5 pb-3.5",
+            layout === "grid"
+              ? "grid grid-cols-1 gap-2 sm:grid-cols-2"
+              : "flex flex-col"
+          )}
+        >
+          {children}
+        </div>
+      )}
     </div>
   )
 }
 
-function conditionLeafSummary(
-  condition: ConditionValues,
-  categoryNameById: Map<string, string>,
-  segmentNameById: Map<string, string>,
-  couponBatchNameById: Map<string, string>,
-  tierNameById: Map<string, string>,
-  productNameById: Map<string, string>
-): string {
-  if (condition.campo === "categoria") {
-    return (
-      condition.valor.map((id) => categoryNameById.get(id) ?? id).join(", ") ||
-      "—"
-    )
-  }
-  if (condition.campo === "producto") {
-    return (
-      condition.valor.map((id) => productNameById.get(id) ?? id).join(", ") ||
-      "—"
-    )
-  }
-  if (condition.campo === "segmento") {
-    return segmentNameById.get(condition.valor) ?? condition.valor
-  }
-  if (condition.campo === "monto_carrito") {
-    return formatUSD(condition.valor)
-  }
-  if (condition.campo === "cupon_codigo") {
-    return couponBatchNameById.get(condition.valor) ?? condition.valor
-  }
-  if (condition.campo === "socio_nivel") {
-    return (
-      condition.valor.map((id) => tierNameById.get(id) ?? id).join(", ") || "—"
-    )
-  }
-  if (condition.campo === "tienda_formato") {
-    return (
-      condition.valor
-        .map((f) => STORE_FORMAT_LABEL[f as keyof typeof STORE_FORMAT_LABEL])
-        .join(", ") || "—"
-    )
-  }
-  if (
-    condition.campo === "socio_provincia" ||
-    condition.campo === "tienda_region" ||
-    condition.campo === "producto_marca" ||
-    condition.campo === "producto_proveedor"
-  ) {
-    return condition.valor.join(", ") || "—"
-  }
-  if (condition.campo === "socio_antiguedad") {
-    return `${condition.valor} meses o más`
-  }
-  if (condition.campo === "socio_edad") {
-    return `${condition.valor} años o más`
-  }
-  return String(condition.valor)
-}
-
-/** Vista de solo-lectura del árbol de condiciones — bullets con sangría por profundidad + "Cumple TODAS/ALGUNA" cuando un grupo tiene más de un hijo, sin la fidelidad visual (chips) del editor. */
+/**
+ * Vista de solo-lectura del árbol de condiciones — sangría por profundidad
+ * + "Cumple TODAS/ALGUNA" cuando un grupo tiene más de un hijo, sin la
+ * fidelidad visual (chips) del editor. El formato del valor sale de
+ * `lib/rule-reading.ts`, compartido con la lectura lógica de la regla.
+ */
 function ConditionNodeSummary({
   node,
   depth,
-  categoryNameById,
-  segmentNameById,
-  couponBatchNameById,
-  tierNameById,
-  productNameById,
+  names,
 }: {
   node: ConditionNodeValues
   depth: number
-  categoryNameById: Map<string, string>
-  segmentNameById: Map<string, string>
-  couponBatchNameById: Map<string, string>
-  tierNameById: Map<string, string>
-  productNameById: Map<string, string>
+  names: RuleReadingNames
 }) {
   const paddingLeft = depth * 12
 
   if (!isConditionGroup(node)) {
     return (
-      <p className="text-xs text-foreground" style={{ paddingLeft }}>
+      <p className="py-0.5 text-xs text-foreground" style={{ paddingLeft }}>
         <span className="text-secondary-foreground">
           {CONDITION_FIELD_LABEL[node.campo]}:
         </span>{" "}
-        <span className="font-medium">
-          {conditionLeafSummary(
-            node,
-            categoryNameById,
-            segmentNameById,
-            couponBatchNameById,
-            tierNameById,
-            productNameById
-          )}
-        </span>
+        <span className="font-medium">{formatConditionValue(node, names)}</span>
       </p>
     )
   }
@@ -186,7 +179,7 @@ function ConditionNodeSummary({
   }
 
   return (
-    <div className="flex flex-col gap-1" style={{ paddingLeft }}>
+    <div className="flex flex-col" style={{ paddingLeft }}>
       {node.condiciones.length > 1 && (
         <p className="text-[11px] font-semibold text-muted-foreground">
           Cumple {node.combinador === "todas" ? "TODAS" : "ALGUNA"}:
@@ -197,11 +190,7 @@ function ConditionNodeSummary({
           key={index}
           node={child}
           depth={depth + 1}
-          categoryNameById={categoryNameById}
-          segmentNameById={segmentNameById}
-          couponBatchNameById={couponBatchNameById}
-          tierNameById={tierNameById}
-          productNameById={productNameById}
+          names={names}
         />
       ))}
     </div>
@@ -228,17 +217,20 @@ export function PromotionReviewSummary({
   tiers,
   suppliers,
 }: PromotionReviewSummaryProps) {
-  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
-  const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
-  const productNameById = new Map(products.map((p) => [p.id, p.name]))
-  const tierNameById = new Map(tiers.map((t) => [t.id, t.name]))
-  const couponBatchNameById = new Map(couponBatches.map((b) => [b.id, b.name]))
+  const names = buildRuleReadingNames({
+    categories,
+    segments,
+    products,
+    couponBatches,
+    tiers,
+  })
+  const { productNameById, couponBatchNameById } = names
   const supplierNameById = new Map(suppliers.map((s) => [s.id, s.name]))
   const conditionsTree = values.conditions
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <SummaryGroup title="Identidad">
+    <div className="flex w-full flex-col gap-3">
+      <SummaryGroup title="Identidad" icon={Fingerprint}>
         <SummaryRow label="Nombre" value={values.name || "—"} />
         <SummaryRow label="Código" value={values.code || "—"} />
         <SummaryRow
@@ -255,25 +247,17 @@ export function PromotionReviewSummary({
         />
       </SummaryGroup>
 
-      <SummaryGroup title="Condiciones (SI)">
+      <SummaryGroup title="Condiciones (SI)" icon={Filter} layout="flow">
         {!conditionsTree || conditionsTree.condiciones.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Sin condiciones — aplica a todos los clientes.
           </p>
         ) : (
-          <ConditionNodeSummary
-            node={conditionsTree}
-            depth={0}
-            categoryNameById={categoryNameById}
-            segmentNameById={segmentNameById}
-            couponBatchNameById={couponBatchNameById}
-            tierNameById={tierNameById}
-            productNameById={productNameById}
-          />
+          <ConditionNodeSummary node={conditionsTree} depth={0} names={names} />
         )}
       </SummaryGroup>
 
-      <SummaryGroup title="Configuración de la mecánica">
+      <SummaryGroup title="Configuración de la mecánica" icon={Sparkles}>
         <SummaryRow
           label="Beneficio"
           value={
@@ -313,7 +297,7 @@ export function PromotionReviewSummary({
                   }
                 />
                 {(values.discountTiers ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="col-span-full text-xs text-muted-foreground">
                     Sin escalones definidos.
                   </p>
                 ) : (
@@ -457,12 +441,7 @@ export function PromotionReviewSummary({
                   : "—"
               }
             />
-            {values.alcancePiezas !== "producto_especifico" && (
-              <SummaryRow
-                label="Mezclar SKUs del universo"
-                value={values.mezclaEnUniverso ? "Sí" : "No"}
-              />
-            )}
+            {/* `mezclaEnUniverso` ya no se muestra: dejó de ser una decisión del formulario (ver `bxgy-form.tsx`). */}
           </>
         ) : values.benefitType === "multiplicador_puntos" ? (
           <>
@@ -717,7 +696,7 @@ export function PromotionReviewSummary({
         ) : values.benefitType === "descuento_continuidad" ? (
           <>
             {(values.discountTiers ?? []).length === 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="col-span-full text-xs text-muted-foreground">
                 Sin escalones definidos.
               </p>
             ) : (
@@ -733,11 +712,10 @@ export function PromotionReviewSummary({
             )}
             <SummaryRow
               label="Ventana de continuidad"
-              value={
-                values.ventanaContinuidadDias
-                  ? `${values.ventanaContinuidadDias} días`
-                  : "—"
-              }
+              value={formatContinuityWindow(
+                values.ventanaContinuidadCantidad,
+                values.ventanaContinuidadUnidad
+              )}
             />
             <SummaryRow
               label="Al exceder la ventana"
@@ -748,32 +726,15 @@ export function PromotionReviewSummary({
               }
             />
             <SummaryRow
-              label="Acumula compras retroactivas"
+              label="Evalúa historial previo"
               value={values.acumulaRetroactivo ? "Sí" : "No"}
             />
-            <SummaryRow
-              label="Efecto de una devolución"
-              value={
-                values.efectoDevolucion
-                  ? RETURN_EFFECT_LABEL[values.efectoDevolucion]
-                  : "—"
-              }
-            />
-            <SummaryRow
-              label="Piezas que reciben el beneficio"
-              value={
-                values.criterioSeleccionPiezas
-                  ? PIECE_SELECTION_CRITERION_LABEL[
-                      values.criterioSeleccionPiezas
-                    ]
-                  : "—"
-              }
-            />
+            {/* "Efecto de una devolución" y "Piezas que reciben el beneficio" salieron del formulario (ver `continuity-form.tsx`), así que ya no se resumen. */}
           </>
         ) : null}
       </SummaryGroup>
 
-      <SummaryGroup title="Vigencia">
+      <SummaryGroup title="Vigencia" icon={CalendarRange}>
         <SummaryRow
           label="Desde"
           value={values.validFrom ? formatDate(values.validFrom) : "—"}
@@ -802,7 +763,7 @@ export function PromotionReviewSummary({
         />
       </SummaryGroup>
 
-      <SummaryGroup title="Límites y stacking">
+      <SummaryGroup title="Límites y stacking" icon={Gauge}>
         {values.limites && values.limites.length > 0 ? (
           <div className="flex flex-col gap-1">
             {values.limites.map((limit, i) => (
@@ -830,7 +791,7 @@ export function PromotionReviewSummary({
         />
       </SummaryGroup>
 
-      <SummaryGroup title="Economía">
+      <SummaryGroup title="Economía" icon={Coins}>
         <SummaryRow
           label="Naturaleza del costo"
           value={

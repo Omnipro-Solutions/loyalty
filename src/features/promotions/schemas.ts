@@ -10,6 +10,7 @@ import {
   BXGY_SCOPES,
   CONDITION_COMBINATORS,
   CONTINUITY_BREAK_BEHAVIORS,
+  CONTINUITY_WINDOW_UNITS,
   COST_NATURES,
   DAYS_OF_WEEK,
   DISCOUNT_TIER_CALCULATION_MODES,
@@ -26,6 +27,7 @@ import {
   POINTS_DEBIT_TIMINGS,
   PRICE_BASES,
   PROMOTION_PUBLICATION_STATUSES,
+  PROMOTION_STATUS_CHANGE_REASONS,
   BENEFIT_TYPES,
   PROMOTION_TYPES,
   RETURN_EFFECTS,
@@ -283,7 +285,10 @@ const promotionBaseSchema = z.object({
     .optional(),
   // por_piezas (S22): si distintos SKU del universo pueden mezclarse para
   // completar "compra N", o si tienen que ser todas el mismo producto.
-  mezclaEnUniverso: z.boolean(),
+  // Opcional y sin control en el formulario (decisión del usuario, ver
+  // `bxgy-form.tsx`): `toRow` lo persiste con `true`, el mismo default que
+  // la columna `mezcla_en_universo`.
+  mezclaEnUniverso: z.boolean().optional(),
 
   // producto_gratis + por_piezas (alcance producto_especifico) + precio_especial (T03)
   productoCompradoId: z.string().uuid().optional(),
@@ -422,16 +427,24 @@ const promotionBaseSchema = z.object({
   // descuento_continuidad — escalera de continuidad (reusa `discountTiers`
   // de arriba: aquí `umbral` es el ordinal de compra consecutiva, 1, 2,
   // 3…, no unidades/monto del carrito).
-  ventanaContinuidadDias: z
-    .number("Ingresa los días de la ventana de continuidad")
+  // Ventana como cantidad + unidad (días/semanas/meses/bimestres): "2
+  // meses" y "60 días" no son la misma regla, aunque hoy se aproximen igual.
+  ventanaContinuidadCantidad: z
+    .number("Ingresa la cantidad de la ventana de continuidad")
     .int("Debe ser un número entero")
     .positive()
     .max(365)
     .optional(),
+  ventanaContinuidadUnidad: z.enum(CONTINUITY_WINDOW_UNITS).optional(),
   alRomperContinuidad: z.enum(CONTINUITY_BREAK_BEHAVIORS).optional(),
-  // "La acumulación de compras inicia con el lanzamiento del programa — no
-  // cuenta compras retroactivas anteriores" del caso de referencia.
+  // Si la racha evalúa el historial de compras anterior al inicio de la
+  // promoción (antes rotulado "acumula compras retroactivas" — misma
+  // semántica, enunciada como la pregunta que se hace el operador).
   acumulaRetroactivo: z.boolean(),
+  // `efectoDevolucion`/`criterioSeleccionPiezas` ya no tienen control en el
+  // formulario (decisión del usuario: fuera el bloque "casos especiales"),
+  // así que tampoco se exigen — quedan opcionales y `toRow` los persiste
+  // como `null`. Ver `continuity-form.tsx`.
   efectoDevolucion: z.enum(RETURN_EFFECTS).optional(),
   criterioSeleccionPiezas: z.enum(PIECE_SELECTION_CRITERIA).optional(),
 
@@ -476,6 +489,24 @@ const promotionBaseSchema = z.object({
 
   publicationStatus: z.enum(PROMOTION_PUBLICATION_STATUSES),
 })
+
+/**
+ * Campos de condición que acotan la promoción a un conjunto de productos.
+ * `producto_marca` y `categoria` son los dos alcances "por familia";
+ * `producto` es el SKU puntual. Cualquiera de los tres sirve para decir "a
+ * qué productos aplica esta regla".
+ */
+const PRODUCT_SCOPE_CONDITION_FIELDS = [
+  "producto",
+  "producto_marca",
+  "categoria",
+] as const
+
+function hasProductScopeCondition(conditions: ConditionGroupValues): boolean {
+  return flattenConditionTree(conditions).some((condition) =>
+    PRODUCT_SCOPE_CONDITION_FIELDS.some((field) => field === condition.campo)
+  )
+}
 
 /**
  * REGLA INVIOLABLE (igual que `refineByOrigin` en
@@ -763,24 +794,30 @@ function refineByBenefitType(
       }
     })
     need(
-      v.ventanaContinuidadDias === undefined,
-      ["ventanaContinuidadDias"],
-      "Ingresa los días de la ventana de continuidad"
+      v.ventanaContinuidadCantidad === undefined,
+      ["ventanaContinuidadCantidad"],
+      "Ingresa la cantidad de la ventana de continuidad"
+    )
+    need(
+      v.ventanaContinuidadUnidad === undefined,
+      ["ventanaContinuidadUnidad"],
+      "Elige la unidad de la ventana (días, semanas, meses…)"
     )
     need(
       v.alRomperContinuidad === undefined,
       ["alRomperContinuidad"],
       "Elige qué pasa al exceder la ventana de continuidad"
     )
+    // Una escalera de continuidad premia la recompra de ALGO concreto, así
+    // que su alcance de producto no puede quedar abierto a todo el
+    // catálogo: exige al menos una condición de producto, marca o
+    // categoría. El `path` es `conditions` (paso 2) a propósito — es el
+    // campo que valida ese paso, así que `trigger()` sí ve el error (misma
+    // regla inviolable que documenta `refineByBenefitType`).
     need(
-      v.efectoDevolucion === undefined,
-      ["efectoDevolucion"],
-      "Elige el efecto de una devolución sobre el escalón"
-    )
-    need(
-      v.criterioSeleccionPiezas === undefined,
-      ["criterioSeleccionPiezas"],
-      "Elige qué piezas elegibles reciben el beneficio"
+      !hasProductScopeCondition(v.conditions),
+      ["conditions"],
+      "Una escalera de continuidad aplica a productos: agrega en el paso Condiciones al menos una condición de producto, marca o categoría"
     )
     // Análogo a S03 (`por_piezas`/`producto_gratis`): sin un tope de piezas
     // por socio, una escalera de continuidad no tiene techo de unidades.
@@ -868,6 +905,33 @@ export const updatePromotionSchema = promotionBaseSchema
   .superRefine(refineByBenefitType)
   .superRefine(refineEconomics)
   .superRefine(refineCompliance)
+
+/**
+ * Una promoción publicada ya no admite cambios en sus campos — el estado es
+ * lo único editable, así que su actualización tiene su propio esquema
+ * mínimo en vez de reusar `updatePromotionSchema` (que exigiría reenviar el
+ * formulario entero y volvería a validar mecánica/economía de datos que no
+ * se están tocando). Las transiciones válidas las decide el servidor con
+ * `canTransitionStatus`.
+ */
+export const updatePromotionStatusSchema = z
+  .object({
+    id: z.string().uuid(),
+    publicationStatus: z.enum(PROMOTION_PUBLICATION_STATUSES),
+    reasonCode: z.enum(PROMOTION_STATUS_CHANGE_REASONS),
+    reasonNote: z.string().trim().max(280, "Máximo 280 caracteres").optional(),
+  })
+  .superRefine((v, ctx) => {
+    // "Otro" sin nota no explica nada — y el motivo es justo lo que hace
+    // auditable la bitácora.
+    if (v.reasonCode === "otro" && !v.reasonNote) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reasonNote"],
+        message: "Describe el motivo",
+      })
+    }
+  })
 
 export const simulatePromotionSchema = z.object({
   excludeId: z.string().uuid().optional(),

@@ -10,11 +10,12 @@ import type {
   LimitUnit,
   LimitWindow,
   PromotionEventType,
+  PromotionPublicationStatus,
   PromotionType,
 } from "@/types/domain"
 
 import { toDateParam, type DateWindow } from "./dashboard-filters"
-import { promotionStatus } from "./status"
+import { promotionStatus, type PromotionStatus } from "./status"
 
 export type PromotionRow = Database["public"]["Tables"]["promociones"]["Row"]
 
@@ -104,7 +105,7 @@ function withTypedConditions(row: PromotionRow): Promotion {
 
 export type PromotionsFilters = {
   search?: string
-  publicationStatus?: "borrador" | "activa"
+  publicationStatus?: PromotionPublicationStatus
   channel?: string
   page?: number
 }
@@ -273,12 +274,8 @@ function applyDashboardFilters<
 }
 
 export type PromotionsDashboardKpis = {
-  statusCounts: {
-    activa: number
-    programada: number
-    borrador: number
-    finalizada: number
-  }
+  /** Un contador por estado — `Record` sobre `PromotionStatus` para que añadir un estado no deje este conteo desincronizado. */
+  statusCounts: Record<PromotionStatus, number>
   assignedBudget: number
   consumedBudget: number
   consumedBudgetPct: number
@@ -309,7 +306,13 @@ export async function getPromotionsDashboardKpis(
   )
   if (error) throw error
 
-  const statusCounts = { activa: 0, programada: 0, borrador: 0, finalizada: 0 }
+  const statusCounts: Record<PromotionStatus, number> = {
+    activa: 0,
+    programada: 0,
+    borrador: 0,
+    inactiva: 0,
+    finalizada: 0,
+  }
   let assignedBudget = 0
   let consumedBudget = 0
   let totalRedemptions = 0
@@ -597,6 +600,74 @@ export async function listPromotionEvents(): Promise<PromotionEventItem[]> {
     metadatos: (row.metadatos as Record<string, unknown>) ?? {},
     ocurridoEn: row.ocurrido_en,
   }))
+}
+
+/**
+ * Bitácora de UNA promoción, para el "Historial" de su vista de detalle.
+ * Más antiguos primero: es una línea de tiempo que se lee hacia abajo, al
+ * revés que la tabla de Logs del panel (que prioriza lo reciente).
+ *
+ * Si no hay evento `creada` (las promociones sembradas o importadas antes
+ * de que existiera la bitácora no lo tienen), se sintetiza uno desde
+ * `promociones.creado_en` — la fecha es real; el autor no se conoce, y se
+ * dice en vez de inventarlo.
+ */
+export async function listPromotionHistory(
+  promocionId: string
+): Promise<PromotionEventItem[]> {
+  const supabase = await createClient()
+  const [{ data, error }, { data: promotion, error: promotionError }] =
+    await Promise.all([
+      supabase
+        .from("promocion_eventos")
+        .select(
+          "id, promocion_id, tipo, titulo, detalle, actor_etiqueta, canal, codigo_motivo, nota_motivo, metadatos, ocurrido_en"
+        )
+        .eq("promocion_id", promocionId)
+        .order("ocurrido_en", { ascending: true }),
+      supabase
+        .from("promociones")
+        .select("nombre, creado_en")
+        .eq("id", promocionId)
+        .maybeSingle(),
+    ])
+  if (error) throw error
+  if (promotionError) throw promotionError
+
+  const name = promotion?.nombre ?? "—"
+  const events: PromotionEventItem[] = (data ?? []).map((row) => ({
+    id: row.id,
+    promocionId: row.promocion_id,
+    promocionNombre: name,
+    tipo: row.tipo as PromotionEventType,
+    titulo: row.titulo,
+    detalle: row.detalle,
+    actorEtiqueta: row.actor_etiqueta,
+    canal: row.canal as ChannelScope | null,
+    codigoMotivo: row.codigo_motivo,
+    notaMotivo: row.nota_motivo,
+    metadatos: (row.metadatos as Record<string, unknown>) ?? {},
+    ocurridoEn: row.ocurrido_en,
+  }))
+
+  if (promotion && !events.some((event) => event.tipo === "creada")) {
+    events.unshift({
+      id: `sintetico-creada-${promocionId}`,
+      promocionId,
+      promocionNombre: name,
+      tipo: "creada",
+      titulo: "Creada",
+      detalle: "Anterior a la bitácora — no se registró quién la creó.",
+      actorEtiqueta: "No registrado",
+      canal: null,
+      codigoMotivo: null,
+      notaMotivo: null,
+      metadatos: {},
+      ocurridoEn: promotion.creado_en,
+    })
+  }
+
+  return events
 }
 
 export type PromotionCanjesTrendRow = {
@@ -964,7 +1035,10 @@ export async function listProductOptionsForPromotions(
     .select("id, nombre, sku, marca, precio")
     .eq("estado", "activo")
     .order("nombre")
-    .limit(50)
+    // El picker es un modal con buscador y sin tope de filas visibles, así
+    // que el límite real de lo que se puede encontrar es este: con 50 no
+    // había forma de llegar al producto 51 ni buscándolo por nombre.
+    .limit(200)
   if (error) throw error
   const base = data ?? []
 

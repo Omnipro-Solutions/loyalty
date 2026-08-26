@@ -1,4 +1,7 @@
-import type { ContinuityBreakBehavior } from "@/types/domain"
+import type {
+  ContinuityBreakBehavior,
+  ContinuityWindowUnit,
+} from "@/types/domain"
 
 /**
  * Evaluador puro de `descuento_continuidad` — la escalera de descuento que
@@ -14,6 +17,30 @@ import type { ContinuityBreakBehavior } from "@/types/domain"
  */
 
 export type ContinuityTier = { umbral: number; beneficio_valor: number }
+
+/**
+ * Días que vale cada unidad de ventana. `meses` y `bimestres` se aproximan
+ * a 30 y 60 días: esta librería es pura y no conoce la fecha de la compra,
+ * así que no puede contar meses de calendario. La aproximación se declara
+ * aquí, en un solo sitio y bajo test, en vez de repetirse en el SQL y en
+ * cada consumidor.
+ */
+export const CONTINUITY_WINDOW_UNIT_DAYS: Record<ContinuityWindowUnit, number> =
+  {
+    dias: 1,
+    semanas: 7,
+    meses: 30,
+    bimestres: 60,
+  }
+
+/** Ventana declarada (cantidad + unidad) en días — 0 si falta la cantidad. */
+export function continuityWindowInDays(
+  amount: number | undefined,
+  unit: ContinuityWindowUnit | undefined
+): number {
+  if (!amount || amount <= 0) return 0
+  return amount * CONTINUITY_WINDOW_UNIT_DAYS[unit ?? "dias"]
+}
 
 export type ContinuityDiscountConfig = {
   tiers: ContinuityTier[]

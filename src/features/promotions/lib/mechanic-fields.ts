@@ -41,13 +41,15 @@ export const MECHANIC_FIELDS: Record<BenefitType, (keyof PromotionValues)[]> = {
     "beneficioSobreRegaloPct",
   ],
   precio_fijo_bundle: ["productosBundleIds", "benefitValue"],
+  // `mezclaEnUniverso` fuera a propósito: dejó de ser un campo del
+  // formulario (ver `bxgy-form.tsx`), así que tampoco se valida en el paso
+  // "Configuración" — se persiste con su default.
   por_piezas: [
     "compraCantidad",
     "pagaCantidad",
     "alcancePiezas",
     "productoCompradoId",
     "descuentoUnidadExtraPct",
-    "mezclaEnUniverso",
   ],
   multiplicador_puntos: [
     "multiplicadorPuntos",
@@ -98,14 +100,16 @@ export const MECHANIC_FIELDS: Record<BenefitType, (keyof PromotionValues)[]> = {
     "vigenciaSaldoDias",
     "montoMinimoCanje",
   ],
+  // Sin `productoCompradoId` (el alcance de producto se declara ahora como
+  // condición obligatoria en el paso Condiciones) ni `efectoDevolucion`/
+  // `criterioSeleccionPiezas` (el bloque "casos especiales" salió del
+  // formulario) — ver `continuity-form.tsx`.
   descuento_continuidad: [
     "discountTiers",
-    "productoCompradoId",
-    "ventanaContinuidadDias",
+    "ventanaContinuidadCantidad",
+    "ventanaContinuidadUnidad",
     "alRomperContinuidad",
     "acumulaRetroactivo",
-    "efectoDevolucion",
-    "criterioSeleccionPiezas",
   ],
 }
 

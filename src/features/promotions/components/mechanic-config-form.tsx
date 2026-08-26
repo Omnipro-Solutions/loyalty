@@ -145,7 +145,6 @@ export function MechanicConfigForm({
           register={register}
           errors={errors}
           setValue={setValue}
-          products={products}
           onGoToConditionsStep={onGoToConditionsStep}
         />
       )

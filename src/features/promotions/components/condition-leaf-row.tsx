@@ -5,6 +5,7 @@ import { X } from "lucide-react"
 import { CurrencyInput } from "@/components/form/currency-input"
 import { EntityPickerField } from "@/components/form/entity-picker"
 import { Multiselect } from "@/components/form/multiselect"
+import { CHIP_TRIGGER, OptionPicker } from "@/components/form/option-picker"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -38,9 +39,6 @@ import {
 } from "../lib/product-picker"
 import type { ConditionOptions } from "../lib/queries"
 import { conditionSchema, type ConditionValues } from "../schemas"
-
-const CHIP_TRIGGER =
-  "w-fit gap-1 rounded-[7px] border-border bg-background px-2 py-[3px] text-[10.5px] font-semibold leading-[15px] whitespace-nowrap"
 
 type ConditionLeafRowProps = {
   condition: ConditionValues
@@ -151,57 +149,41 @@ export function ConditionLeafRow({
             />
           )}
           {condition.campo === "tienda" && (
-            <Select
+            <OptionPicker
+              size="chip"
+              className="min-w-[110px]"
+              title="Ciudad"
+              description="Las tiendas de la ciudad elegida."
+              placeholder="Elige una ciudad"
+              confirmLabel="Elegir ciudad"
+              options={cities.map((c) => ({
+                value: c.city,
+                label: c.city,
+                hint: `${c.totalStores} tiendas`,
+              }))}
               value={condition.valor}
-              onValueChange={(v) =>
-                onChange({ campo: "tienda", valor: v as string })
-              }
-            >
-              <SelectTrigger className={cn(CHIP_TRIGGER, "min-w-[110px]")}>
-                <SelectValue placeholder="Elige una ciudad">
-                  {(v: string) => {
-                    const city = cities.find((c) => c.city === v)
-                    return city ? `${city.city} (${city.totalStores})` : v
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="w-max">
-                {cities.map((c) => (
-                  <SelectItem key={c.city} value={c.city}>
-                    {c.city} ({c.totalStores})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(valor) => onChange({ campo: "tienda", valor })}
+            />
           )}
           {condition.campo === "segmento" && (
-            <Select
+            <OptionPicker
+              size="chip"
+              className="min-w-[110px]"
+              title="Audiencia"
+              description="Segmento de clientes al que aplica."
+              placeholder="Elige una audiencia"
+              confirmLabel="Elegir audiencia"
+              options={segments.map((s) => ({
+                value: s.id,
+                label: s.name,
+                hint:
+                  s.estimatedCount !== null
+                    ? `${formatNumber(s.estimatedCount)} clientes`
+                    : undefined,
+              }))}
               value={condition.valor}
-              onValueChange={(v) =>
-                onChange({ campo: "segmento", valor: v as string })
-              }
-            >
-              <SelectTrigger className={cn(CHIP_TRIGGER, "min-w-[110px]")}>
-                <SelectValue placeholder="Elige una audiencia">
-                  {(v: string) => {
-                    const segment = segments.find((s) => s.id === v)
-                    if (!segment) return v
-                    return segment.estimatedCount !== null
-                      ? `${segment.name} (${formatNumber(segment.estimatedCount)})`
-                      : segment.name
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="w-max">
-                {segments.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                    {s.estimatedCount !== null &&
-                      ` (${formatNumber(s.estimatedCount)})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(valor) => onChange({ campo: "segmento", valor })}
+            />
           )}
           {condition.campo === "monto_carrito" && (
             <CurrencyInput
@@ -216,28 +198,23 @@ export function ConditionLeafRow({
             />
           )}
           {condition.campo === "cupon_codigo" && (
-            <Select
+            <OptionPicker
+              size="chip"
+              className="min-w-[140px]"
+              title="Emisión de cupones"
+              description="Busca por nombre o referencia."
+              placeholder="Elige una emisión"
+              confirmLabel="Elegir emisión"
+              options={couponBatches.map((b) => ({
+                value: b.id,
+                label: b.name,
+                hint: b.reference,
+              }))}
               value={condition.valor}
-              onValueChange={(v) =>
-                onChange({ campo: "cupon_codigo", valor: v as string })
+              onValueChange={(valor) =>
+                onChange({ campo: "cupon_codigo", valor })
               }
-            >
-              <SelectTrigger className={cn(CHIP_TRIGGER, "min-w-[140px]")}>
-                <SelectValue placeholder="Elige una emisión">
-                  {(v: string) => {
-                    const batch = couponBatches.find((b) => b.id === v)
-                    return batch ? `${batch.name} · ${batch.reference}` : v
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="w-max">
-                {couponBatches.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name} · {b.reference}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           )}
           {condition.campo === "socio_nivel" && (
             <Multiselect

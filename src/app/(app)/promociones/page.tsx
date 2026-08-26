@@ -19,6 +19,7 @@ import {
   listPromotions,
   listConditionSegments,
 } from "@/features/promotions/lib/queries"
+import { PROMOTION_PUBLICATION_STATUSES } from "@/types/domain"
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -33,8 +34,12 @@ export default async function PromotionsPage({
 }: PageProps<"/promociones">) {
   const params = await searchParams
   const search = firstValue(params.q)
-  const publicationStatus = firstValue(params.estado) as
-    "borrador" | "activa" | undefined
+  // `find` en vez de un cast: descarta un `?estado=` inventado a mano en
+  // la URL, que si no llegaría al `.eq()` de la consulta.
+  const estado = firstValue(params.estado)
+  const publicationStatus = PROMOTION_PUBLICATION_STATUSES.find(
+    (status) => status === estado
+  )
   const channel = firstValue(params.canal)
   const page = Number(firstValue(params.page) ?? "1")
 

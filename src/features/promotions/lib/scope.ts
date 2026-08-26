@@ -1,5 +1,7 @@
 import { formatUSD } from "@/lib/format"
+import type { ConditionField, ConditionFieldDomain } from "@/types/domain"
 
+import { CONDITION_FIELD_DOMAIN, CONDITION_FIELD_SHORT_LABEL } from "./labels"
 import type { Condition, ConditionNode } from "./queries"
 
 /** Mismo criterio estructural que `flattenConditionTree` de `lib/condition-tree.ts`, redeclarado por ser server-only (ver `collision.ts`). */
@@ -55,6 +57,55 @@ export function scopeSummary(
   if (promotion.canal_aplicacion === "ecommerce") return "E-commerce"
   if (promotion.tipo === "cantidad") return `${ctx.totalStores} tiendas`
   return "Todos"
+}
+
+/**
+ * Color de la etiqueta por ámbito de la condición — el color dice DE QUÉ
+ * habla la condición (producto, tienda, cliente…), así que dos condiciones
+ * del mismo ámbito se leen como un grupo sin tener que leerlas. Reusa la
+ * paleta `avatar-*`, la misma de `PROMOTION_TYPE_COLOR`.
+ */
+export const CONDITION_DOMAIN_COLOR: Record<
+  ConditionFieldDomain,
+  { bg: string; fg: string }
+> = {
+  Carrito: { bg: "bg-avatar-coral-bg", fg: "text-avatar-coral-fg" },
+  Producto: { bg: "bg-avatar-indigo-bg", fg: "text-avatar-indigo-fg" },
+  Tienda: { bg: "bg-avatar-teal-bg", fg: "text-avatar-teal-fg" },
+  Cliente: { bg: "bg-avatar-violet-bg", fg: "text-avatar-violet-fg" },
+  Cupón: { bg: "bg-avatar-amber-bg", fg: "text-avatar-amber-fg" },
+}
+
+export type ScopeTag = {
+  campo: ConditionField
+  domain: ConditionFieldDomain
+  /** Nombre corto de la condición — lo que se ve en la etiqueta. */
+  label: string
+}
+
+/**
+ * Las condiciones de la promoción como etiquetas, una por campo distinto y
+ * en el orden en que aparecen en el árbol. Devuelve el NOMBRE de la
+ * condición (no su valor): la columna ALCANCE responde "por qué está
+ * acotada", y el valor concreto se ve en el árbol del hover.
+ *
+ * Se deduplica por campo: tres condiciones de categoría en distintos grupos
+ * son una sola etiqueta "Categoría" — repetirla tres veces no aporta nada
+ * en 130px de ancho.
+ */
+export function scopeTags(promotion: PromotionScope): ScopeTag[] {
+  const seen = new Set<ConditionField>()
+  const tags: ScopeTag[] = []
+  for (const condition of flattenConditionNode(promotion.condiciones)) {
+    if (seen.has(condition.campo)) continue
+    seen.add(condition.campo)
+    tags.push({
+      campo: condition.campo,
+      domain: CONDITION_FIELD_DOMAIN[condition.campo],
+      label: CONDITION_FIELD_SHORT_LABEL[condition.campo],
+    })
+  }
+  return tags
 }
 
 /** Subtítulo de 06.1 ("Cantidad · todas las tiendas", "Cupón · nuevos clientes"…) — segunda mitad, versión corta. */

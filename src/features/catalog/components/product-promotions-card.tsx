@@ -32,6 +32,7 @@ const STATUS_LABEL: Record<RelatedPromotion["status"], string> = {
   borrador: "Borrador",
   programada: "Programada",
   activa: "Activa",
+  inactiva: "Inactiva",
   finalizada: "Finalizada",
 }
 
@@ -39,6 +40,7 @@ const STATUS_DOT: Record<RelatedPromotion["status"], string> = {
   borrador: "bg-muted-foreground",
   programada: "bg-warning",
   activa: "bg-success",
+  inactiva: "bg-destructive",
   finalizada: "bg-border-strong",
 }
 

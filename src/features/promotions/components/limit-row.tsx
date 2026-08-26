@@ -47,6 +47,20 @@ type LimitRowProps = {
 }
 
 /**
+ * Ancho de cada Select de la fila, dimensionado a su etiqueta MÁS LARGA
+ * ("en una ventana móvil", "Degradar a otra variante"…) y no al promedio:
+ * `SelectTrigger` recorta con `line-clamp-1`, así que un ancho corto no
+ * desborda — deja el valor a medias, que es peor porque no se nota. Fijo y
+ * no `w-fit` para que la frase no salte de ancho al cambiar de opción.
+ */
+const SELECT_WIDTH = {
+  unidad: "w-[130px]",
+  sujeto: "w-[130px]",
+  ventana: "w-[195px]",
+  alExceder: "w-[215px]",
+} as const
+
+/**
  * Una fila del constructor de límites — L01–L23 son combinaciones de las
  * mismas 4 decisiones, leídas como una frase. Los Selects usan
  * `setValue` directo (no `register`, no arriesgan foco); `tope`/
@@ -76,7 +90,7 @@ export function LimitRow({
           setValue(`limites.${index}.unidad`, v as LimitUnit)
         }
       >
-        <SelectTrigger className="w-[120px]">
+        <SelectTrigger className={SELECT_WIDTH.unidad}>
           <SelectValue>{(v: LimitUnit) => LIMIT_UNIT_LABEL[v]}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -96,7 +110,7 @@ export function LimitRow({
           setValue(`limites.${index}.sujeto`, v as LimitSubject)
         }
       >
-        <SelectTrigger className="w-[120px]">
+        <SelectTrigger className={SELECT_WIDTH.sujeto}>
           <SelectValue>
             {(v: LimitSubject) => LIMIT_SUBJECT_LABEL[v]}
           </SelectValue>
@@ -118,7 +132,7 @@ export function LimitRow({
           setValue(`limites.${index}.ventana`, v as LimitWindow)
         }
       >
-        <SelectTrigger className="w-[150px]">
+        <SelectTrigger className={SELECT_WIDTH.ventana}>
           <SelectValue>{(v: LimitWindow) => LIMIT_WINDOW_LABEL[v]}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -159,7 +173,7 @@ export function LimitRow({
           setValue(`limites.${index}.alExceder`, v as LimitExcessBehavior)
         }
       >
-        <SelectTrigger className="w-[170px]">
+        <SelectTrigger className={SELECT_WIDTH.alExceder}>
           <SelectValue>
             {(v: LimitExcessBehavior) => LIMIT_EXCESS_BEHAVIOR_LABEL[v]}
           </SelectValue>

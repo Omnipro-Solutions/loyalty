@@ -3,9 +3,11 @@ import { notFound } from "next/navigation"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { PromotionForm } from "@/features/promotions/components/promotion-form"
+import { PromotionHistoryCard } from "@/features/promotions/components/promotion-history-card"
 import {
   flattenConditionNodes,
   getPromotionById,
+  listPromotionHistory,
   listConditionBrands,
   listConditionCategories,
   listConditionCities,
@@ -24,6 +26,7 @@ import {
   MARITAL_STATUS_LABEL,
   STORE_FORMAT_LABEL,
 } from "@/features/promotions/lib/labels"
+import { isPromotionLocked } from "@/features/promotions/lib/status"
 import { GENDERS, MARITAL_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 /** Reutiliza el mismo wizard de creación (07.1 adaptado) precargado con los valores existentes. */
@@ -43,6 +46,7 @@ export default async function EditPromotionPage({
     brands,
     conditionSuppliers,
     suppliers,
+    history,
   ] = await Promise.all([
     getPromotionById(id),
     listConditionCategories(),
@@ -55,6 +59,7 @@ export default async function EditPromotionPage({
     listConditionBrands(),
     listConditionSuppliers(),
     listSuppliers(),
+    listPromotionHistory(id),
   ])
   if (!promotion) notFound()
 
@@ -98,7 +103,11 @@ export default async function EditPromotionPage({
   return (
     <AppPage
       breadcrumb={`Comercial  ›  Promociones  ›  ${promotion.nombre}`}
-      title="Editar promoción"
+      title={
+        isPromotionLocked(promotion)
+          ? "Detalle de promoción"
+          : "Editar promoción"
+      }
     >
       <BackLink href="/promociones">Volver a Promociones</BackLink>
       <PromotionForm
@@ -106,6 +115,10 @@ export default async function EditPromotionPage({
         products={products}
         suppliers={suppliers}
         promotion={promotion}
+        // Solo en promociones ya creadas: al crear todavía no hay historia.
+        // Va como slot para que se renderice en el panel derecho, debajo de
+        // las acciones, sin mover su consulta al cliente.
+        historyCard={<PromotionHistoryCard events={history} />}
       />
     </AppPage>
   )

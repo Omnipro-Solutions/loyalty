@@ -1913,7 +1913,8 @@ export type Database = {
           umbral_tipo: string | null
           validacion_requerida: string | null
           valor_beneficio: number | null
-          ventana_continuidad_dias: number | null
+          ventana_continuidad_cantidad: number | null
+          ventana_continuidad_unidad: string | null
           vigencia_saldo_dias: number | null
           vigente_desde: string
           vigente_hasta: string | null
@@ -2007,7 +2008,8 @@ export type Database = {
           umbral_tipo?: string | null
           validacion_requerida?: string | null
           valor_beneficio?: number | null
-          ventana_continuidad_dias?: number | null
+          ventana_continuidad_cantidad?: number | null
+          ventana_continuidad_unidad?: string | null
           vigencia_saldo_dias?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null
@@ -2101,7 +2103,8 @@ export type Database = {
           umbral_tipo?: string | null
           validacion_requerida?: string | null
           valor_beneficio?: number | null
-          ventana_continuidad_dias?: number | null
+          ventana_continuidad_cantidad?: number | null
+          ventana_continuidad_unidad?: string | null
           vigencia_saldo_dias?: number | null
           vigente_desde?: string
           vigente_hasta?: string | null

@@ -3,7 +3,7 @@ import { formatUSD } from "@/lib/format"
 import type { PromotionType } from "@/types/domain"
 
 export type PromotionValidityStatus =
-  "borrador" | "programada" | "activa" | "finalizada"
+  "borrador" | "programada" | "activa" | "inactiva" | "finalizada"
 
 export type RelatedPromotion = {
   id: string
@@ -50,7 +50,11 @@ function validityStatus(
   },
   now: Date = new Date()
 ): PromotionValidityStatus {
-  if (row.estado_publicacion === "borrador") return "borrador"
+  // Solo 'activa' se cruza con las fechas — el resto son decisiones
+  // explícitas del operador y se muestran tal cual.
+  if (row.estado_publicacion !== "activa") {
+    return row.estado_publicacion as PromotionValidityStatus
+  }
   const today = dateOnly(now.toISOString())
   const from = dateOnly(row.vigente_desde)
   const to = row.vigente_hasta ? dateOnly(row.vigente_hasta) : null

@@ -81,11 +81,9 @@ export function PromotionsDashboardKpiRow({
   kpis,
 }: PromotionsDashboardKpiRowProps) {
   const { statusCounts } = kpis
-  const total =
-    statusCounts.activa +
-    statusCounts.programada +
-    statusCounts.borrador +
-    statusCounts.finalizada
+  // Suma sobre las claves, no una lista fija: así un estado nuevo entra en
+  // el total sin tener que acordarse de este sitio.
+  const total = Object.values(statusCounts).reduce((acc, n) => acc + n, 0)
 
   return (
     <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
@@ -93,7 +91,7 @@ export function PromotionsDashboardKpiRow({
         icon="activas"
         label="Promociones activas"
         value={formatNumber(statusCounts.activa)}
-        caption={`${formatNumber(total)} en total · ${formatNumber(statusCounts.programada)} programadas · ${formatNumber(statusCounts.borrador)} borrador`}
+        caption={`${formatNumber(total)} en total · ${formatNumber(statusCounts.programada)} programadas · ${formatNumber(statusCounts.inactiva)} inactivas · ${formatNumber(statusCounts.borrador)} borrador`}
       />
       <PromotionKpiCard
         icon="asignado"
