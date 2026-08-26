@@ -150,7 +150,14 @@ export function InspectorPanel({
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* `key={node.id}` fuerza a React a desmontar y remontar todo este
+          subárbol cuando cambia el nodo seleccionado — sin esto, elegir OTRO
+          nodo del mismo tipo (ej. dos "Acumular puntos") no remonta
+          `AccumulatePointsForm`/`BranchesTab` (React los ve como "el mismo
+          componente en la misma posición"), así que su `useState` local
+          sigue mostrando/editando los valores del nodo anterior y termina
+          escribiéndolos sobre el nodo nuevo. */}
+      <div key={node.id} className="flex-1 overflow-y-auto p-4">
         {activeTab === "Configuración" &&
           (tipo === "acumular_puntos" ? (
             <AccumulatePointsForm
