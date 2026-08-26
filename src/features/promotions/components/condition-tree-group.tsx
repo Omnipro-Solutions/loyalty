@@ -1,5 +1,7 @@
 "use client"
 
+import { ChevronDown } from "lucide-react"
+
 import {
   Select,
   SelectContent,
@@ -22,12 +24,7 @@ import {
   CONDITION_COMBINATOR_CONNECTOR_LABEL,
   CONDITION_COMBINATOR_LABEL,
 } from "../lib/labels"
-import type {
-  ConditionCategory,
-  ConditionCity,
-  ConditionSegment,
-  CouponBatchOption,
-} from "../lib/queries"
+import type { ConditionOptions } from "../lib/queries"
 import type { ConditionGroupValues, ConditionNodeValues } from "../schemas"
 
 const COMBINATOR_TRIGGER =
@@ -38,10 +35,7 @@ type ConditionTreeGroupProps = {
   depth: number
   onChange: (next: ConditionGroupValues) => void
   onRemove?: () => void
-  categories: ConditionCategory[]
-  cities: ConditionCity[]
-  segments: ConditionSegment[]
-  couponBatches: CouponBatchOption[]
+  options: ConditionOptions
 }
 
 /**
@@ -63,10 +57,7 @@ export function ConditionTreeGroup({
   depth,
   onChange,
   onRemove,
-  categories,
-  cities,
-  segments,
-  couponBatches,
+  options,
 }: ConditionTreeGroupProps) {
   const isRoot = depth === 0
 
@@ -110,7 +101,7 @@ export function ConditionTreeGroup({
                 {(v: ConditionCombinator) => CONDITION_COMBINATOR_LABEL[v]}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="w-max">
               {CONDITION_COMBINATORS.map((c) => (
                 <SelectItem key={c} value={c}>
                   {CONDITION_COMBINATOR_LABEL[c]}
@@ -148,9 +139,11 @@ export function ConditionTreeGroup({
                   <button
                     type="button"
                     onClick={toggleCombinador}
-                    className="flex shrink-0 items-center gap-1 rounded-full border border-primary-200 bg-background px-2 py-0.5 text-[9.5px] font-semibold text-primary"
+                    title="Cambiar a Y/O — aplica a todo el grupo"
+                    className="flex shrink-0 items-center gap-0.5 rounded-full border border-primary-200 bg-background px-2 py-0.5 text-[9.5px] font-semibold text-primary transition-colors hover:bg-primary-100"
                   >
                     {CONDITION_COMBINATOR_CONNECTOR_LABEL[node.combinador]}
+                    <ChevronDown className="size-2.5" />
                   </button>
                   <div className="h-px flex-1 bg-border" />
                 </div>
@@ -161,18 +154,12 @@ export function ConditionTreeGroup({
                   depth={depth + 1}
                   onChange={(next) => updateChild(index, next)}
                   onRemove={() => removeChild(index)}
-                  categories={categories}
-                  cities={cities}
-                  segments={segments}
-                  couponBatches={couponBatches}
+                  options={options}
                 />
               ) : (
                 <ConditionLeafRow
                   condition={child}
-                  categories={categories}
-                  cities={cities}
-                  segments={segments}
-                  couponBatches={couponBatches}
+                  options={options}
                   onChange={(next) => updateChild(index, next)}
                   onRemove={() => removeChild(index)}
                 />
@@ -186,14 +173,14 @@ export function ConditionTreeGroup({
         <button
           type="button"
           onClick={() => onChange(withConditionAdded(node))}
-          className="flex flex-1 items-center justify-center rounded-lg border border-primary bg-background py-[7px] text-[10.5px] font-semibold text-primary"
+          className="flex flex-1 items-center justify-center rounded-lg border border-primary bg-background py-[7px] text-[10.5px] font-semibold text-primary transition-colors hover:bg-brand-subtle"
         >
           + Condición
         </button>
         <button
           type="button"
           onClick={() => onChange(withGroupAdded(node))}
-          className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-background py-[7px] text-[10.5px] font-semibold text-secondary-foreground"
+          className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-background py-[7px] text-[10.5px] font-semibold text-secondary-foreground transition-colors hover:border-primary-200 hover:text-primary"
         >
           + Subgrupo
         </button>

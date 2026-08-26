@@ -134,7 +134,35 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
 export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
   {
     // === Entradas ===
+    // `evento_compra` es el único bloque de Entrada con más de un momento
+    // técnico posible para el mismo evento de negocio — por eso es el único
+    // con un campo `trigger` real y editable (docs/builder.md §2-3: "Solo
+    // Entrada tiene Trigger"). Los otros 4 tipos de Entrada son 1:1 con su
+    // trigger — no hay nada que elegir, se muestran como dato informativo
+    // en el inspector en vez de repetir un selector de una sola opción
+    // (ver `entry-triggers.ts`).
     evento_compra: [
+      {
+        key: "trigger",
+        label: "Disparador técnico",
+        kind: "select",
+        required: true,
+        options: [
+          {
+            value: "checkout.calculated",
+            label: "Al calcular el checkout (checkout.calculated)",
+          },
+          {
+            value: "order.paid",
+            label: "Al confirmarse el pago (order.paid)",
+          },
+          {
+            value: "order.completed",
+            label: "Al completarse la orden (order.completed)",
+          },
+        ],
+        hint: "En qué momento técnico exacto debe empezar a evaluarse el workflow — el resto de bloques no vuelve a declarar esto.",
+      },
       {
         key: "fuente_datos",
         label: "Fuente de datos",

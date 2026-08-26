@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache"
 import { getRequestIp } from "@/lib/request-ip"
 
 import { couponsActionClient } from "./action-client"
-import { buildDirectCoupons, resolveRequestedQuantity } from "./batches"
+import {
+  buildDirectCoupons,
+  insertIssuedCouponEvents,
+  resolveRequestedQuantity,
+} from "./batches"
 import { APPROVAL_THRESHOLD_REASON_LABEL } from "../lib/labels"
 import { hasPermission } from "../lib/permissions"
 import { countOtherApprovers } from "../lib/queries"
@@ -378,6 +382,16 @@ export const approveApprovalAction = couponsActionClient
             )
           : null,
       ])
+
+      await insertIssuedCouponEvents(
+        ctx.supabase,
+        ctx.orgId,
+        batch.id,
+        (draftCoupons ?? []).map((c) => ({
+          id: c.id,
+          member_id: c.bearer ? null : c.member_id,
+        }))
+      )
 
       await Promise.all([
         ctx.supabase

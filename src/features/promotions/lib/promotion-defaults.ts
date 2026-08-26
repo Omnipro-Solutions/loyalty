@@ -1,0 +1,98 @@
+import type { BenefitType } from "@/types/domain"
+
+import { suggestedCostNature } from "./cost-nature"
+import type { PromotionValues } from "../schemas"
+
+/**
+ * Defaults de una promoción nueva — extraído de la rama "crear" de
+ * `promotion-form.tsx` para que el wizard y el importador masivo
+ * (`lib/promotion-import.ts`) partan del mismo objeto. `benefitType` es el
+ * único parámetro porque `naturalezaCosto` depende de él
+ * (`suggestedCostNature`).
+ */
+export function createPromotionDefaults(
+  benefitType: BenefitType
+): PromotionValues {
+  return {
+    name: "",
+    code: "",
+    type: "categoria",
+    priority: 5,
+    stackable: false,
+    channelScope: "pos_ecommerce",
+    conditions: { combinador: "todas", condiciones: [] },
+    benefitType,
+    benefitValue: 10,
+    maxCap: undefined,
+    discountTiers: [],
+    thresholdType: "unidades",
+    tierCalculationMode: "escalon_unico",
+    applyTo: "subtotal_carrito",
+    compraCantidad: undefined,
+    pagaCantidad: undefined,
+    alcancePiezas: undefined,
+    descuentoUnidadExtraPct: undefined,
+    mezclaEnUniverso: true,
+    productoCompradoId: undefined,
+    productoRegaloId: undefined,
+    cantidadRegalo: undefined,
+    cantidadMinimaComprada: 1,
+    beneficioSobreRegaloPct: 100,
+    productosBundleIds: [],
+    multiplicadorPuntos: undefined,
+    nivelesRequeridos: [],
+    modoResolucionMultiplicador: "gana_mayor",
+    tipoSaldo: "canjeable",
+    momentoAcreditacion: "inmediato",
+    estadoInicial: "disponible",
+    bonoPuntos: undefined,
+    montoMinimoDisparo: undefined,
+    tipoBeneficioNoTransaccional: "envio_gratis",
+    validacionRequerida: undefined,
+    cupoDisponible: undefined,
+    registraUso: false,
+    couponBatchId: undefined,
+    motivoEmision: undefined,
+    umbralPuntos: undefined,
+    duracionCuponDias: undefined,
+    momentoDebitoPuntos: undefined,
+    devolucionSiVence: false,
+    eventoGatillo: undefined,
+    momentoResolucion: undefined,
+    frecuenciaDisparo: undefined,
+    requisitoAlta: undefined,
+    elegibleEnInactividad: false,
+    precioPromocional: undefined,
+    precioReferencia: undefined,
+    hastaAgotarExistencias: false,
+    respetaPrecioMinimoLegal: true,
+    tipoMonedero: "porcentaje",
+    disponibilidadDias: undefined,
+    vigenciaSaldoDias: undefined,
+    montoMinimoCanje: undefined,
+    validFrom: new Date().toISOString().slice(0, 10),
+    validUntil: undefined,
+    daysOfWeek: [],
+    horaInicio: undefined,
+    horaFin: undefined,
+    limites: [],
+    assignedBudget: 0,
+    exclusionGroup: undefined,
+    stackingMode: "mejor_beneficio",
+    naturalezaCosto: suggestedCostNature(benefitType),
+    financiador: "retailer",
+    proveedorId: undefined,
+    contratoId: undefined,
+    porcentajeCostoProveedor: undefined,
+    periodoLiquidacion: undefined,
+    umbralAlertaPresupuestoPct: undefined,
+    autorizacionVentaBajoCosto: false,
+    nivelAplicacion: "ticket",
+    aplicaSobrePrecio: "vigente",
+    descuentoAcumulaPuntos: true,
+    aplicaARx: "permitido",
+    aprobacionRegulatoria: false,
+    simulacionEjecutada: false,
+    publicationStatus: "borrador",
+  }
+}

@@ -41,11 +41,11 @@ export default async function MembersPage({
   // una sola consulta, dos boundaries que resuelven en el mismo tick.
   const membersPromise = listMembers({ search, tierId, accountStatus, page })
 
-  // El texto de búsqueda queda fuera de la key a propósito: ya tiene
-  // debounce de 300ms, y remontar el boundary en cada tecleo se sentiría
-  // más lento que esperar a que lleguen las filas nuevas. Sí remonta (y
-  // por tanto muestra el skeleton) al cambiar de nivel/estado o de página.
-  const dataKey = `${tierId ?? ""}|${accountStatus ?? ""}|${page}`
+  // `search` ya llega debounced (300ms) desde `MembersFiltersBar` antes de
+  // tocar la URL, así que incluirla aquí no remonta por cada tecla — solo
+  // una vez que la búsqueda se asienta, mostrando el skeleton igual que al
+  // cambiar de nivel/estado o de página.
+  const dataKey = `${search ?? ""}|${tierId ?? ""}|${accountStatus ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Clientes" title="Clientes">

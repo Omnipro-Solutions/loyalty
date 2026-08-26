@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   annotateCounts,
+  calculateAge,
   flattenCounts,
   countRulesAndDepth,
   evaluateGroup,
@@ -22,6 +23,9 @@ function member(overrides: Partial<MemberPreview> = {}): MemberPreview {
     tiene_mascotas: true,
     consentimiento_marketing: true,
     provincia: "Antioquia",
+    edad: 35,
+    estado_civil: "casado",
+    preferencia_compra: "online",
     ...overrides,
   }
 }
@@ -92,6 +96,70 @@ describe("evaluateRule", () => {
         )
       ).toBe(true)
     })
+  })
+})
+
+describe("calculateAge", () => {
+  it("cuenta un año cumplido cuando ya pasó el cumpleaños este año", () => {
+    expect(calculateAge("1990-03-15", new Date("2026-06-01"))).toBe(36)
+  })
+
+  it("no cuenta el año todavía si el cumpleaños de este año no ha llegado", () => {
+    expect(calculateAge("1990-08-20", new Date("2026-06-01"))).toBe(35)
+  })
+
+  it("cuenta el año si hoy es exactamente el cumpleaños", () => {
+    expect(calculateAge("1990-06-01", new Date("2026-06-01"))).toBe(36)
+  })
+
+  it("null si el socio no tiene fecha de nacimiento registrada", () => {
+    expect(calculateAge(null, new Date("2026-06-01"))).toBeNull()
+  })
+})
+
+describe("evaluateRule — campos derivados/nuevos de members (edad, estado_civil, preferencia_compra)", () => {
+  it("edad (numérica, derivada) compara con los operadores numéricos", () => {
+    const m = member({ edad: 55 })
+    expect(
+      evaluateRule({ field: "edad", operator: ">=", value: "55" }, m)
+    ).toBe(true)
+    expect(evaluateRule({ field: "edad", operator: "<", value: "55" }, m)).toBe(
+      false
+    )
+  })
+
+  it("estado_civil compara por igualdad", () => {
+    const m = member({ estado_civil: "soltero" })
+    expect(
+      evaluateRule(
+        { field: "estado_civil", operator: "=", value: "soltero" },
+        m
+      )
+    ).toBe(true)
+  })
+
+  it("preferencia_compra (texto libre) compara por igualdad", () => {
+    const m = member({ preferencia_compra: "en tienda" })
+    expect(
+      evaluateRule(
+        { field: "preferencia_compra", operator: "=", value: "en tienda" },
+        m
+      )
+    ).toBe(true)
+  })
+
+  it("un socio sin edad calculable (fecha_nacimiento null → edad null) respeta la política de dato faltante", () => {
+    const m = member({ edad: null })
+    expect(
+      evaluateRule({ field: "edad", operator: ">=", value: "55" }, m)
+    ).toBe(false)
+    expect(
+      evaluateRule(
+        { field: "edad", operator: ">=", value: "55" },
+        m,
+        "si_cumple"
+      )
+    ).toBe(true)
   })
 })
 
@@ -203,6 +271,61 @@ describe("annotateCounts", () => {
     expect(withDefault.type === "grupo" && withDefault.scope).toBe(1)
     // "omitir": el socio se saca de la cuenta del grupo completo por faltarle un dato que el grupo evalúa, aunque hubiera cumplido por la otra rama
     expect(withOmit.type === "grupo" && withOmit.scope).toBe(0)
+  })
+})
+
+describe("annotateCounts — variables de un bloque anterior del grafo", () => {
+  const members = [
+    member({ tier: "oro", saldo_puntos: 2000 }),
+    member({ tier: "oro", saldo_puntos: 10 }),
+  ]
+
+  it("una regla sobre una variable que no es un atributo de members da matchCount null, no un 0 inventado", () => {
+    const tree: ConditionGroup = {
+      id: "raiz",
+      combinator: "and",
+      rules: [
+        { id: "evento", field: "compra.monto", operator: ">", value: "100" },
+      ],
+    }
+    const count = annotateCounts(tree, members)
+    expect(count).toEqual({
+      type: "grupo",
+      id: "raiz",
+      scope: null,
+      children: [{ type: "regla", id: "evento", matchCount: null }],
+    })
+  })
+
+  it("un grupo con una mezcla de atributo real + variable de evento da scope null, pero cada regla calculable conserva su conteo real", () => {
+    const tree: ConditionGroup = {
+      id: "raiz",
+      combinator: "and",
+      rules: [
+        { id: "real", field: "tier", operator: "=", value: "oro" },
+        { id: "evento", field: "compra.monto", operator: ">", value: "100" },
+      ],
+    }
+    const count = annotateCounts(tree, members)
+    expect(count).toEqual({
+      type: "grupo",
+      id: "raiz",
+      scope: null,
+      children: [
+        { type: "regla", id: "real", matchCount: 2 },
+        { type: "regla", id: "evento", matchCount: null },
+      ],
+    })
+  })
+
+  it("un grupo donde todas las reglas son atributos reales sigue dando un scope numérico", () => {
+    const tree: ConditionGroup = {
+      id: "raiz",
+      combinator: "and",
+      rules: [{ id: "real", field: "tier", operator: "=", value: "oro" }],
+    }
+    const count = annotateCounts(tree, members)
+    expect(count.type === "grupo" && count.scope).toBe(2)
   })
 })
 

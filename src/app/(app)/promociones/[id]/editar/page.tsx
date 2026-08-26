@@ -5,26 +5,56 @@ import { BackLink } from "@/components/layout/back-link"
 import { PromotionForm } from "@/features/promotions/components/promotion-form"
 import {
   getPromotionById,
+  listConditionBrands,
   listConditionCategories,
   listConditionCities,
+  listConditionProvinces,
   listConditionSegments,
+  listConditionStoreRegions,
+  listConditionSuppliers,
+  listConditionTiers,
   listCouponBatchesForPromotions,
   listProductOptionsForPromotions,
+  listSuppliers,
+  type ConditionOptions,
 } from "@/features/promotions/lib/queries"
+import {
+  GENDER_LABEL,
+  MARITAL_STATUS_LABEL,
+  STORE_FORMAT_LABEL,
+} from "@/features/promotions/lib/labels"
+import { GENDERS, MARITAL_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 /** Reutiliza el mismo wizard de creación (07.1 adaptado) precargado con los valores existentes. */
 export default async function EditPromotionPage({
   params,
 }: PageProps<"/promociones/[id]/editar">) {
   const { id } = await params
-  const [promotion, categories, cities, segments, couponBatches] =
-    await Promise.all([
-      getPromotionById(id),
-      listConditionCategories(),
-      listConditionCities(),
-      listConditionSegments(),
-      listCouponBatchesForPromotions(),
-    ])
+  const [
+    promotion,
+    categories,
+    cities,
+    segments,
+    couponBatches,
+    tiers,
+    provinces,
+    storeRegions,
+    brands,
+    conditionSuppliers,
+    suppliers,
+  ] = await Promise.all([
+    getPromotionById(id),
+    listConditionCategories(),
+    listConditionCities(),
+    listConditionSegments(),
+    listCouponBatchesForPromotions(),
+    listConditionTiers(),
+    listConditionProvinces(),
+    listConditionStoreRegions(),
+    listConditionBrands(),
+    listConditionSuppliers(),
+    listSuppliers(),
+  ])
   if (!promotion) notFound()
 
   // El producto comprado/de regalo guardado puede no estar entre los 50
@@ -36,6 +66,27 @@ export default async function EditPromotionPage({
     )
   )
 
+  const options: ConditionOptions = {
+    categories,
+    cities,
+    segments,
+    couponBatches,
+    tiers,
+    provinces,
+    storeRegions,
+    storeFormats: STORE_FORMATS.map((f) => ({
+      value: f,
+      label: STORE_FORMAT_LABEL[f],
+    })),
+    brands,
+    suppliers: conditionSuppliers,
+    genders: GENDERS.map((g) => ({ value: g, label: GENDER_LABEL[g] })),
+    maritalStatuses: MARITAL_STATUSES.map((m) => ({
+      value: m,
+      label: MARITAL_STATUS_LABEL[m],
+    })),
+  }
+
   return (
     <AppPage
       breadcrumb={`Comercial  ›  Promociones  ›  ${promotion.nombre}`}
@@ -43,11 +94,9 @@ export default async function EditPromotionPage({
     >
       <BackLink href="/promociones">Volver a Promociones</BackLink>
       <PromotionForm
-        categories={categories}
-        cities={cities}
-        segments={segments}
+        options={options}
         products={products}
-        couponBatches={couponBatches}
+        suppliers={suppliers}
         promotion={promotion}
       />
     </AppPage>

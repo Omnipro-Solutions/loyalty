@@ -21,6 +21,33 @@ export type MemberPreview = {
   tiene_mascotas: boolean | null
   consentimiento_marketing: boolean
   provincia: string | null
+  /** Derivada de `fecha_nacimiento` (ver `calculateAge`), no un valor guardado — así nunca queda desactualizada. */
+  edad: number | null
+  estado_civil: string | null
+  preferencia_compra: string | null
+}
+
+/**
+ * `cliente.edad` no se guarda como valor fijo en la regla — se deriva de
+ * `fecha_nacimiento` en el momento de evaluar (`docs/builder.md` §5.2: "no
+ * debería almacenarse como un valor fijo dentro de la regla"). `now` es
+ * inyectable para pruebas deterministas; el llamador real (`actions.ts`)
+ * siempre pasa la fecha actual.
+ */
+export function calculateAge(
+  fechaNacimiento: string | null,
+  now: Date = new Date()
+): number | null {
+  if (!fechaNacimiento) return null
+  const birth = new Date(fechaNacimiento)
+  if (Number.isNaN(birth.getTime())) return null
+
+  let age = now.getFullYear() - birth.getFullYear()
+  const hasHadBirthdayThisYear =
+    now.getMonth() > birth.getMonth() ||
+    (now.getMonth() === birth.getMonth() && now.getDate() >= birth.getDate())
+  if (!hasHadBirthdayThisYear) age -= 1
+  return age
 }
 
 export type ConditionRule = {
@@ -83,6 +110,9 @@ const FIELD_CONFIG: Record<
     getValue: (m) => m.consentimiento_marketing,
   },
   provincia: { type: "texto", getValue: (m) => m.provincia },
+  edad: { type: "numero", getValue: (m) => m.edad },
+  estado_civil: { type: "texto", getValue: (m) => m.estado_civil },
+  preferencia_compra: { type: "texto", getValue: (m) => m.preferencia_compra },
 }
 
 /** `fecha_alta` en `members` es un timestamp completo — se compara solo por fecha (los 10 primeros caracteres ISO), que es la granularidad que ofrece el `<input type="date">` del valor. */
@@ -155,15 +185,34 @@ function hasMissingData(member: MemberPreview, fields: Set<string>) {
 }
 
 export type CountNode =
-  | { type: "regla"; id: string; matchCount: number }
+  | { type: "regla"; id: string; matchCount: number | null }
   | {
       type: "grupo"
       id: string
-      scope: number
+      scope: number | null
       children: CountNode[]
     }
 
-/** Recorre el árbol una vez y anota cuántos socios cumplen cada nodo (regla individual o grupo completo) — un `Map<id, CountNode>` plano es más cómodo de consumir desde React que volver a recorrer el árbol por cada nodo. */
+/** `true` si el campo es un atributo real de `members` (tiene entrada en `FIELD_CONFIG`) — `false` para una variable de un bloque anterior del grafo (ej. `compra.monto`, ver `MultiConditionForm`), que no tiene dónde leerse en un `MemberPreview`. */
+function isMemberField(field: string): boolean {
+  return field in FIELD_CONFIG
+}
+
+/** Un grupo solo es calculable contra `members` si TODAS sus reglas (recursivamente) lo son — una sola variable de flujo mezclada con AND/OR haría que el número combinado fuera mentira, no una aproximación razonable. */
+function isCalculable(node: ConditionRule | ConditionGroup): boolean {
+  return isGroup(node)
+    ? node.rules.every(isCalculable)
+    : isMemberField(node.field)
+}
+
+/**
+ * Recorre el árbol una vez y anota cuántos socios cumplen cada nodo (regla
+ * individual o grupo completo) — un `Map<id, CountNode>` plano es más
+ * cómodo de consumir desde React que volver a recorrer el árbol por cada
+ * nodo. `null` (no un 0 inventado) cuando el nodo depende de una variable
+ * que no es un atributo de `members` — mismo criterio que el resto de la
+ * app: nunca fabricar un número que no se puede calcular de verdad.
+ */
 export function annotateCounts(
   node: ConditionRule | ConditionGroup,
   members: MemberPreview[],
@@ -178,8 +227,10 @@ export function annotateCounts(
     return {
       type: "grupo",
       id: node.id ?? "",
-      scope: population.filter((m) => evaluateGroup(node, m, missingDataPolicy))
-        .length,
+      scope: isCalculable(node)
+        ? population.filter((m) => evaluateGroup(node, m, missingDataPolicy))
+            .length
+        : null,
       children: node.rules.map((h) =>
         annotateCounts(h, members, missingDataPolicy)
       ),
@@ -188,9 +239,10 @@ export function annotateCounts(
   return {
     type: "regla",
     id: node.id ?? "",
-    matchCount: population.filter((m) =>
-      evaluateRule(node, m, missingDataPolicy)
-    ).length,
+    matchCount: isMemberField(node.field)
+      ? population.filter((m) => evaluateRule(node, m, missingDataPolicy))
+          .length
+      : null,
   }
 }
 

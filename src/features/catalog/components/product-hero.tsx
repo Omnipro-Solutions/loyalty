@@ -65,6 +65,17 @@ export function ProductHero({ product }: ProductHeroProps) {
           >
             {active ? "ACTIVO" : "INACTIVO"}
           </span>
+          {/* RX/OTC (docs/promociones.md §8) — sin nodo Figma propio, sigue el mismo estilo de chip que ACTIVO/tipo_producto. */}
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-[0.2px]",
+              product.requiere_receta
+                ? "bg-destructive-bg text-destructive"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {product.requiere_receta ? "RX" : "OTC"}
+          </span>
           {product.tipo_producto && (
             <span className="rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold tracking-[0.2px] text-warning">
               {product.tipo_producto.toUpperCase()}

@@ -108,9 +108,10 @@ async function UsersTabContent({
   // de conteo y la tabla.
   const usersPromise = listUsers({ search, roleId, status, page })
 
-  // `q` queda fuera de la key a propósito — ya tiene debounce (ver
-  // `UsersFiltersBar`, mismo patrón que `MembersFiltersBar`).
-  const dataKey = `${roleId ?? ""}|${status ?? ""}|${page}`
+  // `search` ya llega debounced (300ms) desde `UsersFiltersBar` (mismo
+  // patrón que `MembersFiltersBar`), así que incluirla aquí no remonta por
+  // cada tecla — solo cuando la búsqueda se asienta.
+  const dataKey = `${search ?? ""}|${roleId ?? ""}|${status ?? ""}|${page}`
 
   return (
     <>

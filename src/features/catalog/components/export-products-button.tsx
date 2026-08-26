@@ -2,6 +2,8 @@
 
 import { Download } from "lucide-react"
 
+import { csvCell, downloadCsv } from "@/lib/csv"
+
 import type { Product } from "../lib/queries"
 
 const COLUMNS: { header: string; value: (p: Product) => string }[] = [
@@ -14,30 +16,18 @@ const COLUMNS: { header: string; value: (p: Product) => string }[] = [
   { header: "Precio", value: (p) => String(p.precio) },
   { header: "Puntos", value: (p) => String(p.puntos) },
   { header: "Estado", value: (p) => p.estado },
+  { header: "Receta", value: (p) => (p.requiere_receta ? "RX" : "OTC") },
 ]
-
-function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`
-}
 
 type ExportProductsButtonProps = { products: Product[] }
 
 /** Exporta la página actual de la tabla (03.1 "Exportar") como CSV. */
 export function ExportProductsButton({ products }: ExportProductsButtonProps) {
   function exportCsv() {
-    const rows = [
-      COLUMNS.map((c) => csvCell(c.header)).join(","),
-      ...products.map((p) => COLUMNS.map((c) => csvCell(c.value(p))).join(",")),
-    ]
-    const blob = new Blob([rows.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "catalogo-productos.csv"
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadCsv("catalogo-productos.csv", [
+      COLUMNS.map((c) => csvCell(c.header)),
+      ...products.map((p) => COLUMNS.map((c) => csvCell(c.value(p)))),
+    ])
   }
 
   return (

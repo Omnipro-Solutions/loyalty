@@ -26,6 +26,14 @@ type MultiselectProps = {
   onValueChange: (value: string[]) => void
   placeholder?: string
   className?: string
+  /**
+   * "default" = campo de formulario normal (Figma 709:370). "chip" = misma
+   * densidad que `CHIP_TRIGGER` (condition-leaf-row.tsx) — para cuando el
+   * multiselect vive dentro de una fila de chips (campo/operador/valor) en
+   * vez de un `Field` propio; sin esto, el control se ve como una caja de
+   * formulario de tamaño completo al lado de chips diminutos.
+   */
+  size?: "default" | "chip"
 }
 
 /**
@@ -38,10 +46,12 @@ export function Multiselect({
   onValueChange,
   placeholder = "Selecciona…",
   className,
+  size = "default",
 }: MultiselectProps) {
   const selected = options.filter((o) => value.includes(o.value))
   const visibleItems = selected.slice(0, 3)
   const remaining = selected.length - visibleItems.length
+  const isChip = size === "chip"
 
   function remove(v: string) {
     onValueChange(value.filter((x) => x !== v))
@@ -58,14 +68,21 @@ export function Multiselect({
       <PopoverTrigger
         className={cn(
           FIELD_CHROME,
-          "flex w-full flex-wrap items-center gap-1.5 py-2 pr-[11px] pl-2.5 text-left data-[popup-open]:border-2 data-[popup-open]:border-ring data-[popup-open]:py-[7px] data-[popup-open]:pr-[9px] data-[popup-open]:pl-2",
+          isChip
+            ? "flex w-fit flex-wrap items-center gap-1 rounded-[7px] border-border py-[3px] pr-2 pl-2 text-left data-[popup-open]:border-2 data-[popup-open]:border-ring data-[popup-open]:py-[2px] data-[popup-open]:pr-[7px] data-[popup-open]:pl-[7px]"
+            : "flex w-full flex-wrap items-center gap-1.5 py-2 pr-[11px] pl-2.5 text-left data-[popup-open]:border-2 data-[popup-open]:border-ring data-[popup-open]:py-[7px] data-[popup-open]:pr-[9px] data-[popup-open]:pl-2",
           className
         )}
       >
         {visibleItems.map((o) => (
           <span
             key={o.value}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent py-1 pr-2 pl-2.5 text-[11px] leading-[15px] font-medium text-accent-foreground"
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 rounded-full bg-accent font-medium text-accent-foreground",
+              isChip
+                ? "gap-1 py-px pr-1.5 pl-2 text-[9.5px] leading-[13px]"
+                : "py-1 pr-2 pl-2.5 text-[11px] leading-[15px]"
+            )}
           >
             {o.label}
             <X
@@ -78,12 +95,24 @@ export function Multiselect({
           </span>
         ))}
         {remaining > 0 && (
-          <span className="shrink-0 text-xs leading-[18px] text-muted-foreground">
+          <span
+            className={cn(
+              "shrink-0 text-muted-foreground",
+              isChip ? "text-[9.5px] leading-[15px]" : "text-xs leading-[18px]"
+            )}
+          >
             + {remaining} más
           </span>
         )}
         {selected.length === 0 && (
-          <span className="min-w-0 flex-1 text-[13px] leading-[19px] text-muted-foreground">
+          <span
+            className={cn(
+              "min-w-0 flex-1 text-muted-foreground",
+              isChip
+                ? "text-[10.5px] leading-[15px] whitespace-nowrap"
+                : "text-[13px] leading-[19px]"
+            )}
+          >
             {placeholder}
           </span>
         )}

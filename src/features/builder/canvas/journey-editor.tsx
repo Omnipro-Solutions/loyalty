@@ -283,6 +283,24 @@ function CanvasArea({
     return n ? { id: n.id, data: n.data } : null
   }, [nodes, selectedId])
 
+  const graphNodeRefs = useMemo(
+    () =>
+      nodes.map((n) => ({
+        id: n.id,
+        tipo: n.data.tipo,
+        etiqueta: n.data.etiqueta,
+      })),
+    [nodes]
+  )
+  const graphEdgeRefs = useMemo(
+    () =>
+      edges.map((e) => ({
+        source_node_id: e.source,
+        target_node_id: e.target,
+      })),
+    [edges]
+  )
+
   const graphForActions = useCallback(
     () => ({
       workflowId: workflow.id,
@@ -411,6 +429,8 @@ function CanvasArea({
         </div>
         <InspectorPanel
           node={selectedNode}
+          nodes={graphNodeRefs}
+          edges={graphEdgeRefs}
           tiers={tiers}
           audiences={audiences}
           couponBatches={couponBatches}

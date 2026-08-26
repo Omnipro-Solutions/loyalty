@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,13 @@ import { MultiConditionForm } from "@/features/builder/inspector/multi-condition
 import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
+import { entryTriggerFor } from "@/features/builder/inspector/entry-triggers"
 import { IntegrationMessageForm } from "@/features/builder/inspector/integration-message-form"
+import {
+  resolveAvailableVariables,
+  type GraphEdgeRef,
+  type GraphNodeRef,
+} from "@/features/builder/inspector/node-variables"
 import { SimpleConfigForm } from "@/features/builder/inspector/simple-config-form"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -31,6 +37,8 @@ function tabsFor(tipo: string): readonly string[] {
 
 export function InspectorPanel({
   node,
+  nodes,
+  edges,
   tiers,
   audiences,
   couponBatches,
@@ -42,6 +50,9 @@ export function InspectorPanel({
     id: string
     data: { tipo: string; etiqueta: string; config: Record<string, unknown> }
   } | null
+  /** Grafo completo del canvas — para resolver qué variables de bloques anteriores llegan hasta el nodo seleccionado (ver `resolveAvailableVariables`). */
+  nodes: GraphNodeRef[]
+  edges: GraphEdgeRef[]
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
@@ -52,6 +63,10 @@ export function InspectorPanel({
   const tabs = node ? tabsFor(node.data.tipo) : []
   const [tab, setTab] = useState<string>("Configuración")
   const activeTab = tabs.includes(tab) ? tab : "Configuración"
+  const graphVariables = useMemo(
+    () => (node ? resolveAvailableVariables(nodes, edges, node.id) : []),
+    [nodes, edges, node]
+  )
 
   if (!node) {
     return (
@@ -70,6 +85,7 @@ export function InspectorPanel({
   const groupMeta = BUILDER_GROUP_META[meta.group]
   const Icon = meta.icon
   const tipo = node.data.tipo
+  const trigger = entryTriggerFor(tipo as never, node.data.config)
 
   function update(config: Record<string, unknown>) {
     onConfigChange(node!.id, config)
@@ -93,6 +109,14 @@ export function InspectorPanel({
           <p className="truncate text-[14px] leading-5 font-semibold text-foreground">
             {node.data.etiqueta}
           </p>
+          {trigger && (
+            <p
+              title={`Trigger: ${trigger}`}
+              className="truncate font-mono text-[11px] text-muted-foreground"
+            >
+              Trigger: {trigger}
+            </p>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -128,14 +152,20 @@ export function InspectorPanel({
             <AccumulatePointsForm
               config={node.data.config}
               tiers={tiers}
+              graphVariables={graphVariables}
               onChange={update}
             />
           ) : tipo === "condicion_multiple" ? (
-            <MultiConditionForm config={node.data.config} onChange={update} />
+            <MultiConditionForm
+              config={node.data.config}
+              graphVariables={graphVariables}
+              onChange={update}
+            />
           ) : isMessageNodeType(tipo as never) ? (
             <IntegrationMessageForm
               channel={tipo as never}
               config={node.data.config}
+              graphVariables={graphVariables}
               onChange={update}
             />
           ) : (

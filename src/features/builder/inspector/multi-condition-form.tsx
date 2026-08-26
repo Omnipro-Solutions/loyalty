@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { DAYS_OF_WEEK, type DayOfWeek } from "@/types/domain"
 
 import { previewConditionAction } from "./actions"
 import {
@@ -46,7 +47,11 @@ import {
   type CountNode,
   type MissingDataPolicy,
 } from "./condition-preview"
-import { FieldSlashAutocomplete } from "./field-slash-autocomplete"
+import {
+  FieldSlashAutocomplete,
+  type AutocompleteField,
+} from "./field-slash-autocomplete"
+import { inferType, type GraphVariable } from "./node-variables"
 
 /**
  * Caso difícil #2 del plan: grupos anidados Y/O con `react-querybuilder`
@@ -81,6 +86,21 @@ const YES_NO = [
   { name: "true", label: "Sí" },
   { name: "false", label: "No" },
 ]
+
+/** Igual que `features/promotions/lib/labels.ts` `DAY_OF_WEEK_LABEL` — duplicado a propósito (features aisladas, CLAUDE.md §2). */
+const DAY_OF_WEEK_LABEL: Record<DayOfWeek, string> = {
+  lunes: "Lunes",
+  martes: "Martes",
+  miercoles: "Miércoles",
+  jueves: "Jueves",
+  viernes: "Viernes",
+  sabado: "Sábado",
+  domingo: "Domingo",
+}
+const DAY_OPTIONS = DAYS_OF_WEEK.map((d) => ({
+  name: d,
+  label: DAY_OF_WEEK_LABEL[d],
+}))
 
 /**
  * Atributos expuestos para segmentar (criterio de producto: los campos de
@@ -182,12 +202,105 @@ const FIELDS: Field[] = [
     inputType: "text",
     operators: COMPARISON_OPERATORS,
   },
+  {
+    name: "edad",
+    label: "Edad",
+    inputType: "number",
+    operators: NUMERIC_OPERATORS,
+  },
+  {
+    name: "estado_civil",
+    label: "Estado civil",
+    valueEditorType: "select",
+    values: [
+      { name: "soltero", label: "Soltero" },
+      { name: "casado", label: "Casado" },
+      { name: "union_libre", label: "Unión libre" },
+      { name: "divorciado", label: "Divorciado" },
+      { name: "viudo", label: "Viudo" },
+    ],
+    operators: COMPARISON_OPERATORS,
+  },
+  {
+    name: "preferencia_compra",
+    label: "Preferencia de compra",
+    inputType: "text",
+    operators: COMPARISON_OPERATORS,
+  },
 ]
+
+const MEMBER_FIELD_GROUP = "Atributos del socio"
 
 const AUTOCOMPLETE_FIELDS = FIELDS.map((f) => ({
   name: String(f.name),
   label: f.label,
+  group: MEMBER_FIELD_GROUP,
 }))
+
+/**
+ * Un `Field` de `react-querybuilder` para una variable de un bloque
+ * ANTERIOR del grafo (ej. `compra.monto` de un `evento_compra` conectado
+ * antes de este `condicion_multiple`) — sin esto, dejar el campo fuera de
+ * `fields` hace que react-querybuilder no encuentre metadata para él y caiga
+ * a sus operadores por defecto en inglés ("contains", "beginsWith"…), que
+ * no aplican a estas variables y rompen la convención en español del resto
+ * del formulario. El tipo de dato se infiere por nombre (`inferType`, mismo
+ * criterio que ya usa `DataTab`) — no hay un tipo declarado explícito por
+ * variable en el catálogo de bloques.
+ *
+ * Dos casos puntuales sí reciben un editor real en vez de texto libre:
+ * booleano (`inferType` ya distingue `abierto`/`evaluadas`/`requiere_receta`)
+ * y el sufijo `dia_semana` (`compra.dia_semana`, valores reales de
+ * `DAYS_OF_WEEK`). No se generaliza a todo el bucket "enum" de `inferType`
+ * (`estado`, `nivel`, `segmento`…) porque esos sí varían de valores según la
+ * variable — no hay una sola lista que darles, a diferencia de un booleano o
+ * de un día de la semana, que son siempre los mismos 2 o 7 valores.
+ */
+function fieldForGraphVariable(v: GraphVariable): Field {
+  const kind = inferType(v.name)
+  const suffix = v.name.split(".").pop() ?? ""
+
+  if (kind === "booleano") {
+    return {
+      name: v.name,
+      label: v.name,
+      valueEditorType: "select",
+      values: YES_NO,
+      operators: COMPARISON_OPERATORS,
+    }
+  }
+  if (suffix === "dia_semana") {
+    return {
+      name: v.name,
+      label: v.name,
+      valueEditorType: "select",
+      values: DAY_OPTIONS,
+      operators: COMPARISON_OPERATORS,
+    }
+  }
+
+  const numeric = kind === "número" || kind === "fecha"
+  return {
+    name: v.name,
+    label: v.name,
+    inputType:
+      kind === "número" ? "number" : kind === "fecha" ? "date" : "text",
+    operators: numeric ? NUMERIC_OPERATORS : COMPARISON_OPERATORS,
+  }
+}
+
+/**
+ * Campos disponibles para ESTA instancia del formulario (atributos fijos de
+ * `members` + variables reales de los bloques anteriores en el grafo) — los
+ * componentes de control (`FieldSelectorControl`, módulo-scope, registrados
+ * una sola vez en `CONTROL_ELEMENTS`) no reciben props del `MultiConditionForm`
+ * que los monta, así que leen la lista vigente de este Context. Mismo patrón
+ * que `PreviewContext`/`CollapseContext` más abajo.
+ */
+const FieldsContext = createContext<{
+  queryFields: Field[]
+  autocompleteFields: AutocompleteField[]
+}>({ queryFields: FIELDS, autocompleteFields: AUTOCOMPLETE_FIELDS })
 
 /** Operador y valor por defecto al agregar una condición desde la barra de búsqueda rápida — mismo criterio "primer valor razonable" que ya aplica `autoSelectOperator`/`autoSelectValue` de `react-querybuilder` para el resto de los flujos de alta. */
 const DEFAULT_OPERATOR: Record<string, string> = {
@@ -211,9 +324,10 @@ const PreviewContext = createContext<{
 const CollapseContext = createContext(false)
 
 function FieldSelectorControl(props: FieldSelectorProps) {
+  const { autocompleteFields } = useContext(FieldsContext)
   return (
     <FieldSlashAutocomplete
-      fields={AUTOCOMPLETE_FIELDS}
+      fields={autocompleteFields}
       value={props.value ?? ""}
       onSelect={props.handleOnChange}
     />
@@ -460,6 +574,11 @@ function RuleGroupControl(props: RuleGroupProps) {
                 ` de ${formatNumber(preview!.totalMembers)} (${pct}%)`}
             </span>
           )}
+          {scope === null && (
+            <span className="shrink-0">
+              Alcance no calculable — incluye una variable de un bloque anterior
+            </span>
+          )}
         </div>
       </div>
 
@@ -514,6 +633,12 @@ function RuleControl(props: RuleProps) {
           </span>
         </p>
       )}
+      {matchCount === null && (
+        <p className="text-[11px] text-muted-foreground">
+          Variable de un bloque anterior — se evalúa en la ejecución real, sin
+          vista previa sobre socios.
+        </p>
+      )}
     </div>
   )
 }
@@ -549,9 +674,12 @@ const MISSING_DATA_OPTIONS: { name: MissingDataPolicy; label: string }[] = [
 
 export function MultiConditionForm({
   config,
+  graphVariables,
   onChange,
 }: {
   config: Record<string, unknown>
+  /** Variables reales de los bloques anteriores a este en el grafo (`resolveAvailableVariables`, resuelto por `InspectorPanel`) — se ofrecen como campos adicionales, agrupadas por el bloque que las expone. */
+  graphVariables: GraphVariable[]
   onChange: (config: Record<string, unknown>) => void
 }) {
   const query = (config.condiciones as RuleGroupType | undefined) ?? EMPTY_QUERY
@@ -561,6 +689,22 @@ export function MultiConditionForm({
     () => countRulesAndDepth(query),
     [query]
   )
+
+  const fields = useMemo(() => {
+    const queryFields: Field[] = [
+      ...FIELDS,
+      ...graphVariables.map(fieldForGraphVariable),
+    ]
+    const autocompleteFields: AutocompleteField[] = [
+      ...AUTOCOMPLETE_FIELDS,
+      ...graphVariables.map((v) => ({
+        name: v.name,
+        label: v.name,
+        group: v.sourceLabel,
+      })),
+    ]
+    return { queryFields, autocompleteFields }
+  }, [graphVariables])
 
   const [preview, setPreview] = useState<{
     counts: Map<string, CountNode>
@@ -609,80 +753,82 @@ export function MultiConditionForm({
   }
 
   return (
-    <PreviewContext.Provider value={preview}>
-      <CollapseContext.Provider value={collapsed}>
-        <div className="flex flex-col gap-3">
-          <FieldSlashAutocomplete
-            fields={AUTOCOMPLETE_FIELDS}
-            value=""
-            onSelect={addQuickCondition}
-            placeholder="Escribe un atributo… ej. tier, saldo, fecha"
-            className="w-full"
-            showShortcut
-          />
+    <FieldsContext.Provider value={fields}>
+      <PreviewContext.Provider value={preview}>
+        <CollapseContext.Provider value={collapsed}>
+          <div className="flex flex-col gap-3">
+            <FieldSlashAutocomplete
+              fields={fields.autocompleteFields}
+              value=""
+              onSelect={addQuickCondition}
+              placeholder="Escribe un atributo… ej. tier, saldo, fecha"
+              className="w-full"
+              showShortcut
+            />
 
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground">
-              <span className="uppercase">Condiciones</span> · {ruleCount} en{" "}
-              {depth} {depth === 1 ? "nivel" : "niveles"}
-            </p>
-            <button
-              type="button"
-              onClick={() => setCollapsed((c) => !c)}
-              className="shrink-0 text-[11px] font-medium text-primary"
-            >
-              {collapsed ? "Expandir todo" : "Contraer todo"}
-            </button>
-          </div>
-
-          <QueryBuilder
-            fields={FIELDS}
-            query={query}
-            onQueryChange={(q) => onChange({ ...config, condiciones: q })}
-            controlElements={CONTROL_ELEMENTS}
-            combinators={COMBINATORS}
-            showCombinatorsBetweenRules
-            controlClassnames={{
-              queryBuilder: "flex flex-col gap-3",
-              betweenRules: "py-0.5",
-              // Sin esto, cuando el campo+operador+valor no caben en una
-              // sola línea el ícono de eliminar cae solo a la izquierda en
-              // su propia línea, como huérfano — `ml-auto` lo ancla siempre
-              // al borde derecho de la fila (comparta línea con el valor o no).
-              removeRule: "ml-auto",
-            }}
-            accessibleDescriptionGenerator={() => ""}
-          />
-
-          <div className="flex flex-col gap-2 border-t border-border pt-3">
-            <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground uppercase">
-              Si falta el dato
-            </p>
-            <div className="flex overflow-hidden rounded-lg border border-border text-[12px] font-medium">
-              {MISSING_DATA_OPTIONS.map((opt) => (
-                <button
-                  key={opt.name}
-                  type="button"
-                  onClick={() =>
-                    onChange({ ...config, siFaltaElDato: opt.name })
-                  }
-                  className={cn(
-                    "flex-1 px-2.5 py-1.5",
-                    missingDataPolicy === opt.name
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground">
+                <span className="uppercase">Condiciones</span> · {ruleCount} en{" "}
+                {depth} {depth === 1 ? "nivel" : "niveles"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
+                className="shrink-0 text-[11px] font-medium text-primary"
+              >
+                {collapsed ? "Expandir todo" : "Contraer todo"}
+              </button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Aplica cuando el atributo no existe en el perfil del socio.
-            </p>
+
+            <QueryBuilder
+              fields={fields.queryFields}
+              query={query}
+              onQueryChange={(q) => onChange({ ...config, condiciones: q })}
+              controlElements={CONTROL_ELEMENTS}
+              combinators={COMBINATORS}
+              showCombinatorsBetweenRules
+              controlClassnames={{
+                queryBuilder: "flex flex-col gap-3",
+                betweenRules: "py-0.5",
+                // Sin esto, cuando el campo+operador+valor no caben en una
+                // sola línea el ícono de eliminar cae solo a la izquierda en
+                // su propia línea, como huérfano — `ml-auto` lo ancla siempre
+                // al borde derecho de la fila (comparta línea con el valor o no).
+                removeRule: "ml-auto",
+              }}
+              accessibleDescriptionGenerator={() => ""}
+            />
+
+            <div className="flex flex-col gap-2 border-t border-border pt-3">
+              <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground uppercase">
+                Si falta el dato
+              </p>
+              <div className="flex overflow-hidden rounded-lg border border-border text-[12px] font-medium">
+                {MISSING_DATA_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.name}
+                    type="button"
+                    onClick={() =>
+                      onChange({ ...config, siFaltaElDato: opt.name })
+                    }
+                    className={cn(
+                      "flex-1 px-2.5 py-1.5",
+                      missingDataPolicy === opt.name
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Aplica cuando el atributo no existe en el perfil del socio.
+              </p>
+            </div>
           </div>
-        </div>
-      </CollapseContext.Provider>
-    </PreviewContext.Provider>
+        </CollapseContext.Provider>
+      </PreviewContext.Provider>
+    </FieldsContext.Provider>
   )
 }

@@ -41,8 +41,9 @@ export default async function StoresPage({
   // Sin `await`: el botón de exportar y la tabla comparten esta promesa.
   const storesPromise = listStores({ search, city, format, page })
 
-  // `q` queda fuera de la key (ya tiene debounce, ver `/clientes`).
-  const dataKey = `${city ?? ""}|${format ?? ""}|${page}`
+  // `search` ya llega debounced (300ms), así que incluirla aquí no remonta
+  // por cada tecla — solo cuando la búsqueda se asienta.
+  const dataKey = `${search ?? ""}|${city ?? ""}|${format ?? ""}|${page}`
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Tiendas" title="Tiendas">

@@ -108,14 +108,14 @@ from (
     -- `points_ledger_apply_after_insert` a partir de los movimientos que se
     -- siembran más abajo (`Log de redenciones`, 05.3g) — no se pone un
     -- número fijo aquí para no descuadrarlo con el ledger.
-    ('Sofía', 'Ramírez', 'sofia.ramirez@example.com', 'diamante', 0, 620, 'cc', '1015042113', '+57 301 555 0142', '1988-05-12', 'femenino', 'Atlántico', 'casado', 'Bebidas', true, false, true, 'ecommerce', 'activo'),
-    ('Camilo', 'Torres', 'camilo.torres@example.com', 'diamante', 0, 540, 'cc', '1022897456', '+57 310 555 0198', '1990-11-03', 'masculino', 'Antioquia', 'soltero', 'Snacks', false, true, true, 'pos', 'activo'),
-    ('Valentina', 'Ríos', 'valentina.rios@example.com', 'oro', 8760, 410, 'cc', '1030112287', '+57 320 555 0231', '1995-02-21', 'femenino', 'Valle del Cauca', 'union_libre', 'Cuidado personal', false, false, false, 'app', 'activo'),
-    ('Andrés', 'Gómez', 'andres.gomez@example.com', 'oro', 7230, 300, 'cc', '1041278890', '+57 300 555 0345', '1985-07-09', 'masculino', 'Cundinamarca', 'casado', 'Analgésicos', true, true, true, 'referido', 'activo'),
-    ('Mariana', 'Ocampo', 'mariana.ocampo@example.com', 'plata', 3450, 210, 'cc', '1052341567', '+57 315 555 0456', '1998-09-30', 'femenino', 'Atlántico', 'soltero', 'Vitaminas', null, null, true, 'campana', 'activo'),
-    ('Julián', 'Restrepo', 'julian.restrepo@example.com', 'plata', 2680, 150, 'cc', '1063789012', '+57 302 555 0567', '1992-12-15', 'masculino', 'Antioquia', 'divorciado', 'Gastrointestinal', true, false, false, 'pos', 'inactivo'),
-    ('Daniela', 'Cárdenas', 'daniela.cardenas@example.com', 'bronce', 890, 60, null, null, '+57 318 555 0678', null, 'femenino', 'Bolívar', null, null, null, null, false, 'ecommerce', 'activo'),
-    ('Felipe', 'Herrera', 'felipe.herrera@example.com', 'bronce', 320, 20, null, null, null, null, null, 'Santander', null, null, null, null, false, 'otro', 'suspendido')
+    ('Sofía', 'Ramírez', 'sofia.ramirez@example.com', 'diamante', 0, 620, 'cc', '1015042113', '+57 301 555 0142', '1988-05-12', 'femenino', 'Quintana Roo', 'casado', 'Bebidas', true, false, true, 'ecommerce', 'activo'),
+    ('Camilo', 'Torres', 'camilo.torres@example.com', 'diamante', 0, 540, 'cc', '1022897456', '+57 310 555 0198', '1990-11-03', 'masculino', 'Jalisco', 'soltero', 'Snacks', false, true, true, 'pos', 'activo'),
+    ('Valentina', 'Ríos', 'valentina.rios@example.com', 'oro', 8760, 410, 'cc', '1030112287', '+57 320 555 0231', '1995-02-21', 'femenino', 'Nuevo León', 'union_libre', 'Cuidado personal', false, false, false, 'app', 'activo'),
+    ('Andrés', 'Gómez', 'andres.gomez@example.com', 'oro', 7230, 300, 'cc', '1041278890', '+57 300 555 0345', '1985-07-09', 'masculino', 'Ciudad de México', 'casado', 'Analgésicos', true, true, true, 'referido', 'activo'),
+    ('Mariana', 'Ocampo', 'mariana.ocampo@example.com', 'plata', 3450, 210, 'cc', '1052341567', '+57 315 555 0456', '1998-09-30', 'femenino', 'Quintana Roo', 'soltero', 'Vitaminas', null, null, true, 'campana', 'activo'),
+    ('Julián', 'Restrepo', 'julian.restrepo@example.com', 'plata', 2680, 150, 'cc', '1063789012', '+57 302 555 0567', '1992-12-15', 'masculino', 'Jalisco', 'divorciado', 'Gastrointestinal', true, false, false, 'pos', 'inactivo'),
+    ('Daniela', 'Cárdenas', 'daniela.cardenas@example.com', 'bronce', 890, 60, null, null, '+57 318 555 0678', null, 'femenino', 'Veracruz', null, null, null, null, false, 'ecommerce', 'activo'),
+    ('Felipe', 'Herrera', 'felipe.herrera@example.com', 'bronce', 320, 20, null, null, null, null, null, 'Guanajuato', null, null, null, null, false, 'otro', 'suspendido')
 ) as m (
   nombre, apellido, email, tier, saldo_puntos, dias_antiguedad, tipo_documento,
   numero_documento, telefono, fecha_nacimiento, genero, provincia, estado_civil,
@@ -393,6 +393,30 @@ from (
 ) as t (email, codigo)
 where m.org_id = (select id from org) and m.email = t.email and m.tienda_inscripcion_id is null;
 
+-- Proveedores (paso Economía de Promociones, 20260826150000) — laboratorios
+-- y fabricantes reales del mercado mexicano que pueden cofinanciar una
+-- promoción. RFC ilustrativos (formato válido, no reales) — mismo criterio
+-- que el resto de datos de contacto de este seed.
+with org as (select id from organizations where slug = 'omni')
+insert into proveedores (org_id, nombre, rfc)
+select (select id from org), v.nombre, v.rfc
+from (
+  values
+    ('Laboratorios Liomont, S.A. de C.V.', 'LIO680214PS4'),
+    ('Genomma Lab Internacional, S.A.B. de C.V.', 'GLI961007Q29'),
+    ('PiSA Farmacéutica, S.A. de C.V.', 'PFA350815RT6'),
+    ('Grupo Farmacéutico Somar, S.A. de C.V.', 'GFS851002K37'),
+    ('Laboratorios Sanfer, S.A. de C.V.', 'LSA720419UB2'),
+    ('Nadro, S.A. de C.V.', 'NAD570326HP9'),
+    ('Bayer de México, S.A. de C.V.', 'BME640911VN5'),
+    ('Pfizer México, S.A. de C.V.', 'PME440613TX8'),
+    ('Procter & Gamble México, S.A. de C.V.', 'PGM480227MC1'),
+    ('Johnson & Johnson de México, S.A. de C.V.', 'JJM610504WD7'),
+    ('Novartis Farmacéutica, S.A. de C.V.', 'NFA750830YE2'),
+    ('Boehringer Ingelheim México, S.A. de C.V.', 'BIM780117ZK6')
+) as v (nombre, rfc)
+on conflict (org_id, nombre) do nothing;
+
 -- Promociones (06.1) — el Figma no define pantalla de creación propia, ver
 -- nota en supabase/migrations/20260823120000_promociones.sql. Categorías
 -- reales de Catálogo (no hay "Bebidas"/"Papelería" en este catálogo de
@@ -489,7 +513,7 @@ from (
     ('Sin consentimiento', 'seg_sin_consent', 'No han otorgado consentimiento de marketing en ningún canal.', 'pausada', 'bronce', false, 3040),
     ('Compradores dermocosmética', 'seg_dermo', 'Compraron en la categoría Dermocosmética en los últimos 90 días.', 'activa', 'plata', true, 1730),
     ('Compradores vitaminas', 'seg_vitaminas', 'Compraron en la categoría Vitaminas en los últimos 90 días.', 'activa', 'bronce', true, 2255),
-    ('Clientes región Antioquia', 'seg_region_antioquia', 'Provincia de residencia registrada: Antioquia.', 'activa', 'plata', false, 3610),
+    ('Clientes región Jalisco', 'seg_region_antioquia', 'Provincia de residencia registrada: Jalisco.', 'activa', 'plata', false, 3610),
     ('Clientes región CDMX', 'seg_region_cdmx', 'Tienda de inscripción en Ciudad de México.', 'activa', 'oro', true, 2980),
     ('Alto ticket promedio', 'seg_alto_ticket', 'Ticket promedio de compra en el 5% superior del programa.', 'activa', 'diamante', true, 720),
     ('Riesgo de bajar de nivel', 'seg_riesgo_bajar_nivel', 'A menos de 500 puntos del umbral inferior de su nivel actual.', 'activa', 'oro', true, 540),
@@ -570,11 +594,11 @@ from (
     -- Lucía nace en agosto a propósito: es la única de este cohorte en
     -- `seg_birthday` (ver `segment_members` más abajo) — antes tenía
     -- `fecha_nacimiento` nula, contradiciendo su propia audiencia.
-    ('María', 'González', 'maria.gonzalez@mail.com', 'oro', 4820, 11, 'cc', '1074456123', '+57 305 555 0789', '1987-04-22', 'femenino', 'Risaralda', 'casado', 'Dermocosmética', true, true, true, 'pos', 'activo'),
-    ('Jorge', 'Ramírez', 'jorge.ramirez@mail.com', 'oro', 3910, 13, 'cc', '1085567234', '+57 311 555 0812', '1991-09-08', 'masculino', 'Bolívar', 'soltero', 'Antihistamínicos', false, true, true, 'ecommerce', 'activo'),
-    ('Lucía', 'Pérez', 'lucia.perez@mail.com', 'plata', 2340, 14, 'cc', '1096678345', '+57 317 555 0834', '1994-08-15', 'femenino', 'Tolima', 'union_libre', 'Cuidado bucal', false, false, false, 'referido', 'activo'),
-    ('Diego', 'Salinas', 'diego.salinas@mail.com', 'plata', 2105, 16, 'cc', '1107789456', '+57 304 555 0856', '1996-01-30', 'masculino', 'Caldas', 'soltero', 'Primeros auxilios', true, false, true, 'campana', 'activo'),
-    ('Camila', 'Flores', 'camila.flores@mail.com', 'bronce', 980, 18, 'cc', '1118890567', '+57 313 555 0878', '1999-06-11', 'femenino', 'Nariño', 'divorciado', 'Respiratorio', false, true, false, 'app', 'inactivo')
+    ('María', 'González', 'maria.gonzalez@mail.com', 'oro', 4820, 11, 'cc', '1074456123', '+57 305 555 0789', '1987-04-22', 'femenino', 'Michoacán', 'casado', 'Dermocosmética', true, true, true, 'pos', 'activo'),
+    ('Jorge', 'Ramírez', 'jorge.ramirez@mail.com', 'oro', 3910, 13, 'cc', '1085567234', '+57 311 555 0812', '1991-09-08', 'masculino', 'Veracruz', 'soltero', 'Antihistamínicos', false, true, true, 'ecommerce', 'activo'),
+    ('Lucía', 'Pérez', 'lucia.perez@mail.com', 'plata', 2340, 14, 'cc', '1096678345', '+57 317 555 0834', '1994-08-15', 'femenino', 'Chihuahua', 'union_libre', 'Cuidado bucal', false, false, false, 'referido', 'activo'),
+    ('Diego', 'Salinas', 'diego.salinas@mail.com', 'plata', 2105, 16, 'cc', '1107789456', '+57 304 555 0856', '1996-01-30', 'masculino', 'Sonora', 'soltero', 'Primeros auxilios', true, false, true, 'campana', 'activo'),
+    ('Camila', 'Flores', 'camila.flores@mail.com', 'bronce', 980, 18, 'cc', '1118890567', '+57 313 555 0878', '1999-06-11', 'femenino', 'Baja California', 'divorciado', 'Respiratorio', false, true, false, 'app', 'inactivo')
 ) as m (
   nombre, apellido, email, tier, saldo_puntos, dias_antiguedad, tipo_documento,
   numero_documento, telefono, fecha_nacimiento, genero, provincia, estado_civil,
@@ -1083,8 +1107,8 @@ apellidos as (
 ),
 provincias as (
   select array[
-    'Antioquia','Cundinamarca','Valle del Cauca','Atlántico','Santander','Bolívar','Risaralda',
-    'Tolima','Caldas','Nariño','Boyacá','Huila','Meta','Quindío','Norte de Santander'
+    'Ciudad de México','Jalisco','Nuevo León','Quintana Roo','Yucatán','Puebla','Querétaro',
+    'Estado de México','Guanajuato','Veracruz','Chihuahua','Sonora','Baja California','Coahuila','Michoacán'
   ] as arr
 ),
 estados_civiles as (

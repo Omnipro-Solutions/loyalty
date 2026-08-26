@@ -46,9 +46,10 @@ export default async function AudiencesPage({
   // Sin `await`: la comparten el pill, el botón de exportar y la tabla.
   const audiencesPromise = listAudiences({ search: busqueda, page, sort, dir })
 
-  // El texto de búsqueda queda fuera de la key a propósito (debounce de
-  // 300ms) — sí remonta al cambiar de orden o de página.
-  const dataKey = `${sort}|${dir}|${page}`
+  // `busqueda` ya llega debounced (300ms), así que incluirla aquí no
+  // remonta por cada tecla — solo cuando se asienta. Remonta también al
+  // cambiar de orden o de página.
+  const dataKey = `${busqueda ?? ""}|${sort}|${dir}|${page}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Audiencias" title="Audiencias">

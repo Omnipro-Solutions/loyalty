@@ -107,15 +107,24 @@ export async function generateBatchChunks(
     if (!chunk || chunk.length === 0 || chunk[0]?.done) break
   }
 
+  const { data: generatedCoupons } = await supabase
+    .from("coupon")
+    .select("id, member_id")
+    .eq("batch_id", batchId)
+  await insertIssuedCouponEvents(
+    supabase,
+    orgId,
+    batchId,
+    generatedCoupons ?? []
+  )
+
   // El RPC solo materializa `coupon.member_id` — completa aquí
   // `coupon_assignment` para que "Personas asociadas" tenga historial.
   if (origin === "batch_audience") {
-    const { data: assignedCoupons } = await supabase
-      .from("coupon")
-      .select("id, member_id")
-      .eq("batch_id", batchId)
-      .not("member_id", "is", null)
-    if (assignedCoupons && assignedCoupons.length > 0) {
+    const assignedCoupons = (generatedCoupons ?? []).filter(
+      (c) => c.member_id != null
+    )
+    if (assignedCoupons.length > 0) {
       await supabase.from("coupon_assignment").insert(
         assignedCoupons.map((c) => ({
           org_id: orgId,
@@ -208,6 +217,74 @@ export async function buildDirectCoupons(
       }
     }),
   }
+}
+
+/**
+ * Registra en `coupon_event` el "issued" (y, si ya trae titular, el
+ * "assigned") de cada cupón recién materializado — sin esto, un cupón
+ * emitido llega a su pestaña "Eventos" con la línea de tiempo vacía. La
+ * usan tanto la emisión directa (`emitCouponBatchAction`,
+ * `generateBatchChunks`, `generateNextChunkAction`) como la activación de
+ * una emisión ya aprobada (`approveApprovalAction` en ./approvals.ts).
+ */
+export async function insertIssuedCouponEvents(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  batchId: string,
+  coupons: { id: string; member_id: string | null }[]
+) {
+  if (coupons.length === 0) return
+
+  const memberIds = [
+    ...new Set(
+      coupons.map((c) => c.member_id).filter((id): id is string => id != null)
+    ),
+  ]
+  const memberNameById = new Map<string, string>()
+  if (memberIds.length > 0) {
+    const { data: members } = await supabase
+      .from("members")
+      .select("id, nombre")
+      .in("id", memberIds)
+    for (const m of members ?? []) memberNameById.set(m.id, m.nombre)
+  }
+
+  const events = coupons.flatMap((c) => {
+    const rows: {
+      org_id: string
+      coupon_id: string
+      batch_id: string
+      type: "issued" | "assigned"
+      title: string
+      actor_type: "system"
+      actor_label: string
+    }[] = [
+      {
+        org_id: orgId,
+        coupon_id: c.id,
+        batch_id: batchId,
+        type: "issued",
+        title: "Cupón emitido",
+        actor_type: "system",
+        actor_label: "Sistema de cupones",
+      },
+    ]
+    if (c.member_id) {
+      const memberName = memberNameById.get(c.member_id)
+      rows.push({
+        org_id: orgId,
+        coupon_id: c.id,
+        batch_id: batchId,
+        type: "assigned",
+        title: memberName ? `Asignado a ${memberName}` : "Cupón asignado",
+        actor_type: "system",
+        actor_label: "Sistema de cupones",
+      })
+    }
+    return rows
+  })
+
+  await supabase.from("coupon_event").insert(events)
 }
 
 export const emitCouponBatchAction = couponsActionClient
@@ -420,6 +497,13 @@ export const emitCouponBatchAction = couponsActionClient
         )
       }
 
+      await insertIssuedCouponEvents(
+        ctx.supabase,
+        ctx.orgId,
+        batch.id,
+        insertedCoupons ?? []
+      )
+
       await ctx.supabase
         .from("coupon_batch")
         .update({
@@ -490,22 +574,33 @@ export const generateNextChunkAction = couponsActionClient
     }
     const result = chunk?.[0]
 
-    if (result?.done && batch.origin === "batch_audience") {
-      const { data: assignedCoupons } = await ctx.supabase
+    if (result?.done) {
+      const { data: generatedCoupons } = await ctx.supabase
         .from("coupon")
         .select("id, member_id")
         .eq("batch_id", batch.id)
-        .not("member_id", "is", null)
-      if (assignedCoupons && assignedCoupons.length > 0) {
-        await ctx.supabase.from("coupon_assignment").insert(
-          assignedCoupons.map((c) => ({
-            org_id: ctx.orgId,
-            coupon_id: c.id,
-            member_id: c.member_id as string,
-            role: "holder" as const,
-            source: "manual" as const,
-          }))
+      await insertIssuedCouponEvents(
+        ctx.supabase,
+        ctx.orgId,
+        batch.id,
+        generatedCoupons ?? []
+      )
+
+      if (batch.origin === "batch_audience") {
+        const assignedCoupons = (generatedCoupons ?? []).filter(
+          (c) => c.member_id != null
         )
+        if (assignedCoupons.length > 0) {
+          await ctx.supabase.from("coupon_assignment").insert(
+            assignedCoupons.map((c) => ({
+              org_id: ctx.orgId,
+              coupon_id: c.id,
+              member_id: c.member_id as string,
+              role: "holder" as const,
+              source: "manual" as const,
+            }))
+          )
+        }
       }
     }
 

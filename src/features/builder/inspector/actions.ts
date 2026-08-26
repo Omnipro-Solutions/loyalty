@@ -5,6 +5,7 @@ import { z } from "zod"
 import { builderActionClient } from "../canvas/action-client"
 import {
   annotateCounts,
+  calculateAge,
   type ConditionGroup,
   type MemberPreview,
   type MissingDataPolicy,
@@ -56,6 +57,7 @@ export const previewConditionAction = builderActionClient
     const { data: members, error } = await ctx.supabase.from("members").select(`
         saldo_puntos, fecha_alta, genero, canal_adquisicion, estado_cuenta,
         tiene_hijos, tiene_mascotas, consentimiento_marketing, provincia,
+        fecha_nacimiento, estado_civil, preferencia_compra,
         tiers(nombre)
       `)
 
@@ -74,6 +76,9 @@ export const previewConditionAction = builderActionClient
       tiene_mascotas: m.tiene_mascotas,
       consentimiento_marketing: m.consentimiento_marketing,
       provincia: m.provincia,
+      edad: calculateAge(m.fecha_nacimiento),
+      estado_civil: m.estado_civil,
+      preferencia_compra: m.preferencia_compra,
     }))
 
     const missingDataPolicy: MissingDataPolicy = parsedInput.siFaltaElDato

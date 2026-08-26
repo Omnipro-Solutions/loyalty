@@ -2,6 +2,8 @@
 
 import { Download } from "lucide-react"
 
+import { csvCell, downloadCsv } from "@/lib/csv"
+
 import { PROMOTION_TYPE_LABEL } from "../lib/labels"
 import type { Promotion } from "../lib/queries"
 
@@ -23,10 +25,6 @@ const COLUMNS: { header: string; value: (p: Promotion) => string }[] = [
   { header: "Estado", value: (p) => p.estado_publicacion },
 ]
 
-function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`
-}
-
 type ExportPromotionsButtonProps = { promotions: Promotion[] }
 
 /** Exporta la página actual de la tabla (06.1 "Exportar") como CSV. */
@@ -34,21 +32,10 @@ export function ExportPromotionsButton({
   promotions,
 }: ExportPromotionsButtonProps) {
   function handleExport() {
-    const rows = [
-      COLUMNS.map((c) => csvCell(c.header)).join(","),
-      ...promotions.map((p) =>
-        COLUMNS.map((c) => csvCell(c.value(p))).join(",")
-      ),
-    ]
-    const blob = new Blob([rows.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "promociones.csv"
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadCsv("promociones.csv", [
+      COLUMNS.map((c) => csvCell(c.header)),
+      ...promotions.map((p) => COLUMNS.map((c) => csvCell(c.value(p)))),
+    ])
   }
 
   return (

@@ -88,9 +88,12 @@ export default async function CouponsPage({
   if (vista !== "batches") batchesPromise.catch(() => {})
   if (vista !== "coupons") couponsPromise.catch(() => {})
 
-  // El texto de búsqueda queda fuera de la key a propósito (debounce de
-  // 300ms) — sí remonta al cambiar vista/estado/origen/página.
-  const dataKey = `${vista}|${status ?? ""}|${origin ?? ""}|${validFrom ?? ""}|${validTo ?? ""}|${page}`
+  // `search` ya llega debounced (300ms) desde `CouponsFiltersBar` antes de
+  // tocar la URL, así que incluirla aquí no remonta por cada tecla — solo
+  // cuando la búsqueda se asienta. `scope` (ámbito) también entra: antes se
+  // quedaba fuera por descuido y cambiarlo no mostraba el `TableSkeleton`
+  // aunque `update()` lo aplica al instante, igual que origen/vigencia.
+  const dataKey = `${vista}|${search ?? ""}|${scope ?? ""}|${status ?? ""}|${origin ?? ""}|${validFrom ?? ""}|${validTo ?? ""}|${page}`
 
   const title =
     vista === "batches" ? "Emisiones de cupones" : "Todos los cupones"
