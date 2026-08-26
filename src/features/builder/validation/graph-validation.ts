@@ -35,6 +35,7 @@ function expectedPorts(node: GraphNode, config: Record<string, unknown>) {
   if (node.tipo === "acumular_puntos") {
     return ["out", "tope_alcanzado", "sin_puntos"]
   }
+  if (node.tipo === "esperar_aprobacion") return ["aprobado", "rechazado"]
   if (node.tipo === "fin_workflow") return []
   if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
     const branches = config.branches

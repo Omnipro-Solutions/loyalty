@@ -535,11 +535,14 @@ export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 
 /**
  * Catalog of 19 Loyalty Builder block types from the Figma "08.4 · Loyalty
- * builder · catálogo de bloques", plus 2 added later without a Figma
+ * builder · catálogo de bloques", plus several added later without a Figma
  * card — `webhook_entrante`/`webhook_saliente` (integración con sistemas
- * externos vía HTTP), same precedent as `email`/`push`/`sms_whatsapp` (ver
- * comentario en `config/integration-flows.ts`: sin equivalente en el Figma,
- * resuelto con el lenguaje de formulario existente del inspector). 5 grupos.
+ * externos vía HTTP), `ajustar_puntos`/`cambio_nivel_entrada`/`devolucion`/
+ * `espera_hasta_evento`/`ventana_horaria`/`esperar_aprobacion` (cobertura de
+ * más flujos, ver análisis grounded en tablas reales del repo) — mismo
+ * precedente que `email`/`push`/`sms_whatsapp` (ver comentario en
+ * `config/integration-flows.ts`: sin equivalente en el Figma, resuelto con
+ * el lenguaje de formulario existente del inspector). 5 grupos.
  * Presentation metadata (label, icon, color) lives in
  * src/config/builder-blocks.ts; here only the closed set of valid values
  * for `workflow_nodes.tipo` (mirrored in the `check` constraint de
@@ -553,6 +556,8 @@ export const BUILDER_NODE_GROUPS = {
     "fecha_recurrente",
     "alta_socio",
     "webhook_entrante",
+    "cambio_nivel_entrada",
+    "devolucion",
   ],
   loyalty: [
     "acumular_puntos",
@@ -561,6 +566,7 @@ export const BUILDER_NODE_GROUPS = {
     "emitir_cupon",
     "reto",
     "referido",
+    "ajustar_puntos",
   ],
   actions: [
     "email",
@@ -569,7 +575,15 @@ export const BUILDER_NODE_GROUPS = {
     "aplicar_promocion",
     "webhook_saliente",
   ],
-  logic: ["condicion_multiple", "ramificacion_valor", "split_ab", "esperar"],
+  logic: [
+    "condicion_multiple",
+    "ramificacion_valor",
+    "split_ab",
+    "esperar",
+    "espera_hasta_evento",
+    "ventana_horaria",
+    "esperar_aprobacion",
+  ],
   end: ["fin_workflow"],
 } as const
 

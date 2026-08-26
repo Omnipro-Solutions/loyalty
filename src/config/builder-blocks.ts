@@ -1,5 +1,7 @@
 import {
+  AlarmClock,
   ArrowDownToLine,
+  ArrowUpDown,
   Bell,
   Calendar,
   Clock,
@@ -8,16 +10,20 @@ import {
   Flag,
   GitBranch,
   Gift,
+  Hourglass,
   Mail,
   MessageCircle,
   Share2,
   Shuffle,
+  SlidersHorizontal,
   Split,
   Tag,
   Target,
   Ticket,
   TicketPercent,
   TrendingUp,
+  Undo2,
+  UserCheck,
   UserPlus,
   Users,
   Webhook,
@@ -107,6 +113,15 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     label: "Webhook entrante",
     icon: ArrowDownToLine,
   },
+  // Sin tarjeta en el catálogo de Figma — distinto del `cambio_nivel` de
+  // Lealtad (ese es la acción que recalcula/fuerza el nivel; este es el
+  // disparador de Entrada que arranca el journey cuando el nivel cambia).
+  cambio_nivel_entrada: {
+    group: "entry",
+    label: "Cambio de nivel",
+    icon: ArrowUpDown,
+  },
+  devolucion: { group: "entry", label: "Devolución", icon: Undo2 },
 
   // Loyalty
   acumular_puntos: {
@@ -127,6 +142,13 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
   },
   reto: { group: "loyalty", label: "Reto / challenge", icon: Target },
   referido: { group: "loyalty", label: "Referido", icon: Share2 },
+  // Sin tarjeta en el catálogo de Figma — la acción real ya existe manual
+  // en la ficha de cliente (`features/members/actions/points-adjustments.ts`).
+  ajustar_puntos: {
+    group: "loyalty",
+    label: "Ajustar puntos",
+    icon: SlidersHorizontal,
+  },
 
   // Actions
   email: { group: "actions", label: "Email", icon: Mail },
@@ -162,6 +184,27 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
   },
   split_ab: { group: "logic", label: "Split A/B", icon: Shuffle },
   esperar: { group: "logic", label: "Esperar", icon: Clock },
+  // Sin tarjeta en el catálogo de Figma — extraídos de los 2 modos
+  // "especiales" que antes vivían dentro de `esperar` (ver comentario de
+  // `SIMPLE_FIELD_SPECS.esperar` en `field-specs.ts`).
+  espera_hasta_evento: {
+    group: "logic",
+    label: "Espera hasta evento",
+    icon: Hourglass,
+  },
+  ventana_horaria: {
+    group: "logic",
+    label: "Ventana horaria",
+    icon: AlarmClock,
+  },
+  // Declarativo — sin motor real de aprobación (mismo criterio que el
+  // resto del builder), grounded en el flujo real de doble aprobación de
+  // cupones (`coupon_approval`) solo como referencia de forma.
+  esperar_aprobacion: {
+    group: "logic",
+    label: "Esperar aprobación",
+    icon: UserCheck,
+  },
 
   // End
   fin_workflow: { group: "end", label: "Fin del workflow", icon: Flag },

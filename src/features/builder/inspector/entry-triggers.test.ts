@@ -18,6 +18,7 @@ describe("entryTriggerFor", () => {
     ["canje_cupon", "coupon.redeemed"],
     ["alta_socio", "member.enrolled"],
     ["webhook_entrante", "webhook.received"],
+    ["devolucion", "order.returned"],
   ] as const)(
     "%s tiene un trigger fijo (%s), sin depender de la config",
     (tipo, expected) => {
@@ -41,6 +42,23 @@ describe("entryTriggerFor", () => {
 
   it("fecha_recurrente sin tipo elegido todavía da null", () => {
     expect(entryTriggerFor("fecha_recurrente", {})).toBeNull()
+  })
+
+  it.each([
+    ["sube", "member.tier_upgraded"],
+    ["baja", "member.tier_downgraded"],
+    ["cualquiera", "member.tier_changed"],
+  ] as const)(
+    "cambio_nivel_entrada deriva el trigger de config.direccion = %s → %s",
+    (direccionValue, expected) => {
+      expect(
+        entryTriggerFor("cambio_nivel_entrada", { direccion: direccionValue })
+      ).toBe(expected)
+    }
+  )
+
+  it("cambio_nivel_entrada sin dirección elegida todavía da null", () => {
+    expect(entryTriggerFor("cambio_nivel_entrada", {})).toBeNull()
   })
 
   it("un bloque que no es de Entrada nunca tiene trigger", () => {

@@ -72,6 +72,15 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   // `canje_cupon`/`alta_socio` arriba.
   webhook_entrante: ["webhook.payload", "webhook.recibido_en"],
   webhook_saliente: ["webhook.status_code", "webhook.respuesta"],
+  // Sin tarjeta en el catálogo de Figma — mismo trato mínimo razonable,
+  // grounded en las tablas reales que respaldan cada bloque (ver
+  // `field-specs.ts` para el detalle de cada uno).
+  ajustar_puntos: ["puntos.ajustados", "puntos.saldo"],
+  cambio_nivel_entrada: ["nivel.anterior", "nivel.actual"],
+  devolucion: ["devolucion.monto", "devolucion.pedido_id"],
+  espera_hasta_evento: ["espera.inicio", "espera.fin"],
+  ventana_horaria: ["espera.inicio", "espera.fin"],
+  esperar_aprobacion: ["aprobacion.decidido_por", "aprobacion.nota"],
 }
 
 /**

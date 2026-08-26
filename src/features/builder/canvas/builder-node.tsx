@@ -86,6 +86,12 @@ export const OUTPUT_HANDLES: Partial<
     { id: "tope_alcanzado", label: "Tope alcanzado" },
     { id: "sin_puntos", label: "Sin puntos" },
   ],
+  // Declarativo, sin motor real de aprobación (ver `field-specs.ts`) — 2
+  // salidas fijas, mismo espíritu que `condicion_multiple`.
+  esperar_aprobacion: [
+    { id: "aprobado", label: "Aprobado" },
+    { id: "rechazado", label: "Rechazado" },
+  ],
   fin_workflow: [],
 }
 

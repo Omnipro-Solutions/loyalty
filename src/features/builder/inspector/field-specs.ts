@@ -56,7 +56,7 @@ export type FieldSpec =
       options: { value: string; label: string }[]
     }
   | { key: string; label: string; kind: "boolean" }
-  | { key: string; label: string; kind: "time-range" }
+  | { key: string; label: string; kind: "time-range"; required?: boolean }
 
 const TIER_OPTIONS = [
   { value: "bronce", label: "Base" },
@@ -104,7 +104,7 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
 ]
 
 /**
- * Especificación de formulario para los 18 tipos de bloque "simples" —
+ * Especificación de formulario para los 24 tipos de bloque "simples" —
  * campos extraídos de la tabla PROPIEDAD/TIPO/VALOR POR DEFECTO del
  * catálogo de Figma (`1109:4478 · 08.4`), un tipo de campo abstracto
  * (enum, currency, multi-select, boolean, rate-limit, reference, etc.) por
@@ -144,7 +144,11 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
  * `webhook_saliente` es el mismo caso: headers y cuerpo son listas
  * dinámicas (`WebhookSalienteForm`, `inspector/webhook-saliente-form.tsx`)
  * — aquí solo están sus campos escalares (URL, método, reintentos...).
- * `webhook_entrante` sí es 100% "simple" (cabe entero en este archivo).
+ * `webhook_entrante` sí es 100% "simple" (cabe entero en este archivo). Los
+ * 6 bloques agregados para cubrir más flujos (`ajustar_puntos`,
+ * `cambio_nivel_entrada`, `devolucion`, `espera_hasta_evento`,
+ * `ventana_horaria`, `esperar_aprobacion`) también son 100% "simples" —
+ * ninguno necesita componente dedicado.
  */
 export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
   {
@@ -383,6 +387,49 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         placeholder: "ej. X-Webhook-Secret",
       },
     ],
+    // Sin tarjeta en el catálogo de Figma — distinto del `cambio_nivel` de
+    // Lealtad (esa es la acción que recalcula/fuerza el nivel). No existe
+    // tabla de historial de cambios de nivel (`nivel_anterior`/
+    // `nivel_actual` no están en el esquema), así que el filtro NO es "de
+    // nivel X a nivel Y" — solo dirección + nivel objetivo, contra la
+    // tabla real `tiers` (mismo `TIER_OPTIONS` que ya usa `cambio_nivel`).
+    cambio_nivel_entrada: [
+      {
+        key: "direccion",
+        label: "Dirección",
+        kind: "select",
+        required: true,
+        options: [
+          { value: "sube", label: "Solo al subir" },
+          { value: "baja", label: "Solo al bajar" },
+          { value: "cualquiera", label: "Cualquier cambio" },
+        ],
+      },
+      {
+        key: "nivel_objetivo",
+        label: "Nivel objetivo",
+        kind: "select",
+        options: TIER_OPTIONS,
+      },
+    ],
+    // Sin tarjeta en el catálogo de Figma — `pedidos.estado` sí incluye
+    // 'devuelto' (real), pero la tabla no tiene columna de motivo/monto
+    // devuelto, así que el spec se queda minimalista (mismo patrón que
+    // `evento_compra`: canal + monto mínimo, contra columnas reales).
+    devolucion: [
+      {
+        key: "canal",
+        label: "Canal",
+        kind: "select",
+        options: [
+          { value: "todos", label: "Todos los canales" },
+          { value: "pos", label: "POS" },
+          { value: "ecommerce", label: "E-commerce" },
+          { value: "app", label: "App" },
+        ],
+      },
+      { key: "monto_minimo", label: "Monto mínimo", kind: "currency" },
+    ],
 
     // === Lealtad ===
     canjear_puntos: [
@@ -555,6 +602,54 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         suffix: "días",
       },
     ],
+    // Sin tarjeta en el catálogo de Figma — la acción real ya existe
+    // manual en la ficha de cliente (`features/members/actions/
+    // points-adjustments.ts` + su schema en `features/members/schemas.ts`):
+    // `direction` (otorgar/restar, no un número con signo),
+    // `amount` (entero positivo), `reason` (con los mismos presets que ya
+    // usa `apply-points-rule-dialog.tsx`). Escribe a `points_ledger` con
+    // `tipo: "ajuste"`.
+    ajustar_puntos: [
+      {
+        key: "direccion",
+        label: "Dirección",
+        kind: "select",
+        required: true,
+        options: [
+          { value: "otorgar", label: "Otorgar" },
+          { value: "restar", label: "Restar" },
+        ],
+      },
+      {
+        key: "cantidad",
+        label: "Cantidad",
+        kind: "number",
+        min: 1,
+        required: true,
+        suffix: "puntos",
+      },
+      {
+        key: "motivo",
+        label: "Motivo",
+        kind: "select",
+        required: true,
+        options: [
+          { value: "bono_cortesia", label: "Bono de cortesía" },
+          { value: "correccion_saldo", label: "Corrección de saldo" },
+          {
+            value: "compensacion_incidencia",
+            label: "Compensación por incidencia",
+          },
+          { value: "otro", label: "Otro" },
+        ],
+      },
+      {
+        key: "motivo_detalle",
+        label: "Detalle del motivo",
+        kind: "text",
+        placeholder: "Solo si el motivo es 'Otro'",
+      },
+    ],
 
     // === Acciones ===
     email: MESSAGE_GUARDRAIL_SPECS,
@@ -715,6 +810,13 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         kind: "boolean",
       },
     ],
+    // `hasta_evento`/`ventana_reanudacion` vivían acá — se extrajeron a
+    // `espera_hasta_evento`/`ventana_horaria` (bloques propios de Lógica,
+    // pedido explícito del usuario) para no tenerlos como sub-modos poco
+    // visibles de un solo bloque. `esperar` se queda con lo que sigue
+    // siendo genuinamente "una sola espera": duración fija o hasta una
+    // fecha. Ningún dato sembrado usaba los campos extraídos (verificado
+    // antes de recortar) — nada que migrar.
     esperar: [
       {
         key: "modo",
@@ -724,7 +826,6 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         options: [
           { value: "duracion", label: "Duración" },
           { value: "hasta_fecha", label: "Hasta fecha" },
-          { value: "hasta_evento", label: "Hasta evento" },
         ],
       },
       {
@@ -734,10 +835,15 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         min: 1,
         suffix: "días",
       },
+    ],
+    // Extraído de `esperar` (ver comentario arriba) — mismos 2 campos que
+    // antes eran el modo "Hasta evento".
+    espera_hasta_evento: [
       {
         key: "hasta_evento",
         label: "Hasta evento",
         kind: "select",
+        required: true,
         options: [
           { value: "canje_cupon", label: "Canje de cupón" },
           { value: "evento_compra", label: "Compra realizada" },
@@ -751,10 +857,60 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         min: 1,
         suffix: "días",
       },
+    ],
+    // Extraído de `esperar` (ver comentario arriba) — mismo campo que antes
+    // era `ventana_reanudacion`, más zona horaria (mismas 4 que ya usa
+    // `fecha_recurrente`) porque una ventana de horas sin zona es ambigua.
+    ventana_horaria: [
       {
-        key: "ventana_reanudacion",
-        label: "Ventana de reanudación",
+        key: "ventana",
+        label: "Ventana horaria",
         kind: "time-range",
+        required: true,
+      },
+      {
+        key: "zona_horaria",
+        label: "Zona horaria",
+        kind: "select",
+        options: [
+          { value: "America/Bogota", label: "America/Bogotá" },
+          { value: "America/Mexico_City", label: "America/Mexico_City" },
+          { value: "America/Lima", label: "America/Lima" },
+          { value: "America/Santiago", label: "America/Santiago" },
+        ],
+      },
+    ],
+    // Sin tarjeta en el catálogo de Figma — declarativo, sin motor real de
+    // aprobación (mismo criterio que el resto del builder). Grounded en el
+    // flujo real de doble aprobación de cupones (`coupon_approval`) solo
+    // como referencia de forma — no reusa esa tabla, es genérico para
+    // cualquier journey. `rol_aprobador` reusa los roles reales del
+    // proyecto (`ROLES` en `types/domain.ts`), sin `lector` (solo lectura).
+    // 2 salidas fijas — ver `OUTPUT_HANDLES` en `canvas/builder-node.tsx`.
+    esperar_aprobacion: [
+      {
+        key: "rol_aprobador",
+        label: "Quién aprueba",
+        kind: "select",
+        required: true,
+        options: [
+          { value: "gestor", label: "Gestor" },
+          { value: "aprobador", label: "Aprobador" },
+          { value: "admin", label: "Administrador" },
+        ],
+      },
+      {
+        key: "motivo",
+        label: "Motivo / contexto",
+        kind: "text",
+        placeholder: "Ej. Emisión de cupón de alto valor",
+      },
+      {
+        key: "tiempo_maximo_espera_dias",
+        label: "Tiempo máximo de espera",
+        kind: "number",
+        min: 1,
+        suffix: "días",
       },
     ],
 

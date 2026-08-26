@@ -87,7 +87,7 @@ export function SimpleConfigForm({
       const range =
         (config[spec.key] as { desde?: string; hasta?: string }) ?? {}
       return (
-        <Field key={spec.key} label={spec.label}>
+        <Field key={spec.key} label={spec.label} required={spec.required}>
           <div className="flex items-center gap-2">
             <Input
               type="time"
