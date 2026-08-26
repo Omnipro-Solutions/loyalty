@@ -28,7 +28,12 @@ import type { BuilderNodeType } from "@/types/domain"
 
 import { renameWorkflowAction, saveGraphAction } from "./actions"
 import { BLOCK_DRAG_MIME, BlockPalette } from "./block-palette"
-import { BuilderNode, type BuilderNodeData } from "./builder-node"
+import {
+  BuilderNode,
+  outputsForNode,
+  TONE_EDGE_CLASS,
+  type BuilderNodeData,
+} from "./builder-node"
 import { EditorBar } from "./editor-bar"
 import {
   publishWorkflowAction,
@@ -304,6 +309,25 @@ function CanvasArea({
     [edges]
   )
 
+  /**
+   * Pinta cada arista con el tono semántico de su puerto de origen (ver
+   * `OUTPUT_HANDLES` en `builder-node.tsx`) — puramente presentacional, no
+   * se persiste con el grafo (`graphForActions` de abajo sigue mandando
+   * solo `id`/`source_node_id`/`target_node_id`/`source_port`).
+   */
+  const styledEdges = useMemo(() => {
+    const byId = new Map(nodes.map((n) => [n.id, n]))
+    return edges.map((e) => {
+      const source = byId.get(e.source)
+      const tone = source
+        ? outputsForNode(source.data.tipo, source.data.config ?? {}).find(
+            (p) => p.id === (e.sourceHandle ?? "out")
+          )?.tone
+        : undefined
+      return tone ? { ...e, className: TONE_EDGE_CLASS[tone] } : e
+    })
+  }, [nodes, edges])
+
   const graphForActions = useCallback(
     () => ({
       workflowId: workflow.id,
@@ -412,7 +436,7 @@ function CanvasArea({
         <div className="min-w-0 flex-1">
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={styledEdges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={onConnect}

@@ -28,6 +28,17 @@ export type BuilderNodeData = {
 }
 
 /**
+ * Significado semántico de un puerto de salida — pinta el punto del handle,
+ * la etiqueta y la arista que sale de él con el mismo token (reusa
+ * `success`/`warning`/`destructive` de `globals.css`, los mismos 3 que ya
+ * usa `Badge`— sin paleta nueva). `undefined` = neutro (gris, el mismo
+ * look de siempre): ramas dinámicas (`ramificacion_valor`/`split_ab`) y el
+ * puerto único `out` de la mayoría de bloques no tienen una lectura
+ * positiva/negativa real, así que se quedan sin tono.
+ */
+export type PortTone = "success" | "warning" | "destructive"
+
+/**
  * Puertos de salida dinámicos: `ramificacion_valor`/`split_ab` leen las
  * ramas que el usuario definió en la pestaña "Ramas" del inspector
  * (`config.branches: {id, label}[]`) — si todavía no configuró ninguna,
@@ -63,11 +74,11 @@ function branchesFromConfig(
  * mientras tanto.
  */
 export const OUTPUT_HANDLES: Partial<
-  Record<BuilderNodeType, { id: string; label: string }[]>
+  Record<BuilderNodeType, { id: string; label: string; tone?: PortTone }[]>
 > = {
   condicion_multiple: [
-    { id: "cumple", label: "Cumple" },
-    { id: "no_cumple", label: "No cumple" },
+    { id: "cumple", label: "Cumple", tone: "success" },
+    { id: "no_cumple", label: "No cumple", tone: "destructive" },
   ],
   ramificacion_valor: [
     { id: "rama_1", label: "Rama 1" },
@@ -80,17 +91,19 @@ export const OUTPUT_HANDLES: Partial<
   // Resultado tipado (docs/builder.md §16-17): solo POINTS_GRANTED (`out`),
   // CAP_REACHED (`tope_alcanzado`) y ZERO_POINTS (`sin_puntos`) — los
   // únicos 3 códigos que este bloque puede determinar de verdad hoy (ver
-  // `resultCodeFor` en `inspector/accumulate-points-engine.ts`).
+  // `resultCodeFor` en `inspector/accumulate-points-engine.ts`). Tono:
+  // otorgar puntos es el camino "bueno", el tope es una advertencia (algo
+  // lo limitó), cero puntos es un resultado neutro, no un error.
   acumular_puntos: [
-    { id: "out", label: "Puntos otorgados" },
-    { id: "tope_alcanzado", label: "Tope alcanzado" },
+    { id: "out", label: "Puntos otorgados", tone: "success" },
+    { id: "tope_alcanzado", label: "Tope alcanzado", tone: "warning" },
     { id: "sin_puntos", label: "Sin puntos" },
   ],
   // Declarativo, sin motor real de aprobación (ver `field-specs.ts`) — 2
   // salidas fijas, mismo espíritu que `condicion_multiple`.
   esperar_aprobacion: [
-    { id: "aprobado", label: "Aprobado" },
-    { id: "rechazado", label: "Rechazado" },
+    { id: "aprobado", label: "Aprobado", tone: "success" },
+    { id: "rechazado", label: "Rechazado", tone: "destructive" },
   ],
   fin_workflow: [],
 }
@@ -101,15 +114,34 @@ const DYNAMIC_BRANCHES: readonly BuilderNodeType[] = [
   "split_ab",
 ]
 
-/** Etiquetas humanas de los puertos de salida de un nodo — misma fuente que usa el canvas del editor, reutilizada por la analítica (08.3) para las píldoras "vino de…". */
+/** Etiquetas humanas de los puertos de salida de un nodo — misma fuente que usa el canvas del editor, reutilizada por la analítica (08.3) para las píldoras "vino de…", y por el color de las aristas (ver `journey-editor.tsx`). */
 export function outputsForNode(
   tipo: BuilderNodeType,
   config: Record<string, unknown>
-): { id: string; label: string }[] {
+): { id: string; label: string; tone?: PortTone }[] {
   const branchesConfig = DYNAMIC_BRANCHES.includes(tipo)
     ? branchesFromConfig(config ?? {})
     : null
   return branchesConfig ?? OUTPUT_HANDLES[tipo] ?? DEFAULT_OUTPUT
+}
+
+const TONE_DOT_CLASS: Record<PortTone, string> = {
+  success: "!bg-success",
+  warning: "!bg-warning",
+  destructive: "!bg-destructive",
+}
+
+const TONE_TEXT_CLASS: Record<PortTone, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  destructive: "text-destructive",
+}
+
+/** Color de la arista que sale de un puerto con tono — reutilizado por `journey-editor.tsx` para pintar la conexión completa, no solo el punto del handle. */
+export const TONE_EDGE_CLASS: Record<PortTone, string> = {
+  success: "!stroke-success",
+  warning: "!stroke-warning",
+  destructive: "!stroke-destructive",
 }
 
 /**
@@ -246,7 +278,12 @@ export function BuilderNode({
             return (
               <div
                 key={output.id}
-                className="relative flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground"
+                className={cn(
+                  "relative flex items-center justify-end gap-1.5 text-[11px]",
+                  output.tone
+                    ? TONE_TEXT_CLASS[output.tone]
+                    : "text-muted-foreground"
+                )}
               >
                 {output.label}
                 {typeof count === "number" && (
@@ -258,7 +295,12 @@ export function BuilderNode({
                   type="source"
                   id={output.id}
                   position={Position.Right}
-                  className="!static !size-2.5 !translate-x-0 !translate-y-0 !border-2 !border-background !bg-border-strong"
+                  className={cn(
+                    "!static !size-2.5 !translate-x-0 !translate-y-0 !border-2 !border-background",
+                    output.tone
+                      ? TONE_DOT_CLASS[output.tone]
+                      : "!bg-border-strong"
+                  )}
                 />
               </div>
             )

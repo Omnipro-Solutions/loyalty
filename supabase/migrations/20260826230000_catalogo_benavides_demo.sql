@@ -1,0 +1,138 @@
+-- Catálogo real de Farmacias Benavides (México), fuente: docs/100bena/ —
+-- 100 productos con SKU/nombre/presentación/precio/receta reales, scrapeados
+-- del sitio público (docs/100bena/productos_benavides.{csv,json}). Fotos
+-- reales de producto copiadas a public/catalogo/benavides/ (decisión con el
+-- usuario: servidas desde el propio dominio en vez de hotlink al CDN de
+-- benavides.com.mx, aunque siguen siendo fotografía real de esa cadena —
+-- distinto del resto del catálogo demo, que usa fotos genéricas CC/PD para
+-- no usar material de una marca ajena, ver bloque "Catálogo de demo" más
+-- arriba en este archivo).
+--
+-- `precio` convertido de MXN a la misma escala "USD" del resto del catálogo
+-- (÷ 18.5, tasa aprox. MXN/USD — mismo criterio que el ÷4000 COP/USD
+-- de los productos Genfar/MK/Redoxon). `puntos` = precio × 6, igual ratio
+-- aproximado que el resto de la tabla. `requiere_receta` viene del campo
+-- real `RequiresPrescription` del scrape.
+with org as (select id from organizations where slug = 'omni')
+insert into productos (
+  org_id, sku, codigo_producto, nombre, presentacion, marca, proveedor,
+  tipo_producto, imagen_url, precio, puntos, estado, requiere_receta
+)
+select
+  (select id from org),
+  'BEN-' || p.sku,
+  'PRD-BEN-' || p.sku,
+  p.nombre,
+  p.presentacion,
+  p.marca,
+  'Farmacias Benavides',
+  case when p.requiere_receta then 'Medicamento con receta' else 'Medicamento OTC' end,
+  p.imagen_url,
+  p.precio,
+  p.puntos,
+  'activo',
+  p.requiere_receta
+from (
+  values
+    ('1049967', 'Genérico de Marca', '200 mg Tramadol', '60 Tabletas', '/catalogo/benavides/1049967.jpg', 26.76, 161, true),
+    ('755249', 'Bifebral', '30 mg / 85 mg / 5 ml Ketoprofeno + Paracetamol', '70 ml Suspensión', '/catalogo/benavides/755249.jpg', 14.11, 85, false),
+    ('755141', 'Bifebral', 'Ketoprofeno + Paracetamol', '12 ud Comprimidos', '/catalogo/benavides/755141.jpg', 20.05, 120, false),
+    ('1045368', 'Bifebral', '100 mg / 300 mg Ketoprofeno + Paracetamol', '24 ud Comprimidos', '/catalogo/benavides/1045368.jpg', 24.05, 144, false),
+    ('1050831', 'Plemtum', '10 mg Dapagliflozina', '28 Tabletas', '/catalogo/benavides/1050831.jpg', 40.27, 242, false),
+    ('1049223', 'Genérico de Marca', '25 mg Indometacina', '30 Cápsulas', '/catalogo/benavides/1049223.jpg', 3.19, 19, false),
+    ('1048493', 'Cessabit', '10 mg Ciclobenzaprina', '30 Tabletas', '/catalogo/benavides/1048493.jpg', 8.59, 52, false),
+    ('1012367', 'Genérico de Marca', 'Tribedoce Compuesto Complejo B/Diclofenaco Solución Inyectable', '3 Ampolletas', '/catalogo/benavides/1012367.jpg', 5.51, 33, false),
+    ('1047700', 'Farmacias Benavides', '300 mg Gabapentina', '30 Cápsulas', '/catalogo/benavides/1047700.jpg', 8.76, 53, false),
+    ('1047564', 'Farmacias Benavides', 'Indometacina 25 mg', '30 Cápsulas', '/catalogo/benavides/1047564.jpg', 2.59, 16, false),
+    ('1047493', 'Flexakocs', '200 mg Celecoxib', '10 ud Cápsulas', '/catalogo/benavides/1047493.jpg', 28.59, 172, false),
+    ('1047478', 'Flexakocs', '200 mg Celecoxib', '30 ud Cápsulas', '/catalogo/benavides/1047478.jpg', 77.03, 462, false),
+    ('1047494', 'Flexakocs', '200 mg Celecoxib', '20 ud Cápsulas', '/catalogo/benavides/1047494.jpg', 51.08, 306, false),
+    ('1040608', 'Farmacias Benavides', '1 g / 2 ml Metamizol Sodico', '3 ud Ampolletas', '/catalogo/benavides/1040608.jpg', 2.92, 18, false),
+    ('1035102', 'Prikul', '50 mg Pregabalina', '28 Cápsulas', '/catalogo/benavides/1035102.jpg', 49.03, 294, false),
+    ('1043873', 'Kisika', '30 mg Deflazacort', '10 ud Tabletas', '/catalogo/benavides/1043873.jpg', 24.03, 144, false),
+    ('1039514', 'Farmacias Benavides', '400 mg Ibuprofeno', '10 Cápsulas', '/catalogo/benavides/1039514.jpg', 3.51, 21, false),
+    ('1043310', 'Xumer', '60 mg Etoricoxib', '28 Tabletas', '/catalogo/benavides/1043310.jpg', 58.81, 353, false),
+    ('1046266', 'Farmacias Benavides', '200 mg Celecoxib', '30 Cápsulas', '/catalogo/benavides/1046266.jpg', 43.57, 261, false),
+    ('1039968', 'Farmacias Benavides', '1.16 g/100 g Diclofenaco Dietilamonio Gel', '60 g', '/catalogo/benavides/1039968.jpg', 5.35, 32, false),
+    ('750646', 'Celebrex', '200 mg Celecoxib', '30 Cápsulas', '/catalogo/benavides/750646.jpg', 113.84, 683, false),
+    ('1043987', 'Farmacias Benavides', '75 mg / 3 ml Diclofenaco', '2 ud Ampolletas', '/catalogo/benavides/1043987.jpg', 5.35, 32, false),
+    ('1043801', 'Cartigen Nf', '600 mg / 50 mg Condroitina + Diacereina', '30 ud Tabletas', '/catalogo/benavides/1043801.jpg', 84.0, 504, false),
+    ('1047339', 'Farmacias Benavides', '500 mg Ácido Mefenámico', '10 Tabletas', '/catalogo/benavides/1047339.jpg', 3.84, 23, false),
+    ('1030006', 'Neuralin Relief', '100 mg Ketoprofeno/100/50/5 mg Vitaminas Complejo B', '20 Tabletas', '/catalogo/benavides/1030006.jpg', 28.11, 169, false),
+    ('1039223', 'Farmacias Benavides', '500 mg Metamizol Sódico', '10 Tabletas', '/catalogo/benavides/1039223.jpg', 1.73, 10, false),
+    ('1042110', 'Farmacias Benavides', '400 mg Ibuprofeno', '20 Cápsulas', '/catalogo/benavides/1042110.jpg', 4.59, 28, false),
+    ('1040102', 'Farmacias Benavides', '8 mg Dexametasona/2 ml Solución Inyectable', '1 Ampolleta', '/catalogo/benavides/1040102.jpg', 1.3, 8, false),
+    ('1039649', 'Xumer', '90 mg Etoricoxib', '14 Tabletas', '/catalogo/benavides/1039649.jpg', 51.08, 306, false),
+    ('1039513', 'Farmacias Benavides', '500 mg Paracetamol', '20 Tabletas', '/catalogo/benavides/1039513.jpg', 2.43, 15, false),
+    ('1040812', 'Farmacias Benavides', '8 mg Betametasona/2 ml Solución Inyectable', '1 Ampolleta', '/catalogo/benavides/1040812.jpg', 5.68, 34, false),
+    ('1039662', 'Farmacias Benavides', '100 mg Diclofenaco Liberación Prolongada', '20 Tabletas', '/catalogo/benavides/1039662.jpg', 2.65, 16, false),
+    ('1040118', 'Farmacias Benavides', '15 mg Meloxicam/215 mg Metocarbamol', '10 Cápsulas', '/catalogo/benavides/1040118.jpg', 6.16, 37, false),
+    ('1040548', 'Farmacias Benavides', '275 mg Naproxeno/300 mg Paracetamol', '15 Tabletas', '/catalogo/benavides/1040548.jpg', 3.73, 22, false),
+    ('1046027', 'Farmacias Benavides', '200 mg Celecoxib', '10 Cápsulas', '/catalogo/benavides/1046027.jpg', 24.43, 147, false),
+    ('1040429', 'Farmacias Benavides', '100 mg Tramadol', '10 Cápsulas', '/catalogo/benavides/1040429.jpg', 4.7, 28, true),
+    ('502650', 'Dafloxen F', '275 mg / 300 mg Naproxeno + Paracetamol', '16 ud Tabletas', '/catalogo/benavides/502650.jpg', 8.38, 50, false),
+    ('1042414', 'Farmacias Benavides', '800 mg Ibuprofeno', '20 Tabletas', '/catalogo/benavides/1042414.jpg', 9.78, 59, false),
+    ('1040583', 'Farmacias Benavides', '550 mg Naproxeno Sódico', '12 Tabletas', '/catalogo/benavides/1040583.jpg', 4.27, 26, false),
+    ('1046028', 'Farmacias Benavides', '200 mg Celecoxib', '20 Cápsulas', '/catalogo/benavides/1046028.jpg', 34.59, 208, false),
+    ('1040941', 'Farmacias Benavides', '250 mg Naproxeno', '30 ud Tabletas', '/catalogo/benavides/1040941.jpg', 3.78, 23, false),
+    ('1040484', 'Farmacias Benavides', '750 mg Paracetamol', '20 Tabletas', '/catalogo/benavides/1040484.jpg', 2.49, 15, false),
+    ('1043772', 'Tylenol', '500 mg Paracetamol', '40 Tabletas', '/catalogo/benavides/1043772.jpg', 13.24, 79, false),
+    ('1018161', 'Dexabión Dc', 'Complejo B/Lidocaína/Dexametasona', '3 Jeringas Prellenadas', '/catalogo/benavides/1018161.jpg', 34.54, 207, false),
+    ('1039752', 'Farmacias Benavides', '15 mg Meloxicam', '10 Tabletas', '/catalogo/benavides/1039752.jpg', 3.78, 23, false),
+    ('1045614', 'Farmacias Benavides', '120 mg Etoricoxib', '7 Comprimidos', '/catalogo/benavides/1045614.jpg', 23.84, 143, false),
+    ('1036060', 'Ateka', '1200 mg Mesalazina', '16 Comprimidos', '/catalogo/benavides/1036060.jpg', 48.43, 291, false),
+    ('1043672', 'Farmacias Benavides', '600 mg Ibuprofeno', '10 Cápsulas', '/catalogo/benavides/1043672.jpg', 4.43, 27, false),
+    ('1043871', 'Kisika', '6 mg Deflazacort', '20 ud Tabletas', '/catalogo/benavides/1043871.jpg', 11.99, 72, false),
+    ('1043629', 'Farmacias Benavides', '90 mg Etoricoxib', '28 Tabletas', '/catalogo/benavides/1043629.jpg', 36.16, 217, false),
+    ('1018256', 'Dolo Neurobión DC', '3 ml Complejo B/Lidocaína/Diclofenaco Sódico', '3 Jeringas Prellenadas', '/catalogo/benavides/1018256.jpg', 34.54, 207, false),
+    ('1040942', 'Farmacias Benavides', '500 mg Naproxeno', '20 Tabletas', '/catalogo/benavides/1040942.jpg', 3.78, 23, false),
+    ('1051096', 'Genérico de Marca', '200 mg Carisoprodol/250 mg Naproxeno', '30 Cápsulas', '/catalogo/benavides/1051096.jpg', 15.68, 94, false),
+    ('1051245', 'Genérico de Marca', '250 mg Naproxeno', '20 Tabletas', '/catalogo/benavides/1051245.jpg', 2.11, 13, false),
+    ('1051211', 'Genérico de Marca', '0.1 g Benzocaína/1 g Gel Sabor Uva', '10 g', '/catalogo/benavides/1051211.jpg', 3.73, 22, false),
+    ('1050955', 'Genérico de Marca', '500 mg Ácido Mefenámico', '20 Tabletas', '/catalogo/benavides/1050955.jpg', 3.51, 21, false),
+    ('1050979', 'Genérico de Marca', '400 mg Metocarbamol/350 mg Paracetamol', '30 Tabletas', '/catalogo/benavides/1050979.jpg', 4.97, 30, false),
+    ('1050965', 'Genérico de Marca', '60 mg Lidocaína/5 mg Hidrocortisona', '6 Supositorios', '/catalogo/benavides/1050965.jpg', 5.62, 34, false),
+    ('1051132', 'Pacetandax', '40 mg Parecoxib/2 ml Solución Inyectable', '2 Frascos Ámpula', '/catalogo/benavides/1051132.jpg', 21.57, 129, false),
+    ('1051091', 'Genérico de Marca', '30 mg Ketorolaco Sublingual', '4 Tabletas', '/catalogo/benavides/1051091.jpg', 3.03, 18, false),
+    ('1051037', 'Alin Depot', '8 mg Dexametasona/2 ml Suspensión Inyectable', '1 Jeringa Prellenada', '/catalogo/benavides/1051037.jpg', 26.97, 162, false),
+    ('1051047', 'Alin', '2 ml Dexametasona Solución Inyectable', '1 Jeringa Prellenada', '/catalogo/benavides/1051047.jpg', 20.49, 123, false),
+    ('1051063', 'XELETEC', '200 mg Celecoxib', '30 Cápsulas', '/catalogo/benavides/1051063.jpg', 41.57, 249, false),
+    ('1050898', 'Genérico de Marca', '750 mg Paracetamol', '10 Tabletas', '/catalogo/benavides/1050898.jpg', 1.73, 10, false),
+    ('1050886', 'Genérico de Marca', '275 mg Naproxeno', '20 Tabletas', '/catalogo/benavides/1050886.jpg', 5.19, 31, false),
+    ('1050744', 'Genérico de Marca', '125 mg Naproxeno/100 mg Paracetamol/5 ml Suspensión', '100 ml', '/catalogo/benavides/1050744.jpg', 5.14, 31, false),
+    ('1050706', 'Genérico de Marca', '500 mg Ácido Acetilsalicílico', '20 Tabletas', '/catalogo/benavides/1050706.jpg', 1.89, 11, false),
+    ('1050687', 'Genérico de Marca', '100 mg Tiamina/50 mg Piridoxina/10 mg Hidroxocobalamina/2 ml Solución Inyectable', '5 Ampolletas', '/catalogo/benavides/1050687.jpg', 8.86, 53, false),
+    ('1050607', 'Farmacias Benavides', '600 mg Ibuprofeno', '20 Cápsulas', '/catalogo/benavides/1050607.jpg', 6.27, 38, false),
+    ('1042730', 'Genérico de Marca', '50/500 mg Diclofenaco/Paracetamol', '10 Tabletas', '/catalogo/benavides/1042730.jpg', 5.03, 30, false),
+    ('1050386', 'Genérico de Marca', '100 mg Sumatriptan', '2 Tabletas', '/catalogo/benavides/1050386.jpg', 10.92, 66, false),
+    ('1050320', 'Genérico de Marca', '40 mg Parecoxib Solución Inyectable', '2 Ampolletas', '/catalogo/benavides/1050320.jpg', 28.97, 174, false),
+    ('1049863', 'Graneodin F', '16.2 mg/ml Flurbiprofeno Spray', '15 ml Solución', '/catalogo/benavides/1049863.jpg', 21.57, 129, false),
+    ('1050165', 'Genérico de Marca', '60 mg Raloxifeno', '28 tabletas', '/catalogo/benavides/1050165.jpg', 37.3, 224, false),
+    ('1049797', 'Farmacias Benavides', '200 mg/ml Benzocaína Solución', '10 ml', '/catalogo/benavides/1049797.jpg', 9.14, 55, false),
+    ('1049467', 'Farmacias Benavides', '2.5 mg Zolmitriptano', '2 Tabletas', '/catalogo/benavides/1049467.jpg', 11.08, 66, false),
+    ('1049453', 'Genérico de Marca', '50 mg Sumatriptan', '2 Tabletas', '/catalogo/benavides/1049453.jpg', 7.62, 46, false),
+    ('1049187', 'Farmacias Benavides', 'Árnica Gel Corporal', '120 g', '/catalogo/benavides/1049187.jpg', 3.51, 21, false),
+    ('1049127', 'Genérico de Marca', '2.5 g Naproxeno Suspensión Pediátrico', '100 ml', '/catalogo/benavides/1049127.jpg', 3.51, 21, false),
+    ('1048646', 'Farmacias Benavides', '30 mg/1 ml Ketorolaco Solución', '3 ud Ampolletas', '/catalogo/benavides/1048646.jpg', 3.73, 22, false),
+    ('1048759', 'Keral', '25 mg/10 mL Dexketoprofeno', '20 ud Sobres', '/catalogo/benavides/1048759.jpg', 40.16, 241, false),
+    ('1048326', 'Farmacias Benavides', 'Complejo B, Diclofenaco, Lidocaína Solución Inyectable', '3 Ampolletas', '/catalogo/benavides/1048326.jpg', 7.89, 47, false),
+    ('1048173', 'Farmacias Benavides', '250 mg Paracetamol/250 mg Ácido Acetilsalicílico/65 mg Cafeína', '24 Tabletas', '/catalogo/benavides/1048173.jpg', 3.73, 22, false),
+    ('1048171', 'Farmacias Benavides', '100 mg Ácido Acetilsalicílico Liberación Retardada', '30 Tabletas', '/catalogo/benavides/1048171.jpg', 2.65, 16, false),
+    ('1047879', 'Farmacias Benavides', '1 mg Colchicina', '30 ud Tabletas', '/catalogo/benavides/1047879.jpg', 3.24, 19, false),
+    ('1047742', 'Farmacias Benavides', '800 mg Ibuprofeno', '10 Tabletas', '/catalogo/benavides/1047742.jpg', 7.03, 42, false),
+    ('1045157', 'Keral', '25 mg Dexketoprofeno', '20 ud Tabletas', '/catalogo/benavides/1045157.jpg', 39.62, 238, false),
+    ('1042925', 'Genérico de Marca', '400 mg Ibuprofeno/100 mg Cafeína', '10 Cápsulas', '/catalogo/benavides/1042925.jpg', 4.43, 27, false),
+    ('1047830', 'Farmacias Benavides', '4 mg /1 ml Betametasona Solución Inyectable', '1 Ampolleta', '/catalogo/benavides/1047830.jpg', 4.43, 27, false),
+    ('1043295', 'Tremepen', '300 mg/25 mg Gabapentina, Tramadol', '30 ud Cápsulas', '/catalogo/benavides/1043295.jpg', 59.68, 358, true),
+    ('1037823', 'Cortax', '200 mg Celecoxib', '30 ud Cápsulas', '/catalogo/benavides/1037823.jpg', 83.35, 500, false),
+    ('1040033', 'Mistan', '90 mg Etoricoxib', '14 ud Tabletas', '/catalogo/benavides/1040033.jpg', 46.16, 277, false),
+    ('1040032', 'Mistan', '60 mg Etoricoxib', '28 ud Tabletas', '/catalogo/benavides/1040032.jpg', 48.49, 291, false),
+    ('1043402', 'Dolocam Plus', '7.5 mg Meloxicam/215 mg Metocarbamol', '20 Cápsulas', '/catalogo/benavides/1043402.jpg', 55.14, 331, false),
+    ('1039757', 'Genérico de Marca', '20 mg/ 400 mg Hioscina, Ibuprofeno', '10 ud Tabletas', '/catalogo/benavides/1039757.jpg', 5.95, 36, false),
+    ('1037822', 'Cortax', '200 mg Celecoxib', '20 ud Cápsulas', '/catalogo/benavides/1037822.jpg', 56.49, 339, false),
+    ('1037821', 'Cortax', '200 mg Celecoxib', '10 ud Cápsulas', '/catalogo/benavides/1037821.jpg', 30.11, 181, false),
+    ('1037200', 'Genérico de Marca', '10 g Naproxeno/2 g Lidocaína Gel', '35 g', '/catalogo/benavides/1037200.jpg', 4.81, 29, false),
+    ('1037567', 'Genérico de Marca', '20 mg Piroxicam', '20 Tabletas', '/catalogo/benavides/1037567.jpg', 3.84, 23, false),
+    ('1039658', 'Xumer', '120 mg Etoricoxib', '7 Tabletas', '/catalogo/benavides/1039658.jpg', 38.92, 234, false)
+) as p (sku, marca, nombre, presentacion, imagen_url, precio, puntos, requiere_receta)
+on conflict (org_id, sku) do nothing;
