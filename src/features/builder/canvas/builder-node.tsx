@@ -3,6 +3,7 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { AlertTriangle } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
 import {
   connectedMessageProviders,
@@ -12,6 +13,8 @@ import {
 import { validateNodeConfig } from "@/features/builder/inspector/schemas"
 import { cn } from "@/lib/utils"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
+
+import { configSummaryFor } from "./node-config-summary"
 
 export type BuilderNodeData = {
   tipo: BuilderNodeType
@@ -138,6 +141,7 @@ export function BuilderNode({
   )
   const outputs = outputsForNode(data.tipo, data.config ?? {})
   const flowSummary = messageFlowSummary(data.tipo, data.config ?? {})
+  const configSummary = configSummaryFor(data.tipo, data.config ?? {})
   const missingFields = validateNodeConfig(data.tipo, data.config ?? {})
 
   return (
@@ -194,6 +198,36 @@ export function BuilderNode({
           <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
             {flowSummary.flowName}
           </span>
+        </div>
+      )}
+
+      {configSummary && (
+        <div className="flex flex-col gap-1.5 border-t border-border px-3 py-2">
+          {configSummary.rows.map((row) => (
+            <div
+              key={row.label}
+              className="flex items-center justify-between gap-2 text-[11px]"
+            >
+              <span className="shrink-0 text-muted-foreground">
+                {row.label}
+              </span>
+              <span
+                title={row.value}
+                className="min-w-0 truncate text-right font-medium text-foreground"
+              >
+                {row.value}
+              </span>
+            </div>
+          ))}
+          {configSummary.pills && configSummary.pills.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {configSummary.pills.map((pill) => (
+                <Badge key={pill} variant="neutral" className="font-normal">
+                  {pill}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

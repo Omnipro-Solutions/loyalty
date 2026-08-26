@@ -58,6 +58,25 @@ export async function listCouponBatchesForBuilder(): Promise<
   return data ?? []
 }
 
+export type PromotionSummary = { id: string; name: string }
+
+/**
+ * Promociones reales del módulo de promociones (`promociones`), para el
+ * selector "Promoción" del bloque `aplicar_promocion` — duplicado de
+ * `features/promotions` por aislamiento entre features (ver CLAUDE.md §2).
+ * Sin filtrar por `estado_publicacion`: mismo criterio que `listAudiences()`
+ * y `listCouponBatchesForBuilder()`, que tampoco filtran por estado.
+ */
+export async function listPromotionsForBuilder(): Promise<PromotionSummary[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("promociones")
+    .select("id, nombre")
+    .order("nombre")
+  if (error) throw error
+  return (data ?? []).map((p) => ({ id: p.id, name: p.nombre }))
+}
+
 export type WorkflowListItem = {
   id: string
   nombre: string

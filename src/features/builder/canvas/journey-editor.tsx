@@ -38,6 +38,7 @@ import { InspectorPanel } from "./inspector-panel"
 import type {
   AudienceSummary,
   CouponBatchSummary,
+  PromotionSummary,
   TierSummary,
   WorkflowWithGraph,
 } from "./queries"
@@ -85,11 +86,13 @@ function CanvasArea({
   tiers,
   audiences,
   couponBatches,
+  promotions,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
+  promotions: PromotionSummary[]
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BuilderNodeData>>(
     workflow.nodes.map(toFlowNode)
@@ -434,6 +437,7 @@ function CanvasArea({
           tiers={tiers}
           audiences={audiences}
           couponBatches={couponBatches}
+          promotions={promotions}
           onClose={() => setSelectedId(null)}
           onDelete={deleteNode}
           onConfigChange={updateNodeConfig}
@@ -454,11 +458,13 @@ export function JourneyEditor({
   tiers,
   audiences,
   couponBatches,
+  promotions,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
+  promotions: PromotionSummary[]
 }) {
   return (
     <ReactFlowProvider>
@@ -467,6 +473,7 @@ export function JourneyEditor({
         tiers={tiers}
         audiences={audiences}
         couponBatches={couponBatches}
+        promotions={promotions}
       />
     </ReactFlowProvider>
   )

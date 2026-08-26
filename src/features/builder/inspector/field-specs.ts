@@ -7,6 +7,7 @@ export type FieldSpec =
       kind: "text"
       placeholder?: string
       required?: boolean
+      hint?: string
     }
   | { key: string; label: string; kind: "textarea"; placeholder?: string }
   | {
@@ -37,6 +38,13 @@ export type FieldSpec =
       key: string
       label: string
       kind: "coupon-select"
+      hint?: string
+      required?: boolean
+    }
+  | {
+      key: string
+      label: string
+      kind: "promotion-select"
       hint?: string
       required?: boolean
     }
@@ -96,7 +104,7 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
 ]
 
 /**
- * Especificación de formulario para los 17 tipos de bloque "simples" —
+ * Especificación de formulario para los 18 tipos de bloque "simples" —
  * campos extraídos de la tabla PROPIEDAD/TIPO/VALOR POR DEFECTO del
  * catálogo de Figma (`1109:4478 · 08.4`), un tipo de campo abstracto
  * (enum, currency, multi-select, boolean, rate-limit, reference, etc.) por
@@ -106,12 +114,15 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
  * existente (select con opciones cerradas razonables, number con sufijo,
  * o text libre para referencias a catálogos que este proyecto todavía no
  * modela — reglas como entidad real sigue siendo trabajo de Fase 5, no de
- * este inspector). Dos excepciones ya tienen entidad real: `audiencia_id`
+ * este inspector). Tres excepciones ya tienen entidad real: `audiencia_id`
  * (`entra_segmento`) usa `kind: "audience-select"` (`segments`, ver 11 ·
- * Audiencias) y `coupon_batch_id` (`emitir_cupon`) usa `kind:
- * "coupon-select"` (`coupon_batch`, ver el módulo de cupones) — en ambos
- * casos las opciones se cargan desde la base, no una lista cerrada en este
- * archivo. `tipo_codigo` ("único por socio" / "código compartido") se quitó
+ * Audiencias); `coupon_batch_id` (`emitir_cupon` y `canje_cupon`) usa `kind:
+ * "coupon-select"` (`coupon_batch`, ver el módulo de cupones); y
+ * `promocion_id` (`aplicar_promocion`) usa `kind: "promotion-select"`
+ * (`promociones`, ver el módulo de promociones) — en los tres casos las
+ * opciones se cargan desde la base, no una lista cerrada en este archivo, y
+ * el usuario elige de lo ya creado en vez de escribir un id/código a mano.
+ * `tipo_codigo` ("único por socio" / "código compartido") se quitó
  * de `emitir_cupon`: "código compartido" no tiene dónde vivir en el
  * esquema real (`coupon` tiene `unique(org_id, code)`, cada código es de
  * una sola fila), y sin esa opción el campo dejaba de ser una elección
@@ -130,6 +141,10 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
  * misma razón que `acumular_puntos`/`condicion_multiple`: proveedor → flujo
  * es una cascada dependiente que no cabe en el modelo plano de
  * `FieldSpec[]`. Sí aparecen abajo, pero solo con sus guardarraíles.
+ * `webhook_saliente` es el mismo caso: headers y cuerpo son listas
+ * dinámicas (`WebhookSalienteForm`, `inspector/webhook-saliente-form.tsx`)
+ * — aquí solo están sus campos escalares (URL, método, reintentos...).
+ * `webhook_entrante` sí es 100% "simple" (cabe entero en este archivo).
  */
 export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
   {
@@ -239,13 +254,17 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
       },
     ],
     // Sin tarjeta en el catálogo de Figma (08.4 no diseñó este bloque) —
-    // se mantiene mínimo: solo qué cupón(es) disparan la entrada.
+    // se mantiene mínimo: solo qué cupón dispara la entrada. Reutiliza el
+    // mismo `coupon-select` de `emitir_cupon` (misma tabla `coupon_batch`)
+    // en vez del prefijo de texto libre que tenía antes — el usuario elige
+    // la emisión real ya creada, no escribe un patrón esperando que
+    // coincida.
     canje_cupon: [
       {
-        key: "codigo_prefijo",
-        label: "Prefijo del cupón",
-        kind: "text",
-        placeholder: "Ej. VIP-",
+        key: "coupon_batch_id",
+        label: "Cupón",
+        kind: "coupon-select",
+        hint: "Emisión de cupón cuyos códigos disparan la entrada al workflow.",
       },
     ],
     fecha_recurrente: [
@@ -320,6 +339,48 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         key: "requiere_opt_in",
         label: "Requiere opt-in de marketing",
         kind: "boolean",
+      },
+    ],
+    // Sin tarjeta en el catálogo de Figma (ver comentario de
+    // `BUILDER_NODE_GROUPS` en `types/domain.ts`) — bloque de integración
+    // autocontenido: un sistema externo llama a este webhook y eso arranca
+    // el journey. Esta demo no expone un endpoint real que lo reciba
+    // (mismo criterio que "sin sender de email/SMS" en otras partes del
+    // proyecto) — `identificador` es solo el dato declarativo que
+    // identificaría ese endpoint.
+    webhook_entrante: [
+      {
+        key: "identificador",
+        label: "Identificador del endpoint",
+        kind: "text",
+        required: true,
+        placeholder: "ej. reactivacion-vip",
+        hint: "Se usa para armar la URL del webhook — esta demo no expone un endpoint real que lo reciba.",
+      },
+      {
+        key: "metodo_esperado",
+        label: "Método esperado",
+        kind: "select",
+        required: true,
+        options: [
+          { value: "post", label: "POST" },
+          { value: "get", label: "GET" },
+        ],
+      },
+      {
+        key: "autenticacion",
+        label: "Autenticación",
+        kind: "select",
+        options: [
+          { value: "ninguna", label: "Ninguna" },
+          { value: "header_secreto", label: "Header secreto" },
+        ],
+      },
+      {
+        key: "header_secreto_nombre",
+        label: "Nombre del header",
+        kind: "text",
+        placeholder: "ej. X-Webhook-Secret",
       },
     ],
 
@@ -501,11 +562,11 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
     sms_whatsapp: MESSAGE_GUARDRAIL_SPECS,
     aplicar_promocion: [
       {
-        key: "regla",
-        label: "Regla",
-        kind: "text",
+        key: "promocion_id",
+        label: "Promoción",
+        kind: "promotion-select",
         required: true,
-        placeholder: "Ej. RULE-VIP-15",
+        hint: "Promoción real que se aplica al socio en este punto del workflow.",
       },
       {
         key: "prioridad_temporal",
@@ -530,6 +591,55 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
             label: "Gana la de mayor prioridad",
           },
           { value: "bloquea_ambas", label: "Se bloquean ambas" },
+        ],
+      },
+    ],
+    // Sin tarjeta en el catálogo de Figma — bloque de integración
+    // autocontenido (URL + método + headers + cuerpo), mismo criterio que
+    // `webhook_entrante` de Entradas. Headers y cuerpo son listas dinámicas
+    // que no caben en `FieldSpec` — viven en `WebhookSalienteForm`
+    // (`inspector/webhook-saliente-form.tsx`), que reusa estos campos
+    // escalares vía `SimpleConfigForm` y agrega sus propias secciones.
+    webhook_saliente: [
+      {
+        key: "url",
+        label: "URL",
+        kind: "text",
+        required: true,
+        placeholder: "https://api.ejemplo.com/webhooks/loyalty",
+      },
+      {
+        key: "metodo",
+        label: "Método",
+        kind: "select",
+        required: true,
+        options: [
+          { value: "post", label: "POST" },
+          { value: "put", label: "PUT" },
+          { value: "patch", label: "PATCH" },
+          { value: "get", label: "GET" },
+        ],
+      },
+      {
+        key: "tiempo_espera_seg",
+        label: "Tiempo de espera",
+        kind: "number",
+        min: 1,
+        suffix: "segundos",
+      },
+      {
+        key: "reintentos",
+        label: "Reintentos",
+        kind: "number",
+        min: 0,
+      },
+      {
+        key: "si_falla",
+        label: "Si falla",
+        kind: "select",
+        options: [
+          { value: "continuar_workflow", label: "Continuar workflow" },
+          { value: "detener_workflow", label: "Detener workflow" },
         ],
       },
     ],

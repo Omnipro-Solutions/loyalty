@@ -18,6 +18,11 @@ const FIXED_ENTRY_TRIGGERS: Partial<Record<BuilderNodeType, string>> = {
   entra_segmento: "segment.entered",
   canje_cupon: "coupon.redeemed",
   alta_socio: "member.enrolled",
+  // Sin tarjeta en el catálogo de Figma — el método esperado (POST/GET) sí
+  // es elegible (`SIMPLE_FIELD_SPECS.webhook_entrante`), pero el trigger
+  // técnico en sí es siempre el mismo evento: "llegó una llamada a este
+  // webhook".
+  webhook_entrante: "webhook.received",
 }
 
 /**

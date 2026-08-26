@@ -13,6 +13,7 @@ import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
 import { entryTriggerFor } from "@/features/builder/inspector/entry-triggers"
 import { IntegrationMessageForm } from "@/features/builder/inspector/integration-message-form"
+import { WebhookSalienteForm } from "@/features/builder/inspector/webhook-saliente-form"
 import {
   resolveAvailableVariables,
   type GraphEdgeRef,
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils"
 import type {
   AudienceSummary,
   CouponBatchSummary,
+  PromotionSummary,
   TierSummary,
 } from "./queries"
 
@@ -42,6 +44,7 @@ export function InspectorPanel({
   tiers,
   audiences,
   couponBatches,
+  promotions,
   onClose,
   onDelete,
   onConfigChange,
@@ -56,6 +59,7 @@ export function InspectorPanel({
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
+  promotions: PromotionSummary[]
   onClose: () => void
   onDelete: (id: string) => void
   onConfigChange: (id: string, config: Record<string, unknown>) => void
@@ -168,6 +172,12 @@ export function InspectorPanel({
               graphVariables={graphVariables}
               onChange={update}
             />
+          ) : tipo === "webhook_saliente" ? (
+            <WebhookSalienteForm
+              config={node.data.config}
+              graphVariables={graphVariables}
+              onChange={update}
+            />
           ) : (
             <SimpleConfigForm
               specs={
@@ -185,6 +195,10 @@ export function InspectorPanel({
               couponBatches={couponBatches.map((b) => ({
                 value: b.id,
                 label: `${b.reference} · ${b.name}`,
+              }))}
+              promotions={promotions.map((p) => ({
+                value: p.id,
+                label: p.name,
               }))}
               onChange={update}
             />

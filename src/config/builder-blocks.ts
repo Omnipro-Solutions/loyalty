@@ -1,4 +1,5 @@
 import {
+  ArrowDownToLine,
   Bell,
   Calendar,
   Clock,
@@ -19,6 +20,7 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  Webhook,
   type LucideIcon,
 } from "lucide-react"
 
@@ -97,6 +99,14 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     icon: Calendar,
   },
   alta_socio: { group: "entry", label: "Alta de socio", icon: UserPlus },
+  // Sin tarjeta en el catálogo de Figma (ver comentario de
+  // `BUILDER_NODE_GROUPS` en `types/domain.ts`) — mismo trato visual que el
+  // resto de bloques de Entrada.
+  webhook_entrante: {
+    group: "entry",
+    label: "Webhook entrante",
+    icon: ArrowDownToLine,
+  },
 
   // Loyalty
   acumular_puntos: {
@@ -130,6 +140,13 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     group: "actions",
     label: "Aplicar promoción",
     icon: Tag,
+  },
+  // Sin tarjeta en el catálogo de Figma — mismo criterio que
+  // `webhook_entrante` arriba.
+  webhook_saliente: {
+    group: "actions",
+    label: "Webhook saliente",
+    icon: Webhook,
   },
 
   // Logic

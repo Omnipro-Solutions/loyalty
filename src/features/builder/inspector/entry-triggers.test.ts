@@ -17,6 +17,7 @@ describe("entryTriggerFor", () => {
     ["entra_segmento", "segment.entered"],
     ["canje_cupon", "coupon.redeemed"],
     ["alta_socio", "member.enrolled"],
+    ["webhook_entrante", "webhook.received"],
   ] as const)(
     "%s tiene un trigger fijo (%s), sin depender de la config",
     (tipo, expected) => {

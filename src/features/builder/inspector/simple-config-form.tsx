@@ -2,6 +2,7 @@
 
 import { Field } from "@/components/form/field"
 import { CurrencyInput } from "@/components/form/currency-input"
+import { EntityPickerField } from "@/components/form/entity-picker"
 import { Multiselect } from "@/components/form/multiselect"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -38,14 +39,17 @@ export function SimpleConfigForm({
   config,
   audiences = [],
   couponBatches = [],
+  promotions = [],
   onChange,
 }: {
   specs: FieldSpec[]
   config: Record<string, unknown>
   /** Opciones para campos `kind: "audience-select"` (audiencias reales, ver `entra_segmento`). */
   audiences?: { value: string; label: string }[]
-  /** Opciones para campos `kind: "coupon-select"` (emisiones reales, ver `emitir_cupon`). */
+  /** Opciones para campos `kind: "coupon-select"` (emisiones reales, ver `emitir_cupon`/`canje_cupon`). */
   couponBatches?: { value: string; label: string }[]
+  /** Opciones para campos `kind: "promotion-select"` (promociones reales, ver `aplicar_promocion`). */
+  promotions?: { value: string; label: string }[]
   onChange: (config: Record<string, unknown>) => void
 }) {
   function set(key: string, value: unknown) {
@@ -113,9 +117,13 @@ export function SimpleConfigForm({
         ? spec.options
         : spec.kind === "audience-select"
           ? audiences
-          : spec.kind === "coupon-select"
-            ? couponBatches
-            : null
+          : null
+    const searchableOptions =
+      spec.kind === "coupon-select"
+        ? couponBatches
+        : spec.kind === "promotion-select"
+          ? promotions
+          : null
 
     return (
       <Field
@@ -152,9 +160,44 @@ export function SimpleConfigForm({
             }
             onValueChange={(value) => set(spec.key, value)}
           />
-        ) : spec.kind === "select" ||
-          spec.kind === "audience-select" ||
-          spec.kind === "coupon-select" ? (
+        ) : spec.kind === "coupon-select" ||
+          spec.kind === "promotion-select" ? (
+          <EntityPickerField
+            id={`cfg-${spec.key}`}
+            title={
+              spec.kind === "coupon-select"
+                ? "Selecciona un cupón"
+                : "Selecciona una promoción"
+            }
+            description="Busca por nombre."
+            mode="single"
+            items={searchableOptions ?? []}
+            getId={(o) => o.value}
+            getSearchText={(o) => o.label}
+            getChipLabel={(o) => o.label}
+            renderRow={(o) => (
+              <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+                {o.label}
+              </div>
+            )}
+            placeholder={
+              spec.kind === "coupon-select"
+                ? "Selecciona un cupón…"
+                : "Selecciona una promoción…"
+            }
+            confirmLabel={
+              spec.kind === "coupon-select"
+                ? "Seleccionar cupón"
+                : "Seleccionar promoción"
+            }
+            value={
+              typeof currentValue === "string" && currentValue
+                ? [currentValue]
+                : []
+            }
+            onValueChange={([id]) => set(spec.key, id)}
+          />
+        ) : spec.kind === "select" || spec.kind === "audience-select" ? (
           <Select
             value={typeof currentValue === "string" ? currentValue : null}
             onValueChange={(value) => set(spec.key, value)}

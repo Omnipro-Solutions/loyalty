@@ -68,6 +68,10 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   split_ab: ["test.variante", "test.grupo"],
   esperar: ["espera.inicio", "espera.fin"],
   fin_workflow: ["workflow.resultado", "workflow.duracion"],
+  // Sin tarjeta en el catálogo de Figma — mismo trato mínimo razonable que
+  // `canje_cupon`/`alta_socio` arriba.
+  webhook_entrante: ["webhook.payload", "webhook.recibido_en"],
+  webhook_saliente: ["webhook.status_code", "webhook.respuesta"],
 }
 
 /**

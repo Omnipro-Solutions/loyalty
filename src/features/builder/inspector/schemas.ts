@@ -131,6 +131,34 @@ export const multiConditionConfigSchema = z.object({
   }),
 })
 
+// `webhook_saliente` (ver `WebhookSalienteForm`,
+// `inspector/webhook-saliente-form.tsx`): headers y cuerpo son listas
+// dinámicas de longitud variable — no caben en `FieldSpec[]`, mismo motivo
+// que `branchesConfigSchema` abajo modela `branches` aparte.
+const webhookHeaderSchema = z.object({
+  id: z.string().min(1),
+  key: z.string().min(1),
+  value: z.string(),
+})
+
+// `campo` es el nombre del key que va en el body JSON enviado; `variable`
+// es el nombre de una variable del grafo (`GraphVariable.name`, ver
+// `node-variables.ts`) elegida vía `FieldSlashAutocomplete` — mismo
+// concepto que `mapeo` en `messageActionConfigSchema` de abajo, pero como
+// lista (acá no hay un `flow.parameters` fijo del que derivar las filas).
+const webhookBodyFieldSchema = z.object({
+  id: z.string().min(1),
+  campo: z.string().min(1),
+  variable: z.string(),
+})
+
+export const webhookSalienteConfigSchema = specsSchema(
+  SIMPLE_FIELD_SPECS.webhook_saliente ?? []
+).extend({
+  headers: z.array(webhookHeaderSchema).default([]),
+  cuerpo: z.array(webhookBodyFieldSchema).default([]),
+})
+
 /**
  * `email`/`push`/`sms_whatsapp` (ver `IntegrationMessageForm`): proveedor +
  * flujo elegidos del catálogo de `config/integration-flows.ts`, más el
@@ -157,6 +185,7 @@ function messageActionConfigSchema(specs: FieldSpec[]) {
 export function nodeConfigSchemaFor(tipo: BuilderNodeType): z.ZodTypeAny {
   if (tipo === "acumular_puntos") return accumulatePointsConfigSchema
   if (tipo === "condicion_multiple") return multiConditionConfigSchema
+  if (tipo === "webhook_saliente") return webhookSalienteConfigSchema
   if (tipo === "ramificacion_valor" || tipo === "split_ab") {
     // `branchesConfigSchema` por sí solo solo cubre la pestaña Ramas — sin
     // este `.extend`, los campos obligatorios de la pestaña Configuración
