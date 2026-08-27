@@ -3,6 +3,7 @@
 import { Braces, ChevronDown, History, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { Pagination } from "@/components/data/pagination"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { formatEventDate } from "@/lib/format"
@@ -18,6 +19,8 @@ import type { PromotionEventItem } from "../lib/queries"
 
 const FILTERS = ["todos", ...PROMOTION_EVENT_TYPES] as const
 type Filter = (typeof FILTERS)[number]
+
+const EVENTS_PAGE_SIZE = 20
 
 const GRID =
   "grid-cols-[136px_190px_minmax(0,1fr)_92px_128px_minmax(0,1fr)_28px]"
@@ -129,6 +132,8 @@ export function PromotionEventsLog({ events }: PromotionEventsLogProps) {
   const [filter, setFilter] = useState<Filter>("todos")
   const [search, setSearch] = useState("")
   const [openId, setOpenId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(EVENTS_PAGE_SIZE)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -143,6 +148,24 @@ export function PromotionEventsLog({ events }: PromotionEventsLogProps) {
     })
   }, [events, filter, search])
 
+  // El filtro por tipo, la búsqueda o el tamaño de página pueden dejar la
+  // página actual fuera de rango (ej. ir de "Todos" a un tipo con menos
+  // resultados) — se recorta al último válido en vez de mostrar una página
+  // vacía.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
+
+  function selectFilter(next: Filter) {
+    setFilter(next)
+    setPage(1)
+  }
+
+  function updateSearch(next: string) {
+    setSearch(next)
+    setPage(1)
+  }
+
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -150,7 +173,7 @@ export function PromotionEventsLog({ events }: PromotionEventsLogProps) {
           <Search className="size-3.5 shrink-0 text-muted-foreground" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateSearch(e.target.value)}
             placeholder="Buscar por promoción, título o actor…"
             className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
           />
@@ -165,7 +188,7 @@ export function PromotionEventsLog({ events }: PromotionEventsLogProps) {
             <button
               key={f}
               type="button"
-              onClick={() => setFilter(f)}
+              onClick={() => selectFilter(f)}
               className={cn(
                 "flex h-9 items-center rounded-full px-3.5 text-xs font-medium transition-colors",
                 active
@@ -205,7 +228,7 @@ export function PromotionEventsLog({ events }: PromotionEventsLogProps) {
               className="pb-8"
             />
           ) : (
-            filtered.map((event) => (
+            paged.map((event) => (
               <EventRow
                 key={event.id}
                 event={event}
@@ -219,9 +242,19 @@ export function PromotionEventsLog({ events }: PromotionEventsLogProps) {
             ))
           )}
 
-          <div className="flex items-center border-t border-border px-5 py-3 text-xs text-muted-foreground">
-            {filtered.length} de {events.length} eventos
-          </div>
+          {filtered.length > 0 && (
+            <Pagination
+              total={filtered.length}
+              pageSize={pageSize}
+              page={safePage}
+              onPageChange={setPage}
+              onPageSizeChange={(next) => {
+                setPageSize(next)
+                setPage(1)
+              }}
+              className="rounded-b-[20px] border-t border-border"
+            />
+          )}
         </div>
       </div>
     </div>

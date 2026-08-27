@@ -226,6 +226,11 @@ export async function getFeaturedPromotions(limit = 3): Promise<Promotion[]> {
     .select("*")
     .eq("estado_publicacion", "activa")
     .order("presupuesto_consumido", { ascending: false })
+    // `estado_publicacion = 'activa'` no basta (todavía hay que descartar
+    // por fecha en JS, ver el `.filter` de abajo) así que no se puede
+    // recortar a `limit` directo en SQL — este techo es solo defensivo
+    // (evita traer TODAS las activas de la org si algún día son miles).
+    .limit(50)
   if (error) throw error
   return (data ?? [])
     .map(withTypedConditions)
@@ -568,7 +573,9 @@ export type PromotionEventItem = {
  * `canjes`/`presupuesto_consumido` (ver comentario de la migración
  * `20260826160000_promociones_eventos.sql`). Sin límite: a esta escala de
  * datos demo no hace falta paginar server-side — el filtro y el "cargar
- * más" corren en cliente, igual que `ProductHistoryCard`.
+ * más" corren en cliente, igual que `ProductHistoryCard` — que sí trae su
+ * propio `.limit(200)` server-side (`catalog/lib/queries.ts`); esta lista
+ * lo replica para no dejar entrar sin techo eventos de TODA la org.
  */
 export async function listPromotionEvents(): Promise<PromotionEventItem[]> {
   const supabase = await createClient()
@@ -578,6 +585,7 @@ export async function listPromotionEvents(): Promise<PromotionEventItem[]> {
       "id, promocion_id, tipo, titulo, detalle, actor_etiqueta, canal, codigo_motivo, nota_motivo, metadatos, ocurrido_en"
     )
     .order("ocurrido_en", { ascending: false })
+    .limit(200)
   if (error) throw error
 
   const promocionIds = [...new Set((data ?? []).map((row) => row.promocion_id))]
@@ -629,7 +637,8 @@ export async function listPromotionHistory(
           "id, promocion_id, tipo, titulo, detalle, actor_etiqueta, canal, codigo_motivo, nota_motivo, metadatos, ocurrido_en"
         )
         .eq("promocion_id", promocionId)
-        .order("ocurrido_en", { ascending: true }),
+        .order("ocurrido_en", { ascending: true })
+        .limit(200),
       supabase
         .from("promociones")
         .select("nombre, creado_en")

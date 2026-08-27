@@ -23,7 +23,7 @@ export function SsoProviderButtons({ samlEnabled }: { samlEnabled: boolean }) {
             Continuar con Microsoft
           </span>
           <span className="text-[11px] text-muted-foreground">
-            Entra ID · omni.onmicrosoft.com
+            Entra ID · etter.onmicrosoft.com
           </span>
         </span>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" />

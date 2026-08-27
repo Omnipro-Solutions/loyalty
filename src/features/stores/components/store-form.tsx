@@ -177,7 +177,7 @@ export function StoreForm({ store, storeGroups }: StoreFormProps) {
               >
                 <Input
                   id="name"
-                  placeholder="Omni Polanco"
+                  placeholder="Etter Polanco"
                   {...register("name")}
                 />
               </Field>

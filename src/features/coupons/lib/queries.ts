@@ -308,6 +308,13 @@ export async function getCouponById(
   return data as CouponWithHolder | null
 }
 
+// Tope defensivo para las 5 listas de historial de abajo (eventos,
+// redenciones, asignaciones, trabajos de impresión) — hoy acotadas en la
+// práctica por su cupón/emisión dueño, pero sin límite explícito una
+// emisión o cupón con actividad anómala haría crecer la respuesta sin
+// techo. Mismo valor que `getProductHistory` (catalog/lib/queries.ts).
+const COUPON_HISTORY_LIMIT = 200
+
 export async function listBatchEvents(batchId: string): Promise<CouponEvent[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -315,6 +322,7 @@ export async function listBatchEvents(batchId: string): Promise<CouponEvent[]> {
     .select("*")
     .eq("batch_id", batchId)
     .order("occurred_at", { ascending: false })
+    .limit(COUPON_HISTORY_LIMIT)
   if (error) throw error
   return data ?? []
 }
@@ -329,6 +337,7 @@ export async function listCouponEvents(
     .select("*")
     .eq("coupon_id", couponId)
     .order("occurred_at", { ascending: true })
+    .limit(COUPON_HISTORY_LIMIT)
   if (error) throw error
   return data ?? []
 }
@@ -346,6 +355,7 @@ export async function listCouponRedemptions(
     .select("*, tienda:tiendas(nombre)")
     .eq("coupon_id", couponId)
     .order("occurred_at", { ascending: false })
+    .limit(COUPON_HISTORY_LIMIT)
   if (error) throw error
   return (data ?? []) as CouponRedemptionWithStore[]
 }
@@ -363,6 +373,7 @@ export async function listCouponAssignments(
     .select("*, member:members!coupon_assignment_member_id_fkey(nombre, email)")
     .eq("coupon_id", couponId)
     .order("assigned_at", { ascending: false })
+    .limit(COUPON_HISTORY_LIMIT)
   if (error) throw error
   return (data ?? []) as CouponAssignmentWithMember[]
 }
@@ -380,6 +391,7 @@ export async function listCouponPrintJobs(
     .select("*")
     .contains("coupon_ids", [couponId])
     .order("created_at", { ascending: false })
+    .limit(COUPON_HISTORY_LIMIT)
   if (error) throw error
   return data ?? []
 }

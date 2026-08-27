@@ -20,7 +20,7 @@ const STEPS = [
   },
   {
     title: "Validación de sesión, rol y permisos",
-    detail: () => "Omni Retail Group",
+    detail: () => "Etter Retail Group",
   },
 ] as const
 
@@ -106,7 +106,7 @@ export function SsoRedirectCard({ email }: { email: string }) {
       </div>
 
       <p className="w-full rounded-lg bg-accent px-3 py-2 text-xs font-medium text-accent-foreground">
-        Conexión cifrada · OIDC / SAML 2.0 · La contraseña nunca pasa por Omni.
+        Conexión cifrada · OIDC / SAML 2.0 · La contraseña nunca pasa por Etter.
       </p>
 
       <Button

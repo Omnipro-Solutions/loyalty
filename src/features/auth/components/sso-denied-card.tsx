@@ -30,7 +30,7 @@ export function SsoDeniedCard({
         </p>
         <p className="text-sm text-muted-foreground">
           Tu identidad fue verificada en Microsoft Entra ID, pero la cuenta aún
-          no está aprovisionada en Omni.
+          no está aprovisionada en Etter.
         </p>
       </div>
 
