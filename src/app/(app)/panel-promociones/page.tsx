@@ -1,23 +1,37 @@
 import { AppPage } from "@/components/layout/app-page"
 import { PromotionAlerts } from "@/features/promotions/components/promotion-alerts"
+import { PromotionsAverageCart } from "@/features/promotions/components/promotions-average-cart"
+import { PromotionsBudgetByCostNature } from "@/features/promotions/components/promotions-budget-by-cost-nature"
 import { PromotionsBudgetByFinancier } from "@/features/promotions/components/promotions-budget-by-financier"
+import { PromotionsBudgetPace } from "@/features/promotions/components/promotions-budget-pace"
 import { PromotionsCanjeChannelAttribution } from "@/features/promotions/components/promotions-canje-channel-attribution"
 import { PromotionsCanjesTrend } from "@/features/promotions/components/promotions-canjes-trend"
+import { PromotionsCollisionSummary } from "@/features/promotions/components/promotions-collision-summary"
 import { PromotionsDashboardFilters } from "@/features/promotions/components/promotions-dashboard-filters"
 import { PromotionsDashboardKpiRow } from "@/features/promotions/components/promotions-dashboard-kpi-row"
 import { PromotionsExpiringSoon } from "@/features/promotions/components/promotions-expiring-soon"
+import { PromotionsGiftedUnits } from "@/features/promotions/components/promotions-gifted-units"
+import { PromotionsLifecycleTimeline } from "@/features/promotions/components/promotions-lifecycle-timeline"
+import { PromotionsPointsAwarded } from "@/features/promotions/components/promotions-points-awarded"
 import { PromotionsRoiRanking } from "@/features/promotions/components/promotions-roi-ranking"
 import { TopPromotionsByRedemptions } from "@/features/promotions/components/top-promotions-by-redemptions"
 import { resolveVigenciaWindow } from "@/features/promotions/lib/dashboard-filters"
 import {
+  getAverageCartByPromotion,
+  getBudgetByCostNature,
   getBudgetByFinancier,
+  getGiftedUnitsByProduct,
+  getPointsAwardedByPromotion,
   getPromotionAlerts,
   getPromotionCanjesTrend,
   getPromotionChannelAttribution,
+  getPromotionsBudgetPace,
+  getPromotionsCollisionSummary,
   getPromotionsDashboardKpis,
   getPromotionsExpiringSoon,
   getPromotionsRoiRanking,
   getTopPromotionsByRedemptions,
+  listPromotionLifecycleEvents,
   listPromotionOptions,
   type PromotionsDashboardFilters as DashboardFilters,
 } from "@/features/promotions/lib/queries"
@@ -116,6 +130,13 @@ async function PromotionsSummaryView({
     canjesTrend,
     channelAttribution,
     expiringSoon,
+    averageCart,
+    budgetByCostNature,
+    budgetPace,
+    collisionSummary,
+    giftedUnits,
+    lifecycleEvents,
+    pointsAwarded,
   ] = await Promise.all([
     getPromotionsDashboardKpis(filters),
     getTopPromotionsByRedemptions(5, filters),
@@ -125,6 +146,13 @@ async function PromotionsSummaryView({
     getPromotionCanjesTrend(promocionIds),
     getPromotionChannelAttribution(promocionIds),
     getPromotionsExpiringSoon(filters),
+    getAverageCartByPromotion(filters),
+    getBudgetByCostNature(filters),
+    getPromotionsBudgetPace(filters),
+    getPromotionsCollisionSummary(),
+    getGiftedUnitsByProduct(filters),
+    listPromotionLifecycleEvents(filters),
+    getPointsAwardedByPromotion(filters),
   ])
 
   return (
@@ -147,6 +175,19 @@ async function PromotionsSummaryView({
         </div>
       </div>
       <PromotionsRoiRanking top={roiRanking.top} bottom={roiRanking.bottom} />
+      <div className="grid w-full grid-cols-1 items-start gap-4 xl:grid-cols-[1.55fr_1fr]">
+        <div className="flex w-full flex-col gap-4">
+          <PromotionsLifecycleTimeline events={lifecycleEvents} />
+          <PromotionsGiftedUnits items={giftedUnits} />
+          <PromotionsPointsAwarded items={pointsAwarded} />
+        </div>
+        <div className="flex w-full flex-col gap-4">
+          <PromotionsBudgetByCostNature items={budgetByCostNature} />
+          <PromotionsBudgetPace items={budgetPace} />
+          <PromotionsAverageCart items={averageCart} />
+          <PromotionsCollisionSummary items={collisionSummary} />
+        </div>
+      </div>
     </>
   )
 }
