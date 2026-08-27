@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   PlayCircle,
   ReceiptText,
   TrendingUp,
@@ -8,7 +7,12 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { formatNumber, formatPercent, formatUSD } from "@/lib/format"
+import {
+  formatNumber,
+  formatPercent,
+  formatUSD,
+  formatUSDCompact,
+} from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import type { PromotionsDashboardKpis } from "../lib/queries"
@@ -21,7 +25,6 @@ const ICONS = {
   presupuesto: Wallet,
   canjes: ReceiptText,
   roi: TrendingUp,
-  alerta: AlertTriangle,
 } as const
 
 type PromotionKpiCardProps = {
@@ -96,8 +99,8 @@ export function PromotionsDashboardKpiRow({
       <PromotionKpiCard
         icon="asignado"
         label="Presupuesto asignado"
-        value={formatUSD(kpis.assignedBudget)}
-        caption="Suma de todas las promociones filtradas"
+        value={formatUSDCompact(kpis.assignedBudget)}
+        caption={`${formatUSD(kpis.assignedBudget)} en promociones filtradas`}
       />
       <PromotionKpiCard
         icon="presupuesto"
@@ -125,12 +128,6 @@ export function PromotionsDashboardKpiRow({
             : "Ninguna promoción tiene ROI registrado"
         }
         tone="promo"
-      />
-      <PromotionKpiCard
-        icon="alerta"
-        label="En alerta"
-        value={formatNumber(kpis.alertCount)}
-        caption="Superan su umbral de presupuesto configurado"
       />
     </div>
   )

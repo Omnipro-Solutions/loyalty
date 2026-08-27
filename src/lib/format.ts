@@ -11,6 +11,13 @@ const currency = new Intl.NumberFormat("es-CO", {
   maximumFractionDigits: 2,
 })
 
+const currencyCompact = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
+
 const number = new Intl.NumberFormat("es-CO")
 
 const percent = new Intl.NumberFormat("es-CO", {
@@ -47,6 +54,11 @@ const shortTime = new Intl.DateTimeFormat("es-CO", {
 
 export function formatUSD(value: number): string {
   return currency.format(value)
+}
+
+/** Ej. "US$26,1 M" — para espacios angostos (KPI cards) donde el formato completo desborda. */
+export function formatUSDCompact(value: number): string {
+  return currencyCompact.format(value)
 }
 
 export function formatNumber(value: number): string {
