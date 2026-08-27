@@ -1,9 +1,9 @@
+import { findEvent } from "@/config/event-catalog"
 import { isMessageNodeType } from "@/config/integration-flows"
 import { formatNumber, formatUSD } from "@/lib/format"
 import type { BuilderNodeType } from "@/types/domain"
 
 import {
-  conditionGroupToPseudocode,
   countRulesAndDepth,
   type ConditionGroup,
 } from "../inspector/condition-preview"
@@ -14,7 +14,15 @@ export type ConfigSummary = {
   pills?: string[]
 }
 
-type Branch = { id: string; label: string; weight?: number }
+type Branch = {
+  id: string
+  label: string
+  /** Estimación para Simular; ya no enruta en `ramificacion_valor` — ver `BranchesTab`. */
+  shareEstimate?: number
+  /** Campo anterior a la condición por rama, se sigue leyendo como respaldo. */
+  weight?: number
+  condition?: { rules?: unknown[] }
+}
 
 function branchesFromConfig(config: Record<string, unknown>): Branch[] | null {
   const branches = config.branches
@@ -27,11 +35,33 @@ function branchesFromConfig(config: Record<string, unknown>): Branch[] | null {
 }
 
 function branchPills(branches: Branch[]): string[] {
-  return branches.map((b) =>
-    typeof b.weight === "number"
-      ? `${b.label} ${Math.round(b.weight)}%`
+  return branches.map((b) => {
+    const share = b.shareEstimate ?? b.weight
+    return typeof share === "number"
+      ? `${b.label} ${Math.round(share)}%`
       : b.label
+  })
+}
+
+/**
+ * En `ramificacion_valor` lo que decide el camino es la condición de cada
+ * rama, no el porcentaje. La tarjeta lo dice porque una rama sin condición
+ * bloquea Publicar (`validateGraph`) y descubrirlo al pulsar el botón, en
+ * un grafo con seis bloques, obliga a abrirlos uno por uno.
+ */
+function branchConditionRow(branches: Branch[]): {
+  label: string
+  value: string
+} {
+  const missing = branches.filter(
+    (b) => b.id !== "por_defecto" && !b.condition?.rules?.length
   )
+  return {
+    label: "Enrutado por",
+    value: missing.length
+      ? `${String(missing.length)} rama(s) sin condición`
+      : "Condición de cada rama",
+  }
 }
 
 function selectLabel(
@@ -63,6 +93,7 @@ function ramificacionValorSummary(
     label: "Salidas",
     value: `${String(branches.length)} rama${branches.length === 1 ? "" : "s"}${hasDefault ? " + por defecto" : ""}`,
   })
+  rows.push(branchConditionRow(branches))
   return { rows, pills: branchPills(branches) }
 }
 
@@ -102,37 +133,6 @@ function condicionMultipleSummary(
       },
     ],
   }
-}
-
-/**
- * Pseudocódigo completo del bloque "Condición múltiple" para la sección
- * colapsable del nodo (`BuilderNode`): las líneas `IF`/`AND`/`OR` del árbol
- * (`conditionGroupToPseudocode`) más `ON_MISSING`/`THEN`/`ELSE` — estas 3
- * últimas no vienen del árbol de condiciones en sí, son fijas para
- * `condicion_multiple` (siempre 2 salidas, `cumple`/`no_cumple`, ver
- * `OUTPUT_HANDLES` en `builder-node.tsx`) más la política de dato faltante
- * que el usuario eligió en el inspector (`config.siFaltaElDato`).
- */
-export function condicionMultiplePseudocode(
-  config: Record<string, unknown>
-): string[] | null {
-  const condiciones = config.condiciones
-  if (!condiciones || typeof condiciones !== "object") return null
-  const group = condiciones as ConditionGroup
-  if (!Array.isArray(group.rules)) return null
-  const lines = conditionGroupToPseudocode(group)
-  if (lines.length === 0) return null
-
-  const missingDataPolicy =
-    typeof config.siFaltaElDato === "string"
-      ? config.siFaltaElDato
-      : "no_cumple"
-  return [
-    ...lines,
-    `ON_MISSING ${missingDataPolicy}`,
-    "THEN → cumple",
-    "ELSE → no_cumple",
-  ]
 }
 
 function acumularPuntosSummary(
@@ -283,6 +283,44 @@ function genericSummary(
 }
 
 /**
+ * El bloque de Entrada tiene dos datos que lo definen y que no se pueden
+ * leer del `FieldSpec` genérico: qué evento escucha (su etiqueta legible,
+ * no el id que guarda `config`) y en qué modo dispara. Dos nodos con el
+ * mismo evento y distinto modo hacen cosas muy distintas, y sin el modo en
+ * la tarjeta se ven idénticos.
+ */
+function eventoSummary(config: Record<string, unknown>): ConfigSummary | null {
+  const event = findEvent(
+    typeof config.evento_id === "string" ? config.evento_id : null
+  )
+  if (!event) return null
+
+  const rows: ConfigSummary["rows"] = [{ label: "Evento", value: event.label }]
+  const modo = selectLabel("evento", "modo_disparo", config.modo_disparo)
+  const modoValue =
+    modo ??
+    (config.modo_disparo === "al_ocurrir"
+      ? "Al ocurrir"
+      : config.modo_disparo === "al_cruzar_umbral"
+        ? "Al cruzar un umbral"
+        : config.modo_disparo === "programado"
+          ? "Programado"
+          : null)
+  if (modoValue) rows.push({ label: "Modo", value: modoValue })
+
+  const pills: string[] = []
+  if (config.modo_disparo === "al_cruzar_umbral") {
+    if (typeof config.umbral_valor === "number") {
+      pills.push(`cada ${formatNumber(config.umbral_valor)}`)
+    }
+    if (config.repeticion === "una_vez") pills.push("una sola vez")
+    if (config.deteccion === "nivel") pills.push("por nivel")
+    else if (config.deteccion === "borde") pills.push("por borde")
+  }
+  return { rows, pills: pills.length ? pills : undefined }
+}
+
+/**
  * Resumen de configuración por tipo de bloque para la tarjeta del canvas
  * (Figma "08.4 · Ramificación · Ramificar por nivel") — generaliza
  * `messageFlowSummary` de `builder-node.tsx` (ese sigue aparte: su fuente,
@@ -293,6 +331,7 @@ export function configSummaryFor(
   tipo: BuilderNodeType,
   config: Record<string, unknown>
 ): ConfigSummary | null {
+  if (tipo === "evento") return eventoSummary(config)
   if (tipo === "ramificacion_valor") return ramificacionValorSummary(config)
   if (tipo === "split_ab") return splitAbSummary(config)
   if (tipo === "condicion_multiple") return condicionMultipleSummary(config)

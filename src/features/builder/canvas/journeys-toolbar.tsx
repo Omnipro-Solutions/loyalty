@@ -9,12 +9,18 @@ import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 import { WORKFLOW_STATUSES } from "@/types/domain"
 
+import { PUBLICATION_STATUS_LABEL } from "@/lib/publication-status"
+
 import type { WorkflowListItem } from "./queries"
 import { NewJourneyButton } from "./new-journey-button"
 
-const STATUS_OPTIONS = WORKFLOW_STATUSES.map((e) => ({
-  value: e,
-  label: e[0]!.toUpperCase() + e.slice(1),
+// El filtro va contra la COLUMNA, así que ofrece los 4 estados guardados —
+// no `programada`, que se deriva de la vigencia y no existe en la base
+// (ver `publicationStatus`). Filtrar por algo que no es una columna daría
+// resultados vacíos sin explicar por qué.
+const STATUS_OPTIONS = WORKFLOW_STATUSES.map((estado) => ({
+  value: estado,
+  label: PUBLICATION_STATUS_LABEL[estado],
 }))
 
 /** Genera un CSV a partir de las filas visibles (la página actual, ya filtrada). */
@@ -85,7 +91,7 @@ export function JourneysToolbar({
           </span>
         </div>
         <p className="truncate text-[11px] text-muted-foreground">
-          {published} publicados · {drafts} borradores · {paused} pausados ·{" "}
+          {published} activas · {drafts} borradores · {paused} inactivas ·{" "}
           {membersInJourney} clientes en recorrido
         </p>
       </div>

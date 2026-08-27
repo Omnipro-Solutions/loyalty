@@ -7,10 +7,15 @@ import { persistGraph } from "./persist-graph"
 import {
   createWorkflowSchema,
   deleteWorkflowsSchema,
-  renameWorkflowSchema,
   saveGraphSchema,
 } from "./schemas"
 
+/**
+ * Primer "Guardar" de una regla nueva: crea la fila y persiste de una vez el
+ * grafo que ya está en el canvas. Entrar al editor (`/journeys/nuevo`) NO
+ * escribe nada — el builder no autoguarda, y eso incluye no dejar
+ * borradores fantasma en la lista por haber abierto el canvas y salir.
+ */
 export const createWorkflowAction = builderActionClient
   .inputSchema(createWorkflowSchema)
   .action(async ({ parsedInput, ctx }) => {
@@ -26,34 +31,29 @@ export const createWorkflowAction = builderActionClient
       .single()
 
     if (error || !data) {
-      return { ok: false as const, message: "No se pudo crear el workflow." }
+      return { ok: false as const, message: "No se pudo crear la regla." }
+    }
+
+    const workflowId = data.id as string
+    const persisted = await persistGraph(
+      ctx.supabase,
+      ctx.userId,
+      workflowId,
+      parsedInput.nodes,
+      parsedInput.edges
+    )
+    if (!persisted.ok) {
+      return { ok: false as const, message: persisted.message }
     }
 
     revalidatePath("/journeys")
-    return { ok: true as const, id: data.id as string }
-  })
-
-export const renameWorkflowAction = builderActionClient
-  .inputSchema(renameWorkflowSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    const { error } = await ctx.supabase
-      .from("workflows")
-      .update({ nombre: parsedInput.nombre, actualizado_por: ctx.userId })
-      .eq("id", parsedInput.workflowId)
-
-    if (error) {
-      return { ok: false as const, message: "No se pudo renombrar." }
+    return {
+      ok: true as const,
+      id: workflowId,
+      savedAt: new Date().toISOString(),
     }
-    revalidatePath("/journeys")
-    return { ok: true as const }
   })
 
-/**
- * Borra uno o más workflows completos. RLS (`workflows_org`) ya limita el
- * `delete` a la organización del usuario — no hace falta repetir el filtro
- * por `org_id` aquí. `on delete cascade` en `workflow_nodes`/`workflow_edges`/
- * `workflow_versions`/`workflow_runs` se encarga del resto.
- */
 export const deleteWorkflowsAction = builderActionClient
   .inputSchema(deleteWorkflowsSchema)
   .action(async ({ parsedInput, ctx }) => {
@@ -79,14 +79,19 @@ export const deleteWorkflowsAction = builderActionClient
 export const saveGraphAction = builderActionClient
   .inputSchema(saveGraphSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const { workflowId, nodes, edges } = parsedInput
-    const result = await persistGraph(
+    const { workflowId, nombre, nodes, edges } = parsedInput
+
+    const persisted = await persistGraph(
       ctx.supabase,
       ctx.userId,
       workflowId,
       nodes,
-      edges
+      edges,
+      nombre
     )
-    if (!result.ok) return result
+    if (!persisted.ok) {
+      return { ok: false as const, message: persisted.message }
+    }
+
     return { ok: true as const, savedAt: new Date().toISOString() }
   })

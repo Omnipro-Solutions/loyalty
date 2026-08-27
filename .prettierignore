@@ -3,3 +3,8 @@ node_modules
 pnpm-lock.yaml
 supabase/.temp
 src/types/database.types.ts
+
+# Prototipos y análisis publicados como artifacts: HTML generado de una sola
+# pieza (estilos y scripts inline), no código fuente. Reformatearlos produce
+# diffs de miles de líneas sobre un archivo que nadie edita a mano.
+.claude/artifacts

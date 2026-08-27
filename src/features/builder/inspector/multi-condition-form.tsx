@@ -51,7 +51,11 @@ import {
   FieldSlashAutocomplete,
   type AutocompleteField,
 } from "./field-slash-autocomplete"
-import { inferType, type GraphVariable } from "./node-variables"
+import {
+  CALCULATED_VARIABLES,
+  inferType,
+  type GraphVariable,
+} from "./node-variables"
 
 /**
  * Caso difícil #2 del plan: grupos anidados Y/O con `react-querybuilder`
@@ -230,12 +234,38 @@ const FIELDS: Field[] = [
 ]
 
 const MEMBER_FIELD_GROUP = "Atributos del socio"
+const CALCULATED_FIELD_GROUP = "Calculadas · Loyalty Engine"
 
-const AUTOCOMPLETE_FIELDS = FIELDS.map((f) => ({
-  name: String(f.name),
-  label: f.label,
-  group: MEMBER_FIELD_GROUP,
+/**
+ * Las variables calculadas (`CALCULATED_VARIABLES`) entran al catálogo como
+ * cualquier otro campo: son el resultado de una agregación sobre el
+ * histórico del socio —«cuántas compras en 30 días», «cuánto gastó en 90»—
+ * que el Loyalty Engine ya sabe responder.
+ *
+ * Es lo que evita meter un motor de consultas dentro del constructor de
+ * condiciones: «5 compras en 30 días» se resuelve con el operador escalar
+ * que ya existe (`cliente.compras_30d >= 5`) en vez de enseñarle al builder
+ * a hacer `COUNT` sobre una ventana. Todas son numéricas por construcción.
+ */
+const CALCULATED_FIELDS: Field[] = CALCULATED_VARIABLES.map((name) => ({
+  name,
+  label: name,
+  inputType: "number",
+  operators: NUMERIC_OPERATORS,
 }))
+
+const AUTOCOMPLETE_FIELDS = [
+  ...FIELDS.map((f) => ({
+    name: String(f.name),
+    label: f.label,
+    group: MEMBER_FIELD_GROUP,
+  })),
+  ...CALCULATED_FIELDS.map((f) => ({
+    name: String(f.name),
+    label: f.label,
+    group: CALCULATED_FIELD_GROUP,
+  })),
+]
 
 /**
  * Un `Field` de `react-querybuilder` para una variable de un bloque
@@ -675,11 +705,21 @@ const MISSING_DATA_OPTIONS: { name: MissingDataPolicy; label: string }[] = [
 export function MultiConditionForm({
   config,
   graphVariables,
+  compact = false,
   onChange,
 }: {
   config: Record<string, unknown>
   /** Variables reales de los bloques anteriores a este en el grafo (`resolveAvailableVariables`, resuelto por `InspectorPanel`) — se ofrecen como campos adicionales, agrupadas por el bloque que las expone. */
   graphVariables: GraphVariable[]
+  /**
+   * Para la condición de UNA rama (`BranchesTab`), donde este formulario se
+   * repite una vez por rama dentro del mismo panel. Quita el buscador de
+   * atributos —tres copias del mismo atajo compiten entre sí— y la política
+   * de dato faltante, que es una decisión del bloque entero y no de cada
+   * rama: tenerla por rama invitaría a configurarlas distinto y a que dos
+   * ramas discreparan sobre el mismo dato ausente.
+   */
+  compact?: boolean
   onChange: (config: Record<string, unknown>) => void
 }) {
   const query = (config.condiciones as RuleGroupType | undefined) ?? EMPTY_QUERY
@@ -693,6 +733,7 @@ export function MultiConditionForm({
   const fields = useMemo(() => {
     const queryFields: Field[] = [
       ...FIELDS,
+      ...CALCULATED_FIELDS,
       ...graphVariables.map(fieldForGraphVariable),
     ]
     const autocompleteFields: AutocompleteField[] = [
@@ -757,14 +798,16 @@ export function MultiConditionForm({
       <PreviewContext.Provider value={preview}>
         <CollapseContext.Provider value={collapsed}>
           <div className="flex flex-col gap-3">
-            <FieldSlashAutocomplete
-              fields={fields.autocompleteFields}
-              value=""
-              onSelect={addQuickCondition}
-              placeholder="Escribe un atributo… ej. tier, saldo, fecha"
-              className="w-full"
-              showShortcut
-            />
+            {!compact && (
+              <FieldSlashAutocomplete
+                fields={fields.autocompleteFields}
+                value=""
+                onSelect={addQuickCondition}
+                placeholder="Escribe un atributo… ej. tier, saldo, fecha"
+                className="w-full"
+                showShortcut
+              />
+            )}
 
             <div className="flex items-center justify-between gap-2">
               <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground">
@@ -799,7 +842,12 @@ export function MultiConditionForm({
               accessibleDescriptionGenerator={() => ""}
             />
 
-            <div className="flex flex-col gap-2 border-t border-border pt-3">
+            <div
+              className={cn(
+                "flex flex-col gap-2 border-t border-border pt-3",
+                compact && "hidden"
+              )}
+            >
               <p className="text-[11px] font-medium tracking-[0.2px] text-muted-foreground uppercase">
                 Si falta el dato
               </p>

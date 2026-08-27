@@ -1,3 +1,4 @@
+import { isMessageNodeType } from "@/config/integration-flows"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
 export type SimNode = {
@@ -16,6 +17,18 @@ export type SimStep = {
   tipo: BuilderNodeType
   entryCount: number
   outputs: { port: string; count: number }[]
+  /**
+   * Socios a los que el evento NUNCA llegó a emitirse — solo tiene valor en
+   * un bloque `evento` en modo umbral.
+   *
+   * Es distinto de "no cumplió las condiciones", y la diferencia importa:
+   * quien no cruzó el umbral no entró al flujo, así que ninguna condición
+   * se evaluó sobre él y no hay nada que revisar en la regla. Quien sí
+   * recibió el evento y salió por `no_cumple` sí fue evaluado. Meterlos en
+   * el mismo cubo hace que una regla que no dispara nunca parezca una
+   * regla demasiado restrictiva.
+   */
+  notTriggered?: number
 }
 
 const ENTRY_TYPES = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
@@ -27,6 +40,11 @@ function configNumber(
 ): number {
   const v = config[key]
   return typeof v === "number" && Number.isFinite(v) ? v : defaultValue
+}
+
+/** Un porcentaje fuera de [0, 100] repartiría más (o menos) cohorte de la que entró. */
+function clampPct(value: number): number {
+  return Math.min(100, Math.max(0, value))
 }
 
 /**
@@ -56,11 +74,23 @@ function distribute(
 
   if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
     const branches = Array.isArray(node.config.branches)
-      ? (node.config.branches as { id: string; weight?: number }[])
+      ? (node.config.branches as {
+          id: string
+          weight?: number
+          shareEstimate?: number
+        }[])
       : [{ id: "rama_1" }, { id: "por_defecto" }]
-    const weights = branches.map((r) =>
-      typeof r.weight === "number" && r.weight > 0 ? r.weight : 1
-    )
+    // En `ramificacion_valor` el peso ya NO enruta: enruta la condición de
+    // cada rama (ver `BranchesTab` y `validateGraph`). Lo que queda aquí es
+    // una ESTIMACIÓN de qué proporción de la cohorte cumplirá cada
+    // condición, porque este simulador no evalúa socios reales — de ahí
+    // `shareEstimate`, con `weight` como respaldo para las ramas guardadas
+    // antes del cambio. En `split_ab` el peso sí es el mecanismo: ahí el
+    // reparto aleatorio es lo que el bloque hace.
+    const weights = branches.map((r) => {
+      const share = r.shareEstimate ?? r.weight
+      return typeof share === "number" && share > 0 ? share : 1
+    })
     const totalWeight = weights.reduce((a, b) => a + b, 0)
     let remaining = entrada
     const outputs = branches.map((r, i) => {
@@ -97,9 +127,72 @@ function distribute(
     ]
   }
 
+  // Resultado tipado de una acción externa (ver `OUTPUT_HANDLES`): el
+  // reparto es una estimación de producto, igual que `tasa_tope_estimada`
+  // de `acumular_puntos` — no hay telemetría real de integraciones todavía.
+  // Los defaults salen de lo razonable para un webhook sano; el resto de la
+  // cohorte va por `exito`, así que los 3 puertos siempre suman la entrada.
+  if (node.tipo === "webhook_saliente") {
+    const errorPct = clampPct(
+      configNumber(node.config, "tasa_error_estimada", 3)
+    )
+    const timeoutPct = Math.min(
+      100 - errorPct,
+      clampPct(configNumber(node.config, "tasa_timeout_estimada", 1))
+    )
+    const error = Math.round((entrada * errorPct) / 100)
+    const timeout = Math.round((entrada * timeoutPct) / 100)
+    return [
+      { port: "exito", count: entrada - error - timeout },
+      { port: "error", count: error },
+      { port: "timeout", count: timeout },
+    ]
+  }
+
+  if (isMessageNodeType(node.tipo)) {
+    const failPct = clampPct(
+      configNumber(node.config, "tasa_fallo_estimada", 5)
+    )
+    const fallido = Math.round((entrada * failPct) / 100)
+    return [
+      { port: "entregado", count: entrada - fallido },
+      { port: "fallido", count: fallido },
+    ]
+  }
+
   if (node.tipo === "fin_workflow") return []
 
   return [{ port: "out", count: entrada }]
+}
+
+/**
+ * Cuántos de `entrada` llegan a RECIBIR el evento.
+ *
+ * Con `al_ocurrir` y `programado` son todos: el evento llega y el flujo
+ * arranca. Con `al_cruzar_umbral` no: quien no cruza el múltiplo nunca
+ * genera el evento, así que no entra al flujo. Ese resto es lo que se
+ * reporta como `notTriggered` — ver el comentario de `SimStep`.
+ *
+ * El porcentaje es una estimación de producto (no hay saldos reales de
+ * socios en este simulador), igual que `tasa_tope_estimada` de
+ * `acumular_puntos`. `una_vez` reduce todavía más: quien ya cruzó ese
+ * umbral en el pasado no vuelve a emitir.
+ */
+function triggeredCount(node: SimNode, entrada: number): number {
+  if (node.tipo !== "evento") return entrada
+  if (node.config.modo_disparo !== "al_cruzar_umbral") return entrada
+
+  const crossPct = clampPct(
+    configNumber(node.config, "tasa_cruce_estimada", 35)
+  )
+  let fired = Math.round((entrada * crossPct) / 100)
+  if (node.config.repeticion === "una_vez") {
+    const repeatPct = clampPct(
+      configNumber(node.config, "tasa_ya_cruzado_estimada", 40)
+    )
+    fired -= Math.round((fired * repeatPct) / 100)
+  }
+  return Math.max(0, Math.min(entrada, fired))
 }
 
 /**
@@ -138,17 +231,52 @@ export function simulateWorkflow(
     queue.push(n.id)
   }
 
+  const incomingByNode = new Map<string, SimEdge[]>()
+  for (const e of edges) {
+    const list = incomingByNode.get(e.target_node_id) ?? []
+    list.push(e)
+    incomingByNode.set(e.target_node_id, list)
+  }
+
+  // Guarda contra un grafo donde una unión espera a un antecesor que nunca
+  // llega (un ciclo en un borrador a medio construir): sin él, reencolar
+  // sería un bucle infinito. El tope es holgado — solo se agota en un grafo
+  // que ya está roto.
+  let guard = nodes.length * nodes.length + edges.length + 16
+
   while (queue.length) {
     const id = queue.shift()!
     if (processed.has(id)) continue
-    processed.add(id)
 
     const node = byId.get(id)
     if (!node) continue
 
+    // Una unión reanuda el flujo: procesarla con la primera rama que llega
+    // contaría solo esa. Se difiere hasta que todos sus antecesores
+    // directos ya se procesaron — con `modo_union: "primera"` da igual el
+    // orden, pero esperar no cambia el resultado y mantiene una sola regla.
+    if (node.tipo === "union" && guard-- > 0) {
+      const pending = (incomingByNode.get(id) ?? []).some(
+        (e) => !processed.has(e.source_node_id) && byId.has(e.source_node_id)
+      )
+      if (pending && queue.length) {
+        queue.push(id)
+        continue
+      }
+    }
+
+    processed.add(id)
+
     const entryCount = accumulatedInputByNode.get(id) ?? 0
-    const outputs = distribute(node, entryCount)
-    steps.push({ nodeId: id, tipo: node.tipo, entryCount, outputs })
+    const fired = triggeredCount(node, entryCount)
+    const outputs = distribute(node, fired)
+    steps.push({
+      nodeId: id,
+      tipo: node.tipo,
+      entryCount,
+      outputs,
+      ...(fired < entryCount ? { notTriggered: entryCount - fired } : {}),
+    })
 
     for (const output of outputs) {
       if (output.count <= 0) continue
@@ -156,8 +284,20 @@ export function simulateWorkflow(
         (e) => e.source_port === output.port
       )
       for (const edge of edgesForThisPort) {
+        const target = byId.get(edge.target_node_id)
         const previous = accumulatedInputByNode.get(edge.target_node_id) ?? 0
-        accumulatedInputByNode.set(edge.target_node_id, previous + output.count)
+        // Un fan-out manda a LAS MISMAS personas por varias ramas, así que
+        // sumarlas al reunirlas las contaría dos veces: 1.000 socios que se
+        // separan en dos caminos siguen siendo 1.000 al juntarse. Fuera de
+        // una unión, dos aristas entrantes sí son cohortes distintas
+        // (caminos excluyentes que desembocan en el mismo bloque) y ahí la
+        // suma es lo correcto.
+        accumulatedInputByNode.set(
+          edge.target_node_id,
+          target?.tipo === "union"
+            ? Math.max(previous, output.count)
+            : previous + output.count
+        )
         if (!processed.has(edge.target_node_id)) {
           queue.push(edge.target_node_id)
         }

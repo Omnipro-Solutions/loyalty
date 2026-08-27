@@ -3,6 +3,7 @@ import type { z } from "zod"
 import type { createClient } from "@/lib/supabase/server"
 import type { Json } from "@/types/database.types"
 
+import { hasV2Schema, nodeToDb } from "./schema-compat"
 import type { graphEdgeSchema, graphNodeSchema } from "./schemas"
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -26,25 +27,37 @@ type GraphEdge = z.infer<typeof graphEdgeSchema>
  * haya hecho clic en "Guardar" — si no, tras publicar sin guardar antes, el
  * canvas volvería a mostrar el último grafo guardado (posiblemente vacío)
  * en vez del que realmente se publicó.
+ *
+ * Contra una base sin migrar, los tipos nuevos (`evento`, `union`,
+ * `emitir_evento`…) violan `workflow_nodes_tipo_check`, así que `nodeToDb`
+ * los guarda bajo un tipo portador con el real en `config`. En una base
+ * migrada devuelve el nodo intacto (ver `schema-compat.ts`).
  */
 export async function persistGraph(
   supabase: SupabaseServerClient,
   userId: string,
   workflowId: string,
   nodes: GraphNode[],
-  edges: GraphEdge[]
+  edges: GraphEdge[],
+  /** Renombrar es un cambio de borrador más, así que se persiste aquí y no en su propia acción (ver `saveGraphSchema`). */
+  nombre?: string
 ): Promise<{ ok: true } | { ok: false; message: string }> {
+  const legacy = !(await hasV2Schema(supabase))
+
   if (nodes.length) {
     const { error: upsertError } = await supabase.from("workflow_nodes").upsert(
-      nodes.map((n) => ({
-        id: n.id,
-        workflow_id: workflowId,
-        tipo: n.tipo,
-        etiqueta: n.etiqueta,
-        posicion_x: n.posicion_x,
-        posicion_y: n.posicion_y,
-        config: n.config as Json,
-      }))
+      nodes.map((n) => {
+        const row = nodeToDb(n.tipo, n.config, legacy)
+        return {
+          id: n.id,
+          workflow_id: workflowId,
+          tipo: row.tipo,
+          etiqueta: n.etiqueta,
+          posicion_x: n.posicion_x,
+          posicion_y: n.posicion_y,
+          config: row.config as Json,
+        }
+      })
     )
     if (upsertError) {
       return { ok: false, message: "No se pudo guardar el grafo." }
@@ -80,7 +93,7 @@ export async function persistGraph(
 
   await supabase
     .from("workflows")
-    .update({ actualizado_por: userId })
+    .update({ actualizado_por: userId, ...(nombre ? { nombre } : {}) })
     .eq("id", workflowId)
 
   return { ok: true }

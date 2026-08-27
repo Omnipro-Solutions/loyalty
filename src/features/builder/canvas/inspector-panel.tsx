@@ -11,6 +11,12 @@ import { MultiConditionForm } from "@/features/builder/inspector/multi-condition
 import { DataTab } from "@/features/builder/inspector/data-tab"
 import { SIMPLE_FIELD_SPECS } from "@/features/builder/inspector/field-specs"
 import { BranchesTab } from "@/features/builder/inspector/branches-tab"
+import { CouponBatchReference } from "@/features/builder/inspector/coupon-batch-reference"
+import {
+  allowedHolders,
+  couponConstraints,
+} from "@/features/builder/inspector/coupon-constraints"
+import { EventReference } from "@/features/builder/inspector/event-reference"
 import { entryTriggerFor } from "@/features/builder/inspector/entry-triggers"
 import { IntegrationMessageForm } from "@/features/builder/inspector/integration-message-form"
 import { WebhookSalienteForm } from "@/features/builder/inspector/webhook-saliente-form"
@@ -39,6 +45,7 @@ function tabsFor(tipo: string): readonly string[] {
 
 export function InspectorPanel({
   node,
+  readOnly = false,
   nodes,
   edges,
   tiers,
@@ -53,6 +60,14 @@ export function InspectorPanel({
     id: string
     data: { tipo: string; etiqueta: string; config: Record<string, unknown> }
   } | null
+  /**
+   * Regla ya publicada: los bloques quedan de solo lectura y lo único
+   * editable es el estado (`isLocked`). Se aplica sobre el panel entero con
+   * `inert` en vez de propagar un `disabled` por cada formulario: son 8
+   * componentes con controles muy distintos, y bastaría olvidarse de uno
+   * para que la garantía dejara de serlo.
+   */
+  readOnly?: boolean
   /** Grafo completo del canvas — para resolver qué variables de bloques anteriores llegan hasta el nodo seleccionado (ver `resolveAvailableVariables`). */
   nodes: GraphNodeRef[]
   edges: GraphEdgeRef[]
@@ -158,7 +173,18 @@ export function InspectorPanel({
           NO es lo que aísla la configuración de cada nodo: eso lo garantiza
           que los formularios sean controlados sobre `node.data.config` (sin
           `useState` que copie el config), y así debe seguir. */}
-      <div key={node.id} className="flex-1 overflow-y-auto p-4">
+      {readOnly && (
+        <p className="border-b border-border bg-muted px-4 py-2 text-[11px] leading-4 text-muted-foreground">
+          Regla publicada: los bloques son de solo lectura. Para cambiar algo,
+          duplícala o cambia su estado desde la barra superior.
+        </p>
+      )}
+
+      <div
+        key={node.id}
+        inert={readOnly || undefined}
+        className={cn("flex-1 overflow-y-auto p-4", readOnly && "opacity-70")}
+      >
         {activeTab === "Configuración" &&
           (tipo === "acumular_puntos" ? (
             <AccumulatePointsForm
@@ -184,6 +210,29 @@ export function InspectorPanel({
             <WebhookSalienteForm
               config={node.data.config}
               graphVariables={graphVariables}
+              onChange={update}
+            />
+          ) : tipo === "evento" ? (
+            // El payload del evento se ve al elegirlo, ANTES de configurar
+            // el modo de disparo: es lo que dice con qué variables se va a
+            // poder trabajar el resto del flujo.
+            <div className="flex flex-col gap-4">
+              <SimpleConfigForm
+                specs={SIMPLE_FIELD_SPECS.evento ?? []}
+                config={node.data.config}
+                onChange={update}
+              />
+              <EventReference config={node.data.config} />
+            </div>
+          ) : tipo === "emitir_cupon" ? (
+            // El único bloque que necesita algo además del formulario: la
+            // ficha de la emisión elegida, para no tener que ir a Cupones a
+            // ver qué va a emitir la regla, y los constraints del lote, para
+            // no dejar construir una combinación que la base rechazaría
+            // recién al ejecutar la regla.
+            <CouponBlockForm
+              config={node.data.config}
+              couponBatches={couponBatches}
               onChange={update}
             />
           ) : (
@@ -212,20 +261,110 @@ export function InspectorPanel({
             />
           ))}
         {activeTab === "Ramas" && (
-          <BranchesTab config={node.data.config} onChange={update} />
+          <BranchesTab
+            config={node.data.config}
+            tipo={tipo as "ramificacion_valor" | "split_ab"}
+            graphVariables={graphVariables}
+            onChange={update}
+          />
         )}
-        {activeTab === "Datos" && <DataTab tipo={tipo as never} />}
+        {activeTab === "Datos" && (
+          <DataTab tipo={tipo as never} config={node.data.config} />
+        )}
       </div>
 
-      <div className="border-t border-border p-4">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => onDelete(node.id)}
+      {!readOnly && (
+        <div className="border-t border-border p-4">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => onDelete(node.id)}
+          >
+            Eliminar nodo
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * `emitir_cupon` es el único bloque cuya validez depende de una entidad de
+ * OTRO módulo (el lote de `features/coupons`), así que su formulario se
+ * arma aquí: filtra las opciones que el lote no admite y explica las que sí
+ * admite pero conviene revisar.
+ *
+ * Filtrar en vez de validar después no es cosmético: `coupon_bearer_or_member`
+ * hace excluyentes titular y portador, y un lote anónimo no tiene titular
+ * posible. Ofrecer la opción y rechazarla al guardar enseñaría la regla como
+ * un error de la persona, cuando es una combinación que nunca existió.
+ */
+function CouponBlockForm({
+  config,
+  couponBatches,
+  onChange,
+}: {
+  config: Record<string, unknown>
+  couponBatches: CouponBatchSummary[]
+  onChange: (config: Record<string, unknown>) => void
+}) {
+  const batch = couponBatches.find((b) => b.id === config.coupon_batch_id)
+  const holders = allowedHolders(batch)
+  const constraints = couponConstraints(batch, config)
+
+  const asigna = config.modo === "asignar"
+
+  const specs = (SIMPLE_FIELD_SPECS.emitir_cupon ?? []).map((spec) => {
+    if (spec.key === "titular" && spec.kind === "select") {
+      return {
+        ...spec,
+        options: spec.options.filter((o) => holders.includes(o.value)),
+      }
+    }
+    // La emisión hace falta en los DOS modos, pero significa cosas
+    // distintas: al emitir es la PLANTILLA de la que salen el descuento y
+    // el patrón de código; al asignar es el LOTE del que se toma un cupón
+    // ya creado. Con una etiqueta única ("Emisión base") el modo emitir se
+    // leía como «elige un cupón existente», que es justo lo que NO hace.
+    if (spec.key === "coupon_batch_id") {
+      return {
+        ...spec,
+        label: asigna
+          ? "Lote del que se asigna"
+          : "Emisión que sirve de plantilla",
+        hint: asigna
+          ? "Se toma un cupón ya creado y sin dueño de este lote, y su stock baja en 1."
+          : "No se elige un cupón existente: de aquí salen el descuento, la moneda y el patrón con el que se genera un código nuevo.",
+      }
+    }
+    return spec
+  })
+
+  return (
+    <div className="flex flex-col gap-4">
+      <SimpleConfigForm
+        specs={specs}
+        config={config}
+        couponBatches={couponBatches.map((b) => ({
+          value: b.id,
+          label: `${b.reference} · ${b.name}`,
+        }))}
+        onChange={onChange}
+      />
+      {constraints.map((constraint, i) => (
+        <p
+          key={i}
+          className={cn(
+            "rounded-lg px-3 py-2 text-[11.5px] leading-4",
+            constraint.level === "error"
+              ? "bg-destructive-bg text-destructive"
+              : "bg-warning-bg text-warning"
+          )}
         >
-          Eliminar nodo
-        </Button>
-      </div>
+          {constraint.message}
+        </p>
+      ))}
+      <CouponBatchReference batch={batch} />
     </div>
   )
 }

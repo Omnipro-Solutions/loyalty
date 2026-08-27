@@ -1,7 +1,7 @@
 "use client"
 
 import { Handle, Position, type NodeProps } from "@xyflow/react"
-import { AlertTriangle, ChevronDown } from "lucide-react"
+import { AlertTriangle, Braces } from "lucide-react"
 import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -11,14 +11,16 @@ import {
   findFlow,
   isMessageNodeType,
 } from "@/config/integration-flows"
+import { nodeProse } from "@/features/builder/engine/rule-reading"
+import {
+  nodeLogicLines,
+  NODE_LOGIC_KEYWORDS,
+} from "@/features/builder/inspector/node-logic"
 import { validateNodeConfig } from "@/features/builder/inspector/schemas"
 import { cn } from "@/lib/utils"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
-import {
-  condicionMultiplePseudocode,
-  configSummaryFor,
-} from "./node-config-summary"
+import { configSummaryFor } from "./node-config-summary"
 
 export type BuilderNodeData = {
   tipo: BuilderNodeType
@@ -109,6 +111,37 @@ export const OUTPUT_HANDLES: Partial<
     { id: "aprobado", label: "Aprobado", tone: "success" },
     { id: "rechazado", label: "Rechazado", tone: "destructive" },
   ],
+  // Resultado tipado de una acción EXTERNA: hasta ahora el fallo se
+  // resolvía con el campo `si_falla` (continuar/detener el workflow), que
+  // es una decisión global y no un camino — no se podía dibujar "si falla,
+  // por acá". Con estos 3 puertos el resultado pasa a ser parte del grafo,
+  // igual que `acumular_puntos` ya hacía con tope/sin puntos.
+  //
+  // `error` sale al AGOTAR los reintentos, no en cada intento fallido: el
+  // reintento es interno al bloque (`reintentos` + `politica_reintento`) y
+  // no puede ser una arista de vuelta, porque `validateGraph` rechaza los
+  // ciclos. `timeout` se separa de `error` porque la respuesta operativa es
+  // distinta: un tiempo agotado no dice que la llamada fallara.
+  webhook_saliente: [
+    { id: "exito", label: "Éxito", tone: "success" },
+    { id: "error", label: "Error", tone: "destructive" },
+    { id: "timeout", label: "Timeout", tone: "warning" },
+  ],
+  // Mismo criterio para los bloques de mensajería: una entrega no es un
+  // camino único. Solo 2 puertos porque el proveedor reporta entrega o
+  // fallo (`mensaje.estado`), sin un tercer estado operativo propio.
+  email: [
+    { id: "entregado", label: "Entregado", tone: "success" },
+    { id: "fallido", label: "Fallido", tone: "destructive" },
+  ],
+  push: [
+    { id: "entregado", label: "Entregado", tone: "success" },
+    { id: "fallido", label: "Fallido", tone: "destructive" },
+  ],
+  sms_whatsapp: [
+    { id: "entregado", label: "Entregado", tone: "success" },
+    { id: "fallido", label: "Fallido", tone: "destructive" },
+  ],
   fin_workflow: [],
 }
 
@@ -171,39 +204,35 @@ function messageFlowSummary(
   return { logo: provider.logo, flowName: flow.name }
 }
 
-/** Prefijo `IF`/`AND`/`OR`/`ON_MISSING`/`THEN`/`ELSE` de una línea de `condicionMultiplePseudocode` — separado para poder pintarlo distinto del resto de la línea. */
-const PSEUDOCODE_KEYWORD_RE = /^(IF|AND|OR|ON_MISSING|THEN|ELSE)\b\s*/
+/**
+ * Resalta las palabras clave del pseudocódigo. Se parte por token para no
+ * tocar el resto de la línea (un nombre de variable puede contener "on" o
+ * "if" y no debe resaltarse), y se ordena de más larga a más corta para que
+ * "WAIT UNTIL" gane a "WAIT".
+ */
+const KEYWORD_PATTERN = new RegExp(
+  `\\b(${[...NODE_LOGIC_KEYWORDS].sort((a, b) => b.length - a.length).join("|")})\\b`,
+  "g"
+)
 
-/** `THEN → cumple` / `ELSE → no_cumple` pintan el desenlace con el mismo tono (success/destructive) que sus puntos de salida más abajo — el resto de líneas solo distingue la palabra clave del resto. */
-function PseudocodeLine({ line }: { line: string }) {
-  const match = line.match(PSEUDOCODE_KEYWORD_RE)
-  if (!match) return <span className="text-foreground">{line}</span>
-
-  const keyword = match[1]
-  const rest = line.slice(match[0].length)
-  if (keyword === "THEN" || keyword === "ELSE") {
-    const [arrow, outcome] = rest.split(" ")
-    return (
-      <>
-        <span className="text-muted-foreground">
-          {keyword} {arrow}{" "}
-        </span>
-        <span
-          className={cn(
-            "font-semibold",
-            keyword === "THEN" ? "text-success" : "text-destructive"
-          )}
-        >
-          {outcome}
-        </span>
-      </>
-    )
-  }
+function LogicLine({ line }: { line: string }) {
+  const [code, comment] = line.split(/\s+--\s+/, 2)
+  const parts = code.split(KEYWORD_PATTERN)
   return (
-    <>
-      <span className="text-muted-foreground">{keyword} </span>
-      <span className="text-foreground">{rest}</span>
-    </>
+    <span className="block">
+      {parts.map((part, i) =>
+        (NODE_LOGIC_KEYWORDS as readonly string[]).includes(part) ? (
+          <span key={i} className="font-medium text-avatar-violet-fg">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+      {comment && (
+        <span className="text-muted-foreground/70">{` -- ${comment}`}</span>
+      )}
+    </span>
   )
 }
 
@@ -211,6 +240,7 @@ export function BuilderNode({
   data,
   selected,
 }: NodeProps & { data: BuilderNodeData }) {
+  const [logicOpen, setLogicOpen] = useState(false)
   const meta = BUILDER_BLOCKS[data.tipo]
   const groupMeta = BUILDER_GROUP_META[meta.group]
   const Icon = meta.icon
@@ -221,11 +251,6 @@ export function BuilderNode({
   const flowSummary = messageFlowSummary(data.tipo, data.config ?? {})
   const configSummary = configSummaryFor(data.tipo, data.config ?? {})
   const missingFields = validateNodeConfig(data.tipo, data.config ?? {})
-  const pseudocode =
-    data.tipo === "condicion_multiple"
-      ? condicionMultiplePseudocode(data.config ?? {})
-      : null
-  const [pseudocodeOpen, setPseudocodeOpen] = useState(true)
 
   return (
     <div
@@ -272,36 +297,74 @@ export function BuilderNode({
             {data.simulacion.entryCount.toLocaleString("es-CO")}
           </span>
         )}
+        {/* `nodrag`/`nopan` y el `stopPropagation`: sin ellos xyflow trata el
+            clic como arrastre del nodo y el desplegable nunca abre. */}
+        <button
+          type="button"
+          aria-expanded={logicOpen}
+          aria-label="Ver qué hace este bloque"
+          title="Ver qué hace este bloque"
+          onClick={(e) => {
+            e.stopPropagation()
+            setLogicOpen((v) => !v)
+          }}
+          className={cn(
+            "nodrag nopan flex size-[22px] shrink-0 items-center justify-center rounded-md border transition-colors",
+            logicOpen
+              ? "border-avatar-violet-fg bg-avatar-violet-bg text-avatar-violet-fg"
+              : "border-border text-muted-foreground hover:border-avatar-violet-fg hover:bg-avatar-violet-bg hover:text-avatar-violet-fg"
+          )}
+        >
+          <Braces className="size-3" />
+        </button>
       </div>
 
-      {pseudocode && (
-        <div className="border-t border-border">
-          <button
-            type="button"
-            onClick={() => setPseudocodeOpen((open) => !open)}
-            className="nodrag flex w-full items-center justify-between gap-2 px-3 py-2 text-[10px] font-semibold tracking-[0.04em] text-muted-foreground uppercase"
-          >
-            Condiciones aplicadas
-            <ChevronDown
-              className={cn(
-                "size-3 shrink-0 transition-transform",
-                pseudocodeOpen && "rotate-180"
-              )}
-            />
-          </button>
-          {pseudocodeOpen && (
-            <div className="nodrag nowheel overflow-x-auto px-3 pb-2.5">
-              <div className="w-fit min-w-full font-mono text-[10.5px] leading-[16px] whitespace-pre">
-                {pseudocode.map((line, i) => (
-                  <div key={i}>
-                    <PseudocodeLine line={line} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Dos formas de decir lo mismo, elegidas por el grupo del bloque:
+          los de Lógica se leen mejor como pseudocódigo —un árbol de
+          condiciones anidado o un SWITCH con sus casos es más claro
+          tabulado que en prosa—, y el resto se leen mejor como frases,
+          porque lo que hacen es una acción, no una estructura. */}
+      {logicOpen &&
+        (meta.group === "logic" ? (
+          <pre className="nowheel overflow-x-auto border-t border-border bg-muted px-3 py-2 font-mono text-[10px] leading-[1.65] text-muted-foreground">
+            {nodeLogicLines({
+              tipo: data.tipo,
+              config: data.config ?? {},
+              ports: outputs,
+              // El nombre real de una emisión/promoción vive en una lista que
+              // este componente no carga (ver `REFERENCE_KINDS` en
+              // `node-config-summary.ts`); el flujo de mensajería sí se
+              // resuelve aquí, así que se pasa.
+              refs: { flow: flowSummary?.flowName },
+            }).map((line, i) => (
+              <LogicLine key={i} line={line} />
+            ))}
+          </pre>
+        ) : (
+          <div className="nowheel flex flex-col gap-1 border-t border-border bg-muted px-3 py-2">
+            {nodeProse({
+              id: data.tipo,
+              tipo: data.tipo,
+              etiqueta: data.etiqueta,
+              config: data.config ?? {},
+            }).map((line, i) => (
+              <p
+                key={i}
+                className={cn(
+                  "text-[11px] leading-[15px]",
+                  // La primera frase es QUÉ hace el bloque; las siguientes
+                  // matizan. Distinguirlas evita que un detalle se lea con
+                  // el mismo peso que la acción principal.
+                  i === 0
+                    ? "text-secondary-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        ))}
 
       {flowSummary && (
         <div className="flex items-center gap-1.5 border-t border-border px-3 py-2">

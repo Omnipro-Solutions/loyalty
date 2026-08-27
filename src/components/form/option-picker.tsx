@@ -130,13 +130,26 @@ export function OptionPicker({
   }
 
   return (
-    <Select value={value} onValueChange={(v) => onValueChange(v as string)}>
+    // `value ?? null`: para Base UI un `value` `undefined` significa "no
+    // controlado", así que un campo que empieza vacío y luego recibe valor
+    // cambiaría de no controlado a controlado (aviso en consola y estado
+    // interno que ya no se puede resetear desde fuera). `null` es su forma
+    // de decir "controlado y sin selección".
+    <Select
+      value={value ?? null}
+      onValueChange={(v) => onValueChange(v as string)}
+    >
       <SelectTrigger
         id={id}
         className={cn(size === "chip" && CHIP_TRIGGER, className)}
       >
-        <SelectValue placeholder={placeholder}>
-          {(v: string) => labelByValue.get(v) ?? v}
+        {/* El `children` de función sustituye por completo a la prop
+            `placeholder` de `SelectValue`, así que el caso vacío también se
+            resuelve aquí. */}
+        <SelectValue>
+          {(v: string | null) =>
+            v === null ? placeholder : (labelByValue.get(v) ?? v)
+          }
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="w-max">

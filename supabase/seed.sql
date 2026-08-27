@@ -720,8 +720,11 @@ on conflict (segment_id, member_id) do nothing;
 -- ejemplo propios fuera de este seed puntual.
 with org as (select id from organizations where slug = 'omni'),
 seg as (select id from segments where org_id = (select id from org) and codigo = 'seg_freq_2026')
-insert into workflows (org_id, nombre, descripcion, estado, version_actual)
-select (select id from org), w.nombre, w.descripcion, 'publicado', 1
+insert into workflows (org_id, nombre, descripcion, estado, vigente_desde, vigente_hasta, prioridad, exclusividad, version_actual)
+-- `activa`, no `publicado`: el builder adoptó el ciclo de vida de
+-- promociones (ver `20260827140000_builder_ciclo_vida.sql`). Acumulables
+-- porque no compiten entre sí — escuchan eventos distintos.
+select (select id from org), w.nombre, w.descripcion, 'activa', date '2027-01-01', null, 10, 'acumulable', 1
 from (
   values
     ('Recompensa por frecuencia', 'Otorga puntos extra a compradores frecuentes al entrar al segmento.'),
@@ -743,17 +746,26 @@ wf as (
 insert into workflow_nodes (workflow_id, tipo, etiqueta, posicion_x, posicion_y, config)
 select
   wf.id, n.tipo, n.etiqueta, n.posicion_x, n.posicion_y,
-  case when n.tipo = 'entra_segmento'
-    then jsonb_build_object('audiencia_id', (select id::text from seg), 'modo', 'al_entrar', 'reevaluacion', 'diaria')
+  -- Entrada por evento del catálogo (`config/event-catalog.ts`): el bloque
+  -- es siempre `evento` y lo que cambia es `evento_id`. `audiencia_id` sigue
+  -- haciendo falta porque «un socio entró a una audiencia» es cierto para
+  -- todas a la vez si no se dice cuál.
+  case when n.tipo = 'evento'
+    then jsonb_build_object(
+      'dominio', 'segmentacion',
+      'evento_id', 'segment.entered',
+      'modo_disparo', 'al_ocurrir',
+      'audiencia_id', (select id::text from seg)
+    )
     else '{}'::jsonb
   end
 from wf
 join (
   values
-    ('Recompensa por frecuencia', 'entra_segmento', 'Entra al segmento', 0, 0),
+    ('Recompensa por frecuencia', 'evento', 'Entra al segmento', 0, 0),
     ('Recompensa por frecuencia', 'acumular_puntos', 'Acumular puntos', 260, 0),
     ('Recompensa por frecuencia', 'fin_workflow', 'Fin', 520, 0),
-    ('Recordatorio de puntos por vencer', 'entra_segmento', 'Entra al segmento', 0, 0),
+    ('Recordatorio de puntos por vencer', 'evento', 'Entra al segmento', 0, 0),
     ('Recordatorio de puntos por vencer', 'email', 'Email', 260, 0),
     ('Recordatorio de puntos por vencer', 'fin_workflow', 'Fin', 520, 0)
 ) as n (workflow_nombre, tipo, etiqueta, posicion_x, posicion_y) on n.workflow_nombre = wf.nombre

@@ -2,20 +2,40 @@
 
 import { Field } from "@/components/form/field"
 import { CurrencyInput } from "@/components/form/currency-input"
-import { EntityPickerField } from "@/components/form/entity-picker"
 import { Multiselect } from "@/components/form/multiselect"
+import {
+  OptionPicker,
+  type PickerOption,
+} from "@/components/form/option-picker"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  eventsInDomain,
+  triggerModesFor,
+  type EventDomain,
+} from "@/config/event-catalog"
+import type { WorkflowTriggerMode } from "@/types/domain"
 
-import type { FieldSpec } from "./field-specs"
+import { isSpecRequired, isSpecVisible, type FieldSpec } from "./field-specs"
+
+/**
+ * Qué decir cuando la lista está vacía. Una lista vacía en la cascada del
+ * evento no es un error: es el paso anterior sin responder, y decirlo es
+ * más útil que un "Selecciona una opción…" que no ofrece ninguna.
+ */
+function emptyPickerHint(kind: FieldSpec["kind"]): string {
+  if (kind === "event-select") return "Elige primero un dominio…"
+  if (kind === "trigger-mode-select") return "Elige primero un evento…"
+  return "Sin opciones disponibles"
+}
+
+/** Cómo se lee cada modo en el selector — el porqué de cada uno vive en el `hint` del spec. */
+const TRIGGER_MODE_LABEL: Record<WorkflowTriggerMode, string> = {
+  al_ocurrir: "Al ocurrir",
+  al_cruzar_umbral: "Al cruzar un umbral",
+  programado: "Programado",
+}
 
 /**
  * Formulario genérico dirigido por `FieldSpec[]` — cubre los tipos de
@@ -44,9 +64,9 @@ export function SimpleConfigForm({
 }: {
   specs: FieldSpec[]
   config: Record<string, unknown>
-  /** Opciones para campos `kind: "audience-select"` (audiencias reales, ver `entra_segmento`). */
+  /** Opciones para campos `kind: "audience-select"` (audiencias reales, ver `cambiar_segmento`). */
   audiences?: { value: string; label: string }[]
-  /** Opciones para campos `kind: "coupon-select"` (emisiones reales, ver `emitir_cupon`/`canje_cupon`). */
+  /** Opciones para campos `kind: "coupon-select"` (emisiones reales, ver `emitir_cupon`). */
   couponBatches?: { value: string; label: string }[]
   /** Opciones para campos `kind: "promotion-select"` (promociones reales, ver `aplicar_promocion`). */
   promotions?: { value: string; label: string }[]
@@ -56,12 +76,37 @@ export function SimpleConfigForm({
     onChange({ ...config, [key]: value })
   }
 
-  if (specs.length === 0) {
-    return (
-      <p className="text-[12px] text-muted-foreground">
-        Este bloque no tiene configuración adicional.
-      </p>
-    )
+  /**
+   * Igual que `set`, pero limpiando lo que el cambio deja inválido aguas
+   * abajo de la cascada del bloque `evento`. Cambiar de dominio con un
+   * `evento_id` de otro dominio todavía guardado dejaba el bloque
+   * describiendo un evento que su propio selector ya no ofrece: el nodo se
+   * veía completo y publicaba una regla que escuchaba otra cosa. Se limpia
+   * al elegir, no al renderizar, para no borrar config por el mero hecho de
+   * abrir el inspector.
+   */
+  function setPickerValue(key: string, value: string) {
+    const next = { ...config, [key]: value }
+    if (key === "dominio") {
+      const eventKey = "evento_id" in config ? "evento_id" : "hasta_evento"
+      if (
+        !eventsInDomain(value as EventDomain).some(
+          (e) => e.id === next[eventKey]
+        )
+      ) {
+        delete next[eventKey]
+        delete next.modo_disparo
+      }
+    }
+    if (key === "evento_id") {
+      const modes = triggerModesFor(value)
+      if (!modes.includes(next.modo_disparo as WorkflowTriggerMode)) {
+        // Un solo modo posible no es una elección: se pone solo, para no
+        // pedir que confirmen lo único que se podía responder.
+        next.modo_disparo = modes.length === 1 ? modes[0] : undefined
+      }
+    }
+    onChange(next)
   }
 
   function renderField(spec: FieldSpec) {
@@ -87,7 +132,11 @@ export function SimpleConfigForm({
       const range =
         (config[spec.key] as { desde?: string; hasta?: string }) ?? {}
       return (
-        <Field key={spec.key} label={spec.label} required={spec.required}>
+        <Field
+          key={spec.key}
+          label={spec.label}
+          required={isSpecRequired(spec, config)}
+        >
           <div className="flex items-center gap-2">
             <Input
               type="time"
@@ -112,24 +161,61 @@ export function SimpleConfigForm({
     }
 
     const currentValue = config[spec.key]
-    const selectOptions =
+
+    /**
+     * Todo lo que es "elegir un valor de una lista" pasa por el mismo
+     * componente, sea cual sea el origen de la lista. `OptionPicker` decide
+     * el control por el TAMAÑO de la lista —desplegable, desplegable con
+     * buscador, o diálogo— con los umbrales del sistema
+     * (`components/form/option-picker.tsx`), en vez de que cada `kind`
+     * imponga uno fijo: antes una emisión de cupón abría siempre un diálogo
+     * aunque hubiera 3, y un `select` con 42 tiendas era un scroll a ciegas.
+     */
+    const pickerOptions: PickerOption[] | null =
       spec.kind === "select"
         ? spec.options
         : spec.kind === "audience-select"
           ? audiences
-          : null
-    const searchableOptions =
+          : spec.kind === "coupon-select"
+            ? couponBatches
+            : spec.kind === "promotion-select"
+              ? promotions
+              : spec.kind === "event-select"
+                ? // Los eventos del dominio ya elegido. Sin dominio la lista
+                  // va vacía a propósito: ofrecer los 26 eventos del
+                  // catálogo de golpe es justo lo que la cascada evita.
+                  eventsInDomain(config.dominio as EventDomain).map((e) => ({
+                    value: e.id,
+                    label: e.label,
+                    hint: e.id,
+                  }))
+                : spec.kind === "trigger-mode-select"
+                  ? // Solo los modos que el evento admite: un alta de socio
+                    // no se puede "cruzar un umbral".
+                    triggerModesFor(
+                      config[
+                        spec.key === "modo_disparo" ? "evento_id" : spec.key
+                      ] as string
+                    ).map((m) => ({
+                      value: m,
+                      label: TRIGGER_MODE_LABEL[m],
+                    }))
+                  : null
+
+    const pickerTitle =
       spec.kind === "coupon-select"
-        ? couponBatches
+        ? "Selecciona un cupón"
         : spec.kind === "promotion-select"
-          ? promotions
-          : null
+          ? "Selecciona una promoción"
+          : spec.kind === "audience-select"
+            ? "Selecciona una audiencia"
+            : spec.label
 
     return (
       <Field
         key={spec.key}
         label={spec.label}
-        required={"required" in spec ? spec.required : undefined}
+        required={isSpecRequired(spec, config)}
         hint={"hint" in spec ? spec.hint : undefined}
         htmlFor={`cfg-${spec.key}`}
       >
@@ -160,69 +246,39 @@ export function SimpleConfigForm({
             }
             onValueChange={(value) => set(spec.key, value)}
           />
-        ) : spec.kind === "coupon-select" ||
-          spec.kind === "promotion-select" ? (
-          <EntityPickerField
-            id={`cfg-${spec.key}`}
-            title={
-              spec.kind === "coupon-select"
-                ? "Selecciona un cupón"
-                : "Selecciona una promoción"
-            }
-            description="Busca por nombre."
-            mode="single"
-            items={searchableOptions ?? []}
-            getId={(o) => o.value}
-            getSearchText={(o) => o.label}
-            getChipLabel={(o) => o.label}
-            renderRow={(o) => (
-              <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
-                {o.label}
-              </div>
+        ) : pickerOptions ? (
+          <div className="flex flex-col gap-1">
+            <OptionPicker
+              id={`cfg-${spec.key}`}
+              className="w-full"
+              title={pickerTitle}
+              options={pickerOptions}
+              value={
+                typeof currentValue === "string" ? currentValue : undefined
+              }
+              onValueChange={(value) => setPickerValue(spec.key, value)}
+              placeholder={
+                pickerOptions.length === 0
+                  ? emptyPickerHint(spec.kind)
+                  : "Selecciona una opción…"
+              }
+            />
+            {/* «El propio selector dice cuántas opciones tiene»: sin esto,
+                que el control cambie de forma entre bloques parece
+                arbitrario en vez de una consecuencia del tamaño de la
+                lista. */}
+            {pickerOptions.length > 0 && (
+              <span className="text-[10.5px] text-muted-foreground">
+                {pickerOptions.length} opciones
+              </span>
             )}
-            placeholder={
-              spec.kind === "coupon-select"
-                ? "Selecciona un cupón…"
-                : "Selecciona una promoción…"
-            }
-            confirmLabel={
-              spec.kind === "coupon-select"
-                ? "Seleccionar cupón"
-                : "Seleccionar promoción"
-            }
-            value={
-              typeof currentValue === "string" && currentValue
-                ? [currentValue]
-                : []
-            }
-            onValueChange={([id]) => set(spec.key, id)}
-          />
-        ) : spec.kind === "select" || spec.kind === "audience-select" ? (
-          <Select
-            value={typeof currentValue === "string" ? currentValue : null}
-            onValueChange={(value) => set(spec.key, value)}
-          >
-            <SelectTrigger id={`cfg-${spec.key}`} className="w-full">
-              <SelectValue placeholder="Selecciona una opción">
-                {(v: string) =>
-                  selectOptions?.find((opt) => opt.value === v)?.label ?? v
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {(selectOptions ?? []).map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          </div>
         ) : (
           <div className="relative">
             <Input
               id={`cfg-${spec.key}`}
               type={spec.kind === "number" ? "number" : "text"}
-              placeholder={spec.placeholder}
+              placeholder={"placeholder" in spec ? spec.placeholder : undefined}
               value={
                 currentValue === undefined || currentValue === null
                   ? ""
@@ -250,16 +306,45 @@ export function SimpleConfigForm({
     )
   }
 
-  const requiredSpecs = specs.filter((s) => "required" in s && s.required)
-  const optionalSpecs = specs.filter((s) => !("required" in s && s.required))
+  // Primero se descarta lo que NO APLICA con la configuración actual, que
+  // es distinto de lo opcional: emitir un cupón nuevo y asignar uno ya
+  // creado no comparten preguntas, y mostrar las de los dos modos a la vez
+  // obligaba a leerlas todas para descubrir cuáles tocaba contestar.
+  const visibleSpecs = specs.filter((spec) => isSpecVisible(spec, config))
+
+  // Vacío tanto si el bloque no tiene campos como si ninguno aplica todavía
+  // (`emitir_cupon` antes de elegir modo): las dos son "aquí no hay nada que
+  // contestar", y distinguirlas en pantalla no le sirve a nadie.
+  if (visibleSpecs.length === 0) {
+    return (
+      <p className="text-[12px] text-muted-foreground">
+        Este bloque no tiene configuración adicional.
+      </p>
+    )
+  }
+
+  // `isSpecRequired` (no `spec.required`) para que un campo obligatorio solo
+  // bajo cierta configuración —el titular de un cupón cuando el modo es
+  // emitir— suba a la sección de obligatorios en cuanto esa condición se
+  // cumple, en vez de quedarse bajo "Opcional" contradiciendo al validador.
+  const requiredSpecs = visibleSpecs.filter((spec) =>
+    isSpecRequired(spec, config)
+  )
+  const optionalSpecs = visibleSpecs.filter(
+    (spec) => !isSpecRequired(spec, config)
+  )
 
   // Separar obligatorios de opcionales solo cuando hay AMBOS — con un solo
-  // grupo (ej. `canje_cupon`, todo opcional) el divisor "Opcional" no
+  // grupo (ej. `union`, todo obligatorio) el divisor "Opcional" no
   // aporta nada y sobra ruido visual. La regla se deriva directo de
   // `FieldSpec.required`, ya presente en `field-specs.ts` — no requiere
   // etiquetar de nuevo cada tipo de bloque.
   if (requiredSpecs.length === 0 || optionalSpecs.length === 0) {
-    return <div className="flex flex-col gap-4">{specs.map(renderField)}</div>
+    // `visibleSpecs`, no `specs`: con la lista sin filtrar este atajo
+    // reintroducía justo los campos que la visibilidad acaba de descartar.
+    return (
+      <div className="flex flex-col gap-4">{visibleSpecs.map(renderField)}</div>
+    )
   }
 
   return (

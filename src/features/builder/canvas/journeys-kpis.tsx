@@ -10,7 +10,7 @@ export async function JourneysKpiRow() {
   return (
     <div className="flex w-full items-start gap-4">
       <KpiWidget
-        label="Workflows activos"
+        label="Reglas activas"
         value={formatNumber(kpis.active)}
         delta={
           kpis.publishedThisWeek > 0
@@ -19,8 +19,8 @@ export async function JourneysKpiRow() {
         }
         caption={
           kpis.publishedThisWeek > 0
-            ? "publicados esta semana"
-            : "sin publicaciones esta semana"
+            ? "activadas esta semana"
+            : "sin activaciones esta semana"
         }
       />
       <KpiWidget
@@ -32,7 +32,7 @@ export async function JourneysKpiRow() {
         }
         caption={
           kpis.membersInJourney !== null
-            ? "con al menos un workflow publicado"
+            ? "con al menos una regla activa"
             : "Aún sin seguimiento en vivo"
         }
       />
