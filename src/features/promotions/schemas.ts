@@ -471,8 +471,13 @@ const promotionBaseSchema = z.object({
 
   // Economía (paso "Economía", F01–F11 + S06) — naturaleza contable del
   // costo y quién lo financia. El bloque de proveedor (proveedorId/
-  // contratoId/porcentajeCostoProveedor/periodoLiquidacion) solo se pide
-  // cuando `financiador !== "retailer"` (ver `refineEconomics`).
+  // contratoId/porcentajeCostoProveedor/periodoLiquidacion) solo se MUESTRA
+  // cuando `financiador !== "retailer"`, pero ninguno de sus campos es
+  // obligatorio: se negocian con el proveedor y suelen llegar después de
+  // armar la promoción, así que exigirlos para guardar llevaba a
+  // inventarlos. Que falten se advierte en el panel de revisión — regla S06
+  // en `lib/program-rules.ts`, con el mismo trato que las demás reglas
+  // "alta" del documento ("advierten pero dejan continuar").
   naturalezaCosto: z.enum(COST_NATURES),
   financiador: z.enum(FINANCIADORES),
   proveedorId: z.string().optional(),
@@ -836,38 +841,6 @@ function refineByBenefitType(
 }
 
 /**
- * S06 · "Financiada por proveedor exige contrato y porcentaje" — a
- * diferencia de `refineByBenefitType`, no depende de la mecánica sino de
- * `financiador`. Solo valida campos del propio formulario (nunca datos
- * externos, ej. costo de producto) — mismo criterio que el resto de este
- * archivo.
- */
-function refineEconomics(
-  v: z.infer<typeof promotionBaseSchema>,
-  ctx: z.RefinementCtx
-) {
-  const need = (cond: boolean, path: (string | number)[], message: string) => {
-    if (cond) ctx.addIssue({ code: "custom", path, message })
-  }
-  if (v.financiador !== "retailer") {
-    // `!v.contratoId`, no `=== undefined`: el input de texto de este campo
-    // no tiene `setValueAs`, así que un campo vacío nunca tocado llega como
-    // `""` a react-hook-form, no como `undefined` — comparar solo contra
-    // `undefined` deja este required-si-no-retailer sin efecto real.
-    need(
-      !v.contratoId,
-      ["contratoId"],
-      "Ingresa el contrato con el financiador"
-    )
-    need(
-      v.porcentajeCostoProveedor === undefined,
-      ["porcentajeCostoProveedor"],
-      "Ingresa el porcentaje que absorbe el proveedor"
-    )
-  }
-}
-
-/**
  * Reglas de negocio transversales (S01-S25) que no dependen de la
  * mecánica ni del financiador — las críticas del documento que sí cruzan
  * campos (las demás críticas, ej. S01/S10/S16, se cumplen con solo tener
@@ -899,7 +872,6 @@ function refineCompliance(
 
 export const promotionSchema = promotionBaseSchema
   .superRefine(refineByBenefitType)
-  .superRefine(refineEconomics)
   .superRefine(refineCompliance)
 export type PromotionValues = z.infer<typeof promotionSchema>
 export type ConditionValues = z.infer<typeof conditionSchema>
@@ -909,7 +881,6 @@ export type LimitValues = z.infer<typeof limitSchema>
 export const updatePromotionSchema = promotionBaseSchema
   .extend({ id: z.string().uuid() })
   .superRefine(refineByBenefitType)
-  .superRefine(refineEconomics)
   .superRefine(refineCompliance)
 
 /**

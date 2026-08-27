@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import type { Json } from "@/types/database.types"
 
 import { builderActionClient } from "./action-client"
+import { hasV2Schema, nodeToDb } from "./schema-compat"
 import {
   createWorkflowSchema,
   deleteWorkflowsSchema,
@@ -91,19 +92,28 @@ export const saveGraphAction = builderActionClient
   .action(async ({ parsedInput, ctx }) => {
     const { workflowId, nodes, edges } = parsedInput
 
+    // Contra una base sin migrar, los tipos nuevos (`evento`, `union`,
+    // `emitir_evento`…) violan `workflow_nodes_tipo_check`, así que
+    // `nodeToDb` los guarda bajo un tipo portador con el real en `config`.
+    // En una base migrada devuelve el nodo intacto (ver `schema-compat.ts`).
+    const legacy = !(await hasV2Schema(ctx.supabase))
+
     if (nodes.length) {
       const { error: upsertError } = await ctx.supabase
         .from("workflow_nodes")
         .upsert(
-          nodes.map((n) => ({
-            id: n.id,
-            workflow_id: workflowId,
-            tipo: n.tipo,
-            etiqueta: n.etiqueta,
-            posicion_x: n.posicion_x,
-            posicion_y: n.posicion_y,
-            config: n.config as Json,
-          }))
+          nodes.map((n) => {
+            const row = nodeToDb(n.tipo, n.config, legacy)
+            return {
+              id: n.id,
+              workflow_id: workflowId,
+              tipo: row.tipo,
+              etiqueta: n.etiqueta,
+              posicion_x: n.posicion_x,
+              posicion_y: n.posicion_y,
+              config: row.config as Json,
+            }
+          })
         )
       if (upsertError) {
         return { ok: false as const, message: "No se pudo guardar el grafo." }

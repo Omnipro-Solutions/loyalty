@@ -1,9 +1,15 @@
 import { z } from "zod"
 
+import { findEvent } from "@/config/event-catalog"
 import { isMessageNodeType } from "@/config/integration-flows"
 import type { BuilderNodeType } from "@/types/domain"
 
-import { SIMPLE_FIELD_SPECS, type FieldSpec } from "./field-specs"
+import {
+  isBlankValue,
+  isSpecRequired,
+  SIMPLE_FIELD_SPECS,
+  type FieldSpec,
+} from "./field-specs"
 
 function fieldSchema(spec: FieldSpec) {
   let base: z.ZodTypeAny
@@ -16,6 +22,15 @@ function fieldSchema(spec: FieldSpec) {
       break
     case "select":
       base = z.enum(spec.options.map((o) => o.value) as [string, ...string[]])
+      break
+    // Sus opciones dependen de otro campo del mismo bloque (el dominio, el
+    // evento), así que no hay una lista cerrada que enumerar aquí. Lo que
+    // sí se valida —que el id exista en el catálogo, que el modo sea uno de
+    // los que ese evento admite— vive en `withEventCatalogChecks`, donde ya
+    // se ve el objeto completo.
+    case "event-select":
+    case "trigger-mode-select":
+      base = z.string().min(1)
       break
     case "multiselect":
       base = z.array(
@@ -42,6 +57,43 @@ function specsSchema(specs: FieldSpec[]) {
   const shape: Record<string, z.ZodTypeAny> = {}
   for (const spec of specs) shape[spec.key] = fieldSchema(spec)
   return z.object(shape)
+}
+
+/**
+ * Aplica la obligatoriedad condicional (`FieldSpec.requiredWhen`) sobre el
+ * schema ya construido: un campo que solo hace falta cuando otro tiene
+ * cierto valor no se puede expresar en la forma del objeto, porque depende
+ * del valor que se está validando.
+ *
+ * Se envuelve al final de `nodeConfigSchemaFor` y no dentro de
+ * `specsSchema` porque varios bloques necesitan `.extend()` sobre el objeto
+ * (headers del webhook, ramas de la ramificación) y `.superRefine` ya no
+ * devuelve un `ZodObject`.
+ *
+ * El `path` de cada issue es la clave del campo, que es exactamente lo que
+ * `validateNodeConfig` traduce a su label del catálogo — así un campo
+ * condicional aparece en el aviso del nodo igual que uno obligatorio fijo.
+ */
+function withConditionalRequirements(
+  schema: z.ZodTypeAny,
+  specs: FieldSpec[]
+): z.ZodTypeAny {
+  const conditional = specs.filter(
+    (spec) => "requiredWhen" in spec && spec.requiredWhen
+  )
+  if (!conditional.length) return schema
+  return schema.superRefine((value, ctx) => {
+    const config = (value ?? {}) as Record<string, unknown>
+    for (const spec of conditional) {
+      if (!isSpecRequired(spec, config)) continue
+      if (!isBlankValue(config[spec.key])) continue
+      ctx.addIssue({
+        code: "custom",
+        path: [spec.key],
+        message: "Obligatorio con la configuración actual del bloque",
+      })
+    }
+  })
 }
 
 export const branchSchema = z.object({
@@ -182,22 +234,72 @@ function messageActionConfigSchema(specs: FieldSpec[]) {
  * exactamente lo mismo que una unión discriminada (un schema específico
  * por variante) sin forzar un `tipo` duplicado dentro de `config`.
  */
+/**
+ * Coherencia contra el catálogo de eventos. Son dos comprobaciones que la
+ * forma del objeto no puede expresar, y que sin ellas dejan pasar config
+ * que se ve completa y no lo está:
+ *
+ * 1. Un `evento_id` que no está en el catálogo — típicamente de un catálogo
+ *    anterior, o quedado tras cambiar de dominio. El nodo se vería
+ *    configurado y el motor escucharía algo que nadie emite.
+ * 2. Un `modo_disparo` que el evento elegido no admite (un alta de socio
+ *    "al cruzar un umbral"). El selector no lo ofrece, pero la config vieja
+ *    sí puede traerlo.
+ */
+function withEventCatalogChecks(
+  schema: z.ZodTypeAny,
+  tipo: BuilderNodeType
+): z.ZodTypeAny {
+  if (tipo !== "evento" && tipo !== "emitir_evento") return schema
+  return schema.superRefine((value, ctx) => {
+    const config = (value ?? {}) as Record<string, unknown>
+    const eventId = config.evento_id
+    if (typeof eventId !== "string" || !eventId) return
+
+    const event = findEvent(eventId)
+    if (!event) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evento_id"],
+        message: "El evento elegido ya no está en el catálogo",
+      })
+      return
+    }
+    if (tipo !== "evento") return
+
+    const modo = config.modo_disparo
+    if (
+      typeof modo === "string" &&
+      !event.triggerModes.includes(modo as never)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["modo_disparo"],
+        message: `«${event.label}» no admite ese modo de disparo`,
+      })
+    }
+  })
+}
+
 export function nodeConfigSchemaFor(tipo: BuilderNodeType): z.ZodTypeAny {
   if (tipo === "acumular_puntos") return accumulatePointsConfigSchema
   if (tipo === "condicion_multiple") return multiConditionConfigSchema
-  if (tipo === "webhook_saliente") return webhookSalienteConfigSchema
-  if (tipo === "ramificacion_valor" || tipo === "split_ab") {
-    // `branchesConfigSchema` por sí solo solo cubre la pestaña Ramas — sin
-    // este `.extend`, los campos obligatorios de la pestaña Configuración
-    // (`atributo_evaluado`/`modo` en ramificación por valor, `criterio_exito`
-    // en split A/B) nunca se validaban.
-    return branchesConfigSchema.extend(
-      specsSchema(SIMPLE_FIELD_SPECS[tipo] ?? []).shape
-    )
-  }
+
   const specs = SIMPLE_FIELD_SPECS[tipo] ?? []
-  if (isMessageNodeType(tipo)) return messageActionConfigSchema(specs)
-  return specsSchema(specs)
+  const base =
+    tipo === "webhook_saliente"
+      ? webhookSalienteConfigSchema
+      : tipo === "ramificacion_valor" || tipo === "split_ab"
+        ? // `branchesConfigSchema` por sí solo solo cubre la pestaña Ramas —
+          // sin este `.extend`, los campos obligatorios de la pestaña
+          // Configuración (`atributo_evaluado`/`modo` en ramificación por
+          // valor, `criterio_exito` en split A/B) nunca se validaban.
+          branchesConfigSchema.extend(specsSchema(specs).shape)
+        : isMessageNodeType(tipo)
+          ? messageActionConfigSchema(specs)
+          : specsSchema(specs)
+
+  return withEventCatalogChecks(withConditionalRequirements(base, specs), tipo)
 }
 
 /**

@@ -36,6 +36,10 @@ function expectedPorts(node: GraphNode, config: Record<string, unknown>) {
     return ["out", "tope_alcanzado", "sin_puntos"]
   }
   if (node.tipo === "esperar_aprobacion") return ["aprobado", "rechazado"]
+  // Resultado tipado de las acciones externas y de mensajería — ver
+  // `OUTPUT_HANDLES` en `canvas/builder-node.tsx`, misma lista.
+  if (node.tipo === "webhook_saliente") return ["exito", "error", "timeout"]
+  if (isMessageNodeType(node.tipo)) return ["entregado", "fallido"]
   if (node.tipo === "fin_workflow") return []
   if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
     const branches = config.branches
@@ -108,6 +112,37 @@ export function validateGraph(
       })
     }
 
+    // Una ramificación enruta por la condición de cada rama, no por peso
+    // (ver `BranchesTab`): una rama sin condición no es "la que sobra", es
+    // una rama que el motor no sabría cuándo tomar. `por_defecto` es la
+    // excepción por definición — es justo la que se toma cuando ninguna
+    // otra se cumple.
+    if (node.tipo === "ramificacion_valor") {
+      const sinCondicion = branchesOf(node.config).filter(
+        (b) => b.id !== "por_defecto" && !hasCondition(b)
+      )
+      if (sinCondicion.length) {
+        issues.push({
+          level: "error",
+          nodeId: node.id,
+          message: `"${BUILDER_BLOCKS[node.tipo].label}" tiene ${String(sinCondicion.length)} rama(s) sin condición: ${sinCondicion.map((b) => b.label).join(", ")}.`,
+        })
+      }
+    }
+
+    // Una unión con una sola entrada no une nada — no rompe la ejecución,
+    // pero casi siempre significa que faltó conectar la otra rama.
+    if (node.tipo === "union") {
+      const incoming = edges.filter((e) => e.target_node_id === node.id).length
+      if (incoming < 2) {
+        issues.push({
+          level: "advertencia",
+          nodeId: node.id,
+          message: `"Unión" tiene ${String(incoming)} rama(s) entrante(s): con menos de 2 no reanuda nada.`,
+        })
+      }
+    }
+
     const expected = expectedPorts(node, node.config)
     if (expected.length <= 1) continue
     const connected = new Set(
@@ -163,6 +198,26 @@ function detectCycle(nodes: GraphNode[], edges: GraphEdge[]): boolean {
     if (!visitState.has(n.id) && dfs(n.id)) return true
   }
   return false
+}
+
+type BranchRef = { id: string; label: string; condition?: unknown }
+
+function branchesOf(config: Record<string, unknown>): BranchRef[] {
+  const branches = config.branches
+  if (!Array.isArray(branches)) return []
+  return branches.filter(
+    (b): b is BranchRef =>
+      !!b &&
+      typeof b === "object" &&
+      typeof (b as { id?: unknown }).id === "string" &&
+      typeof (b as { label?: unknown }).label === "string"
+  )
+}
+
+/** Una rama con un grupo vacío tampoco enruta: `rules: []` se cumple siempre. */
+function hasCondition(branch: BranchRef): boolean {
+  const condition = branch.condition as { rules?: unknown } | undefined
+  return Array.isArray(condition?.rules) && condition.rules.length > 0
 }
 
 export function isLogicNode(tipo: BuilderNodeType) {

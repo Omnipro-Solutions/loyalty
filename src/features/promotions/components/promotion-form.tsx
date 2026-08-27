@@ -1129,10 +1129,15 @@ export function PromotionForm({
                         onValueChange={(v) => setValue("proveedorId", v)}
                       />
                     </Field>
+                    {/* Ni el contrato ni el porcentaje son obligatorios: se
+                        negocian con el proveedor y suelen llegar después de
+                        armar la promoción. Exigirlos para guardar llevaba a
+                        inventarlos, y un contrato inventado se ve igual de
+                        completo que uno real. Si faltan, el panel de
+                        revisión lo advierte (regla S06). */}
                     <Field
                       label="Contrato"
                       htmlFor="contratoId"
-                      required
                       error={errors.contratoId?.message}
                     >
                       <Input
@@ -1144,7 +1149,6 @@ export function PromotionForm({
                     <Field
                       label="Porcentaje que absorbe el proveedor"
                       htmlFor="porcentajeCostoProveedor"
-                      required
                       error={errors.porcentajeCostoProveedor?.message}
                     >
                       <Input
@@ -1332,37 +1336,46 @@ export function PromotionForm({
                 </Row>
               </Section>
             )}
-
-            {step === 6 && (
-              <>
-                <Section
-                  title="Cómo lee el motor esta promoción"
-                  description="La misma configuración, encadenada como la regla que se va a evaluar."
-                >
-                  <PromotionRuleReading
-                    values={values as Partial<PromotionValues>}
-                    names={ruleReadingNames}
-                  />
-                </Section>
-
-                <Section
-                  title="Resumen"
-                  description="Todo lo capturado, campo por campo."
-                >
-                  <PromotionReviewSummary
-                    values={values as Partial<PromotionValues>}
-                    categories={options.categories}
-                    segments={options.segments}
-                    products={products}
-                    couponBatches={options.couponBatches}
-                    tiers={options.tiers}
-                    storeGroups={options.storeGroups}
-                    suppliers={suppliers}
-                  />
-                </Section>
-              </>
-            )}
           </fieldset>
+
+          {/* FUERA del `<fieldset disabled>` de arriba, igual que el campo
+              "Estado": todo lo que hay aquí es de SOLO LECTURA —la lectura
+              de la regla y el resumen campo por campo—, así que
+              deshabilitarlo no protege nada y sí rompe lo único
+              interactivo que tiene: los acordeones. Con la promoción ya
+              publicada el resumen es justo lo que se viene a consultar, y
+              hasta ahora no se dejaba desplegar. Un `fieldset`
+              deshabilitado alcanza a TODOS sus descendientes y no hay
+              forma de re-habilitar uno. */}
+          {step === 6 && (
+            <>
+              <Section
+                title="Cómo lee el motor esta promoción"
+                description="La misma configuración, encadenada como la regla que se va a evaluar."
+              >
+                <PromotionRuleReading
+                  values={values as Partial<PromotionValues>}
+                  names={ruleReadingNames}
+                />
+              </Section>
+
+              <Section
+                title="Resumen"
+                description="Todo lo capturado, campo por campo."
+              >
+                <PromotionReviewSummary
+                  values={values as Partial<PromotionValues>}
+                  categories={options.categories}
+                  segments={options.segments}
+                  products={products}
+                  couponBatches={options.couponBatches}
+                  tiers={options.tiers}
+                  storeGroups={options.storeGroups}
+                  suppliers={suppliers}
+                />
+              </Section>
+            </>
+          )}
 
           <div className="flex items-center justify-between">
             <Button

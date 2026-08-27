@@ -9,6 +9,58 @@ function rulesOf(issues: ReturnType<typeof evaluateProgramRules>): string[] {
   return issues.map((i) => i.rule)
 }
 
+describe("evaluateProgramRules — S06 financiada por un tercero", () => {
+  it("advierte cuando falta el contrato", () => {
+    const issues = evaluateProgramRules({
+      financiador: "proveedor",
+      porcentajeCostoProveedor: 50,
+    })
+    expect(rulesOf(issues)).toContain("S06")
+    expect(issues[0].message).toContain("el contrato")
+  })
+
+  it("advierte cuando falta el porcentaje", () => {
+    const issues = evaluateProgramRules({
+      financiador: "proveedor",
+      contratoId: "CTR-2026-014",
+    })
+    expect(issues[0].message).toContain("el porcentaje que absorbe")
+  })
+
+  it("nombra los dos cuando faltan los dos", () => {
+    const issues = evaluateProgramRules({ financiador: "proveedor" })
+    expect(issues[0].message).toContain("el contrato y el porcentaje")
+  })
+
+  it("no dice nada con el contrato y el porcentaje completos", () => {
+    const issues = evaluateProgramRules({
+      financiador: "proveedor",
+      contratoId: "CTR-2026-014",
+      porcentajeCostoProveedor: 50,
+    })
+    expect(rulesOf(issues)).not.toContain("S06")
+  })
+
+  it("un porcentaje de 0 es una respuesta, no un campo vacío", () => {
+    const issues = evaluateProgramRules({
+      financiador: "proveedor",
+      contratoId: "CTR-2026-014",
+      porcentajeCostoProveedor: 0,
+    })
+    expect(rulesOf(issues)).not.toContain("S06")
+  })
+
+  it("si paga el retailer no hay nada que reclamar a nadie", () => {
+    const issues = evaluateProgramRules({ financiador: "retailer" })
+    expect(rulesOf(issues)).not.toContain("S06")
+  })
+
+  it("apunta al paso de Economía, que es donde se corrige", () => {
+    const issues = evaluateProgramRules({ financiador: "proveedor" })
+    expect(issues[0].step).toBe(5)
+  })
+})
+
 describe("evaluateProgramRules — S04 grupo de exclusión", () => {
   it("advierte si no es acumulable y no declara grupo de exclusión", () => {
     const issues = evaluateProgramRules({ stackable: false })

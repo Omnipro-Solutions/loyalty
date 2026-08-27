@@ -3,65 +3,33 @@ import { describe, expect, it } from "vitest"
 import { entryTriggerFor } from "./entry-triggers"
 
 describe("entryTriggerFor", () => {
-  it("evento_compra resuelve el trigger elegido por el usuario", () => {
-    expect(entryTriggerFor("evento_compra", { trigger: "order.paid" })).toBe(
+  it("el trigger del bloque `evento` ES el evento elegido del catálogo", () => {
+    expect(entryTriggerFor("evento", { evento_id: "order.paid" })).toBe(
       "order.paid"
     )
+    expect(
+      entryTriggerFor("evento", { evento_id: "member.tier_upgraded" })
+    ).toBe("member.tier_upgraded")
   })
 
-  it("evento_compra sin trigger elegido todavía da null — nunca inventa uno por defecto", () => {
-    expect(entryTriggerFor("evento_compra", {})).toBeNull()
+  it("sin evento elegido no hay trigger — no se inventa uno por defecto", () => {
+    expect(entryTriggerFor("evento", {})).toBeNull()
   })
 
-  it.each([
-    ["entra_segmento", "segment.entered"],
-    ["canje_cupon", "coupon.redeemed"],
-    ["alta_socio", "member.enrolled"],
-    ["webhook_entrante", "webhook.received"],
-    ["devolucion", "order.returned"],
-  ] as const)(
-    "%s tiene un trigger fijo (%s), sin depender de la config",
-    (tipo, expected) => {
-      expect(entryTriggerFor(tipo, {})).toBe(expected)
-      expect(entryTriggerFor(tipo, { algo: "irrelevante" })).toBe(expected)
-    }
-  )
-
-  it.each([
-    ["fecha_fija", "schedule.fixed_date"],
-    ["cumpleanos", "schedule.birthday"],
-    ["recurrente", "schedule.recurring"],
-  ] as const)(
-    "fecha_recurrente deriva el trigger de config.tipo = %s → %s",
-    (tipoValue, expected) => {
-      expect(entryTriggerFor("fecha_recurrente", { tipo: tipoValue })).toBe(
-        expected
-      )
-    }
-  )
-
-  it("fecha_recurrente sin tipo elegido todavía da null", () => {
-    expect(entryTriggerFor("fecha_recurrente", {})).toBeNull()
+  it("un `evento_id` que no está en el catálogo no cuenta como trigger", () => {
+    // Config vieja o de un catálogo anterior: el nodo se vería configurado
+    // y el motor escucharía algo que nadie emite.
+    expect(entryTriggerFor("evento", { evento_id: "evento_compra" })).toBeNull()
   })
 
-  it.each([
-    ["sube", "member.tier_upgraded"],
-    ["baja", "member.tier_downgraded"],
-    ["cualquiera", "member.tier_changed"],
-  ] as const)(
-    "cambio_nivel_entrada deriva el trigger de config.direccion = %s → %s",
-    (direccionValue, expected) => {
-      expect(
-        entryTriggerFor("cambio_nivel_entrada", { direccion: direccionValue })
-      ).toBe(expected)
-    }
-  )
-
-  it("cambio_nivel_entrada sin dirección elegida todavía da null", () => {
-    expect(entryTriggerFor("cambio_nivel_entrada", {})).toBeNull()
+  it("`webhook_entrante` tiene trigger fijo: no hay nada que elegir", () => {
+    expect(entryTriggerFor("webhook_entrante", {})).toBe("webhook.received")
+    expect(
+      entryTriggerFor("webhook_entrante", { identificador: "reactivacion" })
+    ).toBe("webhook.received")
   })
 
-  it("un bloque que no es de Entrada nunca tiene trigger", () => {
+  it("los bloques que no son de Entrada no declaran trigger", () => {
     expect(entryTriggerFor("condicion_multiple", {})).toBeNull()
     expect(entryTriggerFor("acumular_puntos", {})).toBeNull()
     expect(entryTriggerFor("fin_workflow", {})).toBeNull()

@@ -7,6 +7,7 @@ import {
   listCouponBatchesForBuilder,
   listPromotionsForBuilder,
   listTiers,
+  listWorkflowActivity,
 } from "@/features/builder/canvas/queries"
 import { JourneyEditor } from "@/features/builder/canvas/journey-editor"
 
@@ -14,13 +15,14 @@ export default async function JourneyEditorPage({
   params,
 }: PageProps<"/journeys/[id]">) {
   const { id } = await params
-  const [workflow, tiers, audiences, couponBatches, promotions] =
+  const [workflow, tiers, audiences, couponBatches, promotions, activity] =
     await Promise.all([
       getWorkflowWithGraph(id),
       listTiers(),
       listAudiences(),
       listCouponBatchesForBuilder(),
       listPromotionsForBuilder(),
+      listWorkflowActivity(id),
     ])
   if (!workflow) notFound()
 
@@ -37,6 +39,7 @@ export default async function JourneyEditorPage({
         audiences={audiences}
         couponBatches={couponBatches}
         promotions={promotions}
+        activity={activity}
       />
     </div>
   )

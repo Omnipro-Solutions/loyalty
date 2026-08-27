@@ -9,9 +9,19 @@ import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
 export const BLOCK_DRAG_MIME = "application/loyalty-builder-block"
 
 /** Paleta lateral agrupada (Figma "08.1", panel izquierdo). Arrastra un bloque hacia el canvas para crearlo. */
-export function BlockPalette() {
+export function BlockPalette({ disabled = false }: { disabled?: boolean }) {
   return (
-    <div className="flex h-full w-[220px] shrink-0 flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4">
+    <div
+      className={cn(
+        "flex h-full w-[220px] shrink-0 flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4",
+        // Una regla publicada es de solo lectura (`isLocked`). Se atenúa y
+        // se apaga el puntero en vez de esconder la paleta: el catálogo
+        // sigue siendo información útil al revisar una regla que ya corre,
+        // lo que no se puede es agregarle bloques.
+        disabled && "pointer-events-none opacity-45"
+      )}
+      aria-disabled={disabled || undefined}
+    >
       <p className="text-[11px] leading-[15px] font-semibold tracking-[0.6px] text-muted-foreground uppercase">
         Bloques
       </p>
@@ -31,7 +41,7 @@ export function BlockPalette() {
               return (
                 <div
                   key={tipo}
-                  draggable
+                  draggable={!disabled}
                   onDragStart={(e) => {
                     e.dataTransfer.setData(BLOCK_DRAG_MIME, tipo)
                     e.dataTransfer.effectAllowed = "move"

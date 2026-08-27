@@ -8,6 +8,7 @@ import type {
 
 export const PROGRAM_RULE_IDS = [
   "S04",
+  "S06",
   "S08",
   "S13",
   "S14",
@@ -31,6 +32,8 @@ export const SERVER_CONTEXT_RULE_IDS: ProgramRuleId[] = ["S13", "S14"]
 /** El paso del asistente (índice de `STEPS` en `promotion-form.tsx`) donde se corrige cada regla. */
 export const PROGRAM_RULE_STEP: Record<ProgramRuleId, number> = {
   S04: 4,
+  // Paso "Economía", donde viven el contrato y el porcentaje del proveedor.
+  S06: 5,
   S08: 2,
   S13: 4,
   S14: 4,
@@ -61,6 +64,10 @@ export type ProgramRuleInput = {
   registraUso?: boolean
   eventoGatillo?: TriggerEvent
   requisitoAlta?: EnrollmentRequirement
+  /** S06 — quién paga la promoción, y con qué respaldo documental. */
+  financiador?: string
+  contratoId?: string
+  porcentajeCostoProveedor?: number
 }
 
 /** Otra promoción activa, ya reducida a los campos que S13/S14 necesitan. */
@@ -102,6 +109,27 @@ export function evaluateProgramRules(
   const issues: ProgramRuleIssue[] = []
   const push = (rule: ProgramRuleId, message: string) =>
     issues.push({ rule, message, step: PROGRAM_RULE_STEP[rule] })
+
+  // S06 · Financiada por un tercero sin contrato o sin porcentaje.
+  //
+  // Advierte, no bloquea: los dos datos se negocian con el proveedor y a
+  // menudo llegan después de armar la promoción. Exigirlos para guardar
+  // llevaba a inventarlos, que es peor que no tenerlos — un contrato
+  // inventado se ve igual de completo que uno real.
+  if (values.financiador && values.financiador !== "retailer") {
+    const faltan = [
+      !values.contratoId ? "el contrato" : null,
+      values.porcentajeCostoProveedor === undefined
+        ? "el porcentaje que absorbe"
+        : null,
+    ].filter(Boolean)
+    if (faltan.length) {
+      push(
+        "S06",
+        `La promoción la financia un tercero pero falta ${faltan.join(" y ")} — sin eso el costo no se puede repartir ni reclamar.`
+      )
+    }
+  }
 
   if (values.stackable === false && !values.exclusionGroup) {
     push(

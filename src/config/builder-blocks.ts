@@ -1,32 +1,30 @@
 import {
   AlarmClock,
   ArrowDownToLine,
-  ArrowUpDown,
   Bell,
-  Calendar,
   Clock,
   Coins,
-  CreditCard,
   Flag,
   GitBranch,
   Gift,
   Hourglass,
   Mail,
   MessageCircle,
+  Merge,
+  Send,
   Share2,
   Shuffle,
   SlidersHorizontal,
   Split,
   Tag,
   Target,
-  Ticket,
   TicketPercent,
   TrendingUp,
-  Undo2,
   UserCheck,
-  UserPlus,
+  UserCog,
   Users,
   Webhook,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 
@@ -87,24 +85,11 @@ type BuilderBlockMeta = {
  * shown in the palette and in the canvas node.
  */
 export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
-  // Entry
-  evento_compra: {
-    group: "entry",
-    label: "Evento de compra",
-    icon: CreditCard,
-  },
-  entra_segmento: {
-    group: "entry",
-    label: "Entra al segmento",
-    icon: Users,
-  },
-  canje_cupon: { group: "entry", label: "Canje de cupón", icon: Ticket },
-  fecha_recurrente: {
-    group: "entry",
-    label: "Fecha / recurrente",
-    icon: Calendar,
-  },
-  alta_socio: { group: "entry", label: "Alta de socio", icon: UserPlus },
+  // Entry — un solo bloque, parametrizado desde `config/event-catalog.ts`
+  // (ver el comentario de `BUILDER_NODE_GROUPS` en `types/domain.ts`). La
+  // etiqueta que se ve en el canvas la pone el nodo con el evento elegido
+  // ("Compra completada"), no esta constante.
+  evento: { group: "entry", label: "Evento", icon: Zap },
   // Sin tarjeta en el catálogo de Figma (ver comentario de
   // `BUILDER_NODE_GROUPS` en `types/domain.ts`) — mismo trato visual que el
   // resto de bloques de Entrada.
@@ -113,15 +98,6 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     label: "Webhook entrante",
     icon: ArrowDownToLine,
   },
-  // Sin tarjeta en el catálogo de Figma — distinto del `cambio_nivel` de
-  // Lealtad (ese es la acción que recalcula/fuerza el nivel; este es el
-  // disparador de Entrada que arranca el journey cuando el nivel cambia).
-  cambio_nivel_entrada: {
-    group: "entry",
-    label: "Cambio de nivel",
-    icon: ArrowUpDown,
-  },
-  devolucion: { group: "entry", label: "Devolución", icon: Undo2 },
 
   // Loyalty
   acumular_puntos: {
@@ -170,6 +146,24 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     label: "Webhook saliente",
     icon: Webhook,
   },
+  // Escriben sobre el propio socio: un atributo del perfil, una etiqueta.
+  // Hasta ahora una regla solo sabía dar beneficios — no dejar constancia
+  // de nada en el cliente, que es lo que hace falta para que la regla
+  // siguiente pueda condicionar sobre ello.
+  actualizar_cliente: {
+    group: "actions",
+    label: "Actualizar cliente",
+    icon: UserCog,
+  },
+  cambiar_segmento: {
+    group: "actions",
+    label: "Cambiar segmento",
+    icon: Users,
+  },
+  // Publica un evento del mismo catálogo que consume el bloque `evento`:
+  // así una regla despierta a otra sin que ninguna sepa de la existencia
+  // de la otra.
+  emitir_evento: { group: "actions", label: "Emitir evento", icon: Send },
 
   // Logic
   condicion_multiple: {
@@ -205,6 +199,9 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     label: "Esperar aprobación",
     icon: UserCheck,
   },
+  // Reanuda después de un fan-out: espera a que lleguen todas las ramas
+  // vivas que apuntan aquí (no a todas las dibujadas) y sigue una sola vez.
+  union: { group: "logic", label: "Unión", icon: Merge },
 
   // End
   fin_workflow: { group: "end", label: "Fin del workflow", icon: Flag },

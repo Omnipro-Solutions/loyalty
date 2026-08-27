@@ -1,9 +1,16 @@
 import type { BuilderNodeType } from "@/types/domain"
 
-import { inferType, VARIABLES_BY_TYPE } from "./node-variables"
+import { inferType, variablesForNode } from "./node-variables"
 
-export function DataTab({ tipo }: { tipo: BuilderNodeType }) {
-  const variables = VARIABLES_BY_TYPE[tipo]
+export function DataTab({
+  tipo,
+  config = {},
+}: {
+  tipo: BuilderNodeType
+  /** Necesaria para `evento`: sus variables son el payload del evento elegido, no una lista fija por tipo. */
+  config?: Record<string, unknown>
+}) {
+  const variables = variablesForNode(tipo, config)
 
   if (!variables?.length) {
     return (

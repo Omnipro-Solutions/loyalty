@@ -1,3 +1,4 @@
+import { statusFromDb } from "@/lib/publication-status"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import type { SegmentStatus, TierName } from "@/types/domain"
@@ -54,23 +55,32 @@ async function getHistoryBySegment(): Promise<Map<string, number[]>> {
 type EnterSegmentConfig = { audiencia_id?: string }
 
 /**
- * Cuenta real de journeys publicados que usan cada audiencia como entrada
- * (bloque "Entra al segmento" del Loyalty Builder, `workflow_nodes.config
- * ->> 'audiencia_id'`). La mayoría de audiencias no tiene ninguno todavía —
- * el seed solo conecta un par de journeys de ejemplo.
+ * Cuenta real de reglas activas que tocan cada audiencia
+ * (`workflow_nodes.config ->> 'audiencia_id'`). La mayoría de audiencias no
+ * tiene ninguna todavía — el seed solo conecta un par de reglas de ejemplo.
+ *
+ * El filtro va por la CONFIGURACIÓN y no por el tipo de bloque a propósito.
+ * Los tipos han cambiado —`entra_segmento` se colapsó en `evento`, y se
+ * sumó `cambiar_segmento`—, y contra una base sin migrar los nodos nuevos
+ * viajan bajo un tipo portador (`schema-compat.ts`). Cualquier lista de
+ * tipos quedaría incompleta en alguna de esas variantes; `audiencia_id` en
+ * cambio significa lo mismo en todas: este nodo habla de esta audiencia.
  */
 async function getLinkedJourneysBySegment(): Promise<Map<string, Set<string>>> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("workflow_nodes")
     .select("workflow_id, config, workflows(estado)")
-    .eq("tipo", "entra_segmento")
+    .not("config->>audiencia_id", "is", null)
   if (error) throw error
 
   const map = new Map<string, Set<string>>()
   for (const node of data ?? []) {
     const workflow = node.workflows as { estado: string } | null
-    if (workflow?.estado !== "publicado") continue
+    // `statusFromDb`: la columna puede seguir con el vocabulario viejo
+    // (`publicado`) si `20260827140000_builder_ciclo_vida` no está aplicada
+    // — comparar directo daría cero journeys vinculados en toda la pantalla.
+    if (statusFromDb(workflow?.estado ?? "") !== "activa") continue
     const audienceId = (node.config as EnterSegmentConfig | null)?.audiencia_id
     if (!audienceId) continue
     const set = map.get(audienceId) ?? new Set<string>()
@@ -175,8 +185,11 @@ export async function getAudiencesKpis(): Promise<AudiencesKpis> {
     supabase.from("segment_size_history").select("fecha, tamano"),
     supabase
       .from("workflows")
+      // Los dos valores porque el filtro va contra la columna: si la base
+      // todavía no migró dice 'publicado', y si ya migró dice 'activa'.
+      // Pedir los dos acierta en ambos casos sin consultar el esquema.
       .select("id", { count: "exact", head: true })
-      .eq("estado", "publicado"),
+      .in("estado", ["activa", "publicado"]),
   ])
   if (segmentsError) throw segmentsError
   if (historyError) throw historyError
@@ -373,7 +386,7 @@ export async function listAudienceMembers(
 
 export type LinkedJourney = { id: string; nombre: string; estado: string }
 
-/** Journeys publicados que entran a través de esta audiencia (mismo cómputo que la columna JOURNEYS del listado, aquí con nombre para el widget de detalle). */
+/** Reglas activas que tocan esta audiencia (mismo cómputo que la columna JOURNEYS del listado, aquí con nombre para el widget de detalle). */
 export async function listLinkedJourneys(
   segmentId: string
 ): Promise<LinkedJourney[]> {
@@ -381,7 +394,7 @@ export async function listLinkedJourneys(
   const { data, error } = await supabase
     .from("workflow_nodes")
     .select("config, workflows(id, nombre, estado)")
-    .eq("tipo", "entra_segmento")
+    .not("config->>audiencia_id", "is", null)
   if (error) throw error
 
   const seen = new Set<string>()
@@ -392,7 +405,7 @@ export async function listLinkedJourneys(
       nombre: string
       estado: string
     } | null
-    if (!workflow || workflow.estado !== "publicado") continue
+    if (!workflow || statusFromDb(workflow.estado) !== "activa") continue
     const audienceId = (node.config as EnterSegmentConfig | null)?.audiencia_id
     if (audienceId !== segmentId || seen.has(workflow.id)) continue
     seen.add(workflow.id)

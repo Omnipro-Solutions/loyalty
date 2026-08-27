@@ -522,14 +522,25 @@ export type StackingMode = (typeof STACKING_MODES)[number]
 //
 // `programada` is NOT part of this set: it is derived by crossing the status
 // with vigente_desde/vigente_hasta instead of being stored separately.
-export const PROMOTION_PUBLICATION_STATUSES = [
+/**
+ * Ciclo de vida de todo lo que se publica en el portal: promociones y
+ * reglas del builder. Vive una sola vez porque las dos lo comparten —
+ * mismos estados, mismas transiciones (ver `lib/publication-status.ts`) y
+ * el mismo motivo obligatorio en cada cambio.
+ *
+ * `programada` no es un estado guardado: se deriva de cruzar `activa` con
+ * la vigencia.
+ */
+export const PUBLICATION_STATUSES = [
   "borrador",
   "activa",
   "inactiva",
   "finalizada",
 ] as const
-export type PromotionPublicationStatus =
-  (typeof PROMOTION_PUBLICATION_STATUSES)[number]
+export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number]
+
+export const PROMOTION_PUBLICATION_STATUSES = PUBLICATION_STATUSES
+export type PromotionPublicationStatus = PublicationStatus
 
 export const CHALLENGE_STATUSES = [
   "en_progreso",
@@ -544,13 +555,62 @@ export type ChallengeStatus = (typeof CHALLENGE_STATUSES)[number]
 export const SEGMENT_STATUSES = ["activa", "pausada"] as const
 export type SegmentStatus = (typeof SEGMENT_STATUSES)[number]
 
-export const WORKFLOW_STATUSES = [
-  "borrador",
-  "publicado",
-  "pausado",
-  "archivado",
+/**
+ * Ciclo de vida de una regla del builder. Adopta el vocabulario del módulo
+ * de promociones (`PROMOTION_PUBLICATION_STATUSES`) en vez del que tenía
+ * antes (`publicado`/`pausado`/`archivado`): las dos cosas se publican, se
+ * suspenden y se cierran igual, y tener dos juegos de palabras para el
+ * mismo ciclo obligaba a traducir mentalmente entre pantallas.
+ *
+ * `programada` NO está aquí a propósito: se deriva de cruzar `activa` con
+ * la vigencia (ver `publicationStatus` en `lib/publication-status.ts`), así
+ * que no puede quedar desincronizada de la columna.
+ */
+export const WORKFLOW_STATUSES = PUBLICATION_STATUSES
+export type WorkflowStatus = PublicationStatus
+
+/**
+ * Cómo se dispara la regla una vez ocurre su evento.
+ *
+ * · `al_ocurrir` — cada vez que llega el evento.
+ * · `al_cruzar_umbral` — solo cuando un valor acumulado cruza un múltiplo
+ *   (ej. cada 1.000 puntos de saldo). Un evento por umbral puede NO
+ *   emitirse: que no se dispare es distinto de dispararse y no cumplir las
+ *   condiciones, y la bitácora los guarda distinto.
+ * · `programado` — a una hora, no ante un evento.
+ */
+export const WORKFLOW_TRIGGER_MODES = [
+  "al_ocurrir",
+  "al_cruzar_umbral",
+  "programado",
 ] as const
-export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number]
+export type WorkflowTriggerMode = (typeof WORKFLOW_TRIGGER_MODES)[number]
+
+/**
+ * Qué hacer cuando el umbral se vuelve a cruzar. `cada_multiplo` emite en
+ * cada múltiplo nuevo; `una_vez` solo la primera vez para ese socio.
+ */
+export const THRESHOLD_REPEAT_MODES = ["cada_multiplo", "una_vez"] as const
+export type ThresholdRepeatMode = (typeof THRESHOLD_REPEAT_MODES)[number]
+
+/**
+ * La diferencia entre asignar un cupón al cruzar el umbral y asignarlo en
+ * cada evaluación mientras el valor siga por encima.
+ *
+ * · `borde` — se emite una vez por cruce.
+ * · `nivel` — se emite en cada evaluación mientras se mantenga por encima.
+ */
+export const THRESHOLD_DETECTIONS = ["borde", "nivel"] as const
+export type ThresholdDetection = (typeof THRESHOLD_DETECTIONS)[number]
+
+/**
+ * Qué pasa cuando dos reglas escuchan el mismo evento. `exclusiva` gana
+ * solo la de mayor prioridad dentro de su grupo; `acumulable` se aplica
+ * junto con las demás. Espejo de `si_colisiona` de `aplicar_promocion`,
+ * pero a nivel de regla completa.
+ */
+export const WORKFLOW_EXCLUSIVITIES = ["exclusiva", "acumulable"] as const
+export type WorkflowExclusivity = (typeof WORKFLOW_EXCLUSIVITIES)[number]
 
 export const WORKFLOW_RUN_TYPES = ["simulacion", "publicacion"] as const
 export type WorkflowRunType = (typeof WORKFLOW_RUN_TYPES)[number]
@@ -563,31 +623,34 @@ export const WORKFLOW_RUN_STATUSES = [
 export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 
 /**
- * Catalog of 19 Loyalty Builder block types from the Figma "08.4 · Loyalty
- * builder · catálogo de bloques", plus several added later without a Figma
- * card — `webhook_entrante`/`webhook_saliente` (integración con sistemas
- * externos vía HTTP), `ajustar_puntos`/`cambio_nivel_entrada`/`devolucion`/
- * `espera_hasta_evento`/`ventana_horaria`/`esperar_aprobacion` (cobertura de
- * más flujos, ver análisis grounded en tablas reales del repo) — mismo
- * precedente que `email`/`push`/`sms_whatsapp` (ver comentario en
+ * Catálogo de tipos de bloque del Loyalty Builder, en 5 grupos. Parte viene
+ * del Figma "08.4 · Loyalty builder · catálogo de bloques"; el resto se
+ * añadió después sin tarjeta de Figma —`webhook_entrante`/`webhook_saliente`
+ * (integración HTTP), `ajustar_puntos`/`espera_hasta_evento`/
+ * `ventana_horaria`/`esperar_aprobacion`, y los bloques nuevos
+ * `actualizar_cliente`/`cambiar_segmento`/`emitir_evento`/`union`— con el
+ * mismo precedente que `email`/`push`/`sms_whatsapp` (ver comentario en
  * `config/integration-flows.ts`: sin equivalente en el Figma, resuelto con
- * el lenguaje de formulario existente del inspector). 5 grupos.
+ * el lenguaje de formulario existente del inspector).
+ *
  * Presentation metadata (label, icon, color) lives in
  * src/config/builder-blocks.ts; here only the closed set of valid values
  * for `workflow_nodes.tipo` (mirrored in the `check` constraint de
  * `supabase/migrations/`).
  */
 export const BUILDER_NODE_GROUPS = {
-  entry: [
-    "evento_compra",
-    "entra_segmento",
-    "canje_cupon",
-    "fecha_recurrente",
-    "alta_socio",
-    "webhook_entrante",
-    "cambio_nivel_entrada",
-    "devolucion",
-  ],
+  // Un solo bloque de evento, parametrizado desde `config/event-catalog.ts`
+  // (dominio → evento → trigger). Antes había 8 tipos de Entrada —
+  // `evento_compra`, `entra_segmento`, `canje_cupon`, `fecha_recurrente`,
+  // `alta_socio`, `cambio_nivel_entrada`, `devolucion`— que solo se
+  // diferenciaban en qué trigger declaraban: cada evento nuevo del catálogo
+  // obligaba a un tipo de bloque nuevo, con su `FieldSpec`, su icono y su
+  // entrada en el `check` de la tabla. Ahora el evento es DATO, no tipo.
+  //
+  // `webhook_entrante` se queda aparte porque no es un evento del catálogo
+  // de negocio: es una llamada HTTP entrante, con su propia configuración
+  // (método esperado, secreto) y sin dominio ni payload declarado.
+  entry: ["evento", "webhook_entrante"],
   loyalty: [
     "acumular_puntos",
     "canjear_puntos",
@@ -603,6 +666,15 @@ export const BUILDER_NODE_GROUPS = {
     "sms_whatsapp",
     "aplicar_promocion",
     "webhook_saliente",
+    // Acciones sobre el propio socio, que hasta ahora no se podían hacer
+    // desde una regla: sin ellas el builder solo sabía dar beneficios, no
+    // dejar constancia de nada en el cliente.
+    "actualizar_cliente",
+    "cambiar_segmento",
+    // Publica un evento al catálogo — lo que permite que una regla despierte
+    // a otra sin acoplarlas. El evento emitido es del mismo catálogo que
+    // consume el bloque `evento`.
+    "emitir_evento",
   ],
   logic: [
     "condicion_multiple",
@@ -612,6 +684,10 @@ export const BUILDER_NODE_GROUPS = {
     "espera_hasta_evento",
     "ventana_horaria",
     "esperar_aprobacion",
+    // Reanuda después de un fan-out. Sin él, abrir varias ramas en paralelo
+    // no tenía forma de volver a juntarse y el flujo había que escribirlo
+    // como cadena secuencial.
+    "union",
   ],
   end: ["fin_workflow"],
 } as const
@@ -882,7 +958,15 @@ export type PromotionEventType = (typeof PROMOTION_EVENT_TYPES)[number]
  * bitácora ("quién, cuándo y por qué"). `otro` exige además una nota
  * libre en `nota_motivo`.
  */
-export const PROMOTION_STATUS_CHANGE_REASONS = [
+/**
+ * Por qué cambió de estado. Es lo que hace auditable la bitácora —quién,
+ * cuándo y por qué—, así que no hay cambio de estado sin uno. `otro` exige
+ * nota (ver `STATUS_CHANGE_REASONS_REQUIRING_NOTE`).
+ *
+ * Compartido por promociones y por las reglas del builder, misma razón que
+ * `PUBLICATION_STATUSES`.
+ */
+export const STATUS_CHANGE_REASONS = [
   "decision_comercial",
   "presupuesto",
   "error_configuracion",
@@ -890,8 +974,14 @@ export const PROMOTION_STATUS_CHANGE_REASONS = [
   "fin_de_campana",
   "otro",
 ] as const
-export type PromotionStatusChangeReason =
-  (typeof PROMOTION_STATUS_CHANGE_REASONS)[number]
+export type StatusChangeReason = (typeof STATUS_CHANGE_REASONS)[number]
+
+/** El único motivo que no se explica solo. */
+export const STATUS_CHANGE_REASONS_REQUIRING_NOTE: readonly StatusChangeReason[] =
+  ["otro"]
+
+export const PROMOTION_STATUS_CHANGE_REASONS = STATUS_CHANGE_REASONS
+export type PromotionStatusChangeReason = StatusChangeReason
 
 export const PROMOTION_EVENT_ACTOR_TYPES = [
   "usuario",

@@ -2764,6 +2764,54 @@ export type Database = {
           },
         ]
       }
+      workflow_status_events: {
+        Row: {
+          actor_id: string | null
+          codigo_motivo: string
+          estado_anterior: string
+          estado_nuevo: string
+          id: string
+          nota: string | null
+          ocurrido_en: string
+          workflow_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          codigo_motivo: string
+          estado_anterior: string
+          estado_nuevo: string
+          id?: string
+          nota?: string | null
+          ocurrido_en?: string
+          workflow_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          codigo_motivo?: string
+          estado_anterior?: string
+          estado_nuevo?: string
+          id?: string
+          nota?: string | null
+          ocurrido_en?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_status_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_status_events_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_versions: {
         Row: {
           autor_id: string | null
@@ -2817,10 +2865,15 @@ export type Database = {
           creado_por: string | null
           descripcion: string | null
           estado: string
+          exclusividad: string
+          grupo_exclusividad: string | null
           id: string
           nombre: string
           org_id: string
+          prioridad: number
           version_actual: number
+          vigente_desde: string
+          vigente_hasta: string | null
         }
         Insert: {
           actualizado_en?: string
@@ -2829,10 +2882,15 @@ export type Database = {
           creado_por?: string | null
           descripcion?: string | null
           estado?: string
+          exclusividad?: string
+          grupo_exclusividad?: string | null
           id?: string
           nombre: string
           org_id: string
+          prioridad?: number
           version_actual?: number
+          vigente_desde?: string
+          vigente_hasta?: string | null
         }
         Update: {
           actualizado_en?: string
@@ -2841,10 +2899,15 @@ export type Database = {
           creado_por?: string | null
           descripcion?: string | null
           estado?: string
+          exclusividad?: string
+          grupo_exclusividad?: string | null
           id?: string
           nombre?: string
           org_id?: string
+          prioridad?: number
           version_actual?: number
+          vigente_desde?: string
+          vigente_hasta?: string | null
         }
         Relationships: [
           {

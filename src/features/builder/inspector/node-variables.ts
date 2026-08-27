@@ -1,3 +1,4 @@
+import { findEvent } from "@/config/event-catalog"
 import type { BuilderNodeType } from "@/types/domain"
 
 /**
@@ -8,9 +9,13 @@ import type { BuilderNodeType } from "@/types/domain"
  * `features/builder/engine/simulate.ts`) — pero qué bloque ANTERIOR en el
  * grafo produjo cada variable (lo que el mockup de Figma "Inspector · Email
  * de reactivación · Datos" muestra como "desde Acumular puntos") sí se
- * resuelve ahora — ver `resolveAvailableVariables` más abajo. `canje_cupon`
- * y `alta_socio` no tienen tarjeta en el catálogo de Figma; se les dejó una
- * lista mínima razonable.
+ * resuelve ahora — ver `resolveAvailableVariables` más abajo.
+ *
+ * El bloque `evento` NO está en esta tabla: sus variables son el `payload`
+ * del evento elegido del catálogo (`config/event-catalog.ts`), así que
+ * dependen de la config del nodo y no solo de su tipo. Ver
+ * `variablesForNode`, que es la entrada correcta para preguntar «qué expone
+ * este nodo».
  *
  * Vive fuera de `data-tab.tsx` porque el mapeo de parámetros de
  * `integration-message-form.tsx` (bloques `email`/`push`/`sms_whatsapp`) y
@@ -35,29 +40,9 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   // (ver `20260826260000_tienda_grupos.sql`) — mismo trato que `compra.tienda`,
   // sin un `Field` de opciones cerradas en este editor (cae a "texto" en
   // `inferType`, igual que `compra.tienda`).
-  evento_compra: [
-    "compra.monto",
-    "compra.tienda",
-    "compra.tienda_grupo",
-    "compra.canal",
-    "compra.fecha",
-    "compra.dia_semana",
-    "compra.items",
-    "compra.items[].sku",
-    "compra.items[].marca",
-    "compra.items[].categoria",
-    "compra.items[].cantidad",
-    "compra.items[].precio_unitario",
-    // RX/OTC (docs/promociones.md §8) — `productos.requiere_receta`,
-    // mismo criterio que el resto de `compra.items[].*`: catálogo real,
-    // sin motor de evaluación en vivo todavía.
-    "compra.items[].requiere_receta",
-    "cliente.id",
-  ],
-  entra_segmento: ["audiencia.id", "cliente.segmento", "cliente.nivel"],
-  canje_cupon: ["cupon.codigo"],
-  fecha_recurrente: ["ejecucion.fecha", "cliente.cumpleanos"],
-  alta_socio: ["socio.id", "socio.tier"],
+  // `evento` NO está aquí: sus variables son el `payload` del evento
+  // elegido, así que dependen de la config del nodo, no solo de su tipo —
+  // ver `variablesForNode`.
   acumular_puntos: ["puntos.otorgados", "puntos.saldo", "puntos.vencimiento"],
   canjear_puntos: ["canje.id", "puntos.descontados", "puntos.saldo"],
   cambio_nivel: ["nivel.anterior", "nivel.actual", "nivel.vigencia"],
@@ -74,18 +59,75 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   esperar: ["espera.inicio", "espera.fin"],
   fin_workflow: ["workflow.resultado", "workflow.duracion"],
   // Sin tarjeta en el catálogo de Figma — mismo trato mínimo razonable que
-  // `canje_cupon`/`alta_socio` arriba.
+  // el resto de bloques sin diseño.
   webhook_entrante: ["webhook.payload", "webhook.recibido_en"],
   webhook_saliente: ["webhook.status_code", "webhook.respuesta"],
   // Sin tarjeta en el catálogo de Figma — mismo trato mínimo razonable,
   // grounded en las tablas reales que respaldan cada bloque (ver
   // `field-specs.ts` para el detalle de cada uno).
   ajustar_puntos: ["puntos.ajustados", "puntos.saldo"],
-  cambio_nivel_entrada: ["nivel.anterior", "nivel.actual"],
-  devolucion: ["devolucion.monto", "devolucion.pedido_id"],
-  espera_hasta_evento: ["espera.inicio", "espera.fin"],
+  espera_hasta_evento: ["espera.inicio", "espera.fin", "espera.evento_id"],
   ventana_horaria: ["espera.inicio", "espera.fin"],
   esperar_aprobacion: ["aprobacion.decidido_por", "aprobacion.nota"],
+  // Bloques nuevos — mismo trato mínimo razonable que el resto sin tarjeta
+  // de Figma: lo que la acción deja escrito y que el flujo siguiente puede
+  // querer leer.
+  actualizar_cliente: [
+    "cliente.atributo_actualizado",
+    "cliente.valor_anterior",
+  ],
+  cambiar_segmento: ["segmento.anterior", "segmento.actual"],
+  emitir_evento: ["evento.id", "evento.publicado_en"],
+  union: ["union.ramas_completadas"],
+}
+
+/**
+ * Variables que el Loyalty Engine calcula sobre el histórico del socio y
+ * expone como cualquier otra: agregaciones (`COUNT`, `SUM` sobre una
+ * ventana) que el builder NO aprende a hacer.
+ *
+ * Por qué importa la frontera: casos como «5 compras en 30 días» pedían un
+ * evaluador con operadores de agregación dentro del constructor de
+ * condiciones — un motor de consultas embebido en la UI. Con estas
+ * variables el caso se resuelve con el operador escalar que ya existe
+ * (`cliente.compras_30d >= 5`), y la ventana y el agregado son
+ * responsabilidad de quien tiene los datos.
+ *
+ * Están disponibles en CUALQUIER nodo: no las produce un bloque anterior
+ * del grafo, llegan del socio.
+ */
+export const CALCULATED_VARIABLES = [
+  "cliente.compras_30d",
+  "cliente.gasto_90d",
+  "cliente.dias_sin_comprar",
+  "cliente.ticket_promedio_3m",
+  "cliente.racha_continuidad",
+  "cliente.saldo_puntos",
+  "cliente.puntos_acumulados",
+  "cliente.gasto_acumulado",
+] as const
+
+/**
+ * Qué expone un nodo concreto. Para casi todos es su lista por tipo; para
+ * `evento` es el `payload` del evento elegido en el catálogo, porque un
+ * `order.completed` y un `member.enrolled` son el mismo TIPO de bloque y
+ * exponen cosas distintas.
+ *
+ * Sin evento elegido devuelve vacío a propósito: ofrecer las variables de
+ * un evento que todavía no se eligió sería prometer datos que el motor no
+ * va a inyectar.
+ */
+export function variablesForNode(
+  tipo: BuilderNodeType,
+  config: Record<string, unknown> = {}
+): string[] {
+  if (tipo === "evento") {
+    const event = findEvent(
+      typeof config.evento_id === "string" ? config.evento_id : null
+    )
+    return event ? event.payload : []
+  }
+  return VARIABLES_BY_TYPE[tipo] ?? []
 }
 
 /**
@@ -97,14 +139,19 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
 export function inferType(variable: string): string {
   const suffix = variable.split(".").pop() ?? ""
   if (
-    /^(monto|saldo|valor|progreso|meta|descontados|otorgados|cantidad|precio_unitario)$/.test(
+    /^(monto|saldo|valor|progreso|meta|descontados|otorgados|cantidad|precio_unitario|hito|compras_30d|gasto_90d|dias_sin_comprar|ticket_promedio_3m|racha_continuidad|puntos_acumulados|gasto_acumulado|ramas_completadas|vence_en_dias|por_vencer|descuento)$/.test(
       suffix
     )
   )
     return "número"
   if (/^(fecha|vence|vigencia|inicio|fin|duracion|cumpleanos)$/.test(suffix))
     return "fecha"
-  if (/^(abierto|evaluadas|requiere_receta)$/.test(suffix)) return "booleano"
+  if (
+    /^(abierto|evaluadas|requiere_receta|tiene_hijos|tiene_mascotas)$/.test(
+      suffix
+    )
+  )
+    return "booleano"
   if (
     /^(estado|resultado|tier|nivel|actual|anterior|segmento|grupo|variante|nombre)$/.test(
       suffix
@@ -118,6 +165,8 @@ export type GraphNodeRef = {
   id: string
   tipo: BuilderNodeType
   etiqueta: string
+  /** Necesaria para `evento`, cuyo payload depende del evento elegido — ver `variablesForNode`. */
+  config?: Record<string, unknown>
 }
 
 export type GraphEdgeRef = {
@@ -167,7 +216,7 @@ export function resolveAvailableVariables(
   for (const id of ancestors) {
     const node = byId.get(id)
     if (!node) continue
-    for (const name of VARIABLES_BY_TYPE[node.tipo] ?? []) {
+    for (const name of variablesForNode(node.tipo, node.config)) {
       variables.push({ name, sourceNodeId: id, sourceLabel: node.etiqueta })
     }
   }

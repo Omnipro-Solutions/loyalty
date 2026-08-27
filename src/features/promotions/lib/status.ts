@@ -1,24 +1,25 @@
+import {
+  ALLOWED_STATUS_TRANSITIONS,
+  canTransitionStatus,
+  isLocked,
+  publicationStatus,
+  type DisplayStatus,
+  type ValidityStatus,
+} from "@/lib/publication-status"
 import type { PromotionPublicationStatus } from "@/types/domain"
 
-/** Único estado que no se guarda: se deriva de 'activa' + las fechas de vigencia. */
-export type PromotionValidityStatus = "programada"
-
-/** Lo que se muestra en el listado y en la tarjeta de estado. */
-export type PromotionStatus =
-  PromotionPublicationStatus | PromotionValidityStatus
-
-/** Día calendario en UTC como entero comparable — evita que la hora del día o la zona horaria muevan el límite. */
-function dateOnly(value: string | Date): number {
-  const d = typeof value === "string" ? new Date(value) : value
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-}
-
 /**
- * `borrador`, `inactiva` y `finalizada` son decisiones explícitas del
- * operador y se muestran tal cual. Solo `activa` se cruza con las fechas
- * — así `programada`/`finalizada` por vigencia no pueden quedar
- * desincronizadas de la columna.
+ * El ciclo de vida de una promoción, que desde el rediseño del builder es
+ * el MISMO que el de una regla: se movió a `lib/publication-status.ts` para
+ * que las dos features lo compartan sin importarse entre sí (CLAUDE.md §2).
+ * Aquí solo queda la capa de nombres de esta feature —`estado_publicacion`
+ * en vez de `estado`— para no tocar los llamadores.
  */
+
+export type { ValidityStatus as PromotionValidityStatus }
+export type PromotionStatus = DisplayStatus
+export { ALLOWED_STATUS_TRANSITIONS, canTransitionStatus }
+
 export function promotionStatus(
   promotion: {
     estado_publicacion: string
@@ -27,54 +28,26 @@ export function promotionStatus(
   },
   now: Date = new Date()
 ): PromotionStatus {
-  if (promotion.estado_publicacion !== "activa") {
-    return promotion.estado_publicacion as PromotionPublicationStatus
-  }
-  const today = dateOnly(now)
-  const start = dateOnly(promotion.vigente_desde)
-  const end = promotion.vigente_hasta ? dateOnly(promotion.vigente_hasta) : null
-  if (start > today) return "programada"
-  if (end !== null && end < today) return "finalizada"
-  return "activa"
+  return publicationStatus(
+    {
+      estado: promotion.estado_publicacion,
+      vigente_desde: promotion.vigente_desde,
+      vigente_hasta: promotion.vigente_hasta,
+    },
+    now
+  )
 }
 
-/**
- * Una promoción solo es editable mientras es un borrador. En cuanto se
- * publica (cualquier otro estado) sus campos pasan a ser de solo lectura y
- * lo único que se puede cambiar es el propio estado — de ahí que ningún
- * estado publicado pueda volver a `borrador` (ver
- * `ALLOWED_STATUS_TRANSITIONS`).
- */
 export function isPromotionLocked(promotion: {
   estado_publicacion: string
 }): boolean {
-  return promotion.estado_publicacion !== "borrador"
+  return isLocked({ estado: promotion.estado_publicacion })
 }
 
-/**
- * Transiciones permitidas al cambiar el estado de una promoción ya creada.
- * Regla única: entre estados publicados se puede ir a cualquiera, pero
- * ninguno vuelve a `borrador` — volver a borrador reabriría la edición de
- * una promoción que ya estuvo publicada.
- *
- * Al CREAR no aplica: ahí los cuatro estados son elegibles como estado
- * inicial (campo "Estado" del paso Resumen).
- */
-export const ALLOWED_STATUS_TRANSITIONS: Record<
-  PromotionPublicationStatus,
-  readonly PromotionPublicationStatus[]
-> = {
-  borrador: ["activa", "inactiva", "finalizada"],
-  activa: ["inactiva", "finalizada"],
-  inactiva: ["activa", "finalizada"],
-  finalizada: ["activa", "inactiva"],
-}
-
-export function canTransitionStatus(
-  from: PromotionPublicationStatus,
-  to: PromotionPublicationStatus
-): boolean {
-  return from === to || ALLOWED_STATUS_TRANSITIONS[from].includes(to)
+/** Día calendario en UTC como entero comparable — evita que la hora del día o la zona horaria muevan el límite. */
+function dateOnly(value: string | Date): number {
+  const d = typeof value === "string" ? new Date(value) : value
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
 }
 
 /** "Vence hoy" / "Vence en N días" / "Permanente" (06.1, tarjetas superiores). */
@@ -91,3 +64,6 @@ export function validitySummary(
   if (days === 1) return "Vence en 1 día"
   return `Vence en ${days} días`
 }
+
+/** Reexport del tipo de la columna, para que los llamadores no dependan del alias genérico. */
+export type { PromotionPublicationStatus }

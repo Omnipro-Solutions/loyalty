@@ -19,7 +19,13 @@ import { useAction } from "next-safe-action/hooks"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Message } from "@/components/form/message"
+import { formatDate } from "@/lib/format"
 import { BUILDER_BLOCKS } from "@/config/builder-blocks"
+import {
+  isLocked as isPublicationLocked,
+  publicationStatus,
+} from "@/lib/publication-status"
+import { ruleReading } from "@/features/builder/engine/rule-reading"
 import {
   validateGraph,
   type ValidationIssue,
@@ -36,17 +42,24 @@ import {
 } from "./builder-node"
 import { EditorBar } from "./editor-bar"
 import {
+  changeWorkflowStatusAction,
   publishWorkflowAction,
   simulateWorkflowAction,
 } from "./publish-actions"
+import {
+  StatusChangeDialog,
+  type StatusChangePayload,
+} from "./status-change-dialog"
 import { InspectorPanel } from "./inspector-panel"
 import type {
   AudienceSummary,
   CouponBatchSummary,
   PromotionSummary,
   TierSummary,
+  WorkflowActivityEntry,
   WorkflowWithGraph,
 } from "./queries"
+import { RulePanel } from "./rule-panel"
 import { VersionHistoryDialog } from "./version-history-dialog"
 
 const NODE_TYPES = { builderNode: BuilderNode }
@@ -92,12 +105,14 @@ function CanvasArea({
   audiences,
   couponBatches,
   promotions,
+  activity,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
   promotions: PromotionSummary[]
+  activity: WorkflowActivityEntry[]
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BuilderNodeData>>(
     workflow.nodes.map(toFlowNode)
@@ -108,16 +123,21 @@ function CanvasArea({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState(workflow.actualizado_en)
   const [status, setStatus] = useState(workflow.estado)
+  const [validFrom, setValidFrom] = useState(workflow.vigente_desde)
+  const [validTo, setValidTo] = useState(workflow.vigente_hasta)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [statusDialog, setStatusDialog] = useState<
+    "publicar" | "cambiar" | null
+  >(null)
   const [publishMessage, setPublishMessage] = useState<string>()
   // Publicar debe quedar inhabilitado apenas se publica con éxito, hasta
   // que el grafo cambie de verdad — si no, un doble clic (o clic accidental
   // otra vez) crea una versión y una fila de `workflow_runs` idénticas a la
-  // que ya existía. Arranca en `false` si ya estaba publicado al cargar
-  // (nada nuevo que publicar todavía), o en `true` para borrador/pausado/
-  // archivado (siempre hay algo que publicar la primera vez).
+  // que ya existía. Arranca en `true` solo si sigue en borrador — una vez
+  // publicada la regla queda bloqueada para editar, así que no hay cambios
+  // de grafo nuevos que publicar por definición.
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
-    workflow.estado !== "publicado"
+    workflow.estado === "borrador"
   )
   const { screenToFlowPosition } = useReactFlow()
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -132,6 +152,9 @@ function CanvasArea({
   const simulate = useAction(simulateWorkflowAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) return
+      // El resultado se lee sobre el canvas: cada tarjeta recibe su conteo
+      // de entrada y el reparto por puerto. Ver `RulePanel` para por qué no
+      // hay además una lista aparte.
       const byId = new Map(data.steps.map((p) => [p.nodeId, p]))
       setNodes((nds) =>
         nds.map((n) => {
@@ -153,13 +176,31 @@ function CanvasArea({
     },
   })
   const publish = useAction(publishWorkflowAction, {
-    onSuccess: ({ data }) => {
+    onSuccess: ({ data, input }) => {
       if (data?.ok) {
-        setStatus("publicado")
+        // `input` es el parsedInput del schema, que tiene defaults para
+        // estos tres — TS los ve opcionales igual, así que se cae al valor
+        // que ya estaba en pantalla en vez de escribir `undefined`.
+        setStatus(input.estado ?? "activa")
+        setValidFrom(input.vigente_desde)
+        setValidTo(input.vigente_hasta ?? null)
         setPublishMessage(undefined)
         setHasUnpublishedChanges(false)
+        setStatusDialog(null)
       } else {
         setPublishMessage(data?.message ?? "No se pudo publicar.")
+      }
+    },
+  })
+
+  const changeStatus = useAction(changeWorkflowStatusAction, {
+    onSuccess: ({ data }) => {
+      if (data?.ok) {
+        setStatus(data.estado)
+        setPublishMessage(undefined)
+        setStatusDialog(null)
+      } else {
+        setPublishMessage(data?.message ?? "No se pudo cambiar el estado.")
       }
     },
   })
@@ -297,6 +338,10 @@ function CanvasArea({
         id: n.id,
         tipo: n.data.tipo,
         etiqueta: n.data.etiqueta,
+        // `evento` expone el payload del evento ELEGIDO, no una lista fija
+        // por tipo — sin la config, los bloques siguientes no verían
+        // ninguna variable de la entrada (ver `variablesForNode`).
+        config: n.data.config ?? {},
       })),
     [nodes]
   )
@@ -367,6 +412,68 @@ function CanvasArea({
   )
   const blockingErrors = validation.filter((v) => v.level === "error")
 
+  const readingClauses = useMemo(
+    () =>
+      ruleReading(
+        nodes.map((n) => ({
+          id: n.id,
+          tipo: n.data.tipo,
+          etiqueta: n.data.etiqueta,
+          config: n.data.config ?? {},
+        })),
+        edges.map((e) => ({
+          source_node_id: e.source,
+          source_port: e.sourceHandle ?? "out",
+          target_node_id: e.target,
+        })),
+        {
+          prioridad: workflow.prioridad,
+          exclusividad: workflow.exclusividad,
+          grupoExclusividad: workflow.grupo_exclusividad,
+          // Formateadas aquí y no dentro de `ruleReading`: ese módulo es
+          // puro y no debe cargar el locale. Sin esto la frase decía
+          // "vigente del 2027-01-01", que es una fecha para una máquina.
+          vigenteDesde: formatDate(validFrom),
+          vigenteHasta: validTo ? formatDate(validTo) : null,
+          estado: status,
+        },
+        // La emisión y la promoción viven en otras features; la lectura solo
+        // conoce sus ids, y un uuid crudo en medio de una frase es peor que
+        // no decir el nombre (mismo criterio que `NodeLogicInput.refs`).
+        {
+          couponBatches: Object.fromEntries(
+            couponBatches.map((b) => [b.id, `${b.reference} · ${b.name}`])
+          ),
+          promotions: Object.fromEntries(promotions.map((p) => [p.id, p.name])),
+          audiences: Object.fromEntries(audiences.map((a) => [a.id, a.name])),
+        }
+      ),
+    [
+      nodes,
+      edges,
+      workflow.prioridad,
+      workflow.exclusividad,
+      workflow.grupo_exclusividad,
+      validFrom,
+      validTo,
+      status,
+      couponBatches,
+      promotions,
+      audiences,
+    ]
+  )
+
+  // Publicada = solo lectura. No es una preferencia de UI: es la regla del
+  // ciclo de vida (`isLocked`), y se aplica en el canvas —arrastrar,
+  // conectar, borrar, editar config— y no solo escondiendo el botón, que
+  // sería una barrera que se salta sin querer con el teclado.
+  const locked = isPublicationLocked({ estado: status })
+  const displayStatus = publicationStatus({
+    estado: status,
+    vigente_desde: validFrom,
+    vigente_hasta: validTo,
+  })
+
   function restoreVersion(graph: {
     nodes: WorkflowWithGraph["nodes"]
     edges: WorkflowWithGraph["edges"]
@@ -383,6 +490,13 @@ function CanvasArea({
         workflowId={workflow.id}
         name={workflow.nombre}
         status={status}
+        displayStatus={displayStatus}
+        priority={workflow.prioridad}
+        exclusivity={workflow.exclusividad}
+        exclusivityGroup={workflow.grupo_exclusividad}
+        validFrom={validFrom}
+        validTo={validTo}
+        version={workflow.version_actual}
         authorName={workflow.authorName}
         updatedAt={updatedAt}
         saving={save.isPending}
@@ -390,9 +504,9 @@ function CanvasArea({
         publishing={publish.isPending}
         publishDisabledReason={
           blockingErrors.length > 0
-            ? "Resuelve los errores del workflow antes de publicar"
+            ? "Resuelve los errores de la regla antes de publicar"
             : !hasUnpublishedChanges
-              ? "Ya está publicado — no hay cambios nuevos que publicar"
+              ? "Ya está publicada — no hay cambios nuevos que publicar"
               : undefined
         }
         onRename={(name) =>
@@ -402,8 +516,23 @@ function CanvasArea({
         onSimulate={() =>
           simulate.execute({ ...graphForActions(), initialCohort: 1514 })
         }
-        onPublish={() => publish.execute(graphForActions())}
+        onPublish={() => setStatusDialog("publicar")}
+        onChangeStatus={() => setStatusDialog("cambiar")}
       />
+      {/* La capa de compatibilidad (`schema-compat.ts`) deja crear y publicar
+          reglas contra la base sin migrar, pero la vigencia, la prioridad y
+          la exclusividad no tienen columna donde guardarse. Se dice aquí, no
+          en un comentario del código: quien las cambie y no vea el cambio la
+          próxima vez merece saber por qué antes de tocarlas. */}
+      {!workflow.lifecyclePersisted && (
+        <div className="border-b border-border px-6 py-2.5">
+          <Message
+            variant="warning"
+            title="Vigencia, prioridad y exclusividad no se están guardando"
+            description="La base todavía no tiene esas columnas: se muestran con valores por defecto y los cambios se pierden al recargar. Todo lo demás —bloques, conexiones, publicar— sí persiste. Aplica las migraciones del builder para activarlas."
+          />
+        </div>
+      )}
       {publishMessage && (
         <div className="border-b border-border px-6 py-2.5">
           <Message
@@ -432,7 +561,7 @@ function CanvasArea({
         </div>
       )}
       <div className="flex min-h-0 flex-1">
-        <BlockPalette />
+        <BlockPalette disabled={locked} />
         <div className="min-w-0 flex-1">
           <ReactFlow
             nodes={nodes}
@@ -445,7 +574,10 @@ function CanvasArea({
             onDragOver={(e) => e.preventDefault()}
             onNodeClick={(_, node) => setSelectedId(node.id)}
             onPaneClick={() => setSelectedId(null)}
-            deleteKeyCode={["Backspace", "Delete"]}
+            nodesDraggable={!locked}
+            nodesConnectable={!locked}
+            elementsSelectable
+            deleteKeyCode={locked ? null : ["Backspace", "Delete"]}
             fitView
             fitViewOptions={{ padding: 0.3, maxZoom: 0.85 }}
             minZoom={0.2}
@@ -456,6 +588,7 @@ function CanvasArea({
         </div>
         <InspectorPanel
           node={selectedNode}
+          readOnly={locked}
           nodes={graphNodeRefs}
           edges={graphEdgeRefs}
           tiers={tiers}
@@ -467,12 +600,57 @@ function CanvasArea({
           onConfigChange={updateNodeConfig}
         />
       </div>
+      <RulePanel
+        clauses={readingClauses}
+        activity={activity}
+        displayStatus={displayStatus}
+      />
       <VersionHistoryDialog
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         workflowId={workflow.id}
         onRestore={restoreVersion}
       />
+      {/* `key` remonta el diálogo cada vez que se abre: sus campos son
+          estado local (estado destino, motivo, nota) y sin esto reaparecen
+          con lo que se tecleó y se canceló la vez anterior. */}
+      {statusDialog && (
+        <StatusChangeDialog
+          key={statusDialog}
+          open
+          mode={statusDialog}
+          currentStatus={status}
+          currentValidFrom={validFrom}
+          currentValidTo={validTo}
+          pending={publish.isPending || changeStatus.isPending}
+          blockedReason={
+            statusDialog === "publicar" && blockingErrors.length > 0
+              ? blockingErrors.map((e) => e.message).join(" ")
+              : undefined
+          }
+          onOpenChange={(open) => !open && setStatusDialog(null)}
+          onConfirm={(payload: StatusChangePayload) => {
+            if (statusDialog === "publicar") {
+              publish.execute({
+                ...graphForActions(),
+                initialCohort: 1514,
+                estado: payload.status,
+                motivo: payload.reason,
+                nota: payload.note,
+                vigente_desde: payload.validFrom ?? validFrom,
+                vigente_hasta: payload.validTo ?? null,
+              })
+              return
+            }
+            changeStatus.execute({
+              workflowId: workflow.id,
+              estado: payload.status,
+              motivo: payload.reason,
+              nota: payload.note,
+            })
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -483,12 +661,14 @@ export function JourneyEditor({
   audiences,
   couponBatches,
   promotions,
+  activity,
 }: {
   workflow: WorkflowWithGraph
   tiers: TierSummary[]
   audiences: AudienceSummary[]
   couponBatches: CouponBatchSummary[]
   promotions: PromotionSummary[]
+  activity: WorkflowActivityEntry[]
 }) {
   return (
     <ReactFlowProvider>
@@ -498,6 +678,7 @@ export function JourneyEditor({
         audiences={audiences}
         couponBatches={couponBatches}
         promotions={promotions}
+        activity={activity}
       />
     </ReactFlowProvider>
   )

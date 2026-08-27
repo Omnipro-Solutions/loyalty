@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
+import { publicationStatus } from "@/lib/publication-status"
 import { cn } from "@/lib/utils"
 
 import { deleteWorkflowsAction } from "./actions"
@@ -103,7 +104,18 @@ function useColumns(
     columnHelper.accessor("estado", {
       header: "Estado",
       size: 118,
-      cell: (info) => <JourneyStatusDot status={info.getValue()} />,
+      // El estado que se muestra es el DERIVADO: una regla activa cuya
+      // vigencia empieza mañana se lee «Programada», no «Activa» — ver
+      // `publicationStatus`.
+      cell: (info) => (
+        <JourneyStatusDot
+          status={publicationStatus({
+            estado: info.getValue(),
+            vigente_desde: info.row.original.vigente_desde,
+            vigente_hasta: info.row.original.vigente_hasta,
+          })}
+        />
+      ),
     }),
     columnHelper.accessor("inJourney", {
       id: "inJourney",
