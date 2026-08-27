@@ -1,101 +1,74 @@
 "use client"
 
-import { useAction } from "next-safe-action/hooks"
-import { useEffect, useState } from "react"
-
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { Field } from "@/components/form/field"
-import { FilterSearch } from "@/components/filters/search"
+import { OptionPicker } from "@/components/form/option-picker"
 import { Section } from "@/components/form/section"
-import { cn } from "@/lib/utils"
 
-import { searchMembersAction } from "../actions/lookups"
 import type { MemberOption } from "../lib/queries"
 
 type StepRecipientProps = {
+  members: MemberOption[]
   memberId: string | undefined
-  memberLabel: string | undefined
   error?: string
   onChange: (member: MemberOption) => void
 }
 
-/** Paso "Destinatario" (manual_customer, points_redemption): busca un socio por nombre/email y lo elige como titular. */
+/**
+ * Paso "Destinatario" (manual_customer, points_redemption): elige al socio
+ * que será el titular del cupón.
+ *
+ * El control es `OptionPicker`, así que la forma de elegir la decide el
+ * tamaño de la lista con los mismos umbrales que el resto de la app
+ * (desplegable → desplegable con buscador → modal), en vez de un campo de
+ * búsqueda a ciegas que no enseñaba a nadie hasta escribir dos letras. El
+ * email viaja como `hint`: se ve bajo el nombre y también se busca por él,
+ * que es lo único que distingue a dos socios homónimos.
+ */
 export function StepRecipient({
+  members,
   memberId,
-  memberLabel,
   error,
   onChange,
 }: StepRecipientProps) {
-  const [search, setSearch] = useState("")
-  const [rawResults, setRawResults] = useState<MemberOption[]>([])
-  // Derivado en el render, no en el efecto: bajo 2 caracteres no hay
-  // búsqueda visible, sin necesidad de un setState extra para "limpiarla".
-  const results = search.trim().length < 2 ? [] : rawResults
-  const searchAction = useAction(searchMembersAction, {
-    onSuccess: ({ data }) => {
-      if (data?.ok) setRawResults(data.members)
-    },
-  })
-
-  useEffect(() => {
-    if (search.trim().length < 2) return
-    const timeout = setTimeout(() => {
-      searchAction.execute({ search })
-    }, 300)
-    return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search])
+  const selected = members.find((member) => member.id === memberId)
 
   return (
     <Section
       title="Destinatario"
-      description="Busca al cliente que será el titular del cupón."
+      description="Elige al cliente que será el titular del cupón."
     >
-      <Field label="Cliente" error={error} required>
-        <FilterSearch
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      <Field label="Cliente" error={error} required htmlFor="recipient-member">
+        <OptionPicker
+          id="recipient-member"
+          title="Elegir cliente"
+          description="Busca por nombre o email al titular del cupón."
           placeholder="Busca por nombre o email…"
-          className="w-full"
+          confirmLabel="Elegir cliente"
+          options={members.map((member) => ({
+            value: member.id,
+            label: member.name,
+            hint: member.email,
+          }))}
+          value={memberId}
+          onValueChange={(id) => {
+            const member = members.find((m) => m.id === id)
+            if (member) onChange(member)
+          }}
         />
       </Field>
 
-      {memberId && memberLabel && (
+      {selected && (
         <div className="flex items-center gap-2.5 rounded-xl border-2 border-primary bg-accent px-3 py-2.5">
-          <AvatarInitials name={memberLabel} size={28} />
-          <p className="text-[13px] font-medium text-foreground">
-            {memberLabel}
-          </p>
-        </div>
-      )}
-
-      {results.length > 0 && (
-        <div className="flex flex-col gap-1">
-          {results.map((member) => (
-            <button
-              key={member.id}
-              type="button"
-              onClick={() => {
-                onChange(member)
-                setSearch("")
-                setRawResults([])
-              }}
-              className={cn(
-                "flex items-center gap-2.5 rounded-xl border border-border px-3 py-2 text-left hover:bg-accent",
-                memberId === member.id && "border-primary bg-accent"
-              )}
-            >
-              <AvatarInitials name={member.name} size={28} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-foreground">
-                  {member.name}
-                </p>
-                <p className="truncate text-[11px] text-muted-foreground">
-                  {member.email}
-                </p>
-              </div>
-            </button>
-          ))}
+          <AvatarInitials name={selected.name} size={28} />
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-medium text-foreground">
+              {selected.name}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {selected.email}
+            </p>
+          </div>
         </div>
       )}
     </Section>

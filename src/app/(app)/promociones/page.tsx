@@ -6,13 +6,13 @@ import { AppPage } from "@/components/layout/app-page"
 import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { formatUSD } from "@/lib/format"
-import { PromoKpiCard } from "@/features/promotions/components/promo-kpi-card"
 import { PromotionsCard } from "@/features/promotions/components/promotions-card"
+import { PromotionsPlanningKpis } from "@/features/promotions/components/promotions-planning-kpis"
 import { PromotionsExportSection } from "@/features/promotions/components/promotions-export-section"
 import { PromotionsTableSection } from "@/features/promotions/components/promotions-table-section"
 import {
   PROMOTIONS_PAGE_SIZE,
-  getFeaturedPromotions,
+  getPromotionsPlanningKpis,
   getPromotionsSummary,
   getTotalStores,
   listConditionCategories,
@@ -26,7 +26,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 /** Igual al `size` de cada `ColumnDef` en `promotions-table.tsx`. */
-const PROMOTIONS_TABLE_COLUMNS = [240, 130, 90, 130, 88, 120, 110, 56]
+const PROMOTIONS_TABLE_COLUMNS = [40, 240, 130, 90, 130, 88, 120, 110, 56]
 
 /** Figma "06.1 · Promociones · listado" (630:428). */
 export default async function PromotionsPage({
@@ -45,9 +45,9 @@ export default async function PromotionsPage({
   const pageSize = Number(firstValue(params.pageSize) ?? PROMOTIONS_PAGE_SIZE)
 
   // No dependen de los filtros de la tabla — se quedan esperados aquí.
-  const [featured, summary, totalStores, categories, segments] =
+  const [planningKpis, summary, totalStores, categories, segments] =
     await Promise.all([
-      getFeaturedPromotions(3),
+      getPromotionsPlanningKpis(),
       getPromotionsSummary(),
       getTotalStores(),
       listConditionCategories(),
@@ -110,13 +110,7 @@ export default async function PromotionsPage({
         </div>
       </div>
 
-      {featured.length > 0 && (
-        <div className="flex w-full items-stretch gap-4">
-          {featured.map((promotion) => (
-            <PromoKpiCard key={promotion.id} promotion={promotion} />
-          ))}
-        </div>
-      )}
+      <PromotionsPlanningKpis kpis={planningKpis} />
 
       <PromotionsCard
         summary={summary}
@@ -131,6 +125,9 @@ export default async function PromotionsPage({
           fallback={
             <TableSkeleton
               columns={PROMOTIONS_TABLE_COLUMNS}
+              // Mismas filas que la página real: con el default (6) la
+              // tabla daba un salto al pasar del skeleton a los datos.
+              rows={PROMOTIONS_PAGE_SIZE}
               leadingAvatar={false}
               headerClassName="bg-neutral-50"
               paginationRow

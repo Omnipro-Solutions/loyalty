@@ -150,13 +150,14 @@ export function InspectorPanel({
         ))}
       </div>
 
-      {/* `key={node.id}` fuerza a React a desmontar y remontar todo este
-          subárbol cuando cambia el nodo seleccionado — sin esto, elegir OTRO
-          nodo del mismo tipo (ej. dos "Acumular puntos") no remonta
-          `AccumulatePointsForm`/`BranchesTab` (React los ve como "el mismo
-          componente en la misma posición"), así que su `useState` local
-          sigue mostrando/editando los valores del nodo anterior y termina
-          escribiéndolos sobre el nodo nuevo. */}
+      {/* `key={node.id}` remonta el subárbol al cambiar de nodo: React ve
+          "el mismo componente en la misma posición" cuando se pasa de un
+          bloque a otro DEL MISMO TIPO (ej. dos "Acumular puntos"), y sin la
+          key conservaría el estado local de UI del anterior — el plegado y
+          la vista previa de `MultiConditionForm`, el scroll del panel.
+          NO es lo que aísla la configuración de cada nodo: eso lo garantiza
+          que los formularios sean controlados sobre `node.data.config` (sin
+          `useState` que copie el config), y así debe seguir. */}
       <div key={node.id} className="flex-1 overflow-y-auto p-4">
         {activeTab === "Configuración" &&
           (tipo === "acumular_puntos" ? (

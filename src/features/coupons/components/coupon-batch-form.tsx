@@ -70,6 +70,7 @@ type CouponBatchFormProps = {
   stores: CatalogOption[]
   categories: CatalogOption[]
   promotions: CatalogOption[]
+  members: MemberOption[]
   hasOtherApprovers: boolean
 }
 
@@ -79,6 +80,7 @@ export function CouponBatchForm({
   stores,
   categories,
   promotions,
+  members,
   hasOtherApprovers,
 }: CouponBatchFormProps) {
   const router = useRouter()
@@ -395,8 +397,8 @@ export function CouponBatchForm({
 
           {stepId === "recipient" && (
             <StepRecipient
+              members={members}
               memberId={values.memberId}
-              memberLabel={selectedMember?.name}
               error={errors.memberId?.message}
               onChange={(member) => {
                 setSelectedMember(member)

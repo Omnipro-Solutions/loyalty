@@ -9,37 +9,38 @@ import {
   buildImportCatalogs,
   validateImportBatch,
   MAX_IMPORT_ROWS,
+  PROMOTION_IMPORT_COLUMNS,
   type ImportFailure,
+  type PromotionImportColumnKey,
   type RawImportRow,
 } from "../lib/promotion-import"
 import {
   listConditionCategories,
   listConditionCities,
   listConditionSegments,
+  listConditionTiers,
+  listCouponBatchesForPromotions,
+  listProductRefsForImport,
+  listSuppliers,
 } from "../lib/queries"
 import { toRow } from "../lib/to-row"
 
 const DB_CODE_CHUNK_SIZE = 200
 
-/** Espejo estructural de `RawImportRow` (`../lib/promotion-import.ts`) — se mantiene a mano, no generado, igual que el resto de schemas del módulo (ver `conditionSchema` vs `CONDITION_FIELDS`). Si se agrega una columna al CSV, agrégala también aquí. */
+/**
+ * Espejo de `RawImportRow` DERIVADO de `PROMOTION_IMPORT_COLUMNS`, no
+ * escrito a mano: cuando era una lista manual, agregar una columna al CSV
+ * y olvidarla aquí la dejaba fuera del payload de la Server Action en
+ * silencio. Toda celda es texto libre acotado — quien valida el contenido
+ * es `validateImportBatch`, no este schema.
+ */
+const cellSchemas = Object.fromEntries(
+  PROMOTION_IMPORT_COLUMNS.map((column) => [column.key, z.string().max(500)])
+) as Record<PromotionImportColumnKey, z.ZodString>
+
 const rawRowSchema = z.object({
   rowNumber: z.number().int().positive(),
-  nombre: z.string().max(500),
-  codigo: z.string().max(500),
-  tipo: z.string().max(500),
-  mecanica: z.string().max(500),
-  valor: z.string().max(500),
-  tope_maximo: z.string().max(500),
-  desde: z.string().max(500),
-  hasta: z.string().max(500),
-  prioridad: z.string().max(500),
-  presupuesto: z.string().max(500),
-  acumulable: z.string().max(500),
-  canal: z.string().max(500),
-  cond_categorias: z.string().max(500),
-  cond_ciudad: z.string().max(500),
-  cond_segmento: z.string().max(500),
-  cond_monto_minimo: z.string().max(500),
+  ...cellSchemas,
 }) satisfies z.ZodType<RawImportRow>
 
 const importPromotionsSchema = z.object({
@@ -90,12 +91,34 @@ export const importPromotionsAction = promotionsActionClient
       parsedInput.rows.map((r) => [r.rowNumber, r])
     )
 
-    const [categories, segments, cities] = await Promise.all([
+    const [
+      categories,
+      segments,
+      cities,
+      products,
+      couponBatches,
+      tiers,
+      suppliers,
+    ] = await Promise.all([
       listConditionCategories(),
       listConditionSegments(),
       listConditionCities(),
+      listProductRefsForImport(),
+      listCouponBatchesForPromotions(),
+      listConditionTiers(),
+      listSuppliers(),
     ])
-    const catalogs = buildImportCatalogs(categories, segments, cities)
+    const catalogs = buildImportCatalogs(
+      categories,
+      segments,
+      cities,
+      products,
+      {
+        couponBatches,
+        tiers,
+        suppliers,
+      }
+    )
 
     const { ready, failures } = validateImportBatch(parsedInput.rows, catalogs)
 

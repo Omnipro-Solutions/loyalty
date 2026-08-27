@@ -9,16 +9,21 @@ import type { ParsedCsv } from "@/lib/csv"
 import { importPromotionsAction } from "../actions/import-promotions"
 import {
   buildImportCatalogs,
+  buildImportReport,
   inferImportMapping,
   mapImportRows,
   missingRequiredColumns,
   validateImportBatch,
   type ColumnMapping,
+  type ImportCouponBatchRef,
+  type ImportProductRef,
 } from "../lib/promotion-import"
 import type {
   ConditionCategory,
   ConditionCity,
   ConditionSegment,
+  ConditionTier,
+  SupplierOption,
 } from "../lib/queries"
 import { ImportStepFile } from "./import-step-file"
 import { ImportStepMapping } from "./import-step-mapping"
@@ -37,6 +42,12 @@ type PromotionImportFormProps = {
   categories: ConditionCategory[]
   segments: ConditionSegment[]
   cities: ConditionCity[]
+  products: ImportProductRef[]
+  couponBatches: ImportCouponBatchRef[]
+  tiers: ConditionTier[]
+  suppliers: SupplierOption[]
+  /** Fecha del servidor (AAAA-MM-DD) para las plantillas — el cliente no la calcula, así el CSV es igual para todos. */
+  today: string
 }
 
 /**
@@ -50,6 +61,11 @@ export function PromotionImportForm({
   categories,
   segments,
   cities,
+  products,
+  couponBatches,
+  tiers,
+  suppliers,
+  today,
 }: PromotionImportFormProps) {
   const [step, setStep] = useState(0)
   const [furthest, setFurthest] = useState(0)
@@ -58,8 +74,25 @@ export function PromotionImportForm({
   const [mapping, setMapping] = useState<ColumnMapping>({})
 
   const catalogs = useMemo(
-    () => buildImportCatalogs(categories, segments, cities),
-    [categories, segments, cities]
+    () =>
+      buildImportCatalogs(categories, segments, cities, products, {
+        couponBatches,
+        tiers,
+        suppliers,
+      }),
+    [categories, segments, cities, products, couponBatches, tiers, suppliers]
+  )
+
+  /** Datos reales con los que se rellenan las plantillas de ejemplo, para que importen sin editarlas. */
+  const templateSamples = useMemo(
+    () => ({
+      categories: categories.map((c) => c.name),
+      productSkus: products.map((p) => p.sku),
+      segment: segments[0]?.name,
+      city: cities[0]?.city,
+      couponBatch: couponBatches[0]?.reference,
+    }),
+    [categories, products, segments, cities, couponBatches]
   )
 
   const rawRows = useMemo(
@@ -69,6 +102,11 @@ export function PromotionImportForm({
   const validation = useMemo(
     () => validateImportBatch(rawRows, catalogs),
     [rawRows, catalogs]
+  )
+  /** Informe por columna del paso "Validación" — se deriva de `validation`, no revalida nada. */
+  const report = useMemo(
+    () => buildImportReport(rawRows, mapping, validation),
+    [rawRows, mapping, validation]
   )
 
   const importAction = useAction(importPromotionsAction, {
@@ -120,6 +158,8 @@ export function PromotionImportForm({
           file={file}
           onFileParsed={handleFileParsed}
           onRemove={handleReset}
+          templateSamples={templateSamples}
+          today={today}
         />
       )}
 
@@ -135,6 +175,7 @@ export function PromotionImportForm({
         <ImportStepPreview
           ready={validation.ready}
           failures={validation.failures}
+          report={report}
           isPending={importAction.isPending}
           errorMessage={importError}
           onImport={() =>

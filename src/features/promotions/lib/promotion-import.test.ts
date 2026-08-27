@@ -12,6 +12,14 @@ import {
   parseLooseBoolean,
   parseLooseNumber,
   validateImportBatch,
+  buildImportReport,
+  buildMechanicTemplate,
+  columnStep,
+  IMPORTABLE_BENEFIT_TYPES,
+  PROMOTION_IMPORT_COLUMNS,
+  inferImportMapping as inferMapping,
+  mapImportRows,
+  type PromotionImportColumnKey,
   type RawImportRow,
 } from "./promotion-import"
 
@@ -29,25 +37,26 @@ const CATALOGS = buildImportCatalogs(
   [{ city: "Bogotá" }, { city: "Barranquilla" }]
 )
 
+/** Todas las columnas vacías, derivadas del contrato: así agregar una columna no obliga a tocar cada test. */
+const EMPTY_CELLS = Object.fromEntries(
+  PROMOTION_IMPORT_COLUMNS.map((column) => [column.key, ""])
+) as Record<PromotionImportColumnKey, string>
+
 function makeRow(overrides: Partial<RawImportRow> = {}): RawImportRow {
   return {
     rowNumber: 2,
+    ...EMPTY_CELLS,
     nombre: "Verano 20%",
     codigo: "VERANO20",
     tipo: "categoria",
     mecanica: "descuento_porcentual",
     valor: "20",
-    tope_maximo: "",
     desde: "2026-09-01",
     hasta: "2026-09-30",
     prioridad: "5",
     presupuesto: "5000000",
     acumulable: "no",
     canal: "pos_ecommerce",
-    cond_categorias: "",
-    cond_ciudad: "",
-    cond_segmento: "",
-    cond_monto_minimo: "",
     ...overrides,
   }
 }
@@ -206,8 +215,13 @@ describe("parseImportRow", () => {
     expect(result.errors.some((e) => e.column === "valor")).toBe(true)
   })
 
-  it("rejects a mechanic that the importer doesn't support", () => {
-    const result = parseImportRow(makeRow({ mecanica: "por_piezas" }), CATALOGS)
+  it("rejects an unknown mechanic", () => {
+    // Ya no hay mecánicas "no importables" — las 13 tienen formato — así
+    // que lo único que se rechaza aquí es un valor que no existe.
+    const result = parseImportRow(
+      makeRow({ mecanica: "descuento_magico" }),
+      CATALOGS
+    )
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.errors[0]?.column).toBe("mecanica")
@@ -276,5 +290,277 @@ describe("buildTemplateCsv / buildFailuresCsv", () => {
     expect(header.slice(-3)).toEqual(["fila", "columna", "motivo"])
     expect(first?.[0]).toBe(row.nombre)
     expect(first?.at(-1)).toBe("no soportada")
+  })
+})
+
+// --- Plantillas por mecánica ----------------------------------------------
+
+/** Catálogo de ejemplo con lo que pide la plantilla más grande: 3 categorías y 10 SKUs. */
+const TEMPLATE_CATEGORY_NAMES = ["Cuidado bucal", "Dermocosmética", "Vitaminas"]
+const TEMPLATE_SKUS = Array.from(
+  { length: 10 },
+  (_, i) => `BEN-10000${i.toString().padStart(2, "0")}`
+)
+const BATCH_REF = "EMI-2027-001"
+const TEMPLATE_CATALOGS = buildImportCatalogs(
+  TEMPLATE_CATEGORY_NAMES.map((name, i) => ({
+    id: `4${i}111111-1111-4111-8111-111111111111`,
+    name,
+  })),
+  [{ id: SEG_VIP, name: "Clientes VIP" }],
+  [{ city: "Bogotá" }],
+  TEMPLATE_SKUS.map((sku, i) => ({
+    id: `5${i}111111-1111-4111-8111-111111111111`,
+    sku,
+  })),
+  {
+    couponBatches: [
+      {
+        id: "66111111-1111-4111-8111-111111111111",
+        name: "Bienvenida 2027",
+        reference: BATCH_REF,
+      },
+    ],
+    tiers: [
+      { id: "77111111-1111-4111-8111-111111111111", name: "oro" },
+      { id: "78111111-1111-4111-8111-111111111111", name: "diamante" },
+    ],
+    suppliers: [
+      { id: "79111111-1111-4111-8111-111111111111", name: "Laboratorio Uno" },
+    ],
+  }
+)
+const TEMPLATE_SAMPLES = {
+  categories: TEMPLATE_CATEGORY_NAMES,
+  productSkus: TEMPLATE_SKUS,
+  segment: "Clientes VIP",
+  city: "Bogotá",
+  couponBatch: BATCH_REF,
+}
+const TODAY = "2026-08-26"
+
+/** Plantilla → filas crudas, por el mismo camino que sigue un CSV subido. */
+function rowsFromTemplate(csv: string[][]): RawImportRow[] {
+  const [header, ...rows] = csv
+  return mapImportRows({ headers: header, rows }, inferMapping(header))
+}
+
+describe("buildMechanicTemplate", () => {
+  it("solo incluye las columnas de esa mecánica, no el contrato completo", () => {
+    const template = buildMechanicTemplate(
+      "envio_gratis",
+      TEMPLATE_SAMPLES,
+      TODAY
+    )
+    expect(template.columns).toContain("nombre")
+    expect(template.columns).not.toContain("escalones")
+    expect(template.columns).not.toContain("bundle_skus")
+    expect(template.columns.length).toBeLessThan(
+      PROMOTION_IMPORT_COLUMNS.length
+    )
+  })
+
+  it("el ejemplo de escalonado trae 3 escalones, 3 categorías y 10 SKUs", () => {
+    const template = buildMechanicTemplate(
+      "descuento_escalonado",
+      TEMPLATE_SAMPLES,
+      TODAY
+    )
+    const [header, row] = template.csv
+    const cell = (key: PromotionImportColumnKey) =>
+      row[header.indexOf(key)] ?? ""
+
+    expect(cell("escalones").split("|")).toHaveLength(3)
+    expect(cell("cond_categorias").split("|")).toHaveLength(3)
+    expect(cell("cond_productos").split("|")).toHaveLength(10)
+  })
+
+  it.each(IMPORTABLE_BENEFIT_TYPES)(
+    "la plantilla de %s trae dos límites de ejemplo, nunca la columna vacía",
+    (benefitType) => {
+      const template = buildMechanicTemplate(
+        benefitType,
+        TEMPLATE_SAMPLES,
+        TODAY
+      )
+      const [header, row] = template.csv
+      const limites = row[header.indexOf("limites")] ?? ""
+
+      expect(limites.split("|")).toHaveLength(2)
+      // Dos registros distintos: si fueran iguales no se vería cómo se
+      // separan ni que cada uno lleva sus propias 4 decisiones.
+      const [first, second] = limites.split("|").map((r) => r.trim())
+      expect(first).not.toBe(second)
+      for (const record of [first, second]) {
+        expect(record).toMatch(/unidad=/)
+        expect(record).toMatch(/sujeto=/)
+        expect(record).toMatch(/ventana=/)
+        expect(record).toMatch(/tope=/)
+        expect(record).toMatch(/exceder=/)
+      }
+    }
+  )
+
+  it("modela «2 piezas por ticket» tal como lo lee el importador", () => {
+    const template = buildMechanicTemplate(
+      "descuento_porcentual",
+      TEMPLATE_SAMPLES,
+      TODAY
+    )
+    const { ready } = validateImportBatch(
+      rowsFromTemplate(template.csv),
+      TEMPLATE_CATALOGS
+    )
+    expect(ready[0]?.values.limites).toEqual([
+      {
+        unidad: "piezas",
+        sujeto: "ticket",
+        ventana: "ticket",
+        tope: 2,
+        alExceder: "aplicar_parcial",
+        ventanaDias: undefined,
+      },
+      {
+        unidad: "veces",
+        sujeto: "socio",
+        ventana: "mes_calendario",
+        tope: 1,
+        alExceder: "descartar",
+        ventanaDias: undefined,
+      },
+    ])
+  })
+
+  it("usa un marcador visible cuando el tenant no tiene datos de ese tipo", () => {
+    const template = buildMechanicTemplate(
+      "descuento_escalonado",
+      { categories: [], productSkus: [] },
+      TODAY
+    )
+    const [header, row] = template.csv
+    expect(row[header.indexOf("cond_productos")]).toBe("SKU-DEL-PRODUCTO")
+  })
+
+  // La prueba de que "el proceso de import espera esta estructura de datos":
+  // cada plantilla se descarga, se vuelve a leer y pasa la validación real
+  // (`promotionSchema` incluido) sin editar una sola celda.
+  it.each(IMPORTABLE_BENEFIT_TYPES)(
+    "la plantilla de %s se importa sin editarla",
+    (benefitType) => {
+      const template = buildMechanicTemplate(
+        benefitType,
+        TEMPLATE_SAMPLES,
+        TODAY
+      )
+      const { ready, failures } = validateImportBatch(
+        rowsFromTemplate(template.csv),
+        TEMPLATE_CATALOGS
+      )
+      expect(failures.flatMap((f) => f.errors.map((e) => e.message))).toEqual(
+        []
+      )
+      expect(ready).toHaveLength(1)
+      expect(ready[0]?.values.benefitType).toBe(benefitType)
+    }
+  )
+})
+
+describe("buildImportReport", () => {
+  const headerFor = (template: string[][]) => template[0]
+
+  it("marca cumplidas las columnas con dato y señala las líneas con error", () => {
+    const template = buildMechanicTemplate(
+      "descuento_porcentual",
+      TEMPLATE_SAMPLES,
+      TODAY
+    )
+    const header = headerFor(template.csv)
+    // Dos filas: la segunda con una categoría que no existe.
+    const broken = [...template.csv[1]]
+    broken[header.indexOf("cond_categorias")] = "Categoría Fantasma"
+    broken[header.indexOf("codigo")] = "EJ-OTRO"
+    const csv = [header, template.csv[1], broken]
+
+    const rows = rowsFromTemplate(csv)
+    const mapping = inferMapping(header)
+    const report = buildImportReport(
+      rows,
+      mapping,
+      validateImportBatch(rows, TEMPLATE_CATALOGS)
+    )
+
+    expect(report.totalRows).toBe(2)
+    expect(report.readyRows).toBe(1)
+    expect(report.failedRows).toBe(1)
+    expect(report.missingRequired).toEqual([])
+
+    const nombre = report.checks.find((c) => c.key === "nombre")
+    expect(nombre?.status).toBe("ok")
+    expect(nombre?.filled).toBe(2)
+
+    // La fila rota es la 3 del archivo (1 = cabecera).
+    const categorias = report.checks.find((c) => c.key === "cond_categorias")
+    expect(categorias?.status).toBe("error")
+    expect(categorias?.errorRows).toEqual([3])
+  })
+
+  it("marca en error una columna obligatoria que el archivo no trae", () => {
+    const header = ["nombre", "tipo", "mecanica", "desde"]
+    const rows = mapImportRows(
+      {
+        headers: header,
+        rows: [["Sin código", "categoria", "envio_gratis", "2027-01-01"]],
+      },
+      inferMapping(header)
+    )
+    const report = buildImportReport(
+      rows,
+      inferMapping(header),
+      validateImportBatch(rows, TEMPLATE_CATALOGS)
+    )
+
+    expect(report.missingRequired).toContain("codigo")
+    const codigo = report.checks.find((c) => c.key === "codigo")
+    expect(codigo?.status).toBe("error")
+    expect(codigo?.mapped).toBe(false)
+  })
+
+  it("distingue una columna vacía de una que no viene en el archivo", () => {
+    const header = ["nombre", "codigo", "tipo", "mecanica", "desde", "hasta"]
+    const rows = mapImportRows(
+      {
+        headers: header,
+        rows: [
+          [
+            "Envío gratis",
+            "ENV-1",
+            "carrito",
+            "envio_gratis",
+            "2027-01-01",
+            "",
+          ],
+        ],
+      },
+      inferMapping(header)
+    )
+    const report = buildImportReport(
+      rows,
+      inferMapping(header),
+      validateImportBatch(rows, TEMPLATE_CATALOGS)
+    )
+
+    expect(report.checks.find((c) => c.key === "hasta")?.status).toBe("vacia")
+    expect(report.checks.find((c) => c.key === "prioridad")?.status).toBe(
+      "ausente"
+    )
+  })
+
+  it("agrupa cada columna en el paso del formulario que le corresponde", () => {
+    expect(columnStep("nombre")).toBe("Identidad")
+    expect(columnStep("cond_marcas")).toBe("Condiciones")
+    expect(columnStep("escalones")).toBe("Configuración")
+    expect(columnStep("dias_semana")).toBe("Vigencia")
+    expect(columnStep("limites")).toBe("Límites")
+    expect(columnStep("financiador")).toBe("Economía")
   })
 })

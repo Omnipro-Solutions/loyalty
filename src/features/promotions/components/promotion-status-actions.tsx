@@ -173,13 +173,16 @@ export function PromotionStatusActions({
             Cambiar estado
             <ChevronDown className="size-3.5" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          {/* `w-auto` por lo mismo que en `promotions-table.tsx`: el menú hereda el ancho del botón y parte las etiquetas. */}
+          <DropdownMenuContent align="end" className="w-auto min-w-[180px]">
             {transitions.map((status) => {
               const Icon = TRANSITION_ICON[status]
               return (
                 <DropdownMenuItem key={status} onClick={() => open(status)}>
-                  <Icon className="size-3.5" />
-                  {TRANSITION_VERB[status]}
+                  <Icon className="size-4" />
+                  <span className="whitespace-nowrap">
+                    {TRANSITION_VERB[status]}
+                  </span>
                 </DropdownMenuItem>
               )
             })}
@@ -194,7 +197,8 @@ export function PromotionStatusActions({
               {target ? TRANSITION_VERB[target] : ""} la promoción
             </DialogTitle>
             <DialogDescription>
-              Pasará de <strong>{PROMOTION_STATUS_LABEL[savedStatus]}</strong> a{" "}
+              ¿Confirmas el cambio? Pasará de{" "}
+              <strong>{PROMOTION_STATUS_LABEL[savedStatus]}</strong> a{" "}
               <strong>{target ? PROMOTION_STATUS_LABEL[target] : ""}</strong>.
               El motivo queda registrado en la bitácora junto a tu nombre y la
               fecha.

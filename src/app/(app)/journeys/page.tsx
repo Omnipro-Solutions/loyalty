@@ -14,7 +14,7 @@ import type { WorkflowStatus } from "@/types/domain"
 const DEFAULT_PAGE_SIZE = 25
 
 /** Igual al `size` de cada `ColumnDef` en `journeys-table.tsx`. */
-const JOURNEYS_TABLE_COLUMNS = [44, null, 118, 120, 140, 92, 88, 120]
+const JOURNEYS_TABLE_COLUMNS = [44, null, 118, 130, 150, 96, 130]
 
 export default async function JourneysPage({
   searchParams,

@@ -6,12 +6,20 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
-import { ChevronRight } from "lucide-react"
+import { Ban, ChevronDown, Eye, MoreHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 import { DataTable } from "@/components/data/data-table"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { formatDateTime, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +30,7 @@ import {
 import type { CouponSearchRow } from "../lib/queries"
 import { couponValueDisplay } from "../lib/recap"
 import { couponStatus } from "../lib/status"
+import { CouponsVoidDialog } from "./coupons-void-dialog"
 
 const features = tableFeatures({ columnSizingFeature })
 const helper = createColumnHelper<typeof features, CouponSearchRow>()
@@ -32,9 +41,72 @@ type CouponsTableProps = { coupons: CouponSearchRow[] }
 export function CouponsTable({ coupons }: CouponsTableProps) {
   const router = useRouter()
 
+  // Anular es la acción del listado, así que solo se seleccionan los que
+  // se pueden anular: un canjeado o uno ya anulado no van a ninguna parte.
+  const voidableIds = useMemo(
+    () =>
+      coupons
+        .filter((c) => c.status !== "cancelled" && c.status !== "redeemed")
+        .map((c) => c.id),
+    [coupons]
+  )
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [voidIds, setVoidIds] = useState<string[]>([])
+
+  const visibleSelected = useMemo(
+    () => voidableIds.filter((id) => selected.has(id)),
+    [voidableIds, selected]
+  )
+
+  function toggle(id: string, checked: boolean) {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
   const columns = useMemo(
     () =>
       helper.columns([
+        helper.display({
+          id: "select",
+          size: 40,
+          header: () =>
+            voidableIds.length === 0 ? null : (
+              <Checkbox
+                checked={
+                  visibleSelected.length === voidableIds.length &&
+                  voidableIds.length > 0
+                }
+                indeterminate={
+                  visibleSelected.length > 0 &&
+                  visibleSelected.length < voidableIds.length
+                }
+                onCheckedChange={(checked) =>
+                  setSelected(
+                    checked === true ? new Set(voidableIds) : new Set()
+                  )
+                }
+                aria-label="Seleccionar todos los cupones anulables"
+              />
+            ),
+          cell: (info) => {
+            const coupon = info.row.original
+            if (!voidableIds.includes(coupon.id)) return null
+            return (
+              <Checkbox
+                checked={selected.has(coupon.id)}
+                onCheckedChange={(checked) =>
+                  toggle(coupon.id, checked === true)
+                }
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Seleccionar ${coupon.code}`}
+              />
+            )
+          },
+        }),
         helper.display({
           id: "code",
           size: 190,
@@ -158,27 +230,113 @@ export function CouponsTable({ coupons }: CouponsTableProps) {
         }),
         helper.display({
           id: "actions",
-          size: 110,
+          size: 56,
           header: () => null,
-          cell: () => (
-            <div className="flex items-center justify-end gap-1 text-xs font-medium text-primary">
-              Ver detalle
-              <ChevronRight className="size-3.5" />
-            </div>
-          ),
+          cell: (info) => {
+            const coupon = info.row.original
+            const canVoid = voidableIds.includes(coupon.id)
+            return (
+              <div
+                className="flex justify-end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<button type="button" />}
+                    className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+                    aria-label={`Acciones de ${coupon.code}`}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </DropdownMenuTrigger>
+                  {/* `w-auto`: el menú hereda el ancho del disparador (28px) si no se le fija — mismo arreglo que en Promociones. */}
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-auto min-w-[190px]"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/cupones/${coupon.id}`)}
+                    >
+                      <Eye className="size-4" />
+                      <span className="whitespace-nowrap">Ver detalle</span>
+                    </DropdownMenuItem>
+                    {canVoid && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setVoidIds([coupon.id])}
+                      >
+                        <Ban className="size-4" />
+                        <span className="whitespace-nowrap">Anular</span>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )
+          },
         }),
       ]),
-    []
+    [voidableIds, selected, visibleSelected, router]
   )
 
   const data = useMemo(() => coupons, [coupons])
   const table = useTable({ features, columns, data, getRowId: (row) => row.id })
 
   return (
-    <DataTable
-      table={table}
-      headerClassName="bg-neutral-50"
-      onRowClick={(coupon) => router.push(`/cupones/${coupon.id}`)}
-    />
+    <div className="flex w-full flex-col">
+      {visibleSelected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-border bg-brand-subtle px-5 py-2.5">
+          <p className="flex-1 text-xs text-secondary-foreground">
+            <span className="font-semibold text-foreground">
+              {visibleSelected.length}
+            </span>{" "}
+            {visibleSelected.length === 1
+              ? "cupón seleccionado"
+              : "cupones seleccionados"}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelected(new Set())}
+          >
+            Limpiar selección
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button type="button" size="sm" />}>
+              Acciones
+              <ChevronDown className="size-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-auto min-w-[210px]">
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setVoidIds(visibleSelected)}
+              >
+                <Ban className="size-4" />
+                <span className="whitespace-nowrap">
+                  Anular {visibleSelected.length}{" "}
+                  {visibleSelected.length === 1 ? "cupón" : "cupones"}
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
+      <DataTable
+        table={table}
+        headerClassName="bg-neutral-50"
+        onRowClick={(coupon) => router.push(`/cupones/${coupon.id}`)}
+      />
+
+      <CouponsVoidDialog
+        ids={voidIds}
+        open={voidIds.length > 0}
+        onOpenChange={(open) => !open && setVoidIds([])}
+        onVoided={() => {
+          setSelected(new Set())
+          setVoidIds([])
+        }}
+      />
+    </div>
   )
 }

@@ -18,6 +18,8 @@ import { PROMOTION_STATUS_LABEL } from "../lib/labels"
 import { canTransitionStatus } from "../lib/status"
 import { toRow } from "../lib/to-row"
 import {
+  activatePromotionsSchema,
+  deletePromotionsSchema,
   updatePromotionSchema,
   updatePromotionStatusSchema,
   promotionSchema,
@@ -282,6 +284,155 @@ export const updatePromotionStatusAction = promotionsActionClient
     revalidatePath("/promociones")
     revalidatePath(`/promociones/${parsedInput.id}/editar`)
     return { ok: true as const, publicationStatus: to }
+  })
+
+export type ActivatePromotionsResult =
+  | { ok: true; activated: number; skipped: { name: string; reason: string }[] }
+  | { ok: false; message: string }
+
+/**
+ * Activa varias promociones a la vez desde el listado — el paso que sigue a
+ * una importación (que las deja todas en `borrador`): revisar y publicar.
+ *
+ * Solo toca las que están en `borrador`; el resto se devuelven en `skipped`
+ * con el motivo, en vez de fallar la operación entera o activarlas en
+ * silencio. Cada activación deja su evento en la bitácora, igual que si se
+ * hubiera hecho una por una desde el detalle.
+ */
+export const activatePromotionsAction = promotionsActionClient
+  .inputSchema(activatePromotionsSchema)
+  .action(async ({ parsedInput, ctx }): Promise<ActivatePromotionsResult> => {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "aprobar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para activar promociones.",
+      }
+    }
+
+    const { data: rows, error: readError } = await ctx.supabase
+      .from("promociones")
+      .select("id, nombre, estado_publicacion")
+      .in("id", parsedInput.ids)
+
+    if (readError) {
+      return { ok: false, message: "No se pudieron leer las promociones." }
+    }
+
+    const skipped: { name: string; reason: string }[] = []
+    const activatable: { id: string; nombre: string }[] = []
+    for (const row of rows ?? []) {
+      const status = row.estado_publicacion as PromotionPublicationStatus
+      if (status === "borrador") {
+        activatable.push({ id: row.id, nombre: row.nombre })
+      } else {
+        skipped.push({
+          name: row.nombre,
+          reason: `ya está ${PROMOTION_STATUS_LABEL[status].toLowerCase()}`,
+        })
+      }
+    }
+
+    if (activatable.length === 0) {
+      return { ok: true, activated: 0, skipped }
+    }
+
+    const { error } = await ctx.supabase
+      .from("promociones")
+      .update({ estado_publicacion: "activa" })
+      .in(
+        "id",
+        activatable.map((row) => row.id)
+      )
+
+    if (error) {
+      return { ok: false, message: "No se pudieron activar las promociones." }
+    }
+
+    await Promise.all(
+      activatable.map((row) =>
+        logPromotionEvent(ctx, {
+          promocionId: row.id,
+          tipo: "activada",
+          titulo: `${PROMOTION_STATUS_LABEL.borrador} → ${PROMOTION_STATUS_LABEL.activa}`,
+          detalle:
+            parsedInput.ids.length > 1
+              ? `Activación masiva de ${activatable.length} promociones.`
+              : undefined,
+          codigoMotivo: parsedInput.reasonCode,
+          notaMotivo: parsedInput.reasonNote,
+          metadatos: { estado_anterior: "borrador", estado_nuevo: "activa" },
+        })
+      )
+    )
+
+    revalidatePath("/promociones")
+    return { ok: true, activated: activatable.length, skipped }
+  })
+
+export type DeletePromotionsResult =
+  | { ok: true; deleted: number; skipped: { name: string; reason: string }[] }
+  | { ok: false; message: string }
+
+/**
+ * Borra un lote de promociones EN BORRADOR — nunca una publicada: una
+ * promoción que estuvo activa pudo aplicarse a un ticket real, y borrarla
+ * dejaría esa historia sin referencia. Para esas está `finalizada`.
+ *
+ * No deja evento de bitácora a propósito: `promocion_eventos` tiene
+ * `on delete cascade` sobre `promocion_id`, así que el evento se iría con
+ * la fila. Un borrador nunca llegó a aplicarse, así que no hay historia
+ * que preservar.
+ */
+export const deletePromotionsAction = promotionsActionClient
+  .inputSchema(deletePromotionsSchema)
+  .action(async ({ parsedInput, ctx }): Promise<DeletePromotionsResult> => {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "eliminar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para eliminar promociones.",
+      }
+    }
+
+    const { data: rows, error: readError } = await ctx.supabase
+      .from("promociones")
+      .select("id, nombre, estado_publicacion")
+      .in("id", parsedInput.ids)
+
+    if (readError) {
+      return { ok: false, message: "No se pudieron leer las promociones." }
+    }
+
+    const skipped: { name: string; reason: string }[] = []
+    const deletable: string[] = []
+    for (const row of rows ?? []) {
+      if (row.estado_publicacion === "borrador") {
+        deletable.push(row.id)
+      } else {
+        skipped.push({
+          name: row.nombre,
+          reason: `está ${PROMOTION_STATUS_LABEL[row.estado_publicacion as PromotionPublicationStatus].toLowerCase()} — solo se borran borradores`,
+        })
+      }
+    }
+
+    if (deletable.length === 0) {
+      return { ok: true, deleted: 0, skipped }
+    }
+
+    const { error } = await ctx.supabase
+      .from("promociones")
+      .delete()
+      .in("id", deletable)
+      // Segundo cerrojo, en la propia sentencia: si el estado cambiara
+      // entre la lectura y el borrado, la fila ya no coincide y no se borra.
+      .eq("estado_publicacion", "borrador")
+
+    if (error) {
+      return { ok: false, message: "No se pudieron eliminar las promociones." }
+    }
+
+    revalidatePath("/promociones")
+    return { ok: true, deleted: deletable.length, skipped }
   })
 
 export const simulatePromotionAction = promotionsActionClient
