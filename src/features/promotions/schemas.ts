@@ -125,6 +125,12 @@ export const conditionSchema = z.discriminatedUnion("campo", [
     campo: z.literal("tienda_formato"),
     valor: z.array(z.string()).min(1, "Elige al menos un formato"),
   }),
+  // `tienda_grupos` es tabla real (a diferencia de `tienda_region`/
+  // `tienda_formato`) — array de UUID, mismo criterio que `socio_nivel`.
+  z.object({
+    campo: z.literal("tienda_grupo"),
+    valor: z.array(z.string().uuid()).min(1, "Elige al menos un grupo"),
+  }),
   z.object({
     campo: z.literal("producto_marca"),
     valor: z.array(z.string()).min(1, "Elige al menos una marca"),

@@ -122,6 +122,7 @@ describe("defaultConditionFor", () => {
       "socio_provincia",
       "tienda_region",
       "tienda_formato",
+      "tienda_grupo",
       "producto_marca",
       "producto_proveedor",
     ] as const) {

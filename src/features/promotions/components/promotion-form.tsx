@@ -522,6 +522,7 @@ export function PromotionForm({
     products,
     couponBatches: options.couponBatches,
     tiers: options.tiers,
+    storeGroups: options.storeGroups,
   })
 
   return (
@@ -1355,6 +1356,7 @@ export function PromotionForm({
                     products={products}
                     couponBatches={options.couponBatches}
                     tiers={options.tiers}
+                    storeGroups={options.storeGroups}
                     suppliers={suppliers}
                   />
                 </Section>

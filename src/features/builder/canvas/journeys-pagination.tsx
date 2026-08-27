@@ -22,12 +22,20 @@ export function JourneysPagination({
     router.push(`/journeys?${params.toString()}`)
   }
 
+  function onPageSizeChange(newPageSize: number) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("pageSize", String(newPageSize))
+    params.set("page", "1")
+    router.push(`/journeys?${params.toString()}`)
+  }
+
   return (
     <Pagination
       total={total}
       pageSize={pageSize}
       page={page}
       onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
       className="rounded-b-[20px] bg-neutral-50"
     />
   )

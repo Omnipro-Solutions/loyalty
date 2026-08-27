@@ -220,6 +220,7 @@ export default function DesignSystemPage() {
   const [units, setUnits] = React.useState(12)
   const [range, setRange] = React.useState("30d")
   const [page, setPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
   const table = useTable({
     features: tableFeaturesConfig,
     columns: COLUMNS,
@@ -455,9 +456,13 @@ export default function DesignSystemPage() {
         <DataTable table={table} />
         <Pagination
           total={124}
-          pageSize={8}
+          pageSize={pageSize}
           page={page}
           onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size)
+            setPage(1)
+          }}
         />
       </section>
 

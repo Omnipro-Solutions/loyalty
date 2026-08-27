@@ -5,6 +5,7 @@ import type {
   BenefitType,
   ChannelScope,
   ConditionCombinator,
+  CostNature,
   Financiador,
   LimitExcessBehavior,
   LimitSubject,
@@ -15,6 +16,7 @@ import type {
   PromotionType,
 } from "@/types/domain"
 
+import { detectCollisions } from "./collision"
 import { toDateParam, type DateWindow } from "./dashboard-filters"
 import { promotionStatus, type PromotionStatus } from "./status"
 
@@ -37,6 +39,7 @@ export type Condition =
   | { campo: "tiene_mascotas"; valor: boolean }
   | { campo: "tienda_region"; valor: string[] }
   | { campo: "tienda_formato"; valor: string[] }
+  | { campo: "tienda_grupo"; valor: string[] }
   | { campo: "producto_marca"; valor: string[] }
   | { campo: "producto_proveedor"; valor: string[] }
   | { campo: "producto_receta"; valor: boolean }
@@ -129,6 +132,7 @@ export type PromotionsFilters = {
   publicationStatus?: PromotionPublicationStatus
   channel?: string
   page?: number
+  pageSize?: number
 }
 
 export const PROMOTIONS_PAGE_SIZE = 10
@@ -143,8 +147,9 @@ export async function listPromotions(
 ): Promise<{ promotions: Promotion[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * PROMOTIONS_PAGE_SIZE
-  const to = from + PROMOTIONS_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? PROMOTIONS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("promociones")
@@ -1163,6 +1168,359 @@ export async function getPromotionsExpiringSoon(
   return results.sort((a, b) => a.diasRestantes - b.diasRestantes)
 }
 
+export type AverageCartByPromotion = {
+  id: string
+  nombre: string
+  avgCartValue: number
+  sampleSize: number
+}
+
+/** Ticket promedio real de los canjes con `monto_carrito` en `metadatos` (envío gratis, cashback, descuentos de carrito) — no todas las mecánicas lo registran, así que solo entran las que sí lo hacen. */
+export async function getAverageCartByPromotion(
+  filters: PromotionsDashboardFilters = {}
+): Promise<AverageCartByPromotion[]> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("id, nombre"),
+    filters
+  )
+  if (error) throw error
+  const promoIds = (promos ?? []).map((p) => p.id)
+  if (promoIds.length === 0) return []
+  const nameById = new Map((promos ?? []).map((p) => [p.id, p.nombre]))
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("promocion_id, metadatos")
+    .eq("tipo", "canje")
+    .in("promocion_id", promoIds)
+  if (eventsError) throw eventsError
+
+  const sums = new Map<string, { total: number; count: number }>()
+  for (const row of events ?? []) {
+    const metadatos = row.metadatos as Record<string, unknown>
+    const montoCarrito = metadatos.monto_carrito
+    if (typeof montoCarrito !== "number") continue
+    const acc = sums.get(row.promocion_id) ?? { total: 0, count: 0 }
+    acc.total += montoCarrito
+    acc.count += 1
+    sums.set(row.promocion_id, acc)
+  }
+
+  return [...sums.entries()]
+    .map(([id, { total, count }]) => ({
+      id,
+      nombre: nameById.get(id) ?? "—",
+      avgCartValue: total / count,
+      sampleSize: count,
+    }))
+    .sort((a, b) => b.avgCartValue - a.avgCartValue)
+}
+
+export type BudgetByCostNature = {
+  naturaleza: CostNature
+  amount: number
+  /** 0-100, no una fracción — mismo criterio que `BudgetByFinancier.pct`. */
+  pct: number
+  colorVar: string
+}
+
+/** Mismas series de `--data-*` que `PromotionsBudgetByFinancier`, en orden de mayor a menor presupuesto. */
+const COST_NATURE_COLOR_VARS = [
+  "--data-indigo",
+  "--data-teal",
+  "--data-amber",
+  "--data-violet",
+  "--data-coral",
+  "--data-navy",
+]
+
+/** Suma de `presupuesto_asignado` agrupada por `naturaleza_costo` — a qué cuenta contable golpea el presupuesto, real (mismo criterio que `getBudgetByFinancier`). */
+export async function getBudgetByCostNature(
+  filters: PromotionsDashboardFilters = {}
+): Promise<BudgetByCostNature[]> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select("naturaleza_costo, presupuesto_asignado"),
+    filters
+  )
+  if (error) throw error
+
+  const totals = new Map<CostNature, number>()
+  for (const row of data ?? []) {
+    const naturaleza = row.naturaleza_costo as CostNature
+    totals.set(
+      naturaleza,
+      (totals.get(naturaleza) ?? 0) + row.presupuesto_asignado
+    )
+  }
+  const total = [...totals.values()].reduce((acc, v) => acc + v, 0)
+  return [...totals.entries()]
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([naturaleza, amount], index) => ({
+      naturaleza,
+      amount,
+      pct: total > 0 ? Math.round((amount / total) * 1000) / 10 : 0,
+      colorVar: COST_NATURE_COLOR_VARS[index % COST_NATURE_COLOR_VARS.length],
+    }))
+}
+
+export type BudgetPaceItem = {
+  id: string
+  nombre: string
+  /** Fracción 0-1, no porcentaje — mismo criterio que `PromotionsDashboardKpis.consumedBudgetPct`. */
+  consumedPct: number
+  diasRestantesPresupuesto: number
+  diasRestantesVigencia: number | null
+  seAgotaAntesDeVigencia: boolean
+}
+
+/**
+ * Ritmo de consumo proyectado: gasto diario observado desde `vigente_desde`
+ * (`presupuesto_consumido` / días transcurridos) extrapolado contra lo que
+ * queda de presupuesto — a diferencia de "En alerta" (que solo mira el %
+ * consumido hoy contra un umbral fijo), esto avisa cuándo el presupuesto se
+ * agotará antes de que termine la vigencia. Solo promociones realmente
+ * activas hoy con consumo real (sin eso no hay ritmo que proyectar).
+ */
+export async function getPromotionsBudgetPace(
+  filters: PromotionsDashboardFilters = {}
+): Promise<BudgetPaceItem[]> {
+  const supabase = await createClient()
+  const { data, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select(
+        "id, nombre, estado_publicacion, vigente_desde, vigente_hasta, presupuesto_asignado, presupuesto_consumido"
+      ),
+    filters
+  )
+  if (error) throw error
+
+  const items: BudgetPaceItem[] = []
+  for (const row of data ?? []) {
+    if (promotionStatus(row) !== "activa") continue
+    if (row.presupuesto_consumido <= 0 || row.presupuesto_asignado <= 0)
+      continue
+
+    const daysSinceStart = Math.max(1, -daysUntil(row.vigente_desde))
+    const dailyRate = row.presupuesto_consumido / daysSinceStart
+    const remainingBudget = row.presupuesto_asignado - row.presupuesto_consumido
+    const diasRestantesPresupuesto = Math.max(
+      0,
+      Math.floor(remainingBudget / dailyRate)
+    )
+    const diasRestantesVigencia = row.vigente_hasta
+      ? Math.max(0, daysUntil(row.vigente_hasta))
+      : null
+
+    items.push({
+      id: row.id,
+      nombre: row.nombre,
+      consumedPct: row.presupuesto_consumido / row.presupuesto_asignado,
+      diasRestantesPresupuesto,
+      diasRestantesVigencia,
+      seAgotaAntesDeVigencia:
+        diasRestantesVigencia !== null &&
+        diasRestantesPresupuesto < diasRestantesVigencia,
+    })
+  }
+
+  return items.sort(
+    (a, b) => a.diasRestantesPresupuesto - b.diasRestantesPresupuesto
+  )
+}
+
+export type PromotionCollisionSummaryItem = {
+  id: string
+  nombre: string
+  priority: number
+  collisionCount: number
+  reasons: string[]
+}
+
+/**
+ * Colisiones reales del portafolio completo: para cada promoción activa,
+ * cuántas otras activas comparten canal y al menos una condición
+ * (`detectCollisions`, mismo cálculo que el panel lateral del formulario de
+ * creación/edición), aplicado a todas en vez de a un solo borrador.
+ */
+export async function getPromotionsCollisionSummary(): Promise<
+  PromotionCollisionSummaryItem[]
+> {
+  const active = await listActivePromotions()
+
+  return active
+    .map((promotion) => {
+      const collisions = detectCollisions(
+        {
+          conditions: flattenConditionNodes(promotion.condiciones),
+          channelScope: promotion.canal_aplicacion,
+          priority: promotion.prioridad,
+        },
+        active.filter((other) => other.id !== promotion.id)
+      )
+      return {
+        id: promotion.id,
+        nombre: promotion.nombre,
+        priority: promotion.prioridad,
+        collisionCount: collisions.length,
+        reasons: [...new Set(collisions.map((c) => c.reason))],
+      }
+    })
+    .filter((item) => item.collisionCount > 0)
+    .sort((a, b) => b.collisionCount - a.collisionCount)
+}
+
+export type GiftedUnitsByProduct = {
+  productId: string
+  productName: string
+  unidades: number
+}
+
+/** Unidades regaladas reales por producto (`metadatos.producto_id`/`cantidad` de canjes `producto_gratis`/`por_piezas`) — no todas las mecánicas lo registran, solo entran las que sí. */
+export async function getGiftedUnitsByProduct(
+  filters: PromotionsDashboardFilters = {}
+): Promise<GiftedUnitsByProduct[]> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("id"),
+    filters
+  )
+  if (error) throw error
+  const promoIds = (promos ?? []).map((p) => p.id)
+  if (promoIds.length === 0) return []
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("metadatos")
+    .eq("tipo", "canje")
+    .in("promocion_id", promoIds)
+  if (eventsError) throw eventsError
+
+  const totals = new Map<string, number>()
+  for (const row of events ?? []) {
+    const metadatos = row.metadatos as Record<string, unknown>
+    const productoId = metadatos.producto_id
+    const cantidad = metadatos.cantidad
+    if (typeof productoId !== "string" || typeof cantidad !== "number") continue
+    totals.set(productoId, (totals.get(productoId) ?? 0) + cantidad)
+  }
+  if (totals.size === 0) return []
+
+  const { data: productos, error: productosError } = await supabase
+    .from("productos")
+    .select("id, nombre")
+    .in("id", [...totals.keys()])
+  if (productosError) throw productosError
+  const nameById = new Map((productos ?? []).map((p) => [p.id, p.nombre]))
+
+  return [...totals.entries()]
+    .map(([productId, unidades]) => ({
+      productId,
+      productName: nameById.get(productId) ?? "—",
+      unidades,
+    }))
+    .sort((a, b) => b.unidades - a.unidades)
+}
+
+export type PromotionLifecycleEvent = Pick<
+  PromotionEventItem,
+  "id" | "promocionId" | "promocionNombre" | "tipo" | "ocurridoEn"
+>
+
+/**
+ * Hitos de ciclo de vida de "Panel de promociones" — mismos eventos que
+ * `listPromotionEvents`, excluyendo `canje`/`canje_rechazado` (ya tienen su
+ * propia tendencia semanal y tasa de rechazo) y acotados por los filtros
+ * del panel. Sin límite server-side por lo mismo que `listPromotionEvents`
+ * (escala de datos demo) — el corte a `limit` ocurre en cliente, aquí.
+ */
+export async function listPromotionLifecycleEvents(
+  filters: PromotionsDashboardFilters = {},
+  limit = 8
+): Promise<PromotionLifecycleEvent[]> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("id, nombre"),
+    filters
+  )
+  if (error) throw error
+  const promoIds = (promos ?? []).map((p) => p.id)
+  if (promoIds.length === 0) return []
+  const nameById = new Map((promos ?? []).map((p) => [p.id, p.nombre]))
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("id, promocion_id, tipo, ocurrido_en")
+    .in("promocion_id", promoIds)
+    .order("ocurrido_en", { ascending: false })
+  if (eventsError) throw eventsError
+
+  return (events ?? [])
+    .filter((row) => row.tipo !== "canje" && row.tipo !== "canje_rechazado")
+    .slice(0, limit)
+    .map((row) => ({
+      id: row.id,
+      promocionId: row.promocion_id,
+      promocionNombre: nameById.get(row.promocion_id) ?? "—",
+      tipo: row.tipo as PromotionEventType,
+      ocurridoEn: row.ocurrido_en,
+    }))
+}
+
+export type PointsAwardedByPromotion = {
+  id: string
+  nombre: string
+  totalPoints: number
+  sampleSize: number
+}
+
+/** Puntos otorgados reales (`metadatos.puntos_otorgados` de canjes `multiplicador_puntos`/`bono_puntos`) — no todas las mecánicas lo registran, solo entran las que sí. */
+export async function getPointsAwardedByPromotion(
+  filters: PromotionsDashboardFilters = {}
+): Promise<PointsAwardedByPromotion[]> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("id, nombre"),
+    filters
+  )
+  if (error) throw error
+  const promoIds = (promos ?? []).map((p) => p.id)
+  if (promoIds.length === 0) return []
+  const nameById = new Map((promos ?? []).map((p) => [p.id, p.nombre]))
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("promocion_id, metadatos")
+    .eq("tipo", "canje")
+    .in("promocion_id", promoIds)
+  if (eventsError) throw eventsError
+
+  const totals = new Map<string, { points: number; count: number }>()
+  for (const row of events ?? []) {
+    const metadatos = row.metadatos as Record<string, unknown>
+    const puntos = metadatos.puntos_otorgados
+    if (typeof puntos !== "number") continue
+    const acc = totals.get(row.promocion_id) ?? { points: 0, count: 0 }
+    acc.points += puntos
+    acc.count += 1
+    totals.set(row.promocion_id, acc)
+  }
+
+  return [...totals.entries()]
+    .map(([id, { points, count }]) => ({
+      id,
+      nombre: nameById.get(id) ?? "—",
+      totalPoints: points,
+      sampleSize: count,
+    }))
+    .sort((a, b) => b.totalPoints - a.totalPoints)
+}
+
 export type ConditionCategory = { id: string; name: string }
 
 /**
@@ -1280,6 +1638,21 @@ export async function listConditionStoreRegions(): Promise<ConditionOption[]> {
   const { data, error } = await supabase.from("tiendas").select("region")
   if (error) throw error
   return distinctTextValues((data ?? []).map((t) => t.region))
+}
+
+export type ConditionStoreGroup = { id: string; name: string }
+
+/** Grupos de tienda reales (`tienda_grupos`), para la condición "Grupo de tienda" — duplica `features/stores/lib/queries.ts` `listStoreGroups` (aislamiento entre features, CLAUDE.md §2), sin el conteo de tiendas que ese sí necesita. */
+export async function listConditionStoreGroups(): Promise<
+  ConditionStoreGroup[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("tienda_grupos")
+    .select("id, nombre")
+    .order("nombre")
+  if (error) throw error
+  return (data ?? []).map((g) => ({ id: g.id, name: g.nombre }))
 }
 
 /** Marcas reales de Catálogo, para la condición "Marca del producto". */
@@ -1416,6 +1789,7 @@ export type ConditionOptions = {
   provinces: ConditionOption[]
   storeRegions: ConditionOption[]
   storeFormats: ConditionOption[]
+  storeGroups: ConditionStoreGroup[]
   brands: ConditionOption[]
   suppliers: ConditionOption[]
   genders: ConditionOption[]

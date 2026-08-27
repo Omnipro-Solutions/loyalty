@@ -10,6 +10,7 @@ function toRow(values: {
   storeCode: string
   format: string
   status: string
+  groupId: string
   country: string
   region: string
   city: string
@@ -27,6 +28,7 @@ function toRow(values: {
     codigo_tienda: values.storeCode,
     formato: values.format,
     estado: values.status,
+    grupo_id: values.groupId,
     pais: values.country,
     region: values.region,
     ciudad: values.city,

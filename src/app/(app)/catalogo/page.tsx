@@ -41,6 +41,7 @@ export default async function CatalogPage({
   const categoryIds = allValues(params.categoria)
   const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
   const page = Number(firstValue(params.page) ?? "1")
+  const pageSize = Number(firstValue(params.pageSize) ?? CATALOG_PAGE_SIZE)
 
   // No dependen de los filtros — se quedan esperadas aquí.
   const [categories, kpis] = await Promise.all([
@@ -50,13 +51,19 @@ export default async function CatalogPage({
 
   // Sin `await`: pill, botón de exportar y tabla comparten esta promesa —
   // una sola consulta a `listProducts`.
-  const productsPromise = listProducts({ search, categoryIds, status, page })
+  const productsPromise = listProducts({
+    search,
+    categoryIds,
+    status,
+    page,
+    pageSize,
+  })
 
   // `search` ya llega debounced (300ms) desde el filtro de búsqueda, así que
   // incluirla aquí no remonta por cada tecla — solo cuando se asienta.
   // `categoria` es multivalor — se ordena antes de unir para que reordenar
   // el mismo conjunto no dispare un remount falso.
-  const dataKey = `${search ?? ""}|${[...categoryIds].sort().join(",")}|${status ?? ""}|${page}`
+  const dataKey = `${search ?? ""}|${[...categoryIds].sort().join(",")}|${status ?? ""}|${page}|${pageSize}`
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Productos" title="Catálogo de productos">
@@ -109,7 +116,7 @@ export default async function CatalogPage({
         >
           <ProductsTableSection
             productsPromise={productsPromise}
-            pageSize={CATALOG_PAGE_SIZE}
+            pageSize={pageSize}
           />
         </Suspense>
       </ProductsCard>

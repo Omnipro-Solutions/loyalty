@@ -26,6 +26,7 @@ export type RuleReadingNames = {
   couponBatchNameById: Map<string, string>
   tierNameById: Map<string, string>
   productNameById: Map<string, string>
+  storeGroupNameById: Map<string, string>
 }
 
 export const EMPTY_RULE_READING_NAMES: RuleReadingNames = {
@@ -34,15 +35,17 @@ export const EMPTY_RULE_READING_NAMES: RuleReadingNames = {
   couponBatchNameById: new Map(),
   tierNameById: new Map(),
   productNameById: new Map(),
+  storeGroupNameById: new Map(),
 }
 
-/** Construye los 5 mapas desde las listas de opciones que ya cargan las páginas — evita repetir los `new Map(...)` en cada consumidor. */
+/** Construye los 6 mapas desde las listas de opciones que ya cargan las páginas — evita repetir los `new Map(...)` en cada consumidor. */
 export function buildRuleReadingNames(options: {
   categories: { id: string; name: string }[]
   segments: { id: string; name: string }[]
   products: { id: string; name: string }[]
   couponBatches: { id: string; name: string }[]
   tiers: { id: string; name: string }[]
+  storeGroups: { id: string; name: string }[]
 }): RuleReadingNames {
   const toMap = (rows: { id: string; name: string }[]) =>
     new Map(rows.map((row) => [row.id, row.name]))
@@ -52,6 +55,7 @@ export function buildRuleReadingNames(options: {
     couponBatchNameById: toMap(options.couponBatches),
     tierNameById: toMap(options.tiers),
     productNameById: toMap(options.products),
+    storeGroupNameById: toMap(options.storeGroups),
   }
 }
 
@@ -98,6 +102,13 @@ export function formatConditionValue(
     return (
       condition.valor
         .map((f) => STORE_FORMAT_LABEL[f as keyof typeof STORE_FORMAT_LABEL])
+        .join(", ") || "—"
+    )
+  }
+  if (condition.campo === "tienda_grupo") {
+    return (
+      condition.valor
+        .map((id) => names.storeGroupNameById.get(id) ?? id)
         .join(", ") || "—"
     )
   }

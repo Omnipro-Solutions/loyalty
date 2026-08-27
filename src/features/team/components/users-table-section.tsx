@@ -40,7 +40,7 @@ export async function UsersTableSection({
   return (
     <>
       <UsersTable users={users} />
-      <TeamPagination total={total} pageSize={TEAM_PAGE_SIZE} />
+      <TeamPagination total={total} defaultPageSize={TEAM_PAGE_SIZE} />
     </>
   )
 }

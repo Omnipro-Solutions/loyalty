@@ -3,18 +3,22 @@ import { Suspense } from "react"
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { Skeleton } from "@/components/feedback/skeleton"
 import { MembersCard } from "@/features/members/components/members-card"
 import {
   CountPillSkeleton,
   MembersCount,
 } from "@/features/members/components/members-count"
+import { MembersExportSection } from "@/features/members/components/members-export-section"
 import { MembersTableSection } from "@/features/members/components/members-table-section"
 import {
   getMemberKpis,
   listMembers,
   listTiersOptions,
+  MEMBERS_PAGE_SIZE,
 } from "@/features/members/lib/queries"
 import { formatNumber, formatPercent } from "@/lib/format"
+import type { MemberSearchScope } from "@/types/domain"
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -29,9 +33,11 @@ export default async function MembersPage({
 }: PageProps<"/clientes">) {
   const params = await searchParams
   const search = firstValue(params.q)
+  const searchScope = firstValue(params.campo) as MemberSearchScope | undefined
   const tierId = firstValue(params.tier)
   const accountStatus = firstValue(params.estado)
   const page = Number(firstValue(params.page) ?? "1")
+  const pageSize = Number(firstValue(params.pageSize) ?? MEMBERS_PAGE_SIZE)
 
   // No dependen de los filtros — se quedan esperados aquí para que la fila
   // de KPIs y el encabezado nunca parpadeen al filtrar.
@@ -39,13 +45,20 @@ export default async function MembersPage({
 
   // Sin `await`: la misma promesa alimenta el pill de conteo y la tabla —
   // una sola consulta, dos boundaries que resuelven en el mismo tick.
-  const membersPromise = listMembers({ search, tierId, accountStatus, page })
+  const membersPromise = listMembers({
+    search,
+    searchScope,
+    tierId,
+    accountStatus,
+    page,
+    pageSize,
+  })
 
   // `search` ya llega debounced (300ms) desde `MembersFiltersBar` antes de
   // tocar la URL, así que incluirla aquí no remonta por cada tecla — solo
   // una vez que la búsqueda se asienta, mostrando el skeleton igual que al
   // cambiar de nivel/estado o de página.
-  const dataKey = `${search ?? ""}|${tierId ?? ""}|${accountStatus ?? ""}|${page}`
+  const dataKey = `${search ?? ""}|${searchScope ?? ""}|${tierId ?? ""}|${accountStatus ?? ""}|${page}|${pageSize}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Clientes" title="Clientes">
@@ -84,6 +97,11 @@ export default async function MembersPage({
         count={
           <Suspense key={dataKey} fallback={<CountPillSkeleton />}>
             <MembersCount membersPromise={membersPromise} />
+          </Suspense>
+        }
+        exportSlot={
+          <Suspense fallback={<Skeleton className="h-9 w-24 rounded-[10px]" />}>
+            <MembersExportSection membersPromise={membersPromise} />
           </Suspense>
         }
       >

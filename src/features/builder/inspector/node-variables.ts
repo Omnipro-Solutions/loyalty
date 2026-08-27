@@ -31,9 +31,14 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   // simulador que evalúe reglas de evento contra un caso concreto, eso es
   // un motor aparte (ver `AccumulatePointsForm` — sus modificadores/bonos
   // sobre estas variables se marcan "activos" a mano en el ejemplo).
+  // `compra.tienda_grupo` respalda `tiendas.grupo_id`/`tienda_grupos.nombre`
+  // (ver `20260826260000_tienda_grupos.sql`) — mismo trato que `compra.tienda`,
+  // sin un `Field` de opciones cerradas en este editor (cae a "texto" en
+  // `inferType`, igual que `compra.tienda`).
   evento_compra: [
     "compra.monto",
     "compra.tienda",
+    "compra.tienda_grupo",
     "compra.canal",
     "compra.fecha",
     "compra.dia_semana",

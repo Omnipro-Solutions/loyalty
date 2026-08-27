@@ -18,12 +18,20 @@ export function CatalogPagination({ total, pageSize }: CatalogPaginationProps) {
     router.push(`${pathname}?${params.toString()}`)
   }
 
+  function onPageSizeChange(next: number) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("pageSize", String(next))
+    params.set("page", "1")
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
   return (
     <Pagination
       total={total}
       pageSize={pageSize}
       page={page}
       onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
     />
   )
 }

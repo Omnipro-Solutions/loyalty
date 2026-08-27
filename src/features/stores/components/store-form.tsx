@@ -1,6 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Plus } from "lucide-react"
 import { useAction } from "next-safe-action/hooks"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -23,17 +24,19 @@ import { STORE_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 import { createStoreAction, updateStoreAction } from "../actions/stores"
 import { PreSaveChecklist } from "./pre-save-checklist"
+import { StoreGroupsDialog } from "./store-groups-dialog"
 import { StoreSummaryCard } from "./store-summary-card"
 import { STORE_STATUS_LABEL, STORE_FORMAT_LABEL } from "../lib/labels"
-import type { Store } from "../lib/queries"
+import type { Store, StoreGroupOption } from "../lib/queries"
 import { storeSchema, type StoreValues } from "../schemas"
 
-type StoreFormProps = { store?: Store }
+type StoreFormProps = { store?: Store; storeGroups: StoreGroupOption[] }
 
 /** Figma "04.2 · Tiendas · nueva tienda" (1238:4271) — reutilizado también para editar. */
-export function StoreForm({ store }: StoreFormProps) {
+export function StoreForm({ store, storeGroups }: StoreFormProps) {
   const router = useRouter()
   const [generalError, setGeneralError] = useState<string>()
+  const [groups, setGroups] = useState(storeGroups)
   const isEditing = Boolean(store)
 
   const {
@@ -50,6 +53,7 @@ export function StoreForm({ store }: StoreFormProps) {
           storeCode: store.codigo_tienda,
           format: store.formato as StoreValues["format"],
           status: store.estado as StoreValues["status"],
+          groupId: store.grupo_id,
           country: store.pais,
           region: store.region,
           city: store.ciudad,
@@ -67,6 +71,7 @@ export function StoreForm({ store }: StoreFormProps) {
           storeCode: "",
           format: "flagship",
           status: "en_apertura",
+          groupId: "",
           country: "México",
           region: "",
           city: "",
@@ -103,6 +108,15 @@ export function StoreForm({ store }: StoreFormProps) {
   })
 
   const submitting = create.isPending || update.isPending
+
+  function handleGroupCreated(group: { id: string; name: string }) {
+    setGroups((prev) =>
+      [...prev, { ...group, description: null, storeCount: 0 }].sort((a, b) =>
+        a.name.localeCompare(b.name)
+      )
+    )
+    setValue("groupId", group.id)
+  }
 
   function onSubmit(values: StoreValues) {
     setGeneralError(undefined)
@@ -225,6 +239,43 @@ export function StoreForm({ store }: StoreFormProps) {
                 </Select>
               </Field>
             </Row>
+            <Field
+              label="Grupo de tienda"
+              htmlFor="groupId"
+              required
+              error={errors.groupId?.message}
+              hint="Agrupa tiendas para reportes, campañas y condiciones de promociones/journeys."
+            >
+              <div className="flex items-center gap-2">
+                <Select
+                  value={values.groupId || undefined}
+                  onValueChange={(v) => setValue("groupId", v ?? "")}
+                >
+                  <SelectTrigger id="groupId" className="flex-1">
+                    <SelectValue placeholder="Elige un grupo">
+                      {(v: string) => groups.find((g) => g.id === v)?.name ?? v}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <StoreGroupsDialog
+                  groups={groups}
+                  renderTrigger={
+                    <Button type="button" variant="outline" size="icon" />
+                  }
+                  onCreated={handleGroupCreated}
+                >
+                  <Plus className="size-3.5" />
+                  <span className="sr-only">Nuevo grupo de tienda</span>
+                </StoreGroupsDialog>
+              </div>
+            </Field>
           </Section>
 
           <Section
@@ -332,7 +383,7 @@ export function StoreForm({ store }: StoreFormProps) {
         </div>
 
         <div className="flex w-[340px] shrink-0 flex-col gap-5">
-          <StoreSummaryCard values={values} />
+          <StoreSummaryCard values={values} groups={groups} />
           {!isEditing && <PreSaveChecklist />}
           {!isEditing && (
             <div className="flex flex-col gap-1.5 rounded-[20px] bg-background px-5 py-4 shadow-form-section">

@@ -90,6 +90,8 @@ export function defaultConditionFor(field: ConditionField): ConditionValues {
       return { campo: field, valor: [] }
     case "tienda_formato":
       return { campo: field, valor: [] }
+    case "tienda_grupo":
+      return { campo: field, valor: [] }
     case "producto_marca":
       return { campo: field, valor: [] }
     case "producto_proveedor":

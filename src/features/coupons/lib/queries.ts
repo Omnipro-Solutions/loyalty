@@ -89,6 +89,7 @@ export type CouponBatchFilters = {
   validFrom?: string
   validTo?: string
   page?: number
+  pageSize?: number
 }
 
 /** Emisiones cuyos CUPONES (no la emisión en sí) coinciden con la búsqueda — así "Todo"/"ID cupón"/"Persona" en 13.1 encuentran la emisión dueña de un código o de un titular, no solo por nombre/referencia. */
@@ -134,8 +135,9 @@ export async function listCouponBatches(
 ): Promise<{ batches: CouponBatchListItem[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * COUPON_BATCHES_PAGE_SIZE
-  const to = from + COUPON_BATCHES_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? COUPON_BATCHES_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("coupon_batch")
@@ -238,6 +240,7 @@ export type CouponFilters = {
   validFrom?: string
   validTo?: string
   page?: number
+  pageSize?: number
 }
 
 /** Regla 7.8 del doc: la búsqueda corre en servidor sobre el universo completo, vía la vista `coupon_search` (denormaliza persona/emisión para poder hacer un `.or()` sobre una sola relación). */
@@ -246,8 +249,9 @@ export async function listCoupons(
 ): Promise<{ coupons: CouponSearchRow[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * COUPONS_PAGE_SIZE
-  const to = from + COUPONS_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? COUPONS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("coupon_search")

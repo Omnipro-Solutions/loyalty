@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-type CouponSearchFieldProps = {
+type FilterScopedSearchProps = {
   scope: string
   scopeOptions: { value: string; label: string }[]
   onScopeChange: (value: string) => void
@@ -22,12 +22,12 @@ type CouponSearchFieldProps = {
 }
 
 /**
- * Figma "Buscador de cupones" (13.1/13.2): un solo control con selector de
- * ámbito ("Todo" / "ID cupón" / persona / emisión) fusionado al buscador —
- * variante del "Filtro / Buscador" (699:330) de `FilterSearch`, que no
- * soporta esta combinación.
+ * Variante de `FilterSearch` con un selector de ámbito fusionado (ej.
+ * "Buscador de cupones", Figma 13.1/13.2: "Todo" / "ID cupón" / persona /
+ * emisión) — para cuando la búsqueda no debe correr sobre todos los campos
+ * combinados, sino sobre uno elegido por el usuario.
  */
-export function CouponSearchField({
+export function FilterScopedSearch({
   scope,
   scopeOptions,
   onScopeChange,
@@ -35,7 +35,7 @@ export function CouponSearchField({
   onChange,
   placeholder,
   className,
-}: CouponSearchFieldProps) {
+}: FilterScopedSearchProps) {
   return (
     <div
       className={cn(

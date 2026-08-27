@@ -3,14 +3,17 @@ import { notFound } from "next/navigation"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { StoreForm } from "@/features/stores/components/store-form"
-import { getStoreById } from "@/features/stores/lib/queries"
+import { getStoreById, listStoreGroups } from "@/features/stores/lib/queries"
 
 /** Reutiliza el formulario de 04.2 — el Figma no define una pantalla de edición aparte. */
 export default async function EditStorePage({
   params,
 }: PageProps<"/tiendas/[id]/editar">) {
   const { id } = await params
-  const store = await getStoreById(id)
+  const [store, storeGroups] = await Promise.all([
+    getStoreById(id),
+    listStoreGroups(),
+  ])
   if (!store) notFound()
 
   return (
@@ -19,7 +22,7 @@ export default async function EditStorePage({
       title={store.nombre}
     >
       <BackLink href="/tiendas">Volver a Tiendas</BackLink>
-      <StoreForm store={store} />
+      <StoreForm store={store} storeGroups={storeGroups} />
     </AppPage>
   )
 }

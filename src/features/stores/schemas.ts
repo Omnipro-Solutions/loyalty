@@ -7,6 +7,7 @@ export const storeSchema = z.object({
   storeCode: z.string().min(2, "Ingresa el código de tienda"),
   format: z.enum(STORE_FORMATS),
   status: z.enum(STORE_STATUSES),
+  groupId: z.string().uuid("Elige un grupo de tienda"),
   country: z.string().min(2, "Ingresa el país"),
   region: z.string().min(2, "Ingresa el departamento o estado"),
   city: z.string().min(2, "Ingresa la ciudad"),
@@ -23,5 +24,21 @@ export const storeSchema = z.object({
 export type StoreValues = z.infer<typeof storeSchema>
 
 export const updateStoreSchema = storeSchema.extend({
+  id: z.string().uuid(),
+})
+
+/** Diálogo de gestión de grupos de tienda (`StoreGroupsDialog`) — sin nodo de Figma, feature nueva. */
+export const storeGroupSchema = z.object({
+  name: z.string().min(2, "Ingresa el nombre del grupo"),
+  description: z.string().optional(),
+})
+
+export type StoreGroupValues = z.infer<typeof storeGroupSchema>
+
+export const updateStoreGroupSchema = storeGroupSchema.extend({
+  id: z.string().uuid(),
+})
+
+export const deleteStoreGroupSchema = z.object({
   id: z.string().uuid(),
 })

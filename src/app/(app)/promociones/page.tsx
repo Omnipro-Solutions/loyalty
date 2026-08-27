@@ -42,6 +42,7 @@ export default async function PromotionsPage({
   )
   const channel = firstValue(params.canal)
   const page = Number(firstValue(params.page) ?? "1")
+  const pageSize = Number(firstValue(params.pageSize) ?? PROMOTIONS_PAGE_SIZE)
 
   // No dependen de los filtros de la tabla — se quedan esperados aquí.
   const [planningKpis, summary, totalStores, categories, segments] =
@@ -63,13 +64,14 @@ export default async function PromotionsPage({
     publicationStatus,
     channel,
     page,
+    pageSize,
   })
 
   // `search` ya llega debounced (300ms) desde `PromotionsFiltersBar` antes
   // de tocar la URL, así que incluirla aquí no remonta por cada tecla — solo
   // cuando la búsqueda se asienta. Remonta también al cambiar estado/canal/
   // página, mostrando el `TableSkeleton` en los tres casos.
-  const dataKey = `${search ?? ""}|${publicationStatus ?? ""}|${channel ?? ""}|${page}`
+  const dataKey = `${search ?? ""}|${publicationStatus ?? ""}|${channel ?? ""}|${page}|${pageSize}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
@@ -134,7 +136,7 @@ export default async function PromotionsPage({
         >
           <PromotionsTableSection
             promotionsPromise={promotionsPromise}
-            pageSize={PROMOTIONS_PAGE_SIZE}
+            pageSize={pageSize}
             totalStores={totalStores}
             categoryNameById={categoryNameById}
             segmentNameById={segmentNameById}

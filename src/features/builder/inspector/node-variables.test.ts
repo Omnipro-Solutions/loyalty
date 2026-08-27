@@ -31,6 +31,7 @@ describe("resolveAvailableVariables", () => {
         "compra.items[].sku",
         "compra.monto",
         "compra.tienda",
+        "compra.tienda_grupo",
       ].sort()
     )
     expect(variables[0].sourceLabel).toBe("Compra grande")

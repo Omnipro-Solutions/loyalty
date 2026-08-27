@@ -7,6 +7,8 @@ type MembersCardProps = {
   tiers: TierOption[]
   /** Pill de conteo — su propio `<Suspense>`, misma promesa que `children`. */
   count: ReactNode
+  /** `ExportMembersButton` necesita el array resuelto — va en su propio `<Suspense>` sin key (no hace falta remontarlo, solo esperar). */
+  exportSlot: ReactNode
   /** Tabla + paginación, o `EmptyState` — va dentro de un `<Suspense>` con key. */
   children: ReactNode
 }
@@ -17,7 +19,12 @@ type MembersCardProps = {
  * de cualquier `<Suspense>` con key a propósito — remontarla borraría el
  * texto del buscador y el foco (ver `MembersFiltersBar`).
  */
-export function MembersCard({ tiers, count, children }: MembersCardProps) {
+export function MembersCard({
+  tiers,
+  count,
+  exportSlot,
+  children,
+}: MembersCardProps) {
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
       <div className="flex items-center gap-2.5 px-[22px] py-4">
@@ -30,6 +37,7 @@ export function MembersCard({ tiers, count, children }: MembersCardProps) {
           </div>
         </div>
         <MembersFiltersBar tiers={tiers} />
+        {exportSlot}
       </div>
 
       {children}

@@ -1,26 +1,37 @@
 import { AppPage } from "@/components/layout/app-page"
 import { PromotionAlerts } from "@/features/promotions/components/promotion-alerts"
-import { PromotionEventsLog } from "@/features/promotions/components/promotion-events-log"
+import { PromotionsAverageCart } from "@/features/promotions/components/promotions-average-cart"
+import { PromotionsBudgetByCostNature } from "@/features/promotions/components/promotions-budget-by-cost-nature"
 import { PromotionsBudgetByFinancier } from "@/features/promotions/components/promotions-budget-by-financier"
+import { PromotionsBudgetPace } from "@/features/promotions/components/promotions-budget-pace"
 import { PromotionsCanjeChannelAttribution } from "@/features/promotions/components/promotions-canje-channel-attribution"
 import { PromotionsCanjesTrend } from "@/features/promotions/components/promotions-canjes-trend"
+import { PromotionsCollisionSummary } from "@/features/promotions/components/promotions-collision-summary"
 import { PromotionsDashboardFilters } from "@/features/promotions/components/promotions-dashboard-filters"
 import { PromotionsDashboardKpiRow } from "@/features/promotions/components/promotions-dashboard-kpi-row"
-import { PromotionsDashboardTabs } from "@/features/promotions/components/promotions-dashboard-tabs"
 import { PromotionsExpiringSoon } from "@/features/promotions/components/promotions-expiring-soon"
+import { PromotionsGiftedUnits } from "@/features/promotions/components/promotions-gifted-units"
+import { PromotionsLifecycleTimeline } from "@/features/promotions/components/promotions-lifecycle-timeline"
+import { PromotionsPointsAwarded } from "@/features/promotions/components/promotions-points-awarded"
 import { PromotionsRoiRanking } from "@/features/promotions/components/promotions-roi-ranking"
 import { TopPromotionsByRedemptions } from "@/features/promotions/components/top-promotions-by-redemptions"
 import { resolveVigenciaWindow } from "@/features/promotions/lib/dashboard-filters"
 import {
+  getAverageCartByPromotion,
+  getBudgetByCostNature,
   getBudgetByFinancier,
+  getGiftedUnitsByProduct,
+  getPointsAwardedByPromotion,
   getPromotionAlerts,
   getPromotionCanjesTrend,
   getPromotionChannelAttribution,
+  getPromotionsBudgetPace,
+  getPromotionsCollisionSummary,
   getPromotionsDashboardKpis,
   getPromotionsExpiringSoon,
   getPromotionsRoiRanking,
   getTopPromotionsByRedemptions,
-  listPromotionEvents,
+  listPromotionLifecycleEvents,
   listPromotionOptions,
   type PromotionsDashboardFilters as DashboardFilters,
 } from "@/features/promotions/lib/queries"
@@ -53,33 +64,27 @@ function parseEnumList<T extends string>(
  * prefijo del pathname, así que si esta página viviera bajo `/promociones`
  * el item "Promociones" del sidebar quedaría resaltado también aquí.
  * Estilo adaptado del resto de la app (`/analitica`, `/resumen`, catálogo):
- * los widgets de "Resumen" son duplicados de `features/dashboard` y
- * `features/catalog` (aislamiento entre features, CLAUDE.md §2) — no de
- * "Analítica de Loyalty.dc.html" (docs/), que solo aportó la idea de las
- * pestañas Resumen/Logs, el filtro de vigencia y la forma de la tendencia
- * semanal / atribución por canal. Todo lo que se ve sale de columnas o
- * eventos reales (incluyendo `promocion_eventos`, sembrado con fecha real) —
- * sin exposición/conversión, ingreso incremental, uplift vs. control, "vs.
- * periodo anterior", ni la traza de evaluación del log: nada de eso tiene
- * dato real detrás todavía.
+ * los widgets son duplicados de `features/dashboard` y `features/catalog`
+ * (aislamiento entre features, CLAUDE.md §2) — no de "Analítica de
+ * Loyalty.dc.html" (docs/), que solo aportó el filtro de vigencia y la forma
+ * de la tendencia semanal / atribución por canal. Todo lo que se ve sale de
+ * columnas o eventos reales (incluyendo `promocion_eventos`, sembrado con
+ * fecha real) — sin exposición/conversión, ingreso incremental, uplift vs.
+ * control ni "vs. periodo anterior": nada de eso tiene dato real detrás
+ * todavía. La pestaña "Logs" que vivía aquí se movió a su propio ítem de
+ * Configuración (`/ajustes/logs-promociones`) a pedido del usuario.
  */
 export default async function PromotionsDashboardPage({
   searchParams,
 }: PageProps<"/panel-promociones">) {
   const params = await searchParams
-  const vista = firstValue(params.vista) === "logs" ? "logs" : "resumen"
 
   return (
     <AppPage
       breadcrumb="Principal  ›  Panel de promociones"
       title="Panel de promociones"
     >
-      <PromotionsDashboardTabs active={vista} />
-      {vista === "logs" ? (
-        <PromotionsLogsView />
-      ) : (
-        <PromotionsSummaryView params={params} />
-      )}
+      <PromotionsSummaryView params={params} />
     </AppPage>
   )
 }
@@ -125,6 +130,13 @@ async function PromotionsSummaryView({
     canjesTrend,
     channelAttribution,
     expiringSoon,
+    averageCart,
+    budgetByCostNature,
+    budgetPace,
+    collisionSummary,
+    giftedUnits,
+    lifecycleEvents,
+    pointsAwarded,
   ] = await Promise.all([
     getPromotionsDashboardKpis(filters),
     getTopPromotionsByRedemptions(5, filters),
@@ -134,6 +146,13 @@ async function PromotionsSummaryView({
     getPromotionCanjesTrend(promocionIds),
     getPromotionChannelAttribution(promocionIds),
     getPromotionsExpiringSoon(filters),
+    getAverageCartByPromotion(filters),
+    getBudgetByCostNature(filters),
+    getPromotionsBudgetPace(filters),
+    getPromotionsCollisionSummary(),
+    getGiftedUnitsByProduct(filters),
+    listPromotionLifecycleEvents(filters),
+    getPointsAwardedByPromotion(filters),
   ])
 
   return (
@@ -156,11 +175,19 @@ async function PromotionsSummaryView({
         </div>
       </div>
       <PromotionsRoiRanking top={roiRanking.top} bottom={roiRanking.bottom} />
+      <div className="grid w-full grid-cols-1 items-start gap-4 xl:grid-cols-[1.55fr_1fr]">
+        <div className="flex w-full flex-col gap-4">
+          <PromotionsLifecycleTimeline events={lifecycleEvents} />
+          <PromotionsGiftedUnits items={giftedUnits} />
+          <PromotionsPointsAwarded items={pointsAwarded} />
+        </div>
+        <div className="flex w-full flex-col gap-4">
+          <PromotionsBudgetByCostNature items={budgetByCostNature} />
+          <PromotionsBudgetPace items={budgetPace} />
+          <PromotionsAverageCart items={averageCart} />
+          <PromotionsCollisionSummary items={collisionSummary} />
+        </div>
+      </div>
     </>
   )
-}
-
-async function PromotionsLogsView() {
-  const events = await listPromotionEvents()
-  return <PromotionEventsLog events={events} />
 }
