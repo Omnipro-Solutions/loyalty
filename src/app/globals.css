@@ -386,4 +386,16 @@
     background-color: var(--border-strong);
     border-radius: 9999px;
   }
+
+  /* Sin scrollbar visible, con scroll funcional intacto — para columnas
+     angostas donde hasta un scrollbar delgado rompe el centrado (rail
+     colapsado) o donde el propio componente ya trae su indicador de
+     desplazamiento (command palette). */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

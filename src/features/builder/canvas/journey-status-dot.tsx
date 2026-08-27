@@ -24,9 +24,18 @@ const STATUS_META: Record<
   },
 }
 
-/** Figma "08.2": punto + texto en la columna ESTADO de la tabla — más discreto que el `Badge` en píldora de la editor bar. */
+/**
+ * Figma "08.2": punto + texto en la columna ESTADO de la tabla — más discreto
+ * que el `Badge` en píldora de la editor bar.
+ *
+ * `status` viene de una columna `text` en Supabase, no de un enum de
+ * Postgres (ver CLAUDE.md) — el cast a `WorkflowStatus` en `queries.ts` no
+ * garantiza en runtime que el dato coincida con `WORKFLOW_STATUSES`, así que
+ * cualquier valor fuera de ese conjunto cae a "borrador" en vez de tumbar la
+ * tabla completa.
+ */
 export function JourneyStatusDot({ status }: { status: DisplayStatus }) {
-  const meta = STATUS_META[status]
+  const meta = STATUS_META[status] ?? STATUS_META.borrador
   return (
     <div className="flex items-center gap-1.5">
       <span
