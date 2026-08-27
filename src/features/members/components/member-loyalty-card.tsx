@@ -82,7 +82,7 @@ export async function MemberLoyaltyCard({ member }: MemberLoyaltyCardProps) {
               Loyalty System
             </p>
             <p className="text-[8px] leading-[11px] text-white/65">
-              Omni · Programa de lealtad
+              Etter · Programa de lealtad
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end whitespace-nowrap">

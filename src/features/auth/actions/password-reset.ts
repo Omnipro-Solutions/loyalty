@@ -2,7 +2,7 @@
 
 import { actionClient } from "@/lib/safe-action"
 import { getSiteOrigin } from "@/lib/site-origin"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 import { passwordResetSchema, setPasswordSchema } from "../schemas"
 
@@ -36,9 +36,7 @@ export const setNewPasswordAction = actionClient
   .inputSchema(setPasswordSchema)
   .action(async ({ parsedInput }) => {
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getAuthenticatedUser()
     if (!user) {
       return {
         ok: false as const,

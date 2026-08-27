@@ -1,5 +1,5 @@
 import { actionClient } from "@/lib/safe-action"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 /**
  * Calco de `promotionsActionClient` — cada action de cupones exige una
@@ -8,9 +8,7 @@ import { createClient } from "@/lib/supabase/server"
  */
 export const couponsActionClient = actionClient.use(async ({ next }) => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) throw new Error("No autenticado.")
 
   const { data: profile } = await supabase

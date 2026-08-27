@@ -351,14 +351,14 @@ select
   t.zona_horaria, (select id from grupo where grupo.nombre = t.grupo_nombre)
 from (
   values
-    ('Omni Polanco', 'ST-0142', 'flagship', 'operando', 'CDMX', 'Ciudad de México', 'Polanco', 'Av. Presidente Masaryk 214', '11560', '+52 55 5280 1140', 'polanco@omni.mx', 'Elena Martínez', 'America/Mexico_City', 'Zona Centro'),
-    ('Omni Santa Fe', 'ST-0143', 'mall', 'operando', 'CDMX', 'Ciudad de México', 'Santa Fe', 'Av. Vasco de Quiroga 3800', '05348', '+52 55 5292 3010', 'santafe@omni.mx', null, 'America/Mexico_City', 'Zona Centro'),
-    ('Omni Providencia', 'ST-0151', 'flagship', 'bajo_meta', 'Jalisco', 'Guadalajara', 'Providencia', 'Av. Pablo Neruda 2860', '44630', '+52 33 3642 8890', 'providencia@omni.mx', null, 'America/Mexico_City', 'Zona Occidente'),
-    ('Omni San Pedro', 'ST-0158', 'express', 'operando', 'Nuevo León', 'San Pedro Garza García', 'Del Valle', 'Av. Vasconcelos 402', '66220', '+52 81 8335 7720', 'sanpedro@omni.mx', null, 'America/Monterrey', 'Zona Norte'),
-    ('Omni Cancún Centro', 'ST-0163', 'mall', 'operando', 'Quintana Roo', 'Cancún', 'Supermanzana 4', 'Av. Tulum 260', '77500', '+52 998 884 2215', 'cancun@omni.mx', null, 'America/Cancun', 'Zona Sureste'),
-    ('Omni Mérida Norte', 'ST-0170', 'express', 'en_apertura', 'Yucatán', 'Mérida', 'Altabrisa', 'Calle 7 #451 x 20', '97130', '+52 999 943 6018', 'merida@omni.mx', null, 'America/Merida', 'Zona Sureste'),
-    ('Omni Angelópolis', 'ST-0174', 'mall', 'cerrada_temporal', 'Puebla', 'Puebla', 'Angelópolis', 'Blvd. del Niño Poblano 2510', '72197', '+52 222 225 9040', 'puebla@omni.mx', null, 'America/Mexico_City', 'Zona Centro'),
-    ('Omni Juriquilla', 'ST-0181', 'express', 'operando', 'Querétaro', 'Querétaro', 'Juriquilla', 'Anillo Vial Fray J. de C. 1500', '76230', '+52 442 218 6633', 'queretaro@omni.mx', null, 'America/Mexico_City', 'Zona Centro')
+    ('Polanco', 'ST-0142', 'flagship', 'operando', 'CDMX', 'Ciudad de México', 'Polanco', 'Av. Presidente Masaryk 214', '11560', '+52 55 5280 1140', 'polanco@omni.mx', 'Elena Martínez', 'America/Mexico_City', 'Zona Centro'),
+    ('Santa Fe', 'ST-0143', 'mall', 'operando', 'CDMX', 'Ciudad de México', 'Santa Fe', 'Av. Vasco de Quiroga 3800', '05348', '+52 55 5292 3010', 'santafe@omni.mx', null, 'America/Mexico_City', 'Zona Centro'),
+    ('Providencia', 'ST-0151', 'flagship', 'bajo_meta', 'Jalisco', 'Guadalajara', 'Providencia', 'Av. Pablo Neruda 2860', '44630', '+52 33 3642 8890', 'providencia@omni.mx', null, 'America/Mexico_City', 'Zona Occidente'),
+    ('San Pedro', 'ST-0158', 'express', 'operando', 'Nuevo León', 'San Pedro Garza García', 'Del Valle', 'Av. Vasconcelos 402', '66220', '+52 81 8335 7720', 'sanpedro@omni.mx', null, 'America/Monterrey', 'Zona Norte'),
+    ('Cancún Centro', 'ST-0163', 'mall', 'operando', 'Quintana Roo', 'Cancún', 'Supermanzana 4', 'Av. Tulum 260', '77500', '+52 998 884 2215', 'cancun@omni.mx', null, 'America/Cancun', 'Zona Sureste'),
+    ('Mérida Norte', 'ST-0170', 'express', 'en_apertura', 'Yucatán', 'Mérida', 'Altabrisa', 'Calle 7 #451 x 20', '97130', '+52 999 943 6018', 'merida@omni.mx', null, 'America/Merida', 'Zona Sureste'),
+    ('Angelópolis', 'ST-0174', 'mall', 'cerrada_temporal', 'Puebla', 'Puebla', 'Angelópolis', 'Blvd. del Niño Poblano 2510', '72197', '+52 222 225 9040', 'puebla@omni.mx', null, 'America/Mexico_City', 'Zona Centro'),
+    ('Juriquilla', 'ST-0181', 'express', 'operando', 'Querétaro', 'Querétaro', 'Juriquilla', 'Anillo Vial Fray J. de C. 1500', '76230', '+52 442 218 6633', 'queretaro@omni.mx', null, 'America/Mexico_City', 'Zona Centro')
 ) as t (nombre, codigo_tienda, formato, estado, region, ciudad, colonia, direccion, codigo_postal, telefono, email, responsable, zona_horaria, grupo_nombre)
 on conflict (org_id, codigo_tienda) do nothing;
 

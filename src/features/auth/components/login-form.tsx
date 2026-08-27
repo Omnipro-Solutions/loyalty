@@ -231,7 +231,7 @@ export function LoginForm({
       <SsoProviderButtons samlEnabled={samlEnabled} />
 
       <p className="text-center text-[11px] leading-4 text-muted-foreground">
-        Al continuar aceptas la política de uso interno de omni.
+        Al continuar aceptas la política de uso interno de etter.
       </p>
     </AuthCard>
   )

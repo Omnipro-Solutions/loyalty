@@ -1,5 +1,5 @@
 import { actionClient } from "@/lib/safe-action"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 /**
  * Extiende el cliente base de next-safe-action con contexto de sesión —
@@ -9,9 +9,7 @@ import { createClient } from "@/lib/supabase/server"
  */
 export const storesActionClient = actionClient.use(async ({ next }) => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) throw new Error("No autenticado.")
 
   const { data: profile } = await supabase

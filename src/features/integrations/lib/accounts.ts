@@ -19,7 +19,7 @@ export const ACCOUNTS: Account[] = [
   {
     id: "entra-id",
     provider: "Microsoft Entra ID",
-    identifier: "omni.onmicrosoft.com",
+    identifier: "etter.onmicrosoft.com",
     usedBy: ["Microsoft Power BI", "Adobe Journey Optimizer"],
     status: "activa",
     connectedOn: "12 mar 2026",
@@ -27,7 +27,7 @@ export const ACCOUNTS: Account[] = [
   {
     id: "google-cloud",
     provider: "Google Cloud",
-    identifier: "omni-loyalty-analytics",
+    identifier: "etter-loyalty-analytics",
     usedBy: ["Looker Studio"],
     status: "activa",
     connectedOn: "3 feb 2026",
@@ -35,7 +35,7 @@ export const ACCOUNTS: Account[] = [
   {
     id: "salesforce",
     provider: "Salesforce",
-    identifier: "Omni Retail Group (Data Cloud)",
+    identifier: "Etter Retail Group (Data Cloud)",
     usedBy: ["Salesforce CDP (Data Cloud)"],
     status: "requiere_atencion",
     connectedOn: "8 dic 2025",

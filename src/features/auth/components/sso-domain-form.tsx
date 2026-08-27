@@ -77,7 +77,7 @@ export function SsoDomainForm() {
               Microsoft Entra ID
             </p>
             <p className="text-xs text-muted-foreground">
-              {detected.domain} · Omni Retail Group
+              {detected.domain} · Etter Retail Group
             </p>
           </div>
           <Badge variant="success" className="shrink-0 rounded-full">

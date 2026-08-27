@@ -274,3 +274,64 @@ export function countRulesAndDepth(node: ConditionGroup): {
   walk(node, 1)
   return { rules, depth }
 }
+
+const OPERATOR_SYMBOL: Record<string, string> = {
+  "=": "=",
+  "!=": "≠",
+  "<": "<",
+  "<=": "≤",
+  ">": ">",
+  ">=": "≥",
+}
+
+function isNumericLiteral(value: string | number): boolean {
+  if (typeof value === "number") return true
+  const trimmed = value.trim()
+  return trimmed !== "" && !Number.isNaN(Number(trimmed))
+}
+
+/** Sin comillas para números (`2`), entre comillas para todo lo demás (`"activa"`) — mismo criterio visual que un literal de código real. */
+function formatConditionValue(value: string | number): string {
+  return isNumericLiteral(value) ? String(value) : `"${String(value)}"`
+}
+
+/**
+ * `cliente.` antepuesto a los atributos propios de `members` (su `field` no
+ * trae punto, ver `FIELD_CONFIG`) — las variables de un bloque anterior del
+ * grafo ya llegan con su propio prefijo (`compra.monto`, ver
+ * `fieldForGraphVariable` en `multi-condition-form.tsx`), así que se
+ * muestran tal cual.
+ */
+function formatConditionField(field: string): string {
+  return field.includes(".") ? field : `cliente.${field}`
+}
+
+function ruleToPseudocode(rule: ConditionRule): string {
+  const symbol = OPERATOR_SYMBOL[rule.operator] ?? rule.operator
+  return `${formatConditionField(rule.field)} ${symbol} ${formatConditionValue(rule.value)}`
+}
+
+/** Un subgrupo se muestra anidado entre paréntesis en una sola línea, en vez de bajar de nivel — mantiene legible un árbol profundo dentro del ancho fijo de un nodo del canvas. */
+function nodeToPseudocode(node: ConditionRule | ConditionGroup): string {
+  if (!isGroup(node)) return ruleToPseudocode(node)
+  const joiner = node.combinator === "or" ? " OR " : " AND "
+  const inner = node.rules.map(nodeToPseudocode).join(joiner)
+  return node.rules.length > 1 ? `(${inner})` : inner
+}
+
+/**
+ * Serializa el árbol de condiciones a pseudocódigo tipo motor de reglas
+ * ("IF a ≥ 2 / AND b = \"activa\""): una línea por condición del nivel
+ * raíz, la primera con `IF` y el resto con el combinador del grupo raíz
+ * (`AND`/`OR`) — mismo dato que ya arma "CONDICIONES · N en M niveles"
+ * (`countRulesAndDepth`), solo que como código en vez de conteo.
+ */
+export function conditionGroupToPseudocode(group: ConditionGroup): string[] {
+  if (group.rules.length === 0) return []
+  const combinator = group.combinator === "or" ? "OR" : "AND"
+  return group.rules.map((rule, i) =>
+    i === 0
+      ? `IF ${nodeToPseudocode(rule)}`
+      : `${combinator} ${nodeToPseudocode(rule)}`
+  )
+}

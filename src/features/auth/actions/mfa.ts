@@ -3,7 +3,7 @@
 import { cookies } from "next/headers"
 
 import { actionClient } from "@/lib/safe-action"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 import { generateBackupCodes, hashBackupCode } from "../lib/backup-codes"
 import {
@@ -71,9 +71,7 @@ export const verifyTotpAction = actionClient
     const supabase = await createClient()
     const cookieStore = await cookies()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getAuthenticatedUser()
     if (!user) {
       return {
         ok: false as const,
@@ -130,9 +128,7 @@ export const verifyBackupCodeAction = actionClient
     const supabase = await createClient()
     const cookieStore = await cookies()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getAuthenticatedUser()
     if (!user) {
       return {
         ok: false as const,

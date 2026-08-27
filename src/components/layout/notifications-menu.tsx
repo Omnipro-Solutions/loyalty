@@ -66,7 +66,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     tone: "success",
     icon: Trophy,
     title: "Meta de canjes alcanzada",
-    description: "La tienda Omni Chapinero superó los 500 canjes este mes.",
+    description: "La tienda Etter Chapinero superó los 500 canjes este mes.",
     date: new Date("2026-08-22T17:41:00"),
     read: true,
   },

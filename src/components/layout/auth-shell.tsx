@@ -95,7 +95,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             Icon only (no text) on mobile: with the most content-heavy
             screens (login with 2 SSO buttons, SSO denied with the detail
             table) even the previous compact header (icon + "Loyalty
-            System / By Omni") made the total not fit without clipping on
+            System / By Etter") made the total not fit without clipping on
             a ~667px viewport (iPhone SE). The icon-only version keeps
             BrandMark's `aria-label`, so it's still accessible without the
             visible text. Below 680px of height (some compact Androids,

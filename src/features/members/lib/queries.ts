@@ -944,7 +944,18 @@ export async function listActivePromotionsForMember(
   manuallyAssignedIds?: Set<string>
 ): Promise<MemberPromotionRow[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("promociones").select("*")
+  // `promotionValidity` descarta cualquier fila con `estado_publicacion`
+  // distinto de 'activa' (candidates más abajo solo se queda con
+  // status 'activa'/'programada', y ambos exigen estado_publicacion ===
+  // 'activa') — empujar ese filtro a SQL es equivalente y evita traer
+  // borradores/inactivas/finalizadas y columnas no usadas en cada carga
+  // del detalle de socio.
+  const { data, error } = await supabase
+    .from("promociones")
+    .select(
+      "id, nombre, codigo, tipo, canal_aplicacion, condiciones, estado_publicacion, vigente_desde, vigente_hasta, presupuesto_asignado, presupuesto_consumido"
+    )
+    .eq("estado_publicacion", "activa")
   if (error) throw error
 
   const candidates = (data ?? [])

@@ -377,6 +377,10 @@ export async function listAudienceMembers(
     .select("agregado_en, members(*, tier:tiers(nombre))")
     .eq("segment_id", segmentId)
     .order("agregado_en", { ascending: false })
+    // `segment_members` es una MUESTRA curada (ver migración de la tabla),
+    // no el universo completo — este techo es defensivo, coherente con esa
+    // intención de diseño, no un cambio de comportamiento esperado.
+    .limit(200)
   if (error) throw error
 
   return (data ?? [])
