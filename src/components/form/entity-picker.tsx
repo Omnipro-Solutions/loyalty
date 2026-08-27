@@ -375,6 +375,10 @@ export function EntityPickerField<T>({
   const visibleItems = selected.slice(0, 3)
   const remaining = selected.length - visibleItems.length
   const isChip = size === "chip"
+  // En `single` la única forma de cambiar el valor es elegir otro: quitar
+  // el chip dejaría el campo vacío, y quien lo consume (`OptionPicker`)
+  // ignora la lista vacía — la X se veía pulsable y no hacía nada.
+  const isSingle = dialogProps.mode === "single"
 
   function remove(itemId: string) {
     onValueChange(value.filter((v) => v !== itemId))
@@ -407,13 +411,15 @@ export function EntityPickerField<T>({
               )}
             >
               {getChipLabel(item)}
-              <X
-                className="size-2.5 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  remove(itemId)
-                }}
-              />
+              {!isSingle && (
+                <X
+                  className="size-2.5 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    remove(itemId)
+                  }}
+                />
+              )}
             </span>
           )
         })}

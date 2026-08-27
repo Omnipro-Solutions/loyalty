@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 
 /** Igual al `size` de cada `ColumnDef` en `journeys-table.tsx`. */
-const JOURNEYS_TABLE_COLUMNS = [44, null, 118, 120, 140, 92, 88, 120]
+const JOURNEYS_TABLE_COLUMNS = [44, null, 118, 130, 150, 96, 130]
 
 export default function JourneysLoading() {
   return (

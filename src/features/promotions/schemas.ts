@@ -933,6 +933,49 @@ export const updatePromotionStatusSchema = z
     }
   })
 
+/**
+ * Activación masiva desde el listado — el paso que sigue a una
+ * importación: revisar los borradores y publicarlos. Mismo vocabulario de
+ * motivo que el cambio de estado individual, para que la bitácora se lea
+ * igual venga de donde venga.
+ */
+export const activatePromotionsSchema = z
+  .object({
+    ids: z
+      .array(z.string().uuid())
+      .min(1, "Selecciona al menos una promoción.")
+      .max(200, "Máximo 200 promociones por activación."),
+    reasonCode: z.enum(PROMOTION_STATUS_CHANGE_REASONS),
+    reasonNote: z.string().trim().max(280, "Máximo 280 caracteres").optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.reasonCode === "otro" && !v.reasonNote) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reasonNote"],
+        message: "Describe el motivo",
+      })
+    }
+  })
+
+/**
+ * Borrado de borradores desde el listado. El tope de 10 por llamada no es
+ * arbitrario: el cliente trocea la selección en lotes de 10 para poder
+ * mostrar el avance, y este `max` impide que una llamada suelta se salte
+ * ese troceo y bloquee la petición con 500 ids.
+ */
+export const DELETE_PROMOTIONS_BATCH_SIZE = 10
+
+export const deletePromotionsSchema = z.object({
+  ids: z
+    .array(z.string().uuid())
+    .min(1, "Selecciona al menos una promoción.")
+    .max(
+      DELETE_PROMOTIONS_BATCH_SIZE,
+      `Máximo ${DELETE_PROMOTIONS_BATCH_SIZE} promociones por lote.`
+    ),
+})
+
 export const simulatePromotionSchema = z.object({
   excludeId: z.string().uuid().optional(),
   conditions: z.array(conditionSchema),

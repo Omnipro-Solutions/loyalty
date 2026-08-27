@@ -2,15 +2,23 @@
 
 import { Message } from "@/components/form/message"
 import { Section } from "@/components/form/section"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatNumber } from "@/lib/format"
 
+import { ImportColumnReport } from "./import-column-report"
 import { ImportFailuresTable } from "./import-failures-table"
-import type { ImportFailure, ImportReadyRow } from "../lib/promotion-import"
+import type {
+  ImportFailure,
+  ImportReadyRow,
+  ImportReport,
+} from "../lib/promotion-import"
 
 type ImportStepPreviewProps = {
   ready: ImportReadyRow[]
   failures: ImportFailure[]
+  /** Informe por columna — qué campos pasaron y en qué líneas falló cada uno. */
+  report: ImportReport
   isPending: boolean
   errorMessage?: string
   onImport: () => void
@@ -20,6 +28,7 @@ type ImportStepPreviewProps = {
 export function ImportStepPreview({
   ready,
   failures,
+  report,
   isPending,
   errorMessage,
   onImport,
@@ -31,20 +40,32 @@ export function ImportStepPreview({
       title="Validación y previsualización"
       description="Se importarán solo las filas listas — corrige y vuelve a subir las que tengan error."
     >
-      <p className="text-[13px] text-muted-foreground">
-        {formatNumber(total)} filas ·{" "}
-        <span className="font-medium text-success">
-          {formatNumber(ready.length)} listas
-        </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="neutral">{formatNumber(total)} filas</Badge>
+        <Badge variant="success">
+          {formatNumber(ready.length)} pasan la validación
+        </Badge>
         {failures.length > 0 && (
-          <>
-            {" · "}
-            <span className="font-medium text-destructive">
-              {formatNumber(failures.length)} con error
-            </span>
-          </>
+          <Badge variant="error">
+            {formatNumber(failures.length)} con error
+          </Badge>
         )}
-      </p>
+        {report.missingRequired.length === 0 ? (
+          <Badge variant="success">Campos obligatorios completos</Badge>
+        ) : (
+          <Badge variant="error">
+            Faltan {report.missingRequired.length} campos obligatorios
+          </Badge>
+        )}
+      </div>
+
+      {report.missingRequired.length > 0 && (
+        <Message
+          variant="error"
+          title="El archivo no trae todas las columnas obligatorias"
+          description={`Falta: ${report.missingRequired.join(", ")}. Vuelve al paso "Mapeo de columnas" para asignarlas.`}
+        />
+      )}
 
       {errorMessage && (
         <Message
@@ -53,6 +74,8 @@ export function ImportStepPreview({
           description={errorMessage}
         />
       )}
+
+      <ImportColumnReport report={report} />
 
       {failures.length > 0 && <ImportFailuresTable failures={failures} />}
 

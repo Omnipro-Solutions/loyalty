@@ -107,7 +107,7 @@ function useColumns(
     }),
     columnHelper.accessor("inJourney", {
       id: "inJourney",
-      size: 120,
+      size: 130,
       header: () => <span className="block text-right">En recorrido</span>,
       // `null` = ningún socio con un `points_ledger` vinculado a una
       // corrida de este workflow todavía (ver `getAttributionByWorkflow`
@@ -121,7 +121,7 @@ function useColumns(
     }),
     columnHelper.accessor("conversion", {
       id: "conversion",
-      size: 140,
+      size: 150,
       header: "Conversión",
       cell: (info) => {
         const valor = info.getValue()
@@ -142,19 +142,9 @@ function useColumns(
         )
       },
     }),
-    columnHelper.display({
-      id: "tendencia",
-      size: 92,
-      header: "Tendencia",
-      // Necesitaría una serie histórica (misma métrica en el periodo
-      // anterior) que hoy no se guarda en ningún lado — a diferencia de
-      // "En recorrido"/"Conversión"/"Ingreso", esto sigue sin dato real
-      // detrás.
-      cell: () => <span className="text-xs text-muted-foreground">—</span>,
-    }),
     columnHelper.accessor("totalNodes", {
       header: () => <span className="block text-right">Nodos</span>,
-      size: 88,
+      size: 96,
       cell: (info) => (
         <span className="block text-right text-xs text-muted-foreground">
           {info.getValue()}
@@ -163,7 +153,7 @@ function useColumns(
     }),
     columnHelper.accessor("revenue", {
       id: "revenue",
-      size: 120,
+      size: 130,
       header: () => <span className="block text-right">Ingreso</span>,
       cell: (info) => (
         <span className="block text-right text-[13px] font-semibold text-foreground">

@@ -399,6 +399,275 @@ function applyCouponSearchFilter<
   )
 }
 
+export type CouponOriginSlice = {
+  origin: CouponOrigin
+  count: number
+  share: number
+}
+
+export type CouponAttentionItem = {
+  id:
+    | "por_vencer"
+    | "pendientes_aprobacion"
+    | "emisiones_borrador"
+    | "emisiones_generando"
+    | "vencidos_sin_cerrar"
+    | "activos_sin_canjear"
+    | "sin_titular"
+    | "puntos_sin_devolver"
+  count: number
+  detail?: string
+  href?: string
+  tone: "warning" | "destructive" | "neutral"
+}
+
+export type CouponCommercialKpis = {
+  /** Cómo se reparten los cupones por origen — de dónde salen y cuál manda. */
+  mix: {
+    total: number
+    slices: CouponOriginSlice[]
+    dominant: CouponOriginSlice | null
+  }
+  /** Estado de la cartera entregada (sin borradores ni anulados). */
+  portfolio: {
+    /** Cupones que llegaron a un cliente: emitidos, asignados, canjeados y vencidos. */
+    delivered: number
+    issued: number
+    assigned: number
+    redeemed: number
+    expired: number
+    cancelled: number
+    /** `redeemed / delivered` — 0 si todavía no se entregó ninguno. */
+    redemptionRate: number
+    /** Puntos que los clientes ya gastaron en cupones canjeados. */
+    pointsRedeemed: number
+    /** Puntos comprometidos en cupones vivos: lo serán si se canjean. */
+    pointsCommitted: number
+  }
+  attention: CouponAttentionItem[]
+}
+
+/** Ventana de "por vencer" — un mes es el horizonte en el que todavía da tiempo a reenviar o extender la vigencia. */
+const EXPIRING_SOON_DAYS = 30
+
+/**
+ * KPIs del listado de cupones (13.2), con el mismo enfoque que los de
+ * Promociones: MEZCLA → CARTERA → PENDIENTES. Todo sale de columnas reales
+ * de `coupon` sobre el universo completo.
+ *
+ * Deliberadamente NO hay un "monto entregado en descuentos": el valor real
+ * de un cupón porcentual depende del ticket contra el que se canjeó, y en
+ * este proyecto no existe la tabla de transacciones (mismo hueco que
+ * documenta `20260823120000_promociones.sql`). Sumar solo los de monto fijo
+ * daría una cifra que parece el total y no lo es, así que el impacto
+ * económico se expresa en puntos, que sí son un dato completo.
+ */
+export async function getCouponCommercialKpis(): Promise<CouponCommercialKpis> {
+  const supabase = await createClient()
+  // `origin` vive en la EMISIÓN, no en el cupón: se resuelve por
+  // `batch_id` en vez de asumir una columna que `coupon` no tiene.
+  const [
+    { data, error },
+    { data: batches, error: batchesError },
+    pendingApprovals,
+    batchCounts,
+  ] = await Promise.all([
+    supabase
+      .from("coupon")
+      .select(
+        "status, valid_to, points_cost, batch_id, member_id, bearer, points_charged_at, points_refunded"
+      ),
+    supabase.from("coupon_batch").select("id, origin"),
+    getPendingApprovalsCount(),
+    countBatchesByStatus(),
+  ])
+  if (error) throw error
+  if (batchesError) throw batchesError
+
+  const originByBatch = new Map(
+    (batches ?? []).map((batch) => [batch.id, batch.origin as CouponOrigin])
+  )
+
+  const rows = data ?? []
+  const now = new Date()
+  const soonLimit = new Date(now)
+  soonLimit.setDate(soonLimit.getDate() + EXPIRING_SOON_DAYS)
+
+  const originCounts = new Map<CouponOrigin, number>()
+  let delivered = 0
+  let issued = 0
+  let assigned = 0
+  let redeemed = 0
+  let expired = 0
+  let cancelled = 0
+  let pointsRedeemed = 0
+  let pointsCommitted = 0
+  let expiringSoon = 0
+  let withoutHolder = 0
+  let pointsNotRefunded = 0
+
+  for (const row of rows) {
+    const origin = originByBatch.get(row.batch_id)
+    if (origin) originCounts.set(origin, (originCounts.get(origin) ?? 0) + 1)
+
+    const display = couponStatus({
+      status: row.status as CouponStatus,
+      valid_to: row.valid_to,
+    })
+    if (display === "cancelled") {
+      cancelled += 1
+      // El cliente pagó puntos por un cupón que se anuló y no se le
+      // devolvieron: es deuda con el socio, no un detalle de estado.
+      if (
+        row.points_charged_at != null &&
+        !row.points_refunded &&
+        (row.points_cost ?? 0) > 0
+      ) {
+        pointsNotRefunded += 1
+      }
+      continue
+    }
+    // `draft` todavía no llegó a nadie: no dice nada de la cartera.
+    if (display === "draft") continue
+
+    delivered += 1
+    const points = row.points_cost ?? 0
+
+    if (display === "redeemed") {
+      redeemed += 1
+      pointsRedeemed += points
+      continue
+    }
+    if (display === "expired") {
+      expired += 1
+      continue
+    }
+    if (display === "issued") issued += 1
+    else if (display === "assigned") assigned += 1
+
+    // Cupón vivo que no tiene a quién cobrarle ni a quién avisar. Los "al
+    // portador" no cuentan: ahí la ausencia de titular es intencional, se
+    // asocian a quien los canjee.
+    if (row.member_id == null && !row.bearer) withoutHolder += 1
+
+    pointsCommitted += points
+    if (row.valid_to) {
+      const validTo = new Date(row.valid_to)
+      if (validTo >= now && validTo <= soonLimit) expiringSoon += 1
+    }
+  }
+
+  const total = rows.length
+  const slices = [...originCounts.entries()]
+    .map(([origin, count]) => ({
+      origin,
+      count,
+      share: total > 0 ? count / total : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+
+  const attention: CouponAttentionItem[] = [
+    {
+      id: "por_vencer" as const,
+      count: expiringSoon,
+      detail: `próximos ${EXPIRING_SOON_DAYS} días`,
+      href: "/cupones?vista=coupons&estado=issued",
+      tone: "warning" as const,
+    },
+    {
+      id: "pendientes_aprobacion" as const,
+      count: pendingApprovals,
+      detail: "esperan decisión",
+      href: "/cupones/aprobaciones",
+      tone: "destructive" as const,
+    },
+    {
+      id: "emisiones_borrador" as const,
+      count: batchCounts.draft,
+      detail: "sin emitir",
+      href: "/cupones?estado=draft",
+      tone: "neutral" as const,
+    },
+    {
+      id: "emisiones_generando" as const,
+      count: batchCounts.generating,
+      detail: "atascadas generando",
+      href: "/cupones?estado=generating",
+      tone: "destructive" as const,
+    },
+    {
+      id: "sin_titular" as const,
+      count: withoutHolder,
+      detail: "vigentes, sin dueño conocido",
+      tone: "warning" as const,
+    },
+    {
+      // Cartera viva: entregados, en vigencia y todavía sin usar. No es un
+      // error — es el saldo que sigue abierto y puede vencerse solo.
+      id: "activos_sin_canjear" as const,
+      count: issued + assigned,
+      detail: "vigentes, todavía sin usar",
+      tone: "neutral" as const,
+    },
+    {
+      id: "puntos_sin_devolver" as const,
+      count: pointsNotRefunded,
+      detail: "anulados con puntos cobrados",
+      tone: "destructive" as const,
+    },
+    {
+      id: "vencidos_sin_cerrar" as const,
+      count: expired,
+      detail: "sin canjearse",
+      tone: "neutral" as const,
+    },
+  ]
+    .filter((item) => item.count > 0)
+    // Lo urgente primero: dentro de cada tono, lo más numeroso arriba.
+    .sort(
+      (a, b) =>
+        ATTENTION_TONE_ORDER[a.tone] - ATTENTION_TONE_ORDER[b.tone] ||
+        b.count - a.count
+    )
+
+  return {
+    mix: { total, slices, dominant: slices[0] ?? null },
+    portfolio: {
+      delivered,
+      issued,
+      assigned,
+      redeemed,
+      expired,
+      cancelled,
+      redemptionRate: delivered > 0 ? redeemed / delivered : 0,
+      pointsRedeemed,
+      pointsCommitted,
+    },
+    attention,
+  }
+}
+
+/** Orden de urgencia de los pendientes — el mismo criterio en Promociones y Cupones. */
+const ATTENTION_TONE_ORDER = { destructive: 0, warning: 1, neutral: 2 }
+
+/** Emisiones a medias: creadas sin emitir, o atascadas generando. */
+async function countBatchesByStatus(): Promise<{
+  draft: number
+  generating: number
+}> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("coupon_batch")
+    .select("status")
+    .in("status", ["draft", "generating"])
+  if (error) throw error
+  const rows = data ?? []
+  return {
+    draft: rows.filter((row) => row.status === "draft").length,
+    generating: rows.filter((row) => row.status === "generating").length,
+  }
+}
+
 export type CouponStatusCount = { total: number; matched: number | null }
 
 /**
@@ -515,15 +784,22 @@ export async function countResolvableAudienceMembers(
 
 export type MemberOption = { id: string; name: string; email: string }
 
-export async function searchMembers(search: string): Promise<MemberOption[]> {
+/**
+ * Clientes elegibles como titular de un cupón, para el paso "Destinatario"
+ * del asistente (13.2). Devuelve la lista COMPLETA a propósito: el
+ * selector filtra en cliente, así que un tope aquí haría que buscar a
+ * alguien que existe no lo encontrara — y en un campo obligatorio eso se
+ * lee como "ese cliente no está dado de alta", que es mentira. Con el
+ * tamaño de un tenant de demo (cientos de socios) el coste es despreciable;
+ * si un día son decenas de miles, lo que toca es un picker con búsqueda
+ * contra el servidor, no truncar la lista en silencio.
+ */
+export async function listMemberOptions(): Promise<MemberOption[]> {
   const supabase = await createClient()
-  const clean = sanitizeSearch(search)
-  if (!clean) return []
   const { data, error } = await supabase
     .from("members")
     .select("id, nombre, email")
-    .or(`nombre.ilike.%${clean}%,email.ilike.%${clean}%`)
-    .limit(20)
+    .order("nombre")
   if (error) throw error
   return (data ?? []).map((m) => ({ id: m.id, name: m.nombre, email: m.email }))
 }

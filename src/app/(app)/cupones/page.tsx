@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { BatchesTableSection } from "@/features/coupons/components/batches-table-section"
 import { CouponsCard } from "@/features/coupons/components/coupons-card"
+import { CouponsKpiRow } from "@/features/coupons/components/coupons-kpi-row"
 import { CouponsExportSection } from "@/features/coupons/components/coupons-export-section"
 import { CouponsStatusChips } from "@/features/coupons/components/coupons-status-chips"
 import { CouponsTableSection } from "@/features/coupons/components/coupons-table-section"
@@ -22,6 +23,7 @@ import {
   COUPONS_PAGE_SIZE,
   countDistinctBatchesForCoupons,
   getCouponBatchStatusCounts,
+  getCouponCommercialKpis,
   getCouponStatusCounts,
   getPendingApprovalsCount,
   listCouponBatches,
@@ -43,7 +45,7 @@ function firstValue(value: string | string[] | undefined) {
 
 /** Igual al `size` de cada `ColumnDef` en `batches-table.tsx`/`coupons-table.tsx`. */
 const BATCHES_TABLE_COLUMNS = [280, 170, 170, 140, 140, 140, 56]
-const COUPONS_TABLE_COLUMNS = [190, 210, 190, 100, 90, 120, 110]
+const COUPONS_TABLE_COLUMNS = [40, 190, 210, 190, 100, 90, 120, 56]
 
 export default async function CouponsPage({
   searchParams,
@@ -57,7 +59,10 @@ export default async function CouponsPage({
   const validFrom = firstValue(params.desde)
   const validTo = firstValue(params.hasta)
   const page = Number(firstValue(params.page) ?? "1")
-  const pendingApprovals = await getPendingApprovalsCount()
+  const [pendingApprovals, kpis] = await Promise.all([
+    getPendingApprovalsCount(),
+    getCouponCommercialKpis(),
+  ])
 
   // Sin `await`: la comparten `CouponsExportSection` (sin key) y
   // `*TableSection` (con key) — mismo patrón que `promociones/page.tsx`.
@@ -268,6 +273,8 @@ export default async function CouponsPage({
         </div>
       </div>
 
+      <CouponsKpiRow kpis={kpis} />
+
       <CouponsCard
         levelNote={levelNote}
         statusChips={statusChips}
@@ -281,6 +288,13 @@ export default async function CouponsPage({
                 vista === "batches"
                   ? BATCHES_TABLE_COLUMNS
                   : COUPONS_TABLE_COLUMNS
+              }
+              // Mismas filas que la página real, para que la tabla no dé un
+              // salto al pasar del skeleton a los datos.
+              rows={
+                vista === "batches"
+                  ? COUPON_BATCHES_PAGE_SIZE
+                  : COUPONS_PAGE_SIZE
               }
               leadingAvatar={false}
               headerClassName="bg-neutral-50"

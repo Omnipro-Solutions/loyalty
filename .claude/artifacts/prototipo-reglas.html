@@ -1,0 +1,1149 @@
+<title>Recorrido de una regla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --canvas: #eef0fe;
+    --paper: #ffffff;
+    --surface: #f5f6fb;
+    --surface-2: #eceef7;
+    --line: #dfe2f0;
+    --line-soft: #eaecf6;
+    --ink: #16172e;
+    --ink-soft: #5a5f7d;
+    --ink-faint: #8a8fab;
+    --brand: #4f46e5;
+    --brand-ink: #ffffff;
+    --brand-wash: #e7e9fe;
+    --good: #15803d;
+    --good-wash: #dcfce7;
+    --warn: #a15c07;
+    --warn-wash: #fdf2e0;
+    --bad: #9f1239;
+    --bad-wash: #fde7ef;
+    --teal: #155e75;
+    --teal-wash: #dff6fb;
+    --amber-fg: #a15c07;
+    --amber-wash: #fdf2e0;
+    --violet-fg: #43188a;
+    --violet-wash: #f4edfe;
+    --shadow: 0 1px 2px rgba(22,23,46,.06), 0 8px 24px -12px rgba(22,23,46,.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #0d0e1e;
+      --paper: #16182f;
+      --surface: #1c1e37;
+      --surface-2: #232541;
+      --line: #2f3252;
+      --line-soft: #262844;
+      --ink: #e8e9f3;
+      --ink-soft: #a9adc6;
+      --ink-faint: #7d8199;
+      --brand: #8b83ff;
+      --brand-ink: #14122e;
+      --brand-wash: #221f4d;
+      --good: #6ee7a8;
+      --good-wash: #0f2f21;
+      --warn: #f0b357;
+      --warn-wash: #33240c;
+      --bad: #fb7185;
+      --bad-wash: #3a1020;
+      --teal: #6fd0e8;
+      --teal-wash: #0c2b34;
+      --amber-fg: #f0b357;
+      --amber-wash: #33240c;
+      --violet-fg: #c3a6f5;
+      --violet-wash: #241638;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --canvas: #0d0e1e;
+    --paper: #16182f;
+    --surface: #1c1e37;
+    --surface-2: #232541;
+    --line: #2f3252;
+    --line-soft: #262844;
+    --ink: #e8e9f3;
+    --ink-soft: #a9adc6;
+    --ink-faint: #7d8199;
+    --brand: #8b83ff;
+    --brand-ink: #14122e;
+    --brand-wash: #221f4d;
+    --good: #6ee7a8;
+    --good-wash: #0f2f21;
+    --warn: #f0b357;
+    --warn-wash: #33240c;
+    --bad: #fb7185;
+    --bad-wash: #3a1020;
+    --teal: #6fd0e8;
+    --teal-wash: #0c2b34;
+    --amber-fg: #f0b357;
+    --amber-wash: #33240c;
+    --violet-fg: #c3a6f5;
+    --violet-wash: #241638;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  /* ===== prototype bar ===== */
+  .protobar {
+    background: var(--ink);
+    color: var(--canvas);
+    padding: 9px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .protobar b { font-weight: 600; letter-spacing: .02em; }
+  .protobar span { color: color-mix(in srgb, currentColor 62%, transparent); }
+  .protobar .reset {
+    margin-left: auto;
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    color: inherit;
+    border: 0;
+    border-radius: 7px;
+    padding: 5px 11px;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .protobar .reset:hover { background: color-mix(in srgb, currentColor 28%, transparent); }
+
+  /* ===== app shell ===== */
+  .shell { display: flex; min-height: 640px; }
+
+  .side {
+    width: 218px;
+    flex-shrink: 0;
+    background: var(--paper);
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+  }
+
+  .brandmark {
+    display: flex; align-items: center; gap: 9px;
+    padding: 0 8px 18px;
+  }
+  .brandmark .dot {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--brand); flex-shrink: 0;
+    display: grid; place-items: center;
+    color: var(--brand-ink); font-weight: 700; font-size: 14px;
+  }
+  .brandmark p { margin: 0; font-size: 13px; font-weight: 600; }
+  .brandmark small { color: var(--ink-faint); font-size: 10.5px; }
+
+  .navlabel {
+    font-size: 9.5px; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    padding: 12px 8px 6px;
+  }
+  .navitem {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 9px; border-radius: 9px;
+    color: var(--ink-soft); font-size: 13px;
+  }
+  .navitem.on { background: var(--brand); color: var(--brand-ink); font-weight: 600; }
+  .navitem .new {
+    margin-left: auto; font-size: 9px; font-weight: 700;
+    letter-spacing: .06em; background: var(--good-wash); color: var(--good);
+    border-radius: 5px; padding: 2px 5px;
+  }
+  .navitem.on .new { background: color-mix(in srgb, currentColor 22%, transparent); color: inherit; }
+
+  .main { flex: 1; min-width: 0; padding: 22px 26px 60px; }
+
+  .crumb { font-size: 11.5px; color: var(--ink-faint); margin: 0 0 3px; }
+  h1.page { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 0 0 20px; }
+
+  /* ===== generic card ===== */
+  .card {
+    background: var(--paper);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+  }
+  .card + .card { margin-top: 14px; }
+
+  .card h2 {
+    font-size: 15px; font-weight: 600; margin: 0 0 3px; letter-spacing: -.01em;
+  }
+  .card .sub { font-size: 12px; color: var(--ink-faint); margin: 0 0 16px; }
+
+  /* ===== screens ===== */
+  .screen { display: none; }
+  .screen.on { display: block; }
+
+  /* ===== choose class ===== */
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .pick {
+    text-align: left; font: inherit; cursor: pointer;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 9px;
+    transition: border-color .12s, transform .12s;
+  }
+  .pick:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .pick .tag {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    border-radius: 99px; padding: 4px 9px; width: fit-content;
+  }
+  .pick h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .pick p { margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .pick .ex { font-size: 11.5px; color: var(--ink-faint); margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .pick.p1 .tag { background: var(--amber-wash); color: var(--amber-fg); }
+  .pick.p2 .tag { background: var(--bad-wash); color: var(--bad); }
+  .pick.p3 .tag { background: var(--teal-wash); color: var(--teal); }
+  .pick.p2, .pick.p3 { opacity: .55; }
+  .pick.p2:hover, .pick.p3:hover { transform: none; border-color: var(--line); cursor: default; }
+
+  /* ===== templates ===== */
+  .tpls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .tpl {
+    text-align: left; font: inherit; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 13px; padding: 15px 17px; display: flex; gap: 13px; align-items: flex-start;
+  }
+  .tpl:hover { border-color: var(--brand); background: var(--brand-wash); }
+  .tpl .f { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 500; }
+  .tpl h4 { margin: 0 0 2px; font-size: 13.5px; font-weight: 600; }
+  .tpl p { margin: 0; font-size: 11.5px; color: var(--ink-faint); }
+  .tpl .pill {
+    font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    background: var(--brand); color: var(--brand-ink); border-radius: 5px; padding: 2px 6px;
+    margin-left: auto; flex-shrink: 0;
+  }
+
+  /* ===== stepper ===== */
+  .stepper { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .st { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-faint); }
+  .st i {
+    width: 20px; height: 20px; border-radius: 99px; display: grid; place-items: center;
+    background: var(--surface-2); color: var(--ink-faint); font-size: 10px; font-weight: 700; font-style: normal;
+  }
+  .st.done i { background: var(--good-wash); color: var(--good); }
+  .st.now i { background: var(--brand); color: var(--brand-ink); }
+  .st.now { color: var(--ink); font-weight: 600; }
+  .st-line { width: 20px; height: 1px; background: var(--line); }
+
+  /* ===== form bits ===== */
+  .field { margin-bottom: 15px; }
+  .field > label {
+    display: block; font-size: 11.5px; font-weight: 500; color: var(--ink-soft); margin-bottom: 5px;
+  }
+  .control {
+    width: 100%; border: 1px solid var(--line); background: var(--paper);
+    border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 13px; color: var(--ink);
+  }
+  .control:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 11px; color: var(--ink-faint); margin-top: 4px; }
+
+  /* ===== messages ===== */
+  .msg {
+    display: flex; gap: 9px; border-radius: 11px; padding: 11px 13px;
+    font-size: 12.5px; line-height: 1.45; margin-bottom: 14px;
+  }
+  .msg b { font-weight: 600; display: block; margin-bottom: 2px; }
+  .msg.warn { background: var(--warn-wash); color: var(--warn); }
+  .msg.bad { background: var(--bad-wash); color: var(--bad); }
+  .msg.good { background: var(--good-wash); color: var(--good); }
+  .msg.info { background: var(--brand-wash); color: var(--brand); }
+  .msg .ic { flex-shrink: 0; font-size: 13px; line-height: 1.2; }
+
+  /* ===== referenced entity ===== */
+  .ref {
+    border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; background: var(--surface);
+  }
+  .ref .top { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+  .ref .top h4 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .ref .lock {
+    margin-left: auto; font-size: 10px; color: var(--ink-faint);
+    background: var(--surface-2); border-radius: 5px; padding: 2px 7px;
+  }
+  .ref dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; }
+  .ref dt { font-size: 10px; color: var(--ink-faint); margin-bottom: 1px; }
+  .ref dd { margin: 0; font-size: 12.5px; font-weight: 500; }
+  .ref .go { display: inline-block; margin-top: 11px; font-size: 12px; color: var(--brand); font-weight: 500; }
+
+  /* ===== canvas ===== */
+  .lienzo {
+    background:
+      radial-gradient(circle, var(--line) 1px, transparent 1px) 0 0 / 18px 18px,
+      var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 18px;
+    overflow-x: auto;
+  }
+  .track { display: flex; align-items: flex-start; gap: 0; min-width: 720px; }
+
+  .node {
+    width: 178px; flex-shrink: 0; text-align: left; font: inherit; cursor: pointer;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 13px;
+    padding: 11px 12px 10px; box-shadow: var(--shadow);
+    transition: border-color .12s, transform .12s;
+  }
+  .node:hover { border-color: var(--brand); transform: translateY(-1px); }
+  .node.sel { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-wash), var(--shadow); }
+  .node .head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+  .node .ico {
+    width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center;
+    font-size: 11px; flex-shrink: 0;
+  }
+  .node .grp-entry .ico, .ico.entry { background: var(--teal-wash); color: var(--teal); }
+  .ico.loyalty { background: var(--amber-wash); color: var(--amber-fg); }
+  .ico.logic { background: var(--violet-wash); color: var(--violet-fg); }
+  .ico.action { background: var(--brand-wash); color: var(--brand); }
+  .ico.end { background: var(--bad-wash); color: var(--bad); }
+  .node h4 { margin: 0; font-size: 12.5px; font-weight: 600; letter-spacing: -.01em; }
+  .node .cfg { font-size: 11px; color: var(--ink-faint); line-height: 1.35; }
+  .node .flow-count {
+    margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line-soft);
+    font-size: 11px; display: flex; align-items: center; gap: 6px;
+  }
+  .node .flow-count b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .est { color: var(--ink-faint); font-style: italic; }
+
+  .ports { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+  .port {
+    font-family: "JetBrains Mono", monospace; font-size: 9.5px;
+    border-radius: 5px; padding: 2px 6px; width: fit-content;
+  }
+  .port.ok { background: var(--good-wash); color: var(--good); }
+  .port.no { background: var(--bad-wash); color: var(--bad); }
+
+  .link { width: 46px; flex-shrink: 0; padding-top: 34px; }
+  .link .bar { height: 1.5px; background: var(--line); position: relative; }
+  .link .bar::after {
+    content: "›"; position: absolute; right: -3px; top: -11px;
+    color: var(--ink-faint); font-size: 15px;
+  }
+  .link .lbl {
+    font-family: "JetBrains Mono", monospace; font-size: 9px; color: var(--ink-faint);
+    text-align: center; margin-bottom: 3px;
+  }
+
+  .branch { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ===== inspector ===== */
+  .withinsp { display: grid; grid-template-columns: 1fr 268px; gap: 14px; align-items: start; }
+  .insp { background: var(--paper); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 17px; }
+  .insp .ttl { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .insp .ttl h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .insp .kind { font-size: 10.5px; color: var(--ink-faint); margin: 0 0 14px; }
+  .insp .tabs { display: flex; gap: 3px; margin-bottom: 14px; background: var(--surface); padding: 3px; border-radius: 9px; }
+  .insp .tab { flex: 1; text-align: center; font-size: 11.5px; padding: 5px; border-radius: 7px; color: var(--ink-soft); }
+  .insp .tab.on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(22,23,46,.08); }
+
+  /* ===== rule reading ===== */
+  .reading { display: flex; flex-direction: column; }
+  .clause { display: flex; gap: 11px; padding: 9px 0; }
+  .clause .kw {
+    font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 500;
+    background: var(--surface-2); color: var(--ink-soft);
+    border-radius: 5px; padding: 3px 7px; height: fit-content; width: 74px; flex-shrink: 0; text-align: center;
+  }
+  .clause.hi .kw { background: var(--brand); color: var(--brand-ink); }
+  .clause p { margin: 0; font-size: 13px; line-height: 1.5; }
+  .clause.hi p { font-weight: 600; }
+
+  /* ===== ficha ===== */
+  .statebar { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11.5px; font-weight: 600; border-radius: 99px; padding: 4px 11px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .badge .d { width: 7px; height: 7px; border-radius: 99px; background: currentColor; }
+  .badge.active { background: var(--good-wash); color: var(--good); }
+  .badge.ver { background: var(--surface-2); color: var(--ink-soft); }
+
+  .log { display: flex; flex-direction: column; }
+  .logrow { display: flex; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .logrow:last-child { border-bottom: 0; }
+  .logrow .when { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-faint); width: 96px; flex-shrink: 0; }
+  .logrow .what { font-size: 12.5px; }
+  .logrow .what b { font-weight: 600; }
+  .logrow .what span { color: var(--ink-faint); }
+
+  /* ===== buttons ===== */
+  .actions { display: flex; align-items: center; gap: 9px; margin-top: 18px; flex-wrap: wrap; }
+  .actions .spacer { margin-left: auto; }
+  .btn {
+    font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+    border-radius: 9px; padding: 9px 15px; border: 1px solid transparent;
+  }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); }
+  .btn.primary:hover { filter: brightness(1.07); }
+  .btn.ghost { background: transparent; color: var(--ink-soft); border-color: var(--line); }
+  .btn.ghost:hover { background: var(--surface); }
+  .btn.quiet { background: transparent; color: var(--ink-soft); border: 0; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  /* ===== modal ===== */
+  .veil {
+    display: none; position: fixed; inset: 0; background: rgba(22,23,46,.42);
+    z-index: 40; padding: 24px; overflow-y: auto;
+  }
+  .veil.on { display: grid; place-items: center; }
+  .modal {
+    background: var(--paper); border-radius: 16px; padding: 22px 24px;
+    width: 100%; max-width: 430px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.4);
+  }
+  .modal h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+  .modal .desc { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 16px; line-height: 1.5; }
+
+  /* ===== misc ===== */
+  .note {
+    font-size: 11.5px; color: var(--ink-faint); margin-top: 12px;
+    padding-top: 11px; border-top: 1px dashed var(--line);
+  }
+  .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kv div span { display: block; font-size: 10px; color: var(--ink-faint); }
+  .kv div b { font-size: 13px; font-weight: 600; }
+
+  @media (max-width: 900px) {
+    .side { display: none; }
+    .picks, .tpls, .withinsp, .kv { grid-template-columns: 1fr; }
+    .ref dl { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="protobar">
+  <b>Prototipo navegable</b>
+  <span>Nada se guarda · datos de ejemplo · caso: 2.000 puntos → cupón $50 → rescate</span>
+  <button class="reset" onclick="reset()">Empezar de nuevo</button>
+</div>
+
+<div class="shell">
+  <aside class="side">
+    <div class="brandmark">
+      <div class="dot">L</div>
+      <div>
+        <p>Loyalty System</p>
+        <small>Motor de promociones</small>
+      </div>
+    </div>
+    <div class="navlabel">Comercial</div>
+    <div class="navitem">Promociones</div>
+    <div class="navitem">Cupones</div>
+    <div class="navitem on">Reglas <span class="new">Nuevo</span></div>
+    <div class="navitem">Loyalty Builder</div>
+    <div class="navlabel">Principal</div>
+    <div class="navitem">Resumen</div>
+    <div class="navitem">Clientes</div>
+    <div class="navitem">Audiencias</div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ 0 · clase ============ -->
+    <section class="screen on" id="s0">
+      <p class="crumb">Comercial › Reglas › Nueva</p>
+      <h1 class="page">¿Cuándo se evalúa esta regla?</h1>
+      <div class="picks">
+        <button class="pick p1" onclick="go('s1')">
+          <span class="tag">Permanente</span>
+          <h3>Regla del programa</h3>
+          <p>Siempre activa mientras esté vigente. Define cómo se gana y cómo se quema la moneda del programa.</p>
+          <span class="ex">$1 = 1 punto · Bono de bienvenida</span>
+        </button>
+        <div class="pick p2">
+          <span class="tag">Transaccional</span>
+          <h3>Promoción</h3>
+          <p>Se evalúa contra un carrito, en el momento de la compra. Compite con otras y consume presupuesto.</p>
+          <span class="ex">Ya existe · 13 mecánicas</span>
+        </div>
+        <div class="pick p3">
+          <span class="tag">Orquestada</span>
+          <h3>Journey</h3>
+          <p>Ocurre a lo largo del tiempo: espera, ramifica y escala. Es lo único que empieza en el lienzo.</p>
+          <span class="ex">Ya existe · 30 bloques</span>
+        </div>
+      </div>
+      <p class="note">La pregunta es <b>cuándo se evalúa</b>, no qué objeto crear. De esa respuesta sale si hace falta el lienzo o no.</p>
+    </section>
+
+    <!-- ============ 1 · plantillas ============ -->
+    <section class="screen" id="s1">
+      <p class="crumb">Comercial › Reglas › Nueva regla del programa</p>
+      <h1 class="page">Empieza por una plantilla</h1>
+      <div class="card">
+        <h2>Plantillas</h2>
+        <p class="sub">Vienen rellenas con datos reales de tu programa. Puedes publicarlas cambiando un solo campo.</p>
+        <div class="tpls">
+          <button class="tpl" onclick="go('s2')">
+            <span class="f">$1 → 1 pt</span>
+            <div><h4>Acumulación base</h4><p>Cada peso comprado suma un punto</p></div>
+          </button>
+          <button class="tpl" onclick="go('s2')">
+            <span class="f">2.000 → $50</span>
+            <div><h4>Canje de puntos por cupón</h4><p>Emite un cupón al alcanzar el umbral</p></div>
+            <span class="pill">Este caso</span>
+          </button>
+          <button class="tpl" onclick="go('s2')">
+            <span class="f">Alta → 1.000</span>
+            <div><h4>Bono de bienvenida</h4><p>Al darse de alta en el programa</p></div>
+          </button>
+          <button class="tpl" onclick="go('s2')">
+            <span class="f">🎂 → 1.000</span>
+            <div><h4>Bono de cumpleaños</h4><p>Una vez al año, en su fecha</p></div>
+          </button>
+        </div>
+        <div class="actions">
+          <button class="btn quiet" onclick="go('s0')">← Cambiar clase</button>
+          <span class="spacer"></span>
+          <button class="btn ghost" onclick="go('s2')">Empezar en blanco</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 2 · asistente ============ -->
+    <section class="screen" id="s2">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="stepper">
+        <span class="st now"><i>1</i>Disparador</span><span class="st-line"></span>
+        <span class="st"><i>2</i>Condiciones</span><span class="st-line"></span>
+        <span class="st"><i>3</i>Acción</span><span class="st-line"></span>
+        <span class="st"><i>4</i>Límites</span><span class="st-line"></span>
+        <span class="st"><i>5</i>Vigencia</span><span class="st-line"></span>
+        <span class="st"><i>6</i>Resumen</span>
+      </div>
+
+      <div class="card">
+        <h2>Disparador</h2>
+        <p class="sub">Qué hace que la regla se evalúe.</p>
+
+        <div class="field">
+          <label for="trg">Evento</label>
+          <select class="control" id="trg">
+            <option>El socio alcanza un saldo de puntos</option>
+            <option>Compra pagada</option>
+            <option>Alta de socio</option>
+            <option>Cumpleaños</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="umb">Umbral de puntos</label>
+            <input class="control" id="umb" value="2.000" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="rep">Se puede repetir</label>
+            <select class="control" id="rep">
+              <option>Sí, cada vez que vuelva a alcanzarlo</option>
+              <option>No, una sola vez por socio</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="msg warn">
+          <span class="ic">▲</span>
+          <div><b>Otras 2 reglas activas ya reaccionan a este evento</b>
+          «Escalera de nivel» y «Aviso de saldo». Revisa cuál debe ganar si coinciden — o agrúpalas en una exclusión.</div>
+        </div>
+        <p class="note">Aviso, no bloqueo: convivir puede ser intencional. Lo que sí bloquea al publicar son <b>dos reglas que otorgan puntos</b> por el mismo evento sin grupo declarado.</p>
+
+        <div class="actions">
+          <button class="btn quiet" onclick="go('s1')">← Plantillas</button>
+          <span class="spacer"></span>
+          <button class="btn primary" onclick="go('sc')">Siguiente: Condiciones</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 2b · condiciones ============ -->
+    <section class="screen" id="sc">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="stepper">
+        <span class="st done"><i>✓</i>Disparador</span><span class="st-line"></span>
+        <span class="st now"><i>2</i>Condiciones</span><span class="st-line"></span>
+        <span class="st"><i>3</i>Acción</span><span class="st-line"></span>
+        <span class="st"><i>4</i>Límites</span><span class="st-line"></span>
+        <span class="st"><i>5</i>Vigencia</span><span class="st-line"></span>
+        <span class="st"><i>6</i>Resumen</span>
+      </div>
+
+      <div class="card">
+        <h2>Condiciones</h2>
+        <p class="sub">A quién le aplica cuando el disparador ocurre. Sin condiciones, aplica a todos.</p>
+
+        <div class="field">
+          <label for="cmb">Se cumple si</label>
+          <select class="control" id="cmb" style="max-width:280px">
+            <option>Se cumplen TODAS las condiciones</option>
+            <option>Se cumple ALGUNA condición</option>
+          </select>
+        </div>
+
+        <div class="ref">
+          <div class="top">
+            <h4>Condiciones del socio</h4>
+            <span class="lock">2 activas</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr .8fr 1fr;gap:8px;margin-bottom:8px">
+            <select class="control" aria-label="Campo de la condición 1">
+              <option>Estado de la cuenta</option><option>Nivel</option><option>Audiencia</option><option>Saldo de puntos</option>
+            </select>
+            <select class="control" aria-label="Operador de la condición 1">
+              <option>es</option><option>no es</option>
+            </select>
+            <select class="control" aria-label="Valor de la condición 1">
+              <option>Activa</option><option>Suspendida</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr .8fr 1fr;gap:8px">
+            <select class="control" aria-label="Campo de la condición 2">
+              <option>Consentimiento de comunicaciones</option><option>Estado de la cuenta</option><option>Nivel</option>
+            </select>
+            <select class="control" aria-label="Operador de la condición 2">
+              <option>es</option><option>no es</option>
+            </select>
+            <select class="control" aria-label="Valor de la condición 2">
+              <option>Aceptado</option><option>Pendiente</option>
+            </select>
+          </div>
+          <span class="go" role="button" tabindex="0" onclick="addCond()" onkeydown="if(event.key==='Enter')addCond()">+ Añadir condición</span>
+        </div>
+
+        <div class="msg info" style="margin-top:14px">
+          <span class="ic">◆</span>
+          <div><b>Solo puedes filtrar por lo que el disparador expone</b>
+          «Saldo alcanzado» entrega <span class="mono">socio.saldo · socio.nivel · socio.id</span>. Nada del carrito: en este evento todavía no hay compra.</div>
+        </div>
+
+        <div class="reading" style="margin-top:6px">
+          <div class="clause"><span class="kw">CUANDO</span><p>un socio alcanza <b>2.000 puntos</b> de saldo</p></div>
+          <div class="clause hi"><span class="kw">SI</span><p>su cuenta está activa <b>y</b> aceptó comunicaciones</p></div>
+        </div>
+        <p class="note">La frase se arma mientras configuras: si no se lee bien aquí, tampoco se entenderá en la ficha. <b>1.402 de 12.940</b> socios cumplirían hoy.</p>
+
+        <div class="actions">
+          <button class="btn quiet" onclick="go('s2')">← Disparador</button>
+          <span class="spacer"></span>
+          <button class="btn ghost" onclick="openSinCond()">Quitar condiciones</button>
+          <button class="btn primary" onclick="go('s3')">Siguiente: Acción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3 · acción (referencia) ============ -->
+    <section class="screen" id="s3">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="stepper">
+        <span class="st done"><i>✓</i>Disparador</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Condiciones</span><span class="st-line"></span>
+        <span class="st now"><i>3</i>Acción</span><span class="st-line"></span>
+        <span class="st"><i>4</i>Límites</span><span class="st-line"></span>
+        <span class="st"><i>5</i>Vigencia</span><span class="st-line"></span>
+        <span class="st"><i>6</i>Resumen</span>
+      </div>
+
+      <div class="card">
+        <h2>Acción</h2>
+        <p class="sub">Qué ocurre cuando se cumple. El beneficio no se define aquí: se elige uno que ya existe.</p>
+
+        <div class="field">
+          <label for="acc">Acción</label>
+          <select class="control" id="acc">
+            <option>Emitir un cupón</option>
+            <option>Otorgar puntos</option>
+            <option>Cambiar de nivel</option>
+            <option>Abonar al monedero</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="emi">Emisión de cupones</label>
+          <select class="control" id="emi">
+            <option>Canje 2.000 pts — EMI-2027-014</option>
+            <option>Bienvenida 2027 — EMI-2027-001</option>
+          </select>
+        </div>
+
+        <div class="ref">
+          <div class="top">
+            <h4>Canje 2.000 pts</h4>
+            <span class="lock">Solo lectura</span>
+          </div>
+          <dl>
+            <div><dt>VALOR</dt><dd>$50 monto fijo</dd></div>
+            <div><dt>VIGENCIA DEL CUPÓN</dt><dd>30 días</dd></div>
+            <div><dt>ESTADO</dt><dd>Emitida</dd></div>
+          </dl>
+          <span class="go">Editar en Cupones →</span>
+        </div>
+        <p class="note">Este bloque <b>no vuelve a preguntar</b> el valor ni la vigencia del cupón. Si algo hay que cambiar, se cambia donde vive — así la regla nunca contradice a la emisión.</p>
+
+        <div class="actions">
+          <button class="btn quiet" onclick="go('sc')">← Condiciones</button>
+          <span class="spacer"></span>
+          <button class="btn ghost" onclick="openWait()">+ Añadir una espera</button>
+          <button class="btn primary" onclick="go('s5')">Siguiente: Límites</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 · límites ============ -->
+    <section class="screen" id="s5">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="stepper">
+        <span class="st done"><i>✓</i>Disparador</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Condiciones</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Acción</span><span class="st-line"></span>
+        <span class="st now"><i>4</i>Límites</span><span class="st-line"></span>
+        <span class="st now"><i>5</i>Vigencia</span><span class="st-line"></span>
+        <span class="st"><i>6</i>Resumen</span>
+      </div>
+
+      <div class="card">
+        <h2>Límites y vigencia</h2>
+        <p class="sub">Sin esto, un bono se paga dos veces y nadie se entera hasta el cierre de mes.</p>
+
+        <div class="row2">
+          <div class="field">
+            <label for="l1">Máximo por socio</label>
+            <input class="control" id="l1" value="1 cupón al mes calendario">
+          </div>
+          <div class="field">
+            <label for="l2">Al exceder</label>
+            <select class="control" id="l2">
+              <option>Descartar</option>
+              <option>Encolar para el mes siguiente</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="v1">Vigente desde</label>
+            <input class="control" id="v1" value="01/01/2027">
+          </div>
+          <div class="field">
+            <label for="v2">Vigente hasta</label>
+            <input class="control" id="v2" value="31/12/2027">
+          </div>
+        </div>
+
+        <div class="msg info">
+          <span class="ic">◆</span>
+          <div><b>Idempotencia declarada</b>
+          Un socio que cruce el umbral tres veces en el mismo mes recibirá un cupón, no tres.</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn quiet" onclick="go('s3')">← Acción</button>
+          <span class="spacer"></span>
+          <button class="btn primary" onclick="go('s6')">Siguiente: Resumen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 · lienzo ============ -->
+    <section class="screen" id="s4">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón · lienzo</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="msg info">
+        <span class="ic">◆</span>
+        <div><b>Pasamos lo que configuraste a bloques</b>
+        La espera necesita el lienzo. Desde aquí no se vuelve al asistente — la regla ya tiene ramas.</div>
+      </div>
+
+      <div class="withinsp">
+        <div class="card" style="padding:16px">
+          <div class="lienzo">
+            <div class="track">
+              <button class="node" onclick="pick(this,'n1')" id="n1">
+                <div class="head"><span class="ico entry">◉</span><h4>Saldo alcanzado</h4></div>
+                <p class="cfg">2.000 puntos · repetible</p>
+                <div class="flow-count"><b>1.402</b> socios</div>
+              </button>
+
+              <div class="link"><div class="lbl">out</div><div class="bar"></div></div>
+
+              <button class="node" onclick="pick(this,'n2')" id="n2">
+                <div class="head"><span class="ico loyalty">◈</span><h4>Emitir cupón</h4></div>
+                <p class="cfg">Canje 2.000 pts · $50</p>
+                <div class="ports"><span class="port ok">emitido</span><span class="port no">fallo</span></div>
+                <div class="flow-count"><b>1.402</b> emitidos</div>
+              </button>
+
+              <div class="link"><div class="lbl">emitido</div><div class="bar"></div></div>
+
+              <button class="node" onclick="pick(this,'n3')" id="n3">
+                <div class="head"><span class="ico logic">◷</span><h4>Espera</h4></div>
+                <p class="cfg">7 días o hasta canjearlo</p>
+                <div class="ports"><span class="port ok">canjeó</span><span class="port no">venció</span></div>
+                <div class="flow-count"><span class="est">~840 estimado</span></div>
+              </button>
+
+              <div class="link"><div class="lbl">venció</div><div class="bar"></div></div>
+
+              <div class="branch">
+                <button class="node" onclick="pick(this,'n4')" id="n4">
+                  <div class="head"><span class="ico action">✉</span><h4>Recordatorio</h4></div>
+                  <p class="cfg">Canal aceptado por el socio</p>
+                  <div class="flow-count"><span class="est">~562 estimado</span></div>
+                </button>
+                <button class="node" onclick="pick(this,'n5')" id="n5">
+                  <div class="head"><span class="ico end">■</span><h4>Fin</h4></div>
+                  <p class="cfg">Canjeó — cuenta como conversión</p>
+                  <div class="flow-count"><span class="est">~840 estimado</span></div>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p class="note">Los caudales en <span class="est">gris cursiva</span> son estimados: solo el primer nodo se evalúa contra socios reales. Un número calculado y uno inventado no pueden verse igual.</p>
+        </div>
+
+        <aside class="insp" id="inspector">
+          <div class="ttl"><span class="ico logic">◷</span><h3 id="i-name">Espera</h3></div>
+          <p class="kind" id="i-kind">Lógica · espera con resultado</p>
+          <div class="tabs"><span class="tab on">Configuración</span><span class="tab">Datos</span><span class="tab">Ramas</span></div>
+          <div id="i-body">
+            <div class="field">
+              <label>Esperar hasta</label>
+              <input class="control" value="7 días" readonly>
+            </div>
+            <div class="field">
+              <label>O hasta que ocurra</label>
+              <input class="control" value="El cupón se canjea" readonly>
+            </div>
+            <div class="field">
+              <label>Salidas</label>
+              <div class="ports" style="flex-direction:row;gap:6px">
+                <span class="port ok">canjeó</span><span class="port no">venció</span>
+              </div>
+              <p class="hint">Cada salida es una rama distinta en el lienzo.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="actions">
+        <button class="btn quiet" onclick="go('s3')">← Volver sin convertir</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="go('s6')">Ir al resumen</button>
+      </div>
+    </section>
+
+    <!-- ============ 6 · resumen ============ -->
+    <section class="screen" id="s6">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="stepper">
+        <span class="st done"><i>✓</i>Disparador</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Condiciones</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Acción</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Límites</span><span class="st-line"></span>
+        <span class="st done"><i>✓</i>Vigencia</span><span class="st-line"></span>
+        <span class="st now"><i>6</i>Resumen</span>
+      </div>
+
+      <div class="card">
+        <h2>Cómo lee el motor esta regla</h2>
+        <p class="sub">La misma frase que verás en la ficha después de publicar.</p>
+        <div class="reading">
+          <div class="clause"><span class="kw">CUANDO</span><p>un socio alcanza <b>2.000 puntos</b> de saldo</p></div>
+          <div class="clause"><span class="kw">SI</span><p>su cuenta está activa y aceptó comunicaciones</p></div>
+          <div class="clause hi"><span class="kw">ENTONCES</span><p>emite un cupón de la emisión «Canje 2.000 pts» ($50)</p></div>
+          <div class="clause"><span class="kw">MIENTRAS</span><p>del 01/01/2027 al 31/12/2027, todos los días</p></div>
+          <div class="clause"><span class="kw">SALVO</span><p>que ya haya recibido uno este mes calendario</p></div>
+          <div class="clause"><span class="kw">HASTA</span><p>1 cupón por socio al mes · al exceder: descartar</p></div>
+        </div>
+      </div>
+
+      <div class="card" id="simcard">
+        <h2>Simulación</h2>
+        <p class="sub">Obligatoria antes de publicar, y hay que repetirla si la regla cambia.</p>
+        <div id="sim-before">
+          <div class="msg bad">
+            <span class="ic">✕</span>
+            <div><b>Cambiaste la regla después de la última simulación</b>
+            Vuelve a simular para poder publicar.</div>
+          </div>
+          <button class="btn ghost" onclick="simular()">Simular con datos reales</button>
+        </div>
+        <div id="sim-after" style="display:none">
+          <div class="msg good">
+            <span class="ic">✓</span>
+            <div><b>Simulación al día</b> · 1.402 socios entrarían hoy · sin colisiones bloqueantes</div>
+          </div>
+          <div class="kv">
+            <div><span>ALCANZAN EL UMBRAL</span><b>1.402</b></div>
+            <div><span>CUPONES A EMITIR</span><b>1.402</b></div>
+            <div><span>COSTO EN PUNTOS</span><b>2,8 M</b></div>
+            <div><span>CAUDAL ESTIMADO</span><b class="est">3 nodos</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn quiet" onclick="go('s5')">← Límites</button>
+        <span class="spacer"></span>
+        <button class="btn ghost">Guardar borrador</button>
+        <button class="btn primary" id="pubbtn" onclick="tryPublish()">Publicar</button>
+      </div>
+    </section>
+
+    <!-- ============ 7 · ficha ============ -->
+    <section class="screen" id="s7">
+      <p class="crumb">Comercial › Reglas › Canje de puntos por cupón</p>
+      <h1 class="page">Canje de puntos por cupón</h1>
+
+      <div class="card">
+        <div class="statebar">
+          <span class="badge active"><span class="d"></span>Activa</span>
+          <span class="badge ver">v1</span>
+          <span style="font-size:12px;color:var(--ink-faint)">Vigente 01/01/2027 – 31/12/2027 · publicada hoy por Massiel R.</span>
+          <span class="spacer" style="margin-left:auto"></span>
+          <button class="btn ghost" onclick="openState()">Cambiar estado</button>
+          <button class="btn ghost" onclick="openV2()">Editar</button>
+        </div>
+        <p class="note">Publicar congeló <b>v1</b>. Editar no la toca: abre un borrador de v2 que la reemplaza al publicarse.</p>
+      </div>
+
+      <div class="card">
+        <h2>Cómo lee el motor esta regla</h2>
+        <div class="reading">
+          <div class="clause"><span class="kw">CUANDO</span><p>un socio alcanza <b>2.000 puntos</b> de saldo</p></div>
+          <div class="clause hi"><span class="kw">ENTONCES</span><p>emite un cupón de «Canje 2.000 pts» ($50) y espera 7 días su canje</p></div>
+          <div class="clause"><span class="kw">HASTA</span><p>1 cupón por socio al mes · al exceder: descartar</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Bitácora</h2>
+        <p class="sub">Quién la creó, cuándo, y cada cambio con su motivo.</p>
+        <div class="log" id="logbody">
+          <div class="logrow">
+            <span class="when">Hoy · 14:22</span>
+            <span class="what"><b>Activada</b> — Massiel R. <span>· Motivo: decisión comercial</span></span>
+          </div>
+          <div class="logrow">
+            <span class="when">Hoy · 14:19</span>
+            <span class="what"><b>Simulada</b> — 1.402 socios · sin colisiones</span>
+          </div>
+          <div class="logrow">
+            <span class="when">Hoy · 14:04</span>
+            <span class="what"><b>Creada</b> — Massiel R. <span>· desde plantilla «Canje de puntos por cupón»</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== modales ===== -->
+<div class="veil" id="veil">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+  const screens = ["s0","s1","s2","sc","s3","s5","s4","s6","s7"];
+
+  function go(id) {
+    screens.forEach(s => {
+      const el = document.getElementById(s);
+      if (el) el.classList.toggle("on", s === id);
+    });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function reset() {
+    document.getElementById("sim-before").style.display = "";
+    document.getElementById("sim-after").style.display = "none";
+    simulated = false;
+    closeModal();
+    go("s0");
+  }
+
+  /* --- inspector del lienzo --- */
+  const NODES = {
+    n1: { name: "Saldo alcanzado", kind: "Entrada · disparador", ico: "entry",
+      body: `<div class="field"><label>Umbral</label><input class="control" value="2.000 puntos" readonly></div>
+             <div class="field"><label>Repetible</label><input class="control" value="Sí, cada vez que lo alcance" readonly></div>
+             <div class="field"><label>Expone</label><p class="hint mono" style="margin:0">socio.saldo · socio.nivel · socio.id</p></div>` },
+    n2: { name: "Emitir cupón", kind: "Lealtad · acción interna", ico: "loyalty",
+      body: `<div class="field"><label>Emisión</label><input class="control" value="Canje 2.000 pts — $50" readonly>
+             <p class="hint">Referencia. El valor se edita en Cupones.</p></div>
+             <div class="field"><label>Salidas</label><div class="ports" style="flex-direction:row;gap:6px"><span class="port ok">emitido</span><span class="port no">fallo</span></div></div>
+             <div class="field"><label>Expone</label><p class="hint mono" style="margin:0">cupon.id · cupon.codigo · cupon.vence</p></div>` },
+    n3: { name: "Espera", kind: "Lógica · espera con resultado", ico: "logic",
+      body: `<div class="field"><label>Esperar hasta</label><input class="control" value="7 días" readonly></div>
+             <div class="field"><label>O hasta que ocurra</label><input class="control" value="El cupón se canjea" readonly></div>
+             <div class="field"><label>Salidas</label><div class="ports" style="flex-direction:row;gap:6px"><span class="port ok">canjeó</span><span class="port no">venció</span></div>
+             <p class="hint">Cada salida es una rama distinta en el lienzo.</p></div>` },
+    n4: { name: "Recordatorio", kind: "Acciones · externa", ico: "action",
+      body: `<div class="field"><label>Canal</label><input class="control" value="El que el socio aceptó" readonly></div>
+             <div class="field"><label>Reintentos</label><input class="control" value="3 · luego marca fallido" readonly>
+             <p class="hint">Una acción externa no se puede deshacer: por eso declara reintentos y estado.</p></div>
+             <div class="field"><label>Límite</label><input class="control" value="1 por socio al mes" readonly></div>` },
+    n5: { name: "Fin", kind: "Fin · cierre del flujo", ico: "end",
+      body: `<div class="field"><label>Marca</label><input class="control" value="Conversión" readonly></div>
+             <p class="hint">El flujo no se marca completado si una acción externa quedó en reintento.</p>` }
+  };
+
+  function pick(el, id) {
+    document.querySelectorAll(".node").forEach(n => n.classList.remove("sel"));
+    el.classList.add("sel");
+    const n = NODES[id];
+    document.getElementById("i-name").textContent = n.name;
+    document.getElementById("i-kind").textContent = n.kind;
+    document.getElementById("i-body").innerHTML = n.body;
+    document.querySelector("#inspector .ttl .ico").className = "ico " + n.ico;
+  }
+
+  /* --- modales --- */
+  const veil = document.getElementById("veil");
+  const modal = document.getElementById("modal");
+
+  function openModal(html) { modal.innerHTML = html; veil.classList.add("on"); }
+  function closeModal() { veil.classList.remove("on"); }
+  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+  function openWait() {
+    openModal(`
+      <h3>Esto necesita el lienzo</h3>
+      <p class="desc">Una espera con dos resultados no cabe en el asistente. Pasamos lo que ya configuraste a bloques —
+      <b>desde ahí no se vuelve al asistente</b>, porque la regla pasa a tener ramas.</p>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn ghost" onclick="closeModal()">Seguir en el asistente</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="closeModal(); go('s4')">Convertir a bloques</button>
+      </div>`);
+  }
+
+  /* --- condiciones --- */
+  function addCond() {
+    openModal(`
+      <h3>Añadir una condición</h3>
+      <p class="desc">Solo se ofrecen campos que el disparador expone. Cada condición que añades reduce
+      el alcance — el conteo de socios se recalcula antes de publicar.</p>
+      <div class="field"><label for="c1">Campo</label>
+        <select class="control" id="c1"><option>Nivel</option><option>Audiencia</option><option>Saldo de puntos</option></select></div>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="closeModal()">Añadir</button>
+      </div>`);
+  }
+
+  function openSinCond() {
+    openModal(`
+      <h3>Sin condiciones aplica a todos</h3>
+      <p class="desc">La regla se evaluaría para los <b>12.940</b> socios del programa, incluidas cuentas
+      suspendidas y quienes no aceptaron comunicaciones. Es válido, pero conviene que sea a propósito.</p>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn ghost" onclick="closeModal()">Mantener las condiciones</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="closeModal()">Entendido, quitarlas</button>
+      </div>`);
+  }
+
+  let simulated = false;
+  function simular() {
+    simulated = true;
+    document.getElementById("sim-before").style.display = "none";
+    document.getElementById("sim-after").style.display = "";
+  }
+
+  function tryPublish() {
+    if (!simulated) {
+      openModal(`
+        <h3>Falta simular</h3>
+        <p class="desc">Cambiaste la regla después de la última simulación. Vuelve a simular para publicar —
+        una regla que otorga saldo no se publica a ciegas.</p>
+        <div class="actions" style="margin-top:4px">
+          <button class="btn ghost" onclick="closeModal()">Cerrar</button>
+          <span class="spacer"></span>
+          <button class="btn primary" onclick="closeModal(); simular()">Simular ahora</button>
+        </div>`);
+      return;
+    }
+    openModal(`
+      <h3>Publicar la regla</h3>
+      <p class="desc">Pasará a <b>Activa</b> y empezará a evaluarse dentro de su vigencia.
+      El motivo queda en la bitácora junto a tu nombre y la fecha.</p>
+      <div class="field"><label for="m1">Estado al guardar</label>
+        <select class="control" id="m1"><option>Activa</option><option>Borrador</option></select></div>
+      <div class="field"><label for="m2">Motivo</label>
+        <select class="control" id="m2"><option>Decisión comercial</option><option>Fin de campaña</option><option>Otro (especificar)</option></select></div>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="closeModal(); go('s7')">Publicar</button>
+      </div>`);
+  }
+
+  function openState() {
+    openModal(`
+      <h3>Inactivar la regla</h3>
+      <p class="desc">¿Confirmas el cambio? Pasará de <b>Activa</b> a <b>Inactiva</b> y el motor dejará de evaluarla.
+      Los cupones ya emitidos siguen siendo válidos.</p>
+      <div class="field"><label for="s1f">Motivo</label>
+        <select class="control" id="s1f"><option>Decisión comercial</option><option>Presupuesto</option><option>Error de configuración</option><option>Otro (especificar)</option></select></div>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="closeModal(); logInactive()">Confirmar e inactivar</button>
+      </div>`);
+  }
+
+  function logInactive() {
+    document.querySelector("#s7 .badge.active").outerHTML =
+      '<span class="badge" style="background:var(--warn-wash);color:var(--warn)"><span class="d"></span>Inactiva</span>';
+    const row = document.createElement("div");
+    row.className = "logrow";
+    row.innerHTML = '<span class="when">Hoy · 14:31</span><span class="what"><b>Inactivada</b> — Massiel R. <span>· Motivo: decisión comercial</span></span>';
+    document.getElementById("logbody").prepend(row);
+  }
+
+  function openV2() {
+    openModal(`
+      <h3>Editar crea la versión 2</h3>
+      <p class="desc">La v1 sigue corriendo mientras tanto. Al publicar la v2 reemplaza a la v1,
+      que queda en el historial y se puede restaurar.</p>
+      <div class="actions" style="margin-top:4px">
+        <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="closeModal(); go('s2')">Abrir borrador v2</button>
+      </div>`);
+  }
+
+  pick(document.getElementById("n3"), "n3");
+</script>

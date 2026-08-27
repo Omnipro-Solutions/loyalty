@@ -2,6 +2,7 @@ import { formatShortDate } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import type {
+  BenefitType,
   ChannelScope,
   ConditionCombinator,
   Financiador,
@@ -103,6 +104,26 @@ function withTypedConditions(row: PromotionRow): Promotion {
   }
 }
 
+/**
+ * SKU → id de todo el catálogo activo, para resolver las columnas de
+ * producto del CSV de importación. Trae solo las dos columnas que hacen
+ * falta (no `listProductOptionsForPromotions`, que carga precio y marca
+ * para pintar el picker) y sin tope bajo: un CSV puede referenciar
+ * cualquier SKU, no solo los primeros por nombre.
+ */
+export async function listProductRefsForImport(): Promise<
+  { id: string; sku: string }[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("productos")
+    .select("id, sku")
+    .eq("estado", "activo")
+    .limit(5000)
+  if (error) throw error
+  return data ?? []
+}
+
 export type PromotionsFilters = {
   search?: string
   publicationStatus?: PromotionPublicationStatus
@@ -110,7 +131,7 @@ export type PromotionsFilters = {
   page?: number
 }
 
-export const PROMOTIONS_PAGE_SIZE = 6
+export const PROMOTIONS_PAGE_SIZE = 10
 
 /** PostgREST interpreta `,()%` dentro de un filtro `.or()` — se descartan del texto de búsqueda. */
 function sanitizeSearch(value: string): string {
@@ -176,6 +197,302 @@ export async function listActivePromotions(
   return (data ?? []).map(withTypedConditions)
 }
 
+export type PromotionCoverage = {
+  /** Mecánicas que entran en el cálculo: activas + programadas. */
+  promotions: number
+  /** Categorías distintas alcanzadas — todas si alguna mecánica no acota producto. */
+  categories: number
+  totalCategories: number
+  /** SKUs nombrados explícitamente en una condición de producto. */
+  products: number
+  segments: number
+  cities: number
+  channels: number
+  /** Mecánicas sin condición de categoría ni de producto: alcanzan el catálogo entero. */
+  catalogWide: number
+}
+
+export type PromotionFundingSlice = {
+  financiador: Financiador
+  amount: number
+  /** Parte del presupuesto total, 0-1. */
+  share: number
+}
+
+/** Cuántas mecánicas de cada tipo se crearon en la ventana de tendencia. */
+export type PromotionMechanicSlice = {
+  benefitType: BenefitType
+  count: number
+  share: number
+}
+
+/** Un pendiente del área: algo que hay que decidir o completar, con su conteo. */
+export type PromotionAttentionItem = {
+  id:
+    | "borradores"
+    | "por_vencer"
+    | "vencidas_sin_cerrar"
+    | "sin_grupo_exclusion"
+    | "sin_aprobacion_rx"
+  count: number
+  /** Dato que da urgencia al pendiente ("el más antiguo lleva 12 días"). */
+  detail?: string
+  /** Filtro del listado que aísla estas filas, si existe uno. */
+  href?: string
+  tone: "warning" | "destructive" | "neutral"
+}
+
+export type PromotionsPlanningKpis = {
+  coverage: PromotionCoverage
+  activity: {
+    active: number
+    scheduled: number
+    drafts: number
+    inactive: number
+    finished: number
+  }
+  funding: { total: number; slices: PromotionFundingSlice[] }
+  /** Últimos 6 meses de creación, del más antiguo al más reciente. */
+  /** Cómo se reparten las mecánicas creadas, de mayor a menor. */
+  mechanics: {
+    total: number
+    slices: PromotionMechanicSlice[]
+    /** La más creada — `null` si todavía no hay ninguna. */
+    dominant: PromotionMechanicSlice | null
+  }
+  attention: PromotionAttentionItem[]
+}
+
+/** Orden de urgencia de los pendientes — el mismo criterio en Promociones y Cupones. */
+const ATTENTION_TONE_ORDER = { destructive: 0, warning: 1, neutral: 2 }
+
+/** Ventana de "por vencer" — un mes es el plazo en el que todavía da tiempo a renovar o dejar caer. */
+const EXPIRING_SOON_DAYS = 30
+
+/**
+ * Los 3 KPI de 06.1 — alcance, actividad y financiación.
+ *
+ * Esta vista es de CREACIÓN Y GESTIÓN: las mecánicas pueden no haber
+ * corrido todavía, así que aquí no hay canjes, ROI ni presupuesto
+ * consumido. Todo sale de lo que el operador declaró al configurarlas
+ * (condiciones, vigencia, financiador, presupuesto asignado); los
+ * resultados reales viven en "Panel de promociones".
+ */
+export async function getPromotionsPlanningKpis(): Promise<PromotionsPlanningKpis> {
+  const supabase = await createClient()
+  const [{ data, error }, categories] = await Promise.all([
+    supabase
+      .from("promociones")
+      .select(
+        "estado_publicacion, vigente_desde, vigente_hasta, condiciones, canal_aplicacion, financiador, presupuesto_asignado, creado_en, aplica_a_rx, aprobacion_regulatoria, tipo_beneficio, acumulable, grupo_exclusion"
+      ),
+    listConditionCategories(),
+  ])
+  if (error) throw error
+
+  const rows = data ?? []
+  const categoryIds = new Set<string>()
+  const productIds = new Set<string>()
+  const segmentIds = new Set<string>()
+  const cities = new Set<string>()
+  const channels = new Set<string>()
+  const budgetByFinanciador = new Map<Financiador, number>()
+
+  const now = new Date()
+  const expiringLimit = new Date(now)
+  expiringLimit.setDate(expiringLimit.getDate() + EXPIRING_SOON_DAYS)
+
+  const mechanicCounts = new Map<BenefitType, number>()
+  let expiringSoon = 0
+  let expiredStillActive = 0
+  let nonStackableWithoutGroup = 0
+  let rxWithoutApproval = 0
+  let oldestDraftDays = 0
+
+  let active = 0
+  let scheduled = 0
+  let drafts = 0
+  let inactive = 0
+  let finished = 0
+  let inScope = 0
+  let catalogWide = 0
+  let totalBudget = 0
+
+  for (const row of rows) {
+    const status = promotionStatus(row)
+    if (status === "activa") active += 1
+    else if (status === "programada") scheduled += 1
+    else if (status === "inactiva") inactive += 1
+    else if (status === "finalizada") finished += 1
+    else if (status === "borrador") {
+      drafts += 1
+      const age = Math.floor(
+        (now.getTime() - new Date(row.creado_en).getTime()) / 86_400_000
+      )
+      oldestDraftDays = Math.max(oldestDraftDays, age)
+    }
+
+    // El ritmo se mide sobre TODAS las mecánicas creadas, publicadas o no:
+    // un borrador también es trabajo del área.
+    // La mezcla se mide sobre TODAS las mecánicas creadas, publicadas o
+    // no: un borrador también dice qué está construyendo el área.
+    const benefitType = row.tipo_beneficio as BenefitType
+    mechanicCounts.set(benefitType, (mechanicCounts.get(benefitType) ?? 0) + 1)
+
+    // Vencida pero todavía marcada como activa: `promotionStatus` ya la
+    // muestra como finalizada, pero su `estado_publicacion` sigue en
+    // 'activa' — hay que decidir si se renueva o se cierra.
+    if (row.estado_publicacion === "activa" && status === "finalizada") {
+      expiredStillActive += 1
+    }
+
+    // S04 · una mecánica no acumulable sin grupo de exclusión no le dice al
+    // motor a cuáles bloquea.
+    if (
+      (status === "activa" || status === "programada") &&
+      !row.acumulable &&
+      !row.grupo_exclusion
+    ) {
+      nonStackableWithoutGroup += 1
+    }
+
+    // S12 · una mecánica que toca productos con receta sin aprobación
+    // regulatoria no debería estar corriendo.
+    if (
+      (status === "activa" || status === "programada") &&
+      row.aplica_a_rx !== "permitido" &&
+      !row.aprobacion_regulatoria
+    ) {
+      rxWithoutApproval += 1
+    }
+    if (status === "activa" && row.vigente_hasta) {
+      const validTo = new Date(row.vigente_hasta)
+      if (validTo >= now && validTo <= expiringLimit) expiringSoon += 1
+    }
+
+    // La financiación se mide sobre lo que ya está comprometido: una
+    // mecánica finalizada o inactiva ya no compromete presupuesto.
+    if (status === "activa" || status === "programada") {
+      const financiador = row.financiador as Financiador
+      const budget = row.presupuesto_asignado ?? 0
+      totalBudget += budget
+      budgetByFinanciador.set(
+        financiador,
+        (budgetByFinanciador.get(financiador) ?? 0) + budget
+      )
+    } else {
+      continue
+    }
+
+    inScope += 1
+    channels.add(row.canal_aplicacion)
+
+    const leaves = flattenConditionNodes(row.condiciones as ConditionNode)
+    let hasProductScope = false
+    for (const leaf of leaves) {
+      if (leaf.campo === "categoria") {
+        hasProductScope = true
+        for (const id of leaf.valor) categoryIds.add(id)
+      } else if (leaf.campo === "producto") {
+        hasProductScope = true
+        for (const id of leaf.valor) productIds.add(id)
+      } else if (leaf.campo === "segmento") {
+        segmentIds.add(leaf.valor)
+      } else if (leaf.campo === "tienda") {
+        cities.add(leaf.valor)
+      }
+    }
+    if (!hasProductScope) catalogWide += 1
+  }
+
+  const slices = [...budgetByFinanciador.entries()]
+    .map(([financiador, amount]) => ({
+      financiador,
+      amount,
+      share: totalBudget > 0 ? amount / totalBudget : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
+  const totalMechanics = rows.length
+  const mechanicSlices = [...mechanicCounts.entries()]
+    .map(([benefitType, count]) => ({
+      benefitType,
+      count,
+      share: totalMechanics > 0 ? count / totalMechanics : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+
+  // Solo los pendientes que existen: una lista con ceros es ruido, y el
+  // caso "nada pendiente" se dibuja aparte.
+  const attention: PromotionAttentionItem[] = [
+    {
+      id: "borradores" as const,
+      count: drafts,
+      detail:
+        oldestDraftDays > 0
+          ? `${oldestDraftDays} ${oldestDraftDays === 1 ? "día" : "días"} el más viejo`
+          : undefined,
+      href: "/promociones?estado=borrador",
+      tone: "warning" as const,
+    },
+    {
+      id: "por_vencer" as const,
+      count: expiringSoon,
+      detail: `próximos ${EXPIRING_SOON_DAYS} días`,
+      tone: "warning" as const,
+    },
+    {
+      id: "vencidas_sin_cerrar" as const,
+      count: expiredStillActive,
+      detail: "aún marcadas activas",
+      tone: "warning" as const,
+    },
+    {
+      id: "sin_grupo_exclusion" as const,
+      count: nonStackableWithoutGroup,
+      detail: "regla S04",
+      tone: "neutral" as const,
+    },
+    {
+      id: "sin_aprobacion_rx" as const,
+      count: rxWithoutApproval,
+      detail: "tocan productos con receta (S12)",
+      tone: "destructive" as const,
+    },
+  ]
+    .filter((item) => item.count > 0)
+    // Lo urgente primero: dentro de cada tono, lo más numeroso arriba —
+    // mismo criterio que en Cupones.
+    .sort(
+      (a, b) =>
+        ATTENTION_TONE_ORDER[a.tone] - ATTENTION_TONE_ORDER[b.tone] ||
+        b.count - a.count
+    )
+
+  return {
+    coverage: {
+      promotions: inScope,
+      // Una sola mecánica sin acotar producto ya alcanza todo el catálogo:
+      // contar solo las categorías nombradas subestimaría la cobertura.
+      categories: catalogWide > 0 ? categories.length : categoryIds.size,
+      totalCategories: categories.length,
+      products: productIds.size,
+      segments: segmentIds.size,
+      cities: cities.size,
+      channels: channels.size,
+      catalogWide,
+    },
+    activity: { active, scheduled, drafts, inactive, finished },
+    funding: { total: totalBudget, slices },
+    mechanics: {
+      total: totalMechanics,
+      slices: mechanicSlices,
+      dominant: mechanicSlices[0] ?? null,
+    },
+    attention,
+  }
+}
+
 export type PromotionsSummary = {
   total: number
   active: number
@@ -211,21 +528,6 @@ export async function getPromotionsSummary(): Promise<PromotionsSummary> {
       0
     ),
   }
-}
-
-/** Top 3 realmente en curso hoy, por presupuesto consumido (06.1: 3 "Promo card" superiores). */
-export async function getFeaturedPromotions(limit = 3): Promise<Promotion[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("promociones")
-    .select("*")
-    .eq("estado_publicacion", "activa")
-    .order("presupuesto_consumido", { ascending: false })
-  if (error) throw error
-  return (data ?? [])
-    .map(withTypedConditions)
-    .filter((p) => promotionStatus(p) === "activa")
-    .slice(0, limit)
 }
 
 export type PromotionsDashboardFilters = {
@@ -612,6 +914,9 @@ export async function listPromotionEvents(): Promise<PromotionEventItem[]> {
  * `promociones.creado_en` — la fecha es real; el autor no se conoce, y se
  * dice en vez de inventarlo.
  */
+/** Eventos que son actividad del motor sobre la regla, no acciones de gestión sobre ella. */
+const PROMOTION_TRANSACTION_EVENTS = ["canje", "canje_rechazado"] as const
+
 export async function listPromotionHistory(
   promocionId: string
 ): Promise<PromotionEventItem[]> {
@@ -624,6 +929,13 @@ export async function listPromotionHistory(
           "id, promocion_id, tipo, titulo, detalle, actor_etiqueta, canal, codigo_motivo, nota_motivo, metadatos, ocurrido_en"
         )
         .eq("promocion_id", promocionId)
+        // El Historial es la bitácora de GESTIÓN de la promoción: qué se
+        // hizo con ella y quién. Los canjes son actividad agregada de la
+        // regla, no acciones sobre ella — y además hoy son datos de demo
+        // (no hay motor de canje, ver `20260826160000_promociones_eventos.sql`),
+        // así que una promoción creada hoy aparecía con "transacciones" de
+        // ayer. Esa actividad vive en "Panel de promociones".
+        .not("tipo", "in", `(${PROMOTION_TRANSACTION_EVENTS.join(",")})`)
         .order("ocurrido_en", { ascending: true }),
       supabase
         .from("promociones")

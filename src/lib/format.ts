@@ -53,6 +53,22 @@ export function formatNumber(value: number): string {
   return number.format(value)
 }
 
+const compactCurrency = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
+
+/**
+ * "US$ 25,2 M" — para la cifra protagonista de una tarjeta KPI, donde un
+ * importe completo (`formatUSD`) se come el ancho y obliga a leer los
+ * separadores de miles para saber el orden de magnitud.
+ */
+export function formatCompactUSD(value: number): string {
+  return compactCurrency.format(value)
+}
+
 /** @param value fraction (0.18), not the whole percent number (18). */
 export function formatPercent(value: number): string {
   return percent.format(value)

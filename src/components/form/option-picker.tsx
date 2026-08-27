@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils"
 
 import { EntityPickerField } from "./entity-picker"
+import { SearchableSelect } from "./searchable-select"
 
 export type PickerOption = {
   value: string
@@ -24,6 +25,16 @@ export type PickerOption = {
  * mismo para todo el sistema, así que vive aquí y no en cada formulario.
  */
 export const SEARCHABLE_OPTION_THRESHOLD = 10
+
+/**
+ * Y a partir de aquí tampoco basta con buscar dentro del desplegable: con
+ * decenas de candidatos hace falta ver varias filas a la vez, con su
+ * segunda línea (email, SKU) para distinguir homónimos, y eso pide el
+ * ancho del modal. Entre 11 y 20 el desplegable con buscador se queda —
+ * abrir un modal a pantalla completa para elegir entre doce opciones es
+ * más ceremonia que ayuda.
+ */
+export const MODAL_OPTION_THRESHOLD = 20
 
 /** Aspecto "chip" de los controles embebidos en una frase (constructor de condiciones). */
 export const CHIP_TRIGGER =
@@ -45,14 +56,17 @@ type OptionPickerProps = {
 
 /**
  * Selector de UN valor que se adapta al tamaño de la lista, sin que cada
- * formulario tenga que decidirlo: hasta `SEARCHABLE_OPTION_THRESHOLD`
- * opciones es el `Select` de siempre, y de ahí para arriba es
- * `EntityPickerField` en modo `single` — modal con buscador, sin tope de
- * filas visibles.
+ * formulario tenga que decidirlo:
  *
- * No implementa nada propio: compone los dos componentes que ya existen,
- * así que el aspecto y el comportamiento son los mismos que en el resto de
- * la app (mismo criterio que `Multiselect`, que ya trae buscador).
+ * - hasta `SEARCHABLE_OPTION_THRESHOLD` (10): el `Select` de siempre;
+ * - hasta `MODAL_OPTION_THRESHOLD` (20): `SearchableSelect` — la misma
+ *   lista desplegable, con buscador dentro;
+ * - por encima: `EntityPickerField` en modo `single` — modal con buscador,
+ *   sin tope de filas visibles.
+ *
+ * No implementa nada propio: compone componentes que ya existen, así que el
+ * aspecto y el comportamiento son los mismos que en el resto de la app
+ * (mismo criterio que `Multiselect`, que ya trae buscador).
  */
 export function OptionPicker({
   options,
@@ -68,7 +82,7 @@ export function OptionPicker({
 }: OptionPickerProps) {
   const labelByValue = new Map(options.map((o) => [o.value, o.label]))
 
-  if (options.length > SEARCHABLE_OPTION_THRESHOLD) {
+  if (options.length > MODAL_OPTION_THRESHOLD) {
     return (
       <EntityPickerField
         id={id}
@@ -97,6 +111,20 @@ export function OptionPicker({
         confirmLabel={confirmLabel}
         value={value ? [value] : []}
         onValueChange={([next]) => next && onValueChange(next)}
+      />
+    )
+  }
+
+  if (options.length > SEARCHABLE_OPTION_THRESHOLD) {
+    return (
+      <SearchableSelect
+        id={id}
+        size={size}
+        className={className}
+        options={options}
+        value={value}
+        onValueChange={onValueChange}
+        placeholder={placeholder}
       />
     )
   }

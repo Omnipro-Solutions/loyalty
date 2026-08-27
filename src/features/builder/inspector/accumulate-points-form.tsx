@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus, Trash2 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { Field } from "@/components/form/field"
 import { Button } from "@/components/ui/button"
@@ -50,16 +50,25 @@ type AccumulatePointsConfig = {
   bonusPolicy: BonusPolicy
 }
 
-const DEFAULT_CONFIG: AccumulatePointsConfig = {
-  amountUnit: 0.25,
-  exampleAmount: 12.5,
-  exampleTierName: "oro",
-  exampleQuantity: 1,
-  modifiers: [],
-  modifiersPolicy: "multiplicativo",
-  itemBonuses: [],
-  invoiceBonuses: [],
-  bonusPolicy: "acumular_todas",
+/**
+ * Función, no constante: devuelve arrays NUEVOS en cada llamada. Un objeto
+ * de módulo compartido dejaría a todos los bloques "Acumular puntos" sin
+ * configurar apuntando al mismo `modifiers`/`itemBonuses`/`invoiceBonuses`
+ * — hoy nadie los muta en sitio, pero basta un `push` futuro para que un
+ * modificador puesto en un bloque aparezca en todos los demás.
+ */
+function defaultConfig(): AccumulatePointsConfig {
+  return {
+    amountUnit: 0.25,
+    exampleAmount: 12.5,
+    exampleTierName: "oro",
+    exampleQuantity: 1,
+    modifiers: [],
+    modifiersPolicy: "multiplicativo",
+    itemBonuses: [],
+    invoiceBonuses: [],
+    bonusPolicy: "acumular_todas",
+  }
 }
 
 const TIER_LABEL: Record<TierName, string> = {
@@ -577,15 +586,20 @@ export function AccumulatePointsForm({
   graphVariables: GraphVariable[]
   onChange: (config: Record<string, unknown>) => void
 }) {
-  const [values, setValues] = useState<AccumulatePointsConfig>({
-    ...DEFAULT_CONFIG,
+  // Sin copia local del config: el único estado vive en el nodo del canvas
+  // (`node.data.config`) y baja por props en cada render, igual que
+  // `SimpleConfigForm` y `MultiConditionForm`. Un `useState` inicializado
+  // desde `config` congela los valores del nodo que estaba seleccionado al
+  // montar y los reescribe enteros sobre el siguiente nodo que se edite —
+  // que es como dos bloques "Acumular puntos" nacidos de dos ramas
+  // distintas terminaban con la misma configuración.
+  const values: AccumulatePointsConfig = {
+    ...defaultConfig(),
     ...(config as Partial<AccumulatePointsConfig>),
-  })
+  }
 
   function update(patch: Partial<AccumulatePointsConfig>) {
-    const next = { ...values, ...patch }
-    setValues(next)
-    onChange(next)
+    onChange({ ...values, ...patch })
   }
 
   const fields: AutocompleteField[] = useMemo(
@@ -608,28 +622,27 @@ export function AccumulatePointsForm({
   const tierMultiplier =
     values.multiplierOverride ?? exampleTier?.multiplicador ?? 1
 
-  const breakdown = useMemo(
-    () =>
-      calculateAccumulatedPoints({
-        amount: values.exampleAmount,
-        amountUnit: values.amountUnit,
-        tierMultiplier,
-        activeModifierMultipliers: values.modifiers
-          .filter((m) => m.previewActive)
-          .map((m) => m.multiplier),
-        modifiersPolicy: values.modifiersPolicy,
-        activeItemBonusPoints: values.itemBonuses
-          .filter((b) => b.previewActive)
-          .map((b) => b.points),
-        exampleQuantity: values.exampleQuantity,
-        activeInvoiceBonusPoints: values.invoiceBonuses
-          .filter((b) => b.previewActive)
-          .map((b) => b.points),
-        bonusPolicy: values.bonusPolicy,
-        capPerTransaction: values.capPerTransaction,
-      }),
-    [values, tierMultiplier]
-  )
+  // Sin `useMemo`: `values` se deriva de props en cada render, así que un
+  // memo con `[values]` nunca acertaría. `calculateAccumulatedPoints` es
+  // aritmética pura sobre un puñado de números.
+  const breakdown = calculateAccumulatedPoints({
+    amount: values.exampleAmount,
+    amountUnit: values.amountUnit,
+    tierMultiplier,
+    activeModifierMultipliers: values.modifiers
+      .filter((m) => m.previewActive)
+      .map((m) => m.multiplier),
+    modifiersPolicy: values.modifiersPolicy,
+    activeItemBonusPoints: values.itemBonuses
+      .filter((b) => b.previewActive)
+      .map((b) => b.points),
+    exampleQuantity: values.exampleQuantity,
+    activeInvoiceBonusPoints: values.invoiceBonuses
+      .filter((b) => b.previewActive)
+      .map((b) => b.points),
+    bonusPolicy: values.bonusPolicy,
+    capPerTransaction: values.capPerTransaction,
+  })
 
   const hasActiveModifiers = values.modifiers.some((m) => m.previewActive)
   const hasActiveItemBonuses = values.itemBonuses.some((b) => b.previewActive)

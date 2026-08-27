@@ -1,12 +1,16 @@
 "use client"
 
 import { Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 type Branch = { id: string; label: string; weight?: number }
+
+/** Ramas de arranque de un bloque recién soltado — se muestran hasta que el usuario toque algo; nunca se mutan en sitio (cada `update` construye un array nuevo). */
+const DEFAULT_BRANCHES: Branch[] = [
+  { id: "rama_1", label: "Rama 1", weight: 50 },
+  { id: "por_defecto", label: "Por defecto", weight: 50 },
+]
 
 /**
  * Pestaña "Ramas" para `ramificacion_valor`/`split_ab` — agregar/quitar/
@@ -32,16 +36,15 @@ export function BranchesTab({
   config: Record<string, unknown>
   onChange: (config: Record<string, unknown>) => void
 }) {
-  const initialBranches = Array.isArray(config.branches)
+  // Derivado de props, sin copia local — misma razón que en
+  // `accumulate-points-form.tsx`: con `useState` las ramas del nodo que
+  // estaba seleccionado al montar sobreviven al cambio de selección y se
+  // escriben sobre el nodo siguiente.
+  const branches: Branch[] = Array.isArray(config.branches)
     ? (config.branches as Branch[])
-    : [
-        { id: "rama_1", label: "Rama 1", weight: 50 },
-        { id: "por_defecto", label: "Por defecto", weight: 50 },
-      ]
-  const [branches, setBranches] = useState<Branch[]>(initialBranches)
+    : DEFAULT_BRANCHES
 
   function update(next: Branch[]) {
-    setBranches(next)
     onChange({ ...config, branches: next })
   }
 
