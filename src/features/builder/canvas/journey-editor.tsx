@@ -16,6 +16,7 @@ import {
   type Node,
 } from "@xyflow/react"
 import { useAction } from "next-safe-action/hooks"
+import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
 import { Message } from "@/components/form/message"
@@ -32,7 +33,7 @@ import {
 } from "@/features/builder/validation/graph-validation"
 import type { BuilderNodeType } from "@/types/domain"
 
-import { renameWorkflowAction, saveGraphAction } from "./actions"
+import { createWorkflowAction, saveGraphAction } from "./actions"
 import { BLOCK_DRAG_MIME, BlockPalette } from "./block-palette"
 import {
   BuilderNode,
@@ -120,6 +121,11 @@ function CanvasArea({
     workflow.edges.map(toFlowEdge)
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // El nombre es estado de borrador como cualquier otro: se edita en la
+  // barra pero no toca la base hasta "Guardar" (o "Publicar", que también
+  // persiste el grafo). Antes se escribía solo con el blur del input, que
+  // era la última vía de autoguardado que quedaba viva.
+  const [name, setName] = useState(workflow.nombre)
   const [updatedAt, setUpdatedAt] = useState(workflow.actualizado_en)
   const [status, setStatus] = useState(workflow.estado)
   const [validFrom, setValidFrom] = useState(workflow.vigente_desde)
@@ -144,6 +150,26 @@ function CanvasArea({
   // termina con éxito.
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const { screenToFlowPosition } = useReactFlow()
+  const router = useRouter()
+
+  // `id` vacío = la regla vive solo en memoria, en `/journeys/nuevo`
+  // (`newWorkflowDraft`). Guardar la crea; hasta entonces Simular,
+  // Historial, Analítica y Publicar no tienen un `workflow_id` que usar.
+  const isNew = workflow.id === ""
+
+  const create = useAction(createWorkflowAction, {
+    onSuccess: ({ data }) => {
+      if (data?.ok) {
+        setHasUnsavedChanges(false)
+        // `replace`, no `push`: volver atrás hasta `/journeys/nuevo` con la
+        // regla ya creada mostraría un canvas en blanco que al guardar
+        // crearía una segunda regla.
+        router.replace(`/journeys/${data.id}`)
+      } else {
+        setPublishMessage(data?.message ?? "No se pudo guardar la regla.")
+      }
+    },
+  })
 
   const save = useAction(saveGraphAction, {
     onSuccess: ({ data }) => {
@@ -153,7 +179,6 @@ function CanvasArea({
       }
     },
   })
-  const rename = useAction(renameWorkflowAction)
   const simulate = useAction(simulateWorkflowAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) return
@@ -215,8 +240,10 @@ function CanvasArea({
   })
 
   const handleSave = useCallback(() => {
-    save.execute({
-      workflowId: workflow.id,
+    const graph = {
+      // Un nombre vacío no es un renombrado, es un input a medio escribir:
+      // se guarda el resto y el nombre se queda como estaba.
+      nombre: name.trim() || workflow.nombre,
       nodes: nodes.map((n) => ({
         id: n.id,
         tipo: n.data.tipo,
@@ -231,8 +258,15 @@ function CanvasArea({
         target_node_id: e.target,
         source_port: e.sourceHandle ?? "out",
       })),
-    })
-  }, [save, workflow.id, nodes, edges])
+    }
+    // El primer guardado de una regla nueva es el que la crea: misma
+    // acción del usuario, distinta escritura.
+    if (isNew) {
+      create.execute(graph)
+      return
+    }
+    save.execute({ workflowId: workflow.id, ...graph })
+  }, [save, create, isNew, workflow.id, workflow.nombre, name, nodes, edges])
 
   // Marca que hay cambios reales de diseño pendientes de publicar y de
   // guardar. Se llama explícitamente desde cada mutación real del grafo
@@ -365,6 +399,9 @@ function CanvasArea({
   const graphForActions = useCallback(
     () => ({
       workflowId: workflow.id,
+      // Publicar persiste el grafo (`persist-graph.ts`), así que arrastra
+      // también el nombre pendiente; simular lo recibe y lo ignora.
+      nombre: name.trim() || workflow.nombre,
       nodes: nodes.map((n) => ({
         id: n.id,
         tipo: n.data.tipo,
@@ -380,7 +417,7 @@ function CanvasArea({
         source_port: e.sourceHandle ?? "out",
       })),
     }),
-    [nodes, edges, workflow.id]
+    [nodes, edges, name, workflow.id, workflow.nombre]
   )
 
   const validation: ValidationIssue[] = useMemo(
@@ -477,7 +514,7 @@ function CanvasArea({
     <div className="flex min-h-0 flex-1 flex-col">
       <EditorBar
         workflowId={workflow.id}
-        name={workflow.nombre}
+        name={name}
         status={status}
         displayStatus={displayStatus}
         priority={workflow.prioridad}
@@ -488,20 +525,26 @@ function CanvasArea({
         version={workflow.version_actual}
         authorName={workflow.authorName}
         updatedAt={updatedAt}
-        saving={save.isPending}
+        saving={save.isPending || create.isPending}
         hasUnsavedChanges={hasUnsavedChanges}
         simulating={simulate.isPending}
         publishing={publish.isPending}
+        unsavedRuleReason={
+          isNew ? "Guarda la regla antes de usar esta acción" : undefined
+        }
         publishDisabledReason={
-          blockingErrors.length > 0
-            ? "Resuelve los errores de la regla antes de publicar"
-            : !hasUnpublishedChanges
-              ? "Ya está publicada — no hay cambios nuevos que publicar"
-              : undefined
+          isNew
+            ? "Guarda la regla antes de publicarla"
+            : blockingErrors.length > 0
+              ? "Resuelve los errores de la regla antes de publicar"
+              : !hasUnpublishedChanges
+                ? "Ya está publicada — no hay cambios nuevos que publicar"
+                : undefined
         }
-        onRename={(name) =>
-          rename.execute({ workflowId: workflow.id, nombre: name })
-        }
+        onRename={(next) => {
+          setName(next)
+          markChanged()
+        }}
         onSave={handleSave}
         onHistory={() => setHistoryOpen(true)}
         onSimulate={() =>

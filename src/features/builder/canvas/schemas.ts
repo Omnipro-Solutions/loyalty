@@ -13,15 +13,6 @@ const builderNodeTypeSchema = z
     (BUILDER_NODE_TYPES as readonly string[]).includes(v)
   )
 
-export const createWorkflowSchema = z.object({
-  nombre: z.string().min(1, "El nombre es obligatorio").max(120),
-})
-
-export const renameWorkflowSchema = z.object({
-  workflowId: z.string().uuid(),
-  nombre: z.string().min(1, "El nombre es obligatorio").max(120),
-})
-
 export const deleteWorkflowsSchema = z.object({
   workflowIds: z.array(z.string().uuid()).min(1),
 })
@@ -42,14 +33,35 @@ export const graphEdgeSchema = z.object({
   target_node_id: z.string(),
 })
 
+/**
+ * Crear ya no es "reservar un id al entrar": la fila nace con el primer
+ * "Guardar", con el grafo que haya en el canvas. Por eso lleva `nodes`/
+ * `edges` — hasta ese momento la regla solo existe en memoria, en
+ * `/journeys/nuevo`.
+ */
+export const createWorkflowSchema = z.object({
+  nombre: z.string().min(1, "El nombre es obligatorio").max(120),
+  nodes: z.array(graphNodeSchema).default([]),
+  edges: z.array(graphEdgeSchema).default([]),
+})
+
+/**
+ * `nombre` viaja con el grafo porque renombrar la regla es un cambio de
+ * borrador más: el builder no autoguarda, así que el nombre nuevo se queda
+ * en pantalla hasta que se pulsa "Guardar" (o "Publicar", que también
+ * persiste), igual que mover un bloque o editar su config.
+ */
 export const saveGraphSchema = z.object({
   workflowId: z.string().uuid(),
+  nombre: z.string().min(1, "El nombre es obligatorio").max(120).optional(),
   nodes: z.array(graphNodeSchema),
   edges: z.array(graphEdgeSchema),
 })
 
 export const runInputSchema = z.object({
   workflowId: z.string().uuid(),
+  /** Solo lo usa publicar (que persiste el grafo); simular lo ignora. */
+  nombre: z.string().min(1, "El nombre es obligatorio").max(120).optional(),
   nodes: z.array(graphNodeSchema),
   edges: z.array(graphEdgeSchema),
   initialCohort: z.number().min(1).default(1000),

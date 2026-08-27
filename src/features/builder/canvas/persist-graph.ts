@@ -38,7 +38,9 @@ export async function persistGraph(
   userId: string,
   workflowId: string,
   nodes: GraphNode[],
-  edges: GraphEdge[]
+  edges: GraphEdge[],
+  /** Renombrar es un cambio de borrador más, así que se persiste aquí y no en su propia acción (ver `saveGraphSchema`). */
+  nombre?: string
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const legacy = !(await hasV2Schema(supabase))
 
@@ -91,7 +93,7 @@ export async function persistGraph(
 
   await supabase
     .from("workflows")
-    .update({ actualizado_por: userId })
+    .update({ actualizado_por: userId, ...(nombre ? { nombre } : {}) })
     .eq("id", workflowId)
 
   return { ok: true }

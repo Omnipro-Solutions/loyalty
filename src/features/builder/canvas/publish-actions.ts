@@ -180,6 +180,7 @@ export const publishWorkflowAction = builderActionClient
   .action(async ({ parsedInput, ctx }) => {
     const {
       workflowId,
+      nombre,
       nodes,
       edges,
       initialCohort,
@@ -207,7 +208,8 @@ export const publishWorkflowAction = builderActionClient
       ctx.userId,
       workflowId,
       nodes,
-      edges
+      edges,
+      nombre
     )
     if (!persisted.ok) {
       return { ok: false as const, message: persisted.message }

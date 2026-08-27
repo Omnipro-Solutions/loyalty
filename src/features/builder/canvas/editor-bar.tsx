@@ -10,7 +10,6 @@ import {
   Save,
 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -45,6 +44,7 @@ export function EditorBar({
   hasUnsavedChanges,
   simulating,
   publishing,
+  unsavedRuleReason,
   publishDisabledReason,
   onRename,
   onSave,
@@ -78,6 +78,13 @@ export function EditorBar({
   hasUnsavedChanges: boolean
   simulating: boolean
   publishing: boolean
+  /**
+   * `undefined` = la regla ya existe en la base. Un string = todavía no se
+   * ha guardado nunca (`/journeys/nuevo`), así que Analítica, Historial y
+   * Simular no tienen un `workflow_id` que usar: se deshabilitan con este
+   * texto de tooltip en vez de fallar al pulsarlos.
+   */
+  unsavedRuleReason: string | undefined
   /** `undefined` = se puede publicar. Un string = motivo del tooltip Y por qué está deshabilitado. */
   publishDisabledReason: string | undefined
   onRename: (name: string) => void
@@ -88,7 +95,6 @@ export function EditorBar({
   /** Abre el diálogo de transición — solo disponible una vez publicada. */
   onChangeStatus: () => void
 }) {
-  const [value, setValue] = useState(name)
   const locked = isPublicationLocked({ estado: status })
 
   return (
@@ -96,14 +102,15 @@ export function EditorBar({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
           <input
-            value={value}
+            value={name}
             readOnly={locked}
-            onChange={(e) => setValue(e.target.value)}
-            onBlur={() => {
-              if (!locked && value.trim() && value !== name) {
-                onRename(value.trim())
-              }
-            }}
+            /* Controlado desde el editor, no con estado local + `onBlur`:
+               el nombre es parte del borrador y tiene que marcar "cambios
+               sin guardar" mientras se escribe. Con el commit en el blur,
+               teclear el nombre y pulsar "Guardar" no funcionaba al primer
+               clic — el botón seguía deshabilitado hasta que el blur
+               llegaba. */
+            onChange={(e) => !locked && onRename(e.target.value)}
             className="min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-[15px] font-semibold text-foreground outline-none read-only:cursor-default hover:border-border read-only:hover:border-transparent focus:border-primary"
           />
           <JourneyStatusBadge status={displayStatus} />
@@ -134,23 +141,37 @@ export function EditorBar({
         </p>
       </div>
 
+      {unsavedRuleReason ? (
+        <Button variant="outline" size="sm" disabled title={unsavedRuleReason}>
+          <BarChart3 className="size-3.5" />
+          Analítica
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={<Link href={`/journeys/${workflowId}/analitica`} />}
+        >
+          <BarChart3 className="size-3.5" />
+          Analítica
+        </Button>
+      )}
       <Button
         variant="outline"
         size="sm"
-        nativeButton={false}
-        render={<Link href={`/journeys/${workflowId}/analitica`} />}
+        disabled={!!unsavedRuleReason}
+        title={unsavedRuleReason}
+        onClick={onHistory}
       >
-        <BarChart3 className="size-3.5" />
-        Analítica
-      </Button>
-      <Button variant="outline" size="sm" onClick={onHistory}>
         <History className="size-3.5" />
         Historial de versiones
       </Button>
       <Button
         variant="outline"
         size="sm"
-        disabled={simulating}
+        disabled={simulating || !!unsavedRuleReason}
+        title={unsavedRuleReason}
         onClick={onSimulate}
       >
         <Play className="size-3.5" />

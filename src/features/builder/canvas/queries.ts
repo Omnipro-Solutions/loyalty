@@ -536,6 +536,31 @@ async function getLifecycleByIds(
   )
 }
 
+/**
+ * La regla que todavía no existe en la base. `/journeys/nuevo` monta el
+ * editor sobre esto y el primer "Guardar" la crea de verdad
+ * (`createWorkflowAction`) — abrir el canvas y salir no deja rastro.
+ *
+ * `id` vacío es la marca de "sin persistir": es lo que mira el editor para
+ * decidir entre crear y actualizar, y lo que deshabilita Simular,
+ * Historial y Analítica, que necesitan un `workflow_id` real.
+ */
+export async function newWorkflowDraft(): Promise<WorkflowWithGraph> {
+  const supabase = await createClient()
+  return {
+    id: "",
+    nombre: "Nueva regla",
+    estado: "borrador",
+    ...LIFECYCLE_FALLBACK,
+    version_actual: 0,
+    lifecyclePersisted: await hasV2Schema(supabase),
+    actualizado_en: new Date().toISOString(),
+    authorName: null,
+    nodes: [],
+    edges: [],
+  }
+}
+
 export async function getWorkflowWithGraph(
   id: string
 ): Promise<WorkflowWithGraph | null> {
