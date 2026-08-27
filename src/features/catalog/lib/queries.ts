@@ -21,6 +21,7 @@ export type CatalogFilters = {
   categoryIds?: string[]
   status?: "activo" | "inactivo"
   page?: number
+  pageSize?: number
 }
 
 export const CATALOG_PAGE_SIZE = 10
@@ -80,8 +81,9 @@ export async function listProducts(
 ): Promise<{ products: Product[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * CATALOG_PAGE_SIZE
-  const to = from + CATALOG_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? CATALOG_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let idsByCategory: string[] | null = null
   if (filters.categoryIds?.length) {

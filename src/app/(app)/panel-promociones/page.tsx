@@ -1,12 +1,10 @@
 import { AppPage } from "@/components/layout/app-page"
 import { PromotionAlerts } from "@/features/promotions/components/promotion-alerts"
-import { PromotionEventsLog } from "@/features/promotions/components/promotion-events-log"
 import { PromotionsBudgetByFinancier } from "@/features/promotions/components/promotions-budget-by-financier"
 import { PromotionsCanjeChannelAttribution } from "@/features/promotions/components/promotions-canje-channel-attribution"
 import { PromotionsCanjesTrend } from "@/features/promotions/components/promotions-canjes-trend"
 import { PromotionsDashboardFilters } from "@/features/promotions/components/promotions-dashboard-filters"
 import { PromotionsDashboardKpiRow } from "@/features/promotions/components/promotions-dashboard-kpi-row"
-import { PromotionsDashboardTabs } from "@/features/promotions/components/promotions-dashboard-tabs"
 import { PromotionsExpiringSoon } from "@/features/promotions/components/promotions-expiring-soon"
 import { PromotionsRoiRanking } from "@/features/promotions/components/promotions-roi-ranking"
 import { TopPromotionsByRedemptions } from "@/features/promotions/components/top-promotions-by-redemptions"
@@ -20,7 +18,6 @@ import {
   getPromotionsExpiringSoon,
   getPromotionsRoiRanking,
   getTopPromotionsByRedemptions,
-  listPromotionEvents,
   listPromotionOptions,
   type PromotionsDashboardFilters as DashboardFilters,
 } from "@/features/promotions/lib/queries"
@@ -53,33 +50,27 @@ function parseEnumList<T extends string>(
  * prefijo del pathname, así que si esta página viviera bajo `/promociones`
  * el item "Promociones" del sidebar quedaría resaltado también aquí.
  * Estilo adaptado del resto de la app (`/analitica`, `/resumen`, catálogo):
- * los widgets de "Resumen" son duplicados de `features/dashboard` y
- * `features/catalog` (aislamiento entre features, CLAUDE.md §2) — no de
- * "Analítica de Loyalty.dc.html" (docs/), que solo aportó la idea de las
- * pestañas Resumen/Logs, el filtro de vigencia y la forma de la tendencia
- * semanal / atribución por canal. Todo lo que se ve sale de columnas o
- * eventos reales (incluyendo `promocion_eventos`, sembrado con fecha real) —
- * sin exposición/conversión, ingreso incremental, uplift vs. control, "vs.
- * periodo anterior", ni la traza de evaluación del log: nada de eso tiene
- * dato real detrás todavía.
+ * los widgets son duplicados de `features/dashboard` y `features/catalog`
+ * (aislamiento entre features, CLAUDE.md §2) — no de "Analítica de
+ * Loyalty.dc.html" (docs/), que solo aportó el filtro de vigencia y la forma
+ * de la tendencia semanal / atribución por canal. Todo lo que se ve sale de
+ * columnas o eventos reales (incluyendo `promocion_eventos`, sembrado con
+ * fecha real) — sin exposición/conversión, ingreso incremental, uplift vs.
+ * control ni "vs. periodo anterior": nada de eso tiene dato real detrás
+ * todavía. La pestaña "Logs" que vivía aquí se movió a su propio ítem de
+ * Configuración (`/ajustes/logs-promociones`) a pedido del usuario.
  */
 export default async function PromotionsDashboardPage({
   searchParams,
 }: PageProps<"/panel-promociones">) {
   const params = await searchParams
-  const vista = firstValue(params.vista) === "logs" ? "logs" : "resumen"
 
   return (
     <AppPage
       breadcrumb="Principal  ›  Panel de promociones"
       title="Panel de promociones"
     >
-      <PromotionsDashboardTabs active={vista} />
-      {vista === "logs" ? (
-        <PromotionsLogsView />
-      ) : (
-        <PromotionsSummaryView params={params} />
-      )}
+      <PromotionsSummaryView params={params} />
     </AppPage>
   )
 }
@@ -158,9 +149,4 @@ async function PromotionsSummaryView({
       <PromotionsRoiRanking top={roiRanking.top} bottom={roiRanking.bottom} />
     </>
   )
-}
-
-async function PromotionsLogsView() {
-  const events = await listPromotionEvents()
-  return <PromotionEventsLog events={events} />
 }

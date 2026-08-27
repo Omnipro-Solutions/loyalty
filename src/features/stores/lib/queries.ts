@@ -8,6 +8,7 @@ export type StoresFilters = {
   city?: string
   format?: string
   page?: number
+  pageSize?: number
 }
 
 export const STORES_PAGE_SIZE = 8
@@ -22,8 +23,9 @@ export async function listStores(
 ): Promise<{ stores: Store[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * STORES_PAGE_SIZE
-  const to = from + STORES_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? STORES_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("tiendas")
@@ -66,6 +68,43 @@ export async function listCities(): Promise<string[]> {
     .order("ciudad")
   if (error) throw error
   return [...new Set((data ?? []).map((t) => t.ciudad))]
+}
+
+export type StoreGroupOption = {
+  id: string
+  name: string
+  description: string | null
+  storeCount: number
+}
+
+/** Grupos de tienda de la org, con conteo de tiendas asignadas — alimenta el Select del formulario y `StoreGroupsDialog`. */
+export async function listStoreGroups(): Promise<StoreGroupOption[]> {
+  const supabase = await createClient()
+  const [{ data: groups, error }, { data: stores, error: storesError }] =
+    await Promise.all([
+      supabase
+        .from("tienda_grupos")
+        .select("id, nombre, descripcion")
+        .order("nombre"),
+      supabase.from("tiendas").select("grupo_id"),
+    ])
+  if (error) throw error
+  if (storesError) throw storesError
+
+  const countByGroupId = new Map<string, number>()
+  for (const row of stores ?? []) {
+    countByGroupId.set(
+      row.grupo_id,
+      (countByGroupId.get(row.grupo_id) ?? 0) + 1
+    )
+  }
+
+  return (groups ?? []).map((g) => ({
+    id: g.id,
+    name: g.nombre,
+    description: g.descripcion,
+    storeCount: countByGroupId.get(g.id) ?? 0,
+  }))
 }
 
 export type StoresSummary = {

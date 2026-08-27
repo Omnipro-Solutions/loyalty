@@ -1,14 +1,27 @@
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
+
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 100]
 
 type PaginationProps = {
   total: number
   pageSize: number
   page: number
   onPageChange: (page: number) => void
+  /** Habilita el selector "Filas por página" — omitirlo lo oculta. */
+  onPageSizeChange?: (pageSize: number) => void
+  /** @default [10, 20, 30, 100] */
+  pageSizeOptions?: number[]
   /** Reemplaza el texto "Mostrando X–Y de Z" por defecto (13 · Cupones: resumen de selección o de búsqueda). */
   summary?: React.ReactNode
   className?: string
@@ -37,6 +50,8 @@ export function Pagination({
   pageSize,
   page,
   onPageChange,
+  onPageSizeChange,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   summary,
   className,
 }: PaginationProps) {
@@ -55,6 +70,32 @@ export function Pagination({
         className
       )}
     >
+      {onPageSizeChange && (
+        <div className="flex shrink-0 items-center gap-2 text-[12px] leading-4 text-muted-foreground">
+          <span>Filas por página</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger
+              size="sm"
+              className={cn(
+                PILL,
+                "w-auto gap-1 border-none bg-muted text-foreground"
+              )}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start" alignItemWithTrigger={false}>
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <p className="min-w-0 flex-1 text-[12px] leading-4 text-muted-foreground">
         {summary ?? (
           <>

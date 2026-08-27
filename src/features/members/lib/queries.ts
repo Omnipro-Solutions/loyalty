@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
-import type { PromotionType } from "@/types/domain"
+import type { MemberSearchScope, PromotionType } from "@/types/domain"
 
 export type TierOption = Pick<
   Database["public"]["Tables"]["tiers"]["Row"],
@@ -18,9 +18,11 @@ export type Member = Database["public"]["Tables"]["members"]["Row"] & {
 
 export type MemberFilters = {
   search?: string
+  searchScope?: MemberSearchScope
   accountStatus?: string
   tierId?: string
   page?: number
+  pageSize?: number
 }
 
 export const MEMBERS_PAGE_SIZE = 10
@@ -33,13 +35,32 @@ function sanitizeSearch(value: string): string {
   return value.replace(/[,()%]/g, "").trim()
 }
 
+/** Ámbito del buscador (05.1, `MEMBER_SEARCH_SCOPES`): "todos" mantiene el `.or()` sobre los 4 campos de siempre; cualquier otro valor acota a una sola columna. */
+function applyMemberSearchFilter<
+  T extends { or: (f: string) => T; ilike: (c: string, v: string) => T },
+>(query: T, search: string, scope: MemberSearchScope): T {
+  if (scope === "nombre") {
+    return query.or(`nombre.ilike.%${search}%,apellido.ilike.%${search}%`)
+  }
+  if (scope === "email") return query.ilike("email", `%${search}%`)
+  if (scope === "codigo_socio")
+    return query.ilike("codigo_socio", `%${search}%`)
+  if (scope === "documento")
+    return query.ilike("numero_documento", `%${search}%`)
+  if (scope === "telefono") return query.ilike("telefono", `%${search}%`)
+  return query.or(
+    `nombre.ilike.%${search}%,apellido.ilike.%${search}%,email.ilike.%${search}%,codigo_socio.ilike.%${search}%`
+  )
+}
+
 export async function listMembers(
   filters: MemberFilters = {}
 ): Promise<{ members: Member[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * MEMBERS_PAGE_SIZE
-  const to = from + MEMBERS_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? MEMBERS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("members")
@@ -49,8 +70,10 @@ export async function listMembers(
 
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
-    query = query.or(
-      `nombre.ilike.%${search}%,apellido.ilike.%${search}%,email.ilike.%${search}%,codigo_socio.ilike.%${search}%`
+    query = applyMemberSearchFilter(
+      query,
+      search,
+      filters.searchScope ?? "todos"
     )
   }
   if (filters.accountStatus)

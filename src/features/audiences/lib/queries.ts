@@ -23,6 +23,7 @@ export type AudiencesSort = "nombre" | "tamano" | "journeys"
 export type AudiencesFilters = {
   search?: string
   page?: number
+  pageSize?: number
   sort?: AudiencesSort
   dir?: "asc" | "desc"
 }
@@ -137,9 +138,10 @@ export async function listAudiences(
 
   const total = audiences.length
   const page = filters.page ?? 1
-  const from = (page - 1) * AUDIENCES_PAGE_SIZE
+  const pageSize = filters.pageSize ?? AUDIENCES_PAGE_SIZE
+  const from = (page - 1) * pageSize
   return {
-    audiences: audiences.slice(from, from + AUDIENCES_PAGE_SIZE),
+    audiences: audiences.slice(from, from + pageSize),
     total,
   }
 }

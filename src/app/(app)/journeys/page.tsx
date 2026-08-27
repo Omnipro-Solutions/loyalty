@@ -11,7 +11,7 @@ import {
 } from "@/features/builder/canvas/queries"
 import type { WorkflowStatus } from "@/types/domain"
 
-const PAGE_SIZE = 25
+const DEFAULT_PAGE_SIZE = 25
 
 /** Igual al `size` de cada `ColumnDef` en `journeys-table.tsx`. */
 const JOURNEYS_TABLE_COLUMNS = [44, null, 118, 120, 140, 92, 88, 120]
@@ -21,6 +21,8 @@ export default async function JourneysPage({
 }: PageProps<"/journeys">) {
   const params = await searchParams
   const page = Number(params.page) > 0 ? Number(params.page) : 1
+  const pageSize =
+    Number(params.pageSize) > 0 ? Number(params.pageSize) : DEFAULT_PAGE_SIZE
   const status = typeof params.estado === "string" ? params.estado : undefined
   const q = typeof params.q === "string" ? params.q : undefined
 
@@ -31,7 +33,7 @@ export default async function JourneysPage({
   // Sin `await`: se resuelve dentro de `JourneysContent`, ya en el boundary.
   const workflowsPromise = listWorkflows({
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
     status: status as WorkflowStatus | undefined,
     q,
   })
@@ -40,7 +42,7 @@ export default async function JourneysPage({
   // URL, así que incluirla aquí no remonta por cada tecla — solo cuando la
   // búsqueda se asienta (el input, no controlado, no pierde texto al
   // remontar — ver el docblock de `JourneysContent`).
-  const dataKey = `${q ?? ""}|${status ?? ""}|${page}`
+  const dataKey = `${q ?? ""}|${status ?? ""}|${page}|${pageSize}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Loyalty Builder" title="Loyalty Builder">
@@ -61,7 +63,7 @@ export default async function JourneysPage({
           <JourneysContent
             workflowsPromise={workflowsPromise}
             kpis={kpis}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             page={page}
             hasFiltersApplied={!!(status || q)}
           />

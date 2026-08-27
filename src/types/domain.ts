@@ -80,6 +80,17 @@ export type AcquisitionChannel = (typeof ACQUISITION_CHANNELS)[number]
 export const MEMBER_STATUSES = ["activo", "inactivo", "suspendido"] as const
 export type MemberStatus = (typeof MEMBER_STATUSES)[number]
 
+/** Ámbito del buscador de clientes (05.1): por cuál dato buscar. Solo UI, sin columna de BD detrás. */
+export const MEMBER_SEARCH_SCOPES = [
+  "todos",
+  "nombre",
+  "email",
+  "codigo_socio",
+  "documento",
+  "telefono",
+] as const
+export type MemberSearchScope = (typeof MEMBER_SEARCH_SCOPES)[number]
+
 export const LANGUAGES = ["es", "en"] as const
 export type Language = (typeof LANGUAGES)[number]
 
@@ -361,6 +372,12 @@ export const CONDITION_FIELDS = [
   "tiene_mascotas",
   "tienda_region",
   "tienda_formato",
+  // A diferencia de `tienda_region`/`tienda_formato` (texto libre, sin tabla
+  // propia), `tienda_grupo` referencia la tabla real `tienda_grupos`
+  // (agrupación editable por el usuario, ver
+  // `20260826260000_tienda_grupos.sql`) — mismo criterio que `socio_nivel`
+  // (array de UUID de una tabla real, no de valores de texto distintos).
+  "tienda_grupo",
   "producto_marca",
   "producto_proveedor",
   "producto_receta",

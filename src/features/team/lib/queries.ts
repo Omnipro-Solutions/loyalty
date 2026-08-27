@@ -22,6 +22,7 @@ export type UserFilters = {
   roleId?: string
   status?: "activo" | "inactivo"
   page?: number
+  pageSize?: number
 }
 
 export const TEAM_PAGE_SIZE = 7
@@ -39,8 +40,9 @@ export async function listUsers(
 ): Promise<{ users: User[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * TEAM_PAGE_SIZE
-  const to = from + TEAM_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? TEAM_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("profiles")

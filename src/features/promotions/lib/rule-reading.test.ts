@@ -17,6 +17,7 @@ const names: RuleReadingNames = {
   couponBatchNameById: new Map(),
   tierNameById: new Map(),
   productNameById: new Map([["prod-1", "Gaseosa 1.5L"]]),
+  storeGroupNameById: new Map([["grupo-1", "Zona Centro"]]),
 }
 
 describe("conditionExpression", () => {
@@ -75,6 +76,17 @@ describe("conditionExpression", () => {
   it("devuelve vacío cuando el árbol no tiene condiciones", () => {
     const node = { combinador: "todas", condiciones: [] } as ConditionNodeValues
     expect(conditionExpression(node, names)).toBe("")
+  })
+
+  it("resuelve el nombre del grupo de tienda por id", () => {
+    const node: ConditionNodeValues = {
+      campo: "tienda_grupo",
+      valor: ["grupo-1"],
+    } as ConditionNodeValues
+
+    expect(conditionExpression(node, names)).toBe(
+      "Grupo de tienda pertenece a Zona Centro"
+    )
   })
 })
 

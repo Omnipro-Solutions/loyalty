@@ -26,6 +26,7 @@ import {
   listStoreOptions,
   listUsers,
   hasPermission,
+  TEAM_PAGE_SIZE,
 } from "@/features/team/lib/queries"
 import { formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -96,6 +97,7 @@ async function UsersTabContent({
   const roleId = firstValue(params.rolFiltro)
   const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
   const page = Number(firstValue(params.page) ?? "1")
+  const pageSize = Number(firstValue(params.pageSize) ?? TEAM_PAGE_SIZE)
 
   // No dependen de los filtros — se quedan esperados aquí.
   const [kpis, roles, stores] = await Promise.all([
@@ -106,12 +108,12 @@ async function UsersTabContent({
 
   // Sin `await`: una sola consulta a `listUsers`, compartida entre el pill
   // de conteo y la tabla.
-  const usersPromise = listUsers({ search, roleId, status, page })
+  const usersPromise = listUsers({ search, roleId, status, page, pageSize })
 
   // `search` ya llega debounced (300ms) desde `UsersFiltersBar` (mismo
   // patrón que `MembersFiltersBar`), así que incluirla aquí no remonta por
   // cada tecla — solo cuando la búsqueda se asienta.
-  const dataKey = `${search ?? ""}|${roleId ?? ""}|${status ?? ""}|${page}`
+  const dataKey = `${search ?? ""}|${roleId ?? ""}|${status ?? ""}|${page}|${pageSize}`
 
   return (
     <>

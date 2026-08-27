@@ -24,7 +24,7 @@ export function InventoryHealthCard({
   return (
     <div className="flex flex-1 flex-col gap-1 rounded-2xl bg-background px-[18px] py-4 shadow-form-section">
       <p className="text-xs font-medium text-muted-foreground">
-        Salud del inventario
+        Salud del catálogo
       </p>
       <div className="flex items-center gap-2">
         <p className="text-[26px] leading-8 font-semibold text-foreground">

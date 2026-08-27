@@ -12,6 +12,7 @@ import {
   STORES_PAGE_SIZE,
   getStoresSummary,
   listCities,
+  listStoreGroups,
   listStores,
 } from "@/features/stores/lib/queries"
 
@@ -31,25 +32,28 @@ export default async function StoresPage({
   const city = firstValue(params.ciudad)
   const format = firstValue(params.formato)
   const page = Number(firstValue(params.page) ?? "1")
+  const pageSize = Number(firstValue(params.pageSize) ?? STORES_PAGE_SIZE)
 
   // No dependen de los filtros — `getStoresSummary()` es una consulta aparte.
-  const [cities, summary] = await Promise.all([
+  const [cities, summary, storeGroups] = await Promise.all([
     listCities(),
     getStoresSummary(),
+    listStoreGroups(),
   ])
 
   // Sin `await`: el botón de exportar y la tabla comparten esta promesa.
-  const storesPromise = listStores({ search, city, format, page })
+  const storesPromise = listStores({ search, city, format, page, pageSize })
 
   // `search` ya llega debounced (300ms), así que incluirla aquí no remonta
   // por cada tecla — solo cuando la búsqueda se asienta.
-  const dataKey = `${search ?? ""}|${city ?? ""}|${format ?? ""}|${page}`
+  const dataKey = `${search ?? ""}|${city ?? ""}|${format ?? ""}|${page}|${pageSize}`
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Tiendas" title="Tiendas">
       <StoresCard
         cities={cities}
         summary={summary}
+        storeGroups={storeGroups}
         exportSlot={
           <Suspense fallback={<ExportButtonSkeleton />}>
             <StoresExportSlot storesPromise={storesPromise} />
@@ -68,7 +72,7 @@ export default async function StoresPage({
         >
           <StoresTableSection
             storesPromise={storesPromise}
-            pageSize={STORES_PAGE_SIZE}
+            pageSize={pageSize}
           />
         </Suspense>
       </StoresCard>

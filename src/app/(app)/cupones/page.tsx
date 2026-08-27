@@ -57,6 +57,10 @@ export default async function CouponsPage({
   const validFrom = firstValue(params.desde)
   const validTo = firstValue(params.hasta)
   const page = Number(firstValue(params.page) ?? "1")
+  const pageSize = Number(
+    firstValue(params.pageSize) ??
+      (vista === "batches" ? COUPON_BATCHES_PAGE_SIZE : COUPONS_PAGE_SIZE)
+  )
   const pendingApprovals = await getPendingApprovalsCount()
 
   // Sin `await`: la comparten `CouponsExportSection` (sin key) y
@@ -69,6 +73,7 @@ export default async function CouponsPage({
     validFrom,
     validTo,
     page,
+    pageSize,
   })
   const couponsPromise = listCoupons({
     search,
@@ -77,6 +82,7 @@ export default async function CouponsPage({
     validFrom,
     validTo,
     page,
+    pageSize,
   })
 
   // Solo una de las dos vistas consume su promesa (la otra vive sin
@@ -93,7 +99,7 @@ export default async function CouponsPage({
   // cuando la búsqueda se asienta. `scope` (ámbito) también entra: antes se
   // quedaba fuera por descuido y cambiarlo no mostraba el `TableSkeleton`
   // aunque `update()` lo aplica al instante, igual que origen/vigencia.
-  const dataKey = `${vista}|${search ?? ""}|${scope ?? ""}|${status ?? ""}|${origin ?? ""}|${validFrom ?? ""}|${validTo ?? ""}|${page}`
+  const dataKey = `${vista}|${search ?? ""}|${scope ?? ""}|${status ?? ""}|${origin ?? ""}|${validFrom ?? ""}|${validTo ?? ""}|${page}|${pageSize}`
 
   const title =
     vista === "batches" ? "Emisiones de cupones" : "Todos los cupones"
@@ -291,12 +297,12 @@ export default async function CouponsPage({
           {vista === "batches" ? (
             <BatchesTableSection
               batchesPromise={batchesPromise}
-              pageSize={COUPON_BATCHES_PAGE_SIZE}
+              pageSize={pageSize}
             />
           ) : (
             <CouponsTableSection
               couponsPromise={couponsPromise}
-              pageSize={COUPONS_PAGE_SIZE}
+              pageSize={pageSize}
               grandTotal={couponsGrandTotal}
               hasSearch={Boolean(search)}
             />

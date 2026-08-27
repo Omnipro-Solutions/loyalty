@@ -1,15 +1,18 @@
-import { Plus } from "lucide-react"
+import { Layers, Plus } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import { Button } from "@/components/ui/button"
 import { formatNumber } from "@/lib/format"
 
+import { StoreGroupsDialog } from "./store-groups-dialog"
 import { StoresFiltersBar } from "./stores-filters-bar"
-import type { StoresSummary } from "../lib/queries"
+import type { StoreGroupOption, StoresSummary } from "../lib/queries"
 
 type StoresCardProps = {
   cities: string[]
   summary: StoresSummary
+  storeGroups: StoreGroupOption[]
   /** `ExportStoresButton` necesita el array resuelto — va detrás de un `<Suspense>`. */
   exportSlot: ReactNode
   /** Tabla + paginación — va dentro de un `<Suspense>` con key. */
@@ -25,6 +28,7 @@ type StoresCardProps = {
 export function StoresCard({
   cities,
   summary,
+  storeGroups,
   exportSlot,
   children,
 }: StoresCardProps) {
@@ -49,6 +53,13 @@ export function StoresCard({
         </div>
         <StoresFiltersBar cities={cities} />
         {exportSlot}
+        <StoreGroupsDialog
+          groups={storeGroups}
+          renderTrigger={<Button variant="outline" size="sm" />}
+        >
+          <Layers className="size-3.5" />
+          Grupos de tienda
+        </StoreGroupsDialog>
         <Link
           href="/tiendas/nueva"
           className="flex items-center gap-[7px] rounded-[10px] bg-primary py-[9px] pr-3.5 pl-3 text-xs font-medium text-primary-foreground"

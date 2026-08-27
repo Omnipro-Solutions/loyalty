@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Gauge,
+  History,
   LayoutGrid,
   Package,
   PlugZap,
@@ -33,17 +34,19 @@ export type NavGroup = {
 }
 
 /**
- * Exact mirror of the Figma sidebar (624:561), with three exceptions: the
+ * Exact mirror of the Figma sidebar (624:561), with four exceptions: the
  * file doesn't give Journeys/Loyalty Builder its own item in the main nav
  * (the "trending-up" icon there is used by "Audiencias"), "Analítica" (02.1 ·
  * Dashboard · denso) isn't in this mock's sidebar at all — it's a second
- * dashboard variant, reachable only via its own frame's node id — and
- * "Panel de promociones" has no Figma node at all (user request, not in the
- * Figma plan). Since all three are priority additions, they were added as
- * new entries (Journeys under COMERCIAL, Analítica under Principal next to
- * Resumen which now renders 02.3 · Dashboard · IA, Panel de promociones as
- * the first item under Principal) — everything else (order, labels, icons)
- * is literal.
+ * dashboard variant, reachable only via its own frame's node id —, "Panel de
+ * promociones" has no Figma node at all (user request, not in the Figma
+ * plan), and "Logs de promociones" is likewise a user request (moved out of
+ * `/panel-promociones`'s "Logs" tab into its own Configuración item). Since
+ * all four are priority additions, they were added as new entries (Journeys
+ * under COMERCIAL, Analítica under Principal next to Resumen which now
+ * renders 02.3 · Dashboard · IA, Panel de promociones as the first item
+ * under Principal, Logs de promociones under Configuración) — everything
+ * else (order, labels, icons) is literal.
  */
 export const NAVIGATION: NavGroup[] = [
   {
@@ -100,6 +103,13 @@ export const NAVIGATION: NavGroup[] = [
         label: "Parámetros del programa",
         href: "/ajustes/programa",
         icon: Settings2,
+      },
+      // Antes vivía como pestaña "Logs" de /panel-promociones — movida aquí
+      // a pedido del usuario, como ítem propio de Configuración.
+      {
+        label: "Logs de promociones",
+        href: "/ajustes/logs-promociones",
+        icon: History,
       },
     ],
   },

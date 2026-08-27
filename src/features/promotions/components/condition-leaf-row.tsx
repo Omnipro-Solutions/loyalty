@@ -62,7 +62,8 @@ export function ConditionLeafRow({
   onRemove,
 }: ConditionLeafRowProps) {
   const enabled = ENABLED_CONDITION_FIELDS.includes(condition.campo)
-  const { categories, products, cities, segments, couponBatches } = options
+  const { categories, products, cities, segments, couponBatches, storeGroups } =
+    options
   // Sin esto, una condición sin valor bloquea "Siguiente" en silencio — el
   // `trigger()` del wizard sí la detecta (comparte esquema con `conditionSchema`),
   // pero nada en este árbol mostraba jamás el porqué. Reusa el mismo esquema
@@ -350,6 +351,17 @@ export function ConditionLeafRow({
               value={condition.valor}
               onValueChange={(valor) =>
                 onChange({ campo: "tienda_formato", valor })
+              }
+            />
+          )}
+          {condition.campo === "tienda_grupo" && (
+            <Multiselect
+              size="chip"
+              className="w-fit min-w-[160px]"
+              options={storeGroups.map((g) => ({ value: g.id, label: g.name }))}
+              value={condition.valor}
+              onValueChange={(valor) =>
+                onChange({ campo: "tienda_grupo", valor })
               }
             />
           )}

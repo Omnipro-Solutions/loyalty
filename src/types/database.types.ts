@@ -2399,6 +2399,41 @@ export type Database = {
           },
         ]
       }
+      tienda_grupos: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          org_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          org_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tienda_grupos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiendas: {
         Row: {
           actualizado_en: string
@@ -2411,6 +2446,7 @@ export type Database = {
           email: string
           estado: string
           formato: string
+          grupo_id: string
           id: string
           nombre: string
           org_id: string
@@ -2432,6 +2468,7 @@ export type Database = {
           email: string
           estado?: string
           formato: string
+          grupo_id: string
           id?: string
           nombre: string
           org_id: string
@@ -2453,6 +2490,7 @@ export type Database = {
           email?: string
           estado?: string
           formato?: string
+          grupo_id?: string
           id?: string
           nombre?: string
           org_id?: string
@@ -2469,6 +2507,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiendas_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "tienda_grupos"
             referencedColumns: ["id"]
           },
         ]

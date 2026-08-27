@@ -7,6 +7,7 @@ import type {
   MaritalStatus,
   Gender,
   Language,
+  MemberSearchScope,
   MemberStatus,
   TierName,
 } from "@/types/domain"
@@ -56,6 +57,15 @@ export const MEMBER_STATUS_LABEL: Record<MemberStatus, string> = {
   activo: "Activo",
   inactivo: "Inactivo",
   suspendido: "Suspendido",
+}
+
+export const MEMBER_SEARCH_SCOPE_LABEL: Record<MemberSearchScope, string> = {
+  todos: "Todos los campos",
+  nombre: "Nombre",
+  email: "Correo electrónico",
+  codigo_socio: "Código de socio",
+  documento: "Documento",
+  telefono: "Teléfono",
 }
 
 export const LANGUAGE_LABEL: Record<Language, string> = {

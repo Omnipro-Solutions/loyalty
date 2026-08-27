@@ -3,16 +3,25 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import { FilterSearch } from "@/components/filters/search"
+import { FilterScopedSearch } from "@/components/filters/scoped-search"
 import { FilterSelect } from "@/components/filters/select"
-import { MEMBER_STATUSES } from "@/types/domain"
+import { MEMBER_SEARCH_SCOPES, MEMBER_STATUSES } from "@/types/domain"
 
-import { MEMBER_STATUS_LABEL, TIER_LABEL } from "../lib/labels"
+import {
+  MEMBER_SEARCH_SCOPE_LABEL,
+  MEMBER_STATUS_LABEL,
+  TIER_LABEL,
+} from "../lib/labels"
 import type { TierOption } from "../lib/queries"
 
 const STATUS_OPTIONS = MEMBER_STATUSES.map((e) => ({
   value: e,
   label: MEMBER_STATUS_LABEL[e],
+}))
+
+const SEARCH_SCOPE_OPTIONS = MEMBER_SEARCH_SCOPES.map((s) => ({
+  value: s,
+  label: MEMBER_SEARCH_SCOPE_LABEL[s],
 }))
 
 type MembersFiltersBarProps = { tiers: TierOption[] }
@@ -46,12 +55,22 @@ export function MembersFiltersBar({ tiers }: MembersFiltersBarProps) {
 
   const selectedTier = searchParams.get("tier")
   const selectedStatus = searchParams.get("estado")
+  const searchScope = searchParams.get("campo") ?? "todos"
 
   return (
     <div className="flex items-center gap-2.5">
-      <FilterSearch
+      <FilterScopedSearch
+        scope={searchScope}
+        scopeOptions={SEARCH_SCOPE_OPTIONS}
+        onScopeChange={(value) =>
+          update((params) => {
+            if (value === "todos") params.delete("campo")
+            else params.set("campo", value)
+          })
+        }
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={setSearch}
+        placeholder="Buscar…"
       />
       <FilterSelect
         label="Nivel"

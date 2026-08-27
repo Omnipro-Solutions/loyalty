@@ -44,7 +44,10 @@ export async function AudiencesTableSection({
   return (
     <>
       <AudiencesTable audiences={audiences} sort={sort} dir={dir} />
-      <AudiencesPagination total={total} pageSize={AUDIENCES_PAGE_SIZE} />
+      <AudiencesPagination
+        total={total}
+        defaultPageSize={AUDIENCES_PAGE_SIZE}
+      />
     </>
   )
 }

@@ -3,11 +3,11 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
+import { FilterScopedSearch } from "@/components/filters/scoped-search"
 import { FilterSelect } from "@/components/filters/select"
 import { Segmented } from "@/components/filters/segmented"
 import { COUPON_ORIGINS, COUPON_SEARCH_SCOPES } from "@/types/domain"
 
-import { CouponSearchField } from "./coupon-search-field"
 import { ValidityFilter } from "./validity-filter"
 import { COUPON_ORIGIN_LABEL, COUPON_SEARCH_SCOPE_LABEL } from "../lib/labels"
 
@@ -66,7 +66,7 @@ export function CouponsFiltersBar() {
         value={vista}
         onValueChange={(v) => update((params) => params.set("vista", v))}
       />
-      <CouponSearchField
+      <FilterScopedSearch
         scope={scope}
         scopeOptions={SCOPE_OPTIONS}
         onScopeChange={(v) => update((params) => params.set("ambito", v))}

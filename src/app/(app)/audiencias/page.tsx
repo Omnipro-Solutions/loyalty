@@ -12,6 +12,7 @@ import {
 import { AudiencesExportSection } from "@/features/audiences/components/audiences-export-section"
 import { AudiencesTableSection } from "@/features/audiences/components/audiences-table-section"
 import {
+  AUDIENCES_PAGE_SIZE,
   getAudiencesKpis,
   listAudiences,
   type AudiencesSort,
@@ -39,17 +40,24 @@ export default async function AudiencesPage({
   const sort = (primerValor(params.sort) ?? "tamano") as AudiencesSort
   const dir = primerValor(params.dir) === "asc" ? "asc" : "desc"
   const page = Number(primerValor(params.page) ?? "1")
+  const pageSize = Number(primerValor(params.pageSize) ?? AUDIENCES_PAGE_SIZE)
 
   // No depende de los filtros — se queda esperada aquí.
   const kpis = await getAudiencesKpis()
 
   // Sin `await`: la comparten el pill, el botón de exportar y la tabla.
-  const audiencesPromise = listAudiences({ search: busqueda, page, sort, dir })
+  const audiencesPromise = listAudiences({
+    search: busqueda,
+    page,
+    pageSize,
+    sort,
+    dir,
+  })
 
   // `busqueda` ya llega debounced (300ms), así que incluirla aquí no
   // remonta por cada tecla — solo cuando se asienta. Remonta también al
   // cambiar de orden o de página.
-  const dataKey = `${busqueda ?? ""}|${sort}|${dir}|${page}`
+  const dataKey = `${busqueda ?? ""}|${sort}|${dir}|${page}|${pageSize}`
 
   return (
     <AppPage breadcrumb="Comercial  ›  Audiencias" title="Audiencias">

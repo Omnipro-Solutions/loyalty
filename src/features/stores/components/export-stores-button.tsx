@@ -5,36 +5,48 @@ import { Download } from "lucide-react"
 import { STORE_STATUS_LABEL, STORE_FORMAT_LABEL } from "../lib/labels"
 import type { Store } from "../lib/queries"
 
-const COLUMNS: { header: string; value: (s: Store) => string }[] = [
-  { header: "Tienda", value: (s) => s.nombre },
-  { header: "Código", value: (s) => s.codigo_tienda },
-  { header: "Ciudad", value: (s) => s.ciudad },
-  { header: "Dirección", value: (s) => `${s.direccion}, ${s.colonia}` },
-  { header: "Teléfono", value: (s) => s.telefono },
-  { header: "Email", value: (s) => s.email },
-  {
-    header: "Formato",
-    value: (s) =>
-      STORE_FORMAT_LABEL[s.formato as keyof typeof STORE_FORMAT_LABEL] ??
-      s.formato,
-  },
-  {
-    header: "Estado",
-    value: (s) =>
-      STORE_STATUS_LABEL[s.estado as keyof typeof STORE_STATUS_LABEL] ??
-      s.estado,
-  },
-]
+function columns(
+  groupNameById: Map<string, string>
+): { header: string; value: (s: Store) => string }[] {
+  return [
+    { header: "Tienda", value: (s) => s.nombre },
+    { header: "Código", value: (s) => s.codigo_tienda },
+    { header: "Ciudad", value: (s) => s.ciudad },
+    { header: "Dirección", value: (s) => `${s.direccion}, ${s.colonia}` },
+    { header: "Teléfono", value: (s) => s.telefono },
+    { header: "Email", value: (s) => s.email },
+    {
+      header: "Formato",
+      value: (s) =>
+        STORE_FORMAT_LABEL[s.formato as keyof typeof STORE_FORMAT_LABEL] ??
+        s.formato,
+    },
+    {
+      header: "Estado",
+      value: (s) =>
+        STORE_STATUS_LABEL[s.estado as keyof typeof STORE_STATUS_LABEL] ??
+        s.estado,
+    },
+    { header: "Grupo", value: (s) => groupNameById.get(s.grupo_id) ?? "—" },
+  ]
+}
 
 function csvCell(value: string): string {
   return `"${value.replaceAll('"', '""')}"`
 }
 
-type ExportStoresButtonProps = { stores: Store[] }
+type ExportStoresButtonProps = {
+  stores: Store[]
+  groupNameById: Map<string, string>
+}
 
 /** Exporta la página actual de la tabla (04.1 "Exportar") como CSV. */
-export function ExportStoresButton({ stores }: ExportStoresButtonProps) {
+export function ExportStoresButton({
+  stores,
+  groupNameById,
+}: ExportStoresButtonProps) {
   function exportCsv() {
+    const COLUMNS = columns(groupNameById)
     const rows = [
       COLUMNS.map((c) => csvCell(c.header)).join(","),
       ...stores.map((s) => COLUMNS.map((c) => csvCell(c.value(s))).join(",")),

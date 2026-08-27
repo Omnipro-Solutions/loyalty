@@ -1,6 +1,7 @@
 import { AvatarInitials } from "@/components/layout/avatar-initials"
 
 import { STORE_STATUS_LABEL, STORE_FORMAT_LABEL } from "../lib/labels"
+import type { StoreGroupOption } from "../lib/queries"
 import type { StoreValues } from "../schemas"
 
 function KV({ label, value }: { label: string; value: string }) {
@@ -12,10 +13,18 @@ function KV({ label, value }: { label: string; value: string }) {
   )
 }
 
-type StoreSummaryCardProps = { values: Partial<StoreValues> }
+type StoreSummaryCardProps = {
+  values: Partial<StoreValues>
+  groups: StoreGroupOption[]
+}
 
-/** Figma "Card · Resumen" (1241:3978): vista previa en vivo mientras se llena el formulario. */
-export function StoreSummaryCard({ values }: StoreSummaryCardProps) {
+/**
+ * Figma "Card · Resumen" (1241:3978): vista previa en vivo mientras se
+ * llena el formulario. La fila "Grupo" no está en el nodo de Figma —
+ * atributo nuevo, ver plan de `tienda_grupos`.
+ */
+export function StoreSummaryCard({ values, groups }: StoreSummaryCardProps) {
+  const groupName = groups.find((g) => g.id === values.groupId)?.name
   const name = values.name?.trim() || "Nombre de la tienda"
   const location = [values.neighborhood, values.city, values.postalCode]
     .filter(Boolean)
@@ -51,6 +60,7 @@ export function StoreSummaryCard({ values }: StoreSummaryCardProps) {
           label="Estado"
           value={values.status ? STORE_STATUS_LABEL[values.status] : "—"}
         />
+        <KV label="Grupo" value={groupName ?? "—"} />
         <KV label="País" value={values.country || "—"} />
       </div>
     </div>

@@ -36,6 +36,7 @@ export type Condition =
   | { campo: "tiene_mascotas"; valor: boolean }
   | { campo: "tienda_region"; valor: string[] }
   | { campo: "tienda_formato"; valor: string[] }
+  | { campo: "tienda_grupo"; valor: string[] }
   | { campo: "producto_marca"; valor: string[] }
   | { campo: "producto_proveedor"; valor: string[] }
   | { campo: "producto_receta"; valor: boolean }
@@ -108,6 +109,7 @@ export type PromotionsFilters = {
   publicationStatus?: PromotionPublicationStatus
   channel?: string
   page?: number
+  pageSize?: number
 }
 
 export const PROMOTIONS_PAGE_SIZE = 6
@@ -122,8 +124,9 @@ export async function listPromotions(
 ): Promise<{ promotions: Promotion[]; total: number }> {
   const supabase = await createClient()
   const page = filters.page ?? 1
-  const from = (page - 1) * PROMOTIONS_PAGE_SIZE
-  const to = from + PROMOTIONS_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? PROMOTIONS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from("promociones")
@@ -970,6 +973,21 @@ export async function listConditionStoreRegions(): Promise<ConditionOption[]> {
   return distinctTextValues((data ?? []).map((t) => t.region))
 }
 
+export type ConditionStoreGroup = { id: string; name: string }
+
+/** Grupos de tienda reales (`tienda_grupos`), para la condición "Grupo de tienda" — duplica `features/stores/lib/queries.ts` `listStoreGroups` (aislamiento entre features, CLAUDE.md §2), sin el conteo de tiendas que ese sí necesita. */
+export async function listConditionStoreGroups(): Promise<
+  ConditionStoreGroup[]
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("tienda_grupos")
+    .select("id, nombre")
+    .order("nombre")
+  if (error) throw error
+  return (data ?? []).map((g) => ({ id: g.id, name: g.nombre }))
+}
+
 /** Marcas reales de Catálogo, para la condición "Marca del producto". */
 export async function listConditionBrands(): Promise<ConditionOption[]> {
   const supabase = await createClient()
@@ -1104,6 +1122,7 @@ export type ConditionOptions = {
   provinces: ConditionOption[]
   storeRegions: ConditionOption[]
   storeFormats: ConditionOption[]
+  storeGroups: ConditionStoreGroup[]
   brands: ConditionOption[]
   suppliers: ConditionOption[]
   genders: ConditionOption[]

@@ -19,10 +19,6 @@ export default function PromotionsDashboardLoading() {
       breadcrumb="Principal  ›  Panel de promociones"
       title="Panel de promociones"
     >
-      <div className="flex items-center gap-6">
-        <Skeleton className="h-5 w-16" />
-        <Skeleton className="h-5 w-12" />
-      </div>
       <div className="flex flex-wrap items-center gap-2.5">
         <Skeleton className="h-9 w-[168px] rounded-lg" />
         <Skeleton className="h-9 w-[132px] rounded-[10px]" />

@@ -319,28 +319,47 @@ from (
 ) as pc (sku, categoria, principal)
 on conflict (producto_id, categoria_id) do nothing;
 
--- Tiendas de demo (04 · Tiendas), México como en el Figma.
+-- Grupos de tienda (agrupación editable, ver
+-- `20260826260000_tienda_grupos.sql`) — se siembran antes que `tiendas`
+-- porque cada tienda referencia su grupo por `grupo_id`.
 with org as (select id from organizations where slug = 'omni')
+insert into tienda_grupos (org_id, nombre, descripcion)
+select (select id from org), g.nombre, g.descripcion
+from (
+  values
+    ('Zona Centro', 'CDMX, Puebla y Querétaro.'),
+    ('Zona Occidente', 'Jalisco.'),
+    ('Zona Norte', 'Nuevo León.'),
+    ('Zona Sureste', 'Quintana Roo y Yucatán.')
+) as g (nombre, descripcion)
+on conflict (org_id, nombre) do nothing;
+
+-- Tiendas de demo (04 · Tiendas), México como en el Figma.
+with org as (select id from organizations where slug = 'omni'),
+grupo as (
+  select id, nombre from tienda_grupos where org_id = (select id from org)
+)
 insert into tiendas (
   org_id, nombre, codigo_tienda, formato, estado, pais, region, ciudad,
-  colonia, direccion, codigo_postal, telefono, email, responsable, zona_horaria
+  colonia, direccion, codigo_postal, telefono, email, responsable,
+  zona_horaria, grupo_id
 )
 select
   (select id from org),
   t.nombre, t.codigo_tienda, t.formato, t.estado, 'México', t.region, t.ciudad,
   t.colonia, t.direccion, t.codigo_postal, t.telefono, t.email, t.responsable,
-  t.zona_horaria
+  t.zona_horaria, (select id from grupo where grupo.nombre = t.grupo_nombre)
 from (
   values
-    ('Omni Polanco', 'ST-0142', 'flagship', 'operando', 'CDMX', 'Ciudad de México', 'Polanco', 'Av. Presidente Masaryk 214', '11560', '+52 55 5280 1140', 'polanco@omni.mx', 'Elena Martínez', 'America/Mexico_City'),
-    ('Omni Santa Fe', 'ST-0143', 'mall', 'operando', 'CDMX', 'Ciudad de México', 'Santa Fe', 'Av. Vasco de Quiroga 3800', '05348', '+52 55 5292 3010', 'santafe@omni.mx', null, 'America/Mexico_City'),
-    ('Omni Providencia', 'ST-0151', 'flagship', 'bajo_meta', 'Jalisco', 'Guadalajara', 'Providencia', 'Av. Pablo Neruda 2860', '44630', '+52 33 3642 8890', 'providencia@omni.mx', null, 'America/Mexico_City'),
-    ('Omni San Pedro', 'ST-0158', 'express', 'operando', 'Nuevo León', 'San Pedro Garza García', 'Del Valle', 'Av. Vasconcelos 402', '66220', '+52 81 8335 7720', 'sanpedro@omni.mx', null, 'America/Monterrey'),
-    ('Omni Cancún Centro', 'ST-0163', 'mall', 'operando', 'Quintana Roo', 'Cancún', 'Supermanzana 4', 'Av. Tulum 260', '77500', '+52 998 884 2215', 'cancun@omni.mx', null, 'America/Cancun'),
-    ('Omni Mérida Norte', 'ST-0170', 'express', 'en_apertura', 'Yucatán', 'Mérida', 'Altabrisa', 'Calle 7 #451 x 20', '97130', '+52 999 943 6018', 'merida@omni.mx', null, 'America/Merida'),
-    ('Omni Angelópolis', 'ST-0174', 'mall', 'cerrada_temporal', 'Puebla', 'Puebla', 'Angelópolis', 'Blvd. del Niño Poblano 2510', '72197', '+52 222 225 9040', 'puebla@omni.mx', null, 'America/Mexico_City'),
-    ('Omni Juriquilla', 'ST-0181', 'express', 'operando', 'Querétaro', 'Querétaro', 'Juriquilla', 'Anillo Vial Fray J. de C. 1500', '76230', '+52 442 218 6633', 'queretaro@omni.mx', null, 'America/Mexico_City')
-) as t (nombre, codigo_tienda, formato, estado, region, ciudad, colonia, direccion, codigo_postal, telefono, email, responsable, zona_horaria)
+    ('Omni Polanco', 'ST-0142', 'flagship', 'operando', 'CDMX', 'Ciudad de México', 'Polanco', 'Av. Presidente Masaryk 214', '11560', '+52 55 5280 1140', 'polanco@omni.mx', 'Elena Martínez', 'America/Mexico_City', 'Zona Centro'),
+    ('Omni Santa Fe', 'ST-0143', 'mall', 'operando', 'CDMX', 'Ciudad de México', 'Santa Fe', 'Av. Vasco de Quiroga 3800', '05348', '+52 55 5292 3010', 'santafe@omni.mx', null, 'America/Mexico_City', 'Zona Centro'),
+    ('Omni Providencia', 'ST-0151', 'flagship', 'bajo_meta', 'Jalisco', 'Guadalajara', 'Providencia', 'Av. Pablo Neruda 2860', '44630', '+52 33 3642 8890', 'providencia@omni.mx', null, 'America/Mexico_City', 'Zona Occidente'),
+    ('Omni San Pedro', 'ST-0158', 'express', 'operando', 'Nuevo León', 'San Pedro Garza García', 'Del Valle', 'Av. Vasconcelos 402', '66220', '+52 81 8335 7720', 'sanpedro@omni.mx', null, 'America/Monterrey', 'Zona Norte'),
+    ('Omni Cancún Centro', 'ST-0163', 'mall', 'operando', 'Quintana Roo', 'Cancún', 'Supermanzana 4', 'Av. Tulum 260', '77500', '+52 998 884 2215', 'cancun@omni.mx', null, 'America/Cancun', 'Zona Sureste'),
+    ('Omni Mérida Norte', 'ST-0170', 'express', 'en_apertura', 'Yucatán', 'Mérida', 'Altabrisa', 'Calle 7 #451 x 20', '97130', '+52 999 943 6018', 'merida@omni.mx', null, 'America/Merida', 'Zona Sureste'),
+    ('Omni Angelópolis', 'ST-0174', 'mall', 'cerrada_temporal', 'Puebla', 'Puebla', 'Angelópolis', 'Blvd. del Niño Poblano 2510', '72197', '+52 222 225 9040', 'puebla@omni.mx', null, 'America/Mexico_City', 'Zona Centro'),
+    ('Omni Juriquilla', 'ST-0181', 'express', 'operando', 'Querétaro', 'Querétaro', 'Juriquilla', 'Anillo Vial Fray J. de C. 1500', '76230', '+52 442 218 6633', 'queretaro@omni.mx', null, 'America/Mexico_City', 'Zona Centro')
+) as t (nombre, codigo_tienda, formato, estado, region, ciudad, colonia, direccion, codigo_postal, telefono, email, responsable, zona_horaria, grupo_nombre)
 on conflict (org_id, codigo_tienda) do nothing;
 
 -- Precios por producto (03.3 "Card · Precios"), solo para visualizar en la

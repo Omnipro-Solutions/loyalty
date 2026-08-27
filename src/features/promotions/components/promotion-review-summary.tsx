@@ -57,6 +57,7 @@ import {
 import type {
   ConditionCategory,
   ConditionSegment,
+  ConditionStoreGroup,
   ConditionTier,
   CouponBatchOption,
   ProductOption,
@@ -204,6 +205,7 @@ type PromotionReviewSummaryProps = {
   products: ProductOption[]
   couponBatches: CouponBatchOption[]
   tiers: ConditionTier[]
+  storeGroups: ConditionStoreGroup[]
   suppliers: SupplierOption[]
 }
 
@@ -215,6 +217,7 @@ export function PromotionReviewSummary({
   products,
   couponBatches,
   tiers,
+  storeGroups,
   suppliers,
 }: PromotionReviewSummaryProps) {
   const names = buildRuleReadingNames({
@@ -223,6 +226,7 @@ export function PromotionReviewSummary({
     products,
     couponBatches,
     tiers,
+    storeGroups,
   })
   const { productNameById, couponBatchNameById } = names
   const supplierNameById = new Map(suppliers.map((s) => [s.id, s.name]))
