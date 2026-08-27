@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import {
   COUPON_BATCH_STATUSES,
@@ -639,9 +639,7 @@ export type ProfileWithPermissions = {
 /** Calco de `features/team/lib/queries.ts` `getProfileWithPermissions` — duplicado a propósito, las features no se importan entre sí (ver CLAUDE.md §2). Decide qué botones de acción mostrar en `/cupones/[id]`. */
 export async function getProfileWithPermissions(): Promise<ProfileWithPermissions | null> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return null
 
   const { data: profile, error } = await supabase

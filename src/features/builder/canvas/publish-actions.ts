@@ -12,6 +12,7 @@ import {
 } from "../engine/simulate"
 import { validateGraph } from "../validation/graph-validation"
 import { builderActionClient } from "./action-client"
+import { persistGraph } from "./persist-graph"
 import { runInputSchema } from "./schemas"
 
 type RunStepRow = {
@@ -100,10 +101,17 @@ export const simulateWorkflowAction = builderActionClient
   })
 
 /**
- * Publicar: a diferencia del autoguardado (que nunca versiona), esto SÍ
- * crea un snapshot en `workflow_versions` y sube `version_actual` — es el
- * único punto donde "guardar" y "versionar" coinciden a propósito, para no
- * acumular una versión por cada autoguardado silencioso.
+ * Publicar: además de crear el snapshot de versión, persiste el grafo en
+ * `workflow_nodes`/`workflow_edges` (mismo helper que el botón "Guardar",
+ * ver `persist-graph.ts`) — el builder ya no autoguarda, así que sin esto
+ * publicar sin haber guardado antes dejaría la versión publicada
+ * desincronizada del grafo "vivo" que el canvas carga al recargar la
+ * página.
+ *
+ * A diferencia de "Guardar" (que nunca versiona), esto SÍ crea un snapshot
+ * en `workflow_versions` y sube `version_actual` — es el único punto donde
+ * "guardar" y "versionar" coinciden a propósito, para no acumular una
+ * versión por cada guardado.
  *
  * Bloqueante vs. advertencia: solo los `level: "error"` de
  * `validateGraph` (sin entrada, más de una entrada, ciclo) impiden publicar.
@@ -132,6 +140,17 @@ export const publishWorkflowAction = builderActionClient
         ok: false as const,
         message: errors.map((e) => e.message).join(" "),
       }
+    }
+
+    const persisted = await persistGraph(
+      ctx.supabase,
+      ctx.userId,
+      workflowId,
+      nodes,
+      edges
+    )
+    if (!persisted.ok) {
+      return { ok: false as const, message: persisted.message }
     }
 
     const { data: workflow } = await ctx.supabase

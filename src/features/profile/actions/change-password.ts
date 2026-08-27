@@ -1,7 +1,7 @@
 "use server"
 
 import { actionClient } from "@/lib/safe-action"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 import { changePasswordSchema } from "../schemas"
 
@@ -9,9 +9,7 @@ export const changePasswordAction = actionClient
   .inputSchema(changePasswordSchema)
   .action(async ({ parsedInput }) => {
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getAuthenticatedUser()
     if (!user?.email) {
       return {
         ok: false as const,

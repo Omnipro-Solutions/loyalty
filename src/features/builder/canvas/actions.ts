@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 
-import type { Json } from "@/types/database.types"
-
 import { builderActionClient } from "./action-client"
+import { persistGraph } from "./persist-graph"
 import {
   createWorkflowSchema,
   deleteWorkflowsSchema,
@@ -71,84 +70,23 @@ export const deleteWorkflowsAction = builderActionClient
   })
 
 /**
- * Guarda el grafo completo (nodos + aristas) del canvas. Estrategia:
- * upsert de nodos por id (los ids los genera el cliente con
- * `crypto.randomUUID()` al soltar un bloque, así son estables entre
- * guardados), borrar los que ya no están, y reemplazar las aristas por
- * completo (su volumen es bajo por workflow y no tienen identidad propia
- * más allá de origen+puerto+destino, así que borrar+reinsertar es más
- * simple que hacer diff).
- *
- * Decisión de producto: esto NO crea una fila en `workflow_versions` — el
- * autoguardado actualiza directamente el grafo "vivo" de `workflow_nodes`/
- * `workflow_edges`. Versionar (snapshot histórico) queda para "Publicar
- * workflow" / "Historial de versiones", que construye el siguiente fork —
- * meter una política de versionado aquí hubiera sido adivinar un diseño
- * que ese trabajo probablemente quiere definir distinto.
+ * Guardado explícito del canvas (botón "Guardar" en la barra del editor —
+ * el builder ya no autoguarda). Decisión de producto: esto NO crea una
+ * fila en `workflow_versions` — versionar (snapshot histórico) queda para
+ * "Publicar workflow" / "Historial de versiones", que construye el
+ * siguiente fork.
  */
 export const saveGraphAction = builderActionClient
   .inputSchema(saveGraphSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { workflowId, nodes, edges } = parsedInput
-
-    if (nodes.length) {
-      const { error: upsertError } = await ctx.supabase
-        .from("workflow_nodes")
-        .upsert(
-          nodes.map((n) => ({
-            id: n.id,
-            workflow_id: workflowId,
-            tipo: n.tipo,
-            etiqueta: n.etiqueta,
-            posicion_x: n.posicion_x,
-            posicion_y: n.posicion_y,
-            config: n.config as Json,
-          }))
-        )
-      if (upsertError) {
-        return { ok: false as const, message: "No se pudo guardar el grafo." }
-      }
-    }
-
-    const { data: existingNodes } = await ctx.supabase
-      .from("workflow_nodes")
-      .select("id")
-      .eq("workflow_id", workflowId)
-    const incomingIds = new Set(nodes.map((n) => n.id))
-    const idsToDelete = (existingNodes ?? [])
-      .map((n) => n.id)
-      .filter((id) => !incomingIds.has(id))
-    if (idsToDelete.length) {
-      await ctx.supabase.from("workflow_nodes").delete().in("id", idsToDelete)
-    }
-
-    await ctx.supabase
-      .from("workflow_edges")
-      .delete()
-      .eq("workflow_id", workflowId)
-    if (edges.length) {
-      const { error: edgesError } = await ctx.supabase
-        .from("workflow_edges")
-        .insert(
-          edges.map((e) => ({
-            workflow_id: workflowId,
-            source_node_id: e.source_node_id,
-            source_port: e.source_port,
-            target_node_id: e.target_node_id,
-          }))
-        )
-      if (edgesError) {
-        return {
-          ok: false as const,
-          message: "No se pudieron guardar las conexiones.",
-        }
-      }
-    }
-
-    await ctx.supabase
-      .from("workflows")
-      .update({ actualizado_por: ctx.userId })
-      .eq("id", workflowId)
-
+    const result = await persistGraph(
+      ctx.supabase,
+      ctx.userId,
+      workflowId,
+      nodes,
+      edges
+    )
+    if (!result.ok) return result
     return { ok: true as const, savedAt: new Date().toISOString() }
   })

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
 export type Organization = Pick<
@@ -18,9 +18,7 @@ const PROFILE_WITH_ORG =
 /** Perfil (con organización) del usuario autenticado, o `null` sin sesión. */
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return null
 
   const { data, error } = await supabase
@@ -42,9 +40,7 @@ export type SecurityInfo = {
 /** Estado de seguridad (2FA + códigos de respaldo) del usuario autenticado. */
 export async function getCurrentSecurity(): Promise<SecurityInfo> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return { mfaEnrolled: false, remainingBackupCodes: 0 }
 
   const [{ data: factors }, { count }] = await Promise.all([
@@ -70,9 +66,7 @@ export type TrustedDevice = Pick<
 /** Dispositivos de confianza del usuario autenticado, más reciente primero. */
 export async function listTrustedDevices(): Promise<TrustedDevice[]> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return []
 
   const { data, error } = await supabase

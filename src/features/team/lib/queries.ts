@@ -1,5 +1,5 @@
 import type { Action, Resource } from "@/lib/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
 import { getAuthStatusByProfileId } from "./admin-auth"
@@ -240,9 +240,7 @@ export type ProfileWithPermissions = {
 /** Perfil autenticado + su set de permisos reales (`role_permissions`), para decidir qué mostrar/permitir en 09. */
 export async function getProfileWithPermissions(): Promise<ProfileWithPermissions | null> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return null
 
   const { data: profile, error } = await supabase

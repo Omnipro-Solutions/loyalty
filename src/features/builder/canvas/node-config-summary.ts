@@ -3,6 +3,7 @@ import { formatNumber, formatUSD } from "@/lib/format"
 import type { BuilderNodeType } from "@/types/domain"
 
 import {
+  conditionGroupToPseudocode,
   countRulesAndDepth,
   type ConditionGroup,
 } from "../inspector/condition-preview"
@@ -101,6 +102,37 @@ function condicionMultipleSummary(
       },
     ],
   }
+}
+
+/**
+ * Pseudocódigo completo del bloque "Condición múltiple" para la sección
+ * colapsable del nodo (`BuilderNode`): las líneas `IF`/`AND`/`OR` del árbol
+ * (`conditionGroupToPseudocode`) más `ON_MISSING`/`THEN`/`ELSE` — estas 3
+ * últimas no vienen del árbol de condiciones en sí, son fijas para
+ * `condicion_multiple` (siempre 2 salidas, `cumple`/`no_cumple`, ver
+ * `OUTPUT_HANDLES` en `builder-node.tsx`) más la política de dato faltante
+ * que el usuario eligió en el inspector (`config.siFaltaElDato`).
+ */
+export function condicionMultiplePseudocode(
+  config: Record<string, unknown>
+): string[] | null {
+  const condiciones = config.condiciones
+  if (!condiciones || typeof condiciones !== "object") return null
+  const group = condiciones as ConditionGroup
+  if (!Array.isArray(group.rules)) return null
+  const lines = conditionGroupToPseudocode(group)
+  if (lines.length === 0) return null
+
+  const missingDataPolicy =
+    typeof config.siFaltaElDato === "string"
+      ? config.siFaltaElDato
+      : "no_cumple"
+  return [
+    ...lines,
+    `ON_MISSING ${missingDataPolicy}`,
+    "THEN → cumple",
+    "ELSE → no_cumple",
+  ]
 }
 
 function acumularPuntosSummary(

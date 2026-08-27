@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, History, Play, Rocket } from "lucide-react"
+import { BarChart3, History, Play, Rocket, Save } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -23,10 +23,12 @@ export function EditorBar({
   authorName,
   updatedAt,
   saving,
+  hasUnsavedChanges,
   simulating,
   publishing,
   publishDisabledReason,
   onRename,
+  onSave,
   onHistory,
   onSimulate,
   onPublish,
@@ -37,11 +39,14 @@ export function EditorBar({
   authorName: string | null
   updatedAt: string
   saving: boolean
+  /** El builder no autoguarda — habilita el botón "Guardar" y el aviso "Cambios sin guardar". */
+  hasUnsavedChanges: boolean
   simulating: boolean
   publishing: boolean
   /** `undefined` = se puede publicar. Un string = motivo del tooltip Y por qué está deshabilitado. */
   publishDisabledReason: string | undefined
   onRename: (name: string) => void
+  onSave: () => void
   onHistory: () => void
   onSimulate: () => void
   onPublish: () => void
@@ -63,7 +68,11 @@ export function EditorBar({
           <Badge variant="neutral">{STATUS_LABEL[status]}</Badge>
         </div>
         <p className="px-1.5 text-[11px] text-muted-foreground">
-          {saving ? "Guardando…" : `Guardado ${formatRelativeTime(updatedAt)}`}
+          {saving
+            ? "Guardando…"
+            : hasUnsavedChanges
+              ? "Cambios sin guardar"
+              : `Guardado ${formatRelativeTime(updatedAt)}`}
           {authorName && ` · editado por ${authorName}`}
         </p>
       </div>
@@ -89,6 +98,18 @@ export function EditorBar({
       >
         <Play className="size-3.5" />
         {simulating ? "Simulando…" : "Simular"}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={saving || !hasUnsavedChanges}
+        title={
+          hasUnsavedChanges ? undefined : "No hay cambios nuevos que guardar"
+        }
+        onClick={onSave}
+      >
+        <Save className="size-3.5" />
+        {saving ? "Guardando…" : "Guardar"}
       </Button>
       <Button
         size="sm"

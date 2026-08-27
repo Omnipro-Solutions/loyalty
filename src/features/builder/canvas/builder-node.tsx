@@ -1,7 +1,8 @@
 "use client"
 
 import { Handle, Position, type NodeProps } from "@xyflow/react"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, ChevronDown } from "lucide-react"
+import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
@@ -14,7 +15,10 @@ import { validateNodeConfig } from "@/features/builder/inspector/schemas"
 import { cn } from "@/lib/utils"
 import { BUILDER_ENTRY_NODE_TYPES, type BuilderNodeType } from "@/types/domain"
 
-import { configSummaryFor } from "./node-config-summary"
+import {
+  condicionMultiplePseudocode,
+  configSummaryFor,
+} from "./node-config-summary"
 
 export type BuilderNodeData = {
   tipo: BuilderNodeType
@@ -167,6 +171,42 @@ function messageFlowSummary(
   return { logo: provider.logo, flowName: flow.name }
 }
 
+/** Prefijo `IF`/`AND`/`OR`/`ON_MISSING`/`THEN`/`ELSE` de una línea de `condicionMultiplePseudocode` — separado para poder pintarlo distinto del resto de la línea. */
+const PSEUDOCODE_KEYWORD_RE = /^(IF|AND|OR|ON_MISSING|THEN|ELSE)\b\s*/
+
+/** `THEN → cumple` / `ELSE → no_cumple` pintan el desenlace con el mismo tono (success/destructive) que sus puntos de salida más abajo — el resto de líneas solo distingue la palabra clave del resto. */
+function PseudocodeLine({ line }: { line: string }) {
+  const match = line.match(PSEUDOCODE_KEYWORD_RE)
+  if (!match) return <span className="text-foreground">{line}</span>
+
+  const keyword = match[1]
+  const rest = line.slice(match[0].length)
+  if (keyword === "THEN" || keyword === "ELSE") {
+    const [arrow, outcome] = rest.split(" ")
+    return (
+      <>
+        <span className="text-muted-foreground">
+          {keyword} {arrow}{" "}
+        </span>
+        <span
+          className={cn(
+            "font-semibold",
+            keyword === "THEN" ? "text-success" : "text-destructive"
+          )}
+        >
+          {outcome}
+        </span>
+      </>
+    )
+  }
+  return (
+    <>
+      <span className="text-muted-foreground">{keyword} </span>
+      <span className="text-foreground">{rest}</span>
+    </>
+  )
+}
+
 export function BuilderNode({
   data,
   selected,
@@ -181,6 +221,11 @@ export function BuilderNode({
   const flowSummary = messageFlowSummary(data.tipo, data.config ?? {})
   const configSummary = configSummaryFor(data.tipo, data.config ?? {})
   const missingFields = validateNodeConfig(data.tipo, data.config ?? {})
+  const pseudocode =
+    data.tipo === "condicion_multiple"
+      ? condicionMultiplePseudocode(data.config ?? {})
+      : null
+  const [pseudocodeOpen, setPseudocodeOpen] = useState(true)
 
   return (
     <div
@@ -228,6 +273,35 @@ export function BuilderNode({
           </span>
         )}
       </div>
+
+      {pseudocode && (
+        <div className="border-t border-border">
+          <button
+            type="button"
+            onClick={() => setPseudocodeOpen((open) => !open)}
+            className="nodrag flex w-full items-center justify-between gap-2 px-3 py-2 text-[10px] font-semibold tracking-[0.04em] text-muted-foreground uppercase"
+          >
+            Condiciones aplicadas
+            <ChevronDown
+              className={cn(
+                "size-3 shrink-0 transition-transform",
+                pseudocodeOpen && "rotate-180"
+              )}
+            />
+          </button>
+          {pseudocodeOpen && (
+            <div className="nodrag nowheel overflow-x-auto px-3 pb-2.5">
+              <div className="w-fit min-w-full font-mono text-[10.5px] leading-[16px] whitespace-pre">
+                {pseudocode.map((line, i) => (
+                  <div key={i}>
+                    <PseudocodeLine line={line} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {flowSummary && (
         <div className="flex items-center gap-1.5 border-t border-border px-3 py-2">

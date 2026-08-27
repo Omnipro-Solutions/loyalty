@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   annotateCounts,
   calculateAge,
+  conditionGroupToPseudocode,
   flattenCounts,
   countRulesAndDepth,
   evaluateGroup,
@@ -381,5 +382,77 @@ describe("countRulesAndDepth", () => {
         rules: [{ field: "tier", operator: "=", value: "oro" }],
       })
     ).toEqual({ rules: 1, depth: 1 })
+  })
+})
+
+describe("conditionGroupToPseudocode", () => {
+  it("un grupo vacío no produce líneas", () => {
+    expect(
+      conditionGroupToPseudocode({ combinator: "and", rules: [] })
+    ).toEqual([])
+  })
+
+  it("antepone `cliente.` a los atributos de members, y usa símbolos de operador y comillas solo en valores no numéricos", () => {
+    const tree: ConditionGroup = {
+      combinator: "and",
+      rules: [
+        { field: "saldo_puntos", operator: ">=", value: "2" },
+        { field: "estado_cuenta", operator: "=", value: "activa" },
+      ],
+    }
+    expect(conditionGroupToPseudocode(tree)).toEqual([
+      "IF cliente.saldo_puntos ≥ 2",
+      'AND cliente.estado_cuenta = "activa"',
+    ])
+  })
+
+  it("una sola condición no repite el combinador, solo IF", () => {
+    expect(
+      conditionGroupToPseudocode({
+        combinator: "or",
+        rules: [{ field: "tier", operator: "!=", value: "bronce" }],
+      })
+    ).toEqual(['IF cliente.tier ≠ "bronce"'])
+  })
+
+  it("usa el combinador del grupo raíz (OR) para las líneas siguientes a la primera", () => {
+    expect(
+      conditionGroupToPseudocode({
+        combinator: "or",
+        rules: [
+          { field: "tier", operator: "=", value: "oro" },
+          { field: "tier", operator: "=", value: "diamante" },
+        ],
+      })
+    ).toEqual(['IF cliente.tier = "oro"', 'OR cliente.tier = "diamante"'])
+  })
+
+  it("una variable de un bloque anterior (con punto en el nombre) se muestra tal cual, sin prefijo `cliente.`", () => {
+    expect(
+      conditionGroupToPseudocode({
+        combinator: "and",
+        rules: [{ field: "compra.monto", operator: ">", value: "100" }],
+      })
+    ).toEqual(["IF compra.monto > 100"])
+  })
+
+  it("un subgrupo se anida entre paréntesis en una sola línea", () => {
+    const tree: ConditionGroup = {
+      combinator: "and",
+      rules: [
+        { field: "estado_cuenta", operator: "=", value: "activa" },
+        {
+          combinator: "or",
+          rules: [
+            { field: "tier", operator: "=", value: "oro" },
+            { field: "tier", operator: "=", value: "diamante" },
+          ],
+        },
+      ],
+    }
+    expect(conditionGroupToPseudocode(tree)).toEqual([
+      'IF cliente.estado_cuenta = "activa"',
+      'AND (cliente.tier = "oro" OR cliente.tier = "diamante")',
+    ])
   })
 })

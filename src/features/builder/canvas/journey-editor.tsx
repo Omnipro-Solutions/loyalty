@@ -16,7 +16,7 @@ import {
   type Node,
 } from "@xyflow/react"
 import { useAction } from "next-safe-action/hooks"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { Message } from "@/components/form/message"
 import { BUILDER_BLOCKS } from "@/config/builder-blocks"
@@ -50,7 +50,6 @@ import type {
 import { VersionHistoryDialog } from "./version-history-dialog"
 
 const NODE_TYPES = { builderNode: BuilderNode }
-const AUTOSAVE_DEBOUNCE_MS = 1200
 
 /**
  * `dimensions` lo dispara xyflow solo con medir cada nodo al montar (no es
@@ -119,13 +118,19 @@ function CanvasArea({
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
     workflow.estado !== "publicado"
   )
+  // El builder ya no autoguarda (decisión de producto) — este flag habilita
+  // el botón "Guardar" solo cuando hay algo real que persistir, y se apaga
+  // apenas el guardado (o la publicación, que también persiste el grafo)
+  // termina con éxito.
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const { screenToFlowPosition } = useReactFlow()
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isFirstRender = useRef(true)
 
   const save = useAction(saveGraphAction, {
     onSuccess: ({ data }) => {
-      if (data?.ok) setUpdatedAt(data.savedAt)
+      if (data?.ok) {
+        setUpdatedAt(data.savedAt)
+        setHasUnsavedChanges(false)
+      }
     },
   })
   const rename = useAction(renameWorkflowAction)
@@ -158,63 +163,47 @@ function CanvasArea({
         setStatus("publicado")
         setPublishMessage(undefined)
         setHasUnpublishedChanges(false)
+        // Publicar persiste el grafo igual que "Guardar" (ver
+        // `persist-graph.ts`) — sin esto el botón "Guardar" seguiría
+        // habilitado después de publicar aunque ya no hubiera nada pendiente.
+        setHasUnsavedChanges(false)
       } else {
         setPublishMessage(data?.message ?? "No se pudo publicar.")
       }
     },
   })
 
-  // Programar el guardado (setTimeout) es un efecto secundario, no una
-  // derivación de estado — no dispara `set-state-in-effect`. El indicador
-  // "Guardando…" de la barra viene de `save.isPending` (abajo), que solo se
-  // vuelve true cuando la llamada de red arranca de verdad, no durante la
-  // espera del debounce.
-  const scheduleSave = useCallback(
-    (nextNodes: Node<BuilderNodeData>[], nextEdges: Edge[]) => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current)
-      saveTimeout.current = setTimeout(() => {
-        save.execute({
-          workflowId: workflow.id,
-          nodes: nextNodes.map((n) => ({
-            id: n.id,
-            tipo: n.data.tipo,
-            etiqueta: n.data.etiqueta,
-            posicion_x: n.position.x,
-            posicion_y: n.position.y,
-            config: n.data.config ?? {},
-          })),
-          edges: nextEdges.map((e) => ({
-            id: e.id,
-            source_node_id: e.source,
-            target_node_id: e.target,
-            source_port: e.sourceHandle ?? "out",
-          })),
-        })
-      }, AUTOSAVE_DEBOUNCE_MS)
-    },
-    [save, workflow.id]
-  )
+  const handleSave = useCallback(() => {
+    save.execute({
+      workflowId: workflow.id,
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        tipo: n.data.tipo,
+        etiqueta: n.data.etiqueta,
+        posicion_x: n.position.x,
+        posicion_y: n.position.y,
+        config: n.data.config ?? {},
+      })),
+      edges: edges.map((e) => ({
+        id: e.id,
+        source_node_id: e.source,
+        target_node_id: e.target,
+        source_port: e.sourceHandle ?? "out",
+      })),
+    })
+  }, [save, workflow.id, nodes, edges])
 
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
-    }
-    scheduleSave(nodes, edges)
-    return () => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar a cambios de grafo, no a que `scheduleSave` cambie de identidad.
-  }, [nodes, edges])
-
-  // Marca que hay cambios reales de diseño pendientes de publicar — a
-  // propósito NO se engancha al `useEffect([nodes, edges])` de más abajo
-  // (ese también dispara con la anotación de `simulacion` que `simulate`
-  // pega directo en `nodes`, y correr Simular no debería reactivar
-  // "Publicar workflow"). Se llama explícitamente desde cada mutación real
-  // del grafo (conectar, soltar un bloque, editar config, borrar, restaurar
-  // versión) y desde los handlers de xyflow (mover/soltar/borrar con teclado).
-  const markChanged = useCallback(() => setHasUnpublishedChanges(true), [])
+  // Marca que hay cambios reales de diseño pendientes de publicar y de
+  // guardar. Se llama explícitamente desde cada mutación real del grafo
+  // (conectar, soltar un bloque, editar config, borrar, restaurar versión)
+  // y desde los handlers de xyflow (mover/soltar/borrar con teclado) — no
+  // desde un `useEffect([nodes, edges])`, porque ese también dispararía con
+  // la anotación de `simulacion` que `simulate` pega directo en `nodes`, y
+  // correr Simular no debería marcar el workflow como editado.
+  const markChanged = useCallback(() => {
+    setHasUnpublishedChanges(true)
+    setHasUnsavedChanges(true)
+  }, [])
 
   const handleNodesChange: typeof onNodesChange = useCallback(
     (changes) => {
@@ -386,6 +375,7 @@ function CanvasArea({
         authorName={workflow.authorName}
         updatedAt={updatedAt}
         saving={save.isPending}
+        hasUnsavedChanges={hasUnsavedChanges}
         simulating={simulate.isPending}
         publishing={publish.isPending}
         publishDisabledReason={
@@ -398,6 +388,7 @@ function CanvasArea({
         onRename={(name) =>
           rename.execute({ workflowId: workflow.id, nombre: name })
         }
+        onSave={handleSave}
         onHistory={() => setHistoryOpen(true)}
         onSimulate={() =>
           simulate.execute({ ...graphForActions(), initialCohort: 1514 })

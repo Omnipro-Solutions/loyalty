@@ -1,5 +1,5 @@
 import type { Action, Resource } from "@/lib/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 /** Igual que `features/promotions/lib/permissions.ts` — duplicado a propósito: las features no se importan entre sí (ver CLAUDE.md §2). */
 export function hasPermission(
@@ -36,9 +36,7 @@ export type MemberProfilePermissions = {
  */
 export async function getMemberProfilePermissions(): Promise<MemberProfilePermissions | null> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return null
 
   const { data: profile } = await supabase
