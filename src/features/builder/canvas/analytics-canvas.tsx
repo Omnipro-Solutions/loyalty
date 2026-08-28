@@ -163,6 +163,7 @@ export function AnalyticsCanvas({
           fitView
           fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
           minZoom={0.2}
+          proOptions={{ hideAttribution: true }}
         >
           <Background />
           <Controls showInteractive={false} />

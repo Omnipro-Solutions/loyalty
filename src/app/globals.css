@@ -94,6 +94,17 @@
   --shadow-segmented-active: var(--shadow-segmented-active);
   --shadow-auth-card: var(--shadow-auth-card);
   --shadow-kpi-featured: var(--shadow-kpi-featured);
+  /* Pills flotantes del panel de marca de Acceso (634:774 y análogos). */
+  --animate-float: float 6s ease-in-out infinite;
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
 }
 
 /*

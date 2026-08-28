@@ -613,6 +613,7 @@ function CanvasArea({
             fitView
             fitViewOptions={{ padding: 0.3, maxZoom: 0.85 }}
             minZoom={0.2}
+            proOptions={{ hideAttribution: true }}
           >
             <Background />
             <Controls />
