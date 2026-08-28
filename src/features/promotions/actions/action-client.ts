@@ -15,18 +15,15 @@ export const promotionsActionClient = actionClient.use(async ({ next }) => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role_id, nombre")
+    .select("org_id, nombre, role:roles(role_permissions(recurso, accion))")
     .eq("id", user.id)
     .single()
   if (!profile) throw new Error("Perfil no encontrado.")
 
-  const { data: permissions } = await supabase
-    .from("role_permissions")
-    .select("recurso, accion")
-    .eq("role_id", profile.role_id)
-
   const permissionsSet = new Set(
-    (permissions ?? []).map((p) => `${p.recurso}:${p.accion}`)
+    (profile.role?.role_permissions ?? []).map(
+      (p) => `${p.recurso}:${p.accion}`
+    )
   )
 
   return next({

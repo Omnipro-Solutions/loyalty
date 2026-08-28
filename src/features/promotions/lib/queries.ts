@@ -1566,19 +1566,15 @@ export async function listConditionCategories(): Promise<ConditionCategory[]> {
 
 export type ConditionCity = { city: string; totalStores: number }
 
-/** Ciudades reales de Tiendas con conteo, para el selector de la condición "Tienda" (07.1: "Barranquilla (14)"). */
+/** Ciudades reales de Tiendas con conteo, para el selector de la condición "Tienda" (07.1: "Barranquilla (14)"). Agregado en DB (`condition_cities`) — antes traía `tiendas` completa para contar en JS. */
 export async function listConditionCities(): Promise<ConditionCity[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("tiendas").select("ciudad")
+  const { data, error } = await supabase.rpc("condition_cities")
   if (error) throw error
-
-  const count = new Map<string, number>()
-  for (const row of data ?? []) {
-    count.set(row.ciudad, (count.get(row.ciudad) ?? 0) + 1)
-  }
-  return [...count.entries()]
-    .map(([city, totalStores]) => ({ city, totalStores }))
-    .sort((a, b) => a.city.localeCompare(b.city))
+  return (data ?? []).map((row) => ({
+    city: row.ciudad,
+    totalStores: row.total_stores,
+  }))
 }
 
 export async function getTotalStores(): Promise<number> {
@@ -1627,13 +1623,6 @@ export async function getCategoryNames(
 /** Opción genérica {value, label} para los selectores de condición cuyo universo de valores es "los distintos que existan hoy en una columna de texto" (provincia, región, marca, proveedor) — sin tabla de catálogo propia detrás. */
 export type ConditionOption = { value: string; label: string }
 
-function distinctTextValues(values: (string | null)[]): ConditionOption[] {
-  const unique = new Set(values.filter((v): v is string => Boolean(v)))
-  return [...unique]
-    .sort((a, b) => a.localeCompare(b))
-    .map((v) => ({ value: v, label: v }))
-}
-
 export type ConditionTier = { id: string; name: string }
 
 /** Niveles reales de lealtad (`tiers`), para la condición "Nivel de lealtad" — ordenados por `orden`, no alfabéticamente, para que el multiselect respete la jerarquía del programa. */
@@ -1647,20 +1636,23 @@ export async function listConditionTiers(): Promise<ConditionTier[]> {
   return (data ?? []).map((t) => ({ id: t.id, name: t.nombre }))
 }
 
-/** Provincias reales con al menos un socio, para la condición "Provincia del socio". */
+/** Provincias reales con al menos un socio, para la condición "Provincia del socio". Distinct en DB (`condition_provinces`). */
 export async function listConditionProvinces(): Promise<ConditionOption[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("members").select("provincia")
+  const { data, error } = await supabase.rpc("condition_provinces")
   if (error) throw error
-  return distinctTextValues((data ?? []).map((m) => m.provincia))
+  return (data ?? []).map((row) => ({
+    value: row.provincia,
+    label: row.provincia,
+  }))
 }
 
-/** Regiones reales de Tiendas, para la condición "Región de la tienda". */
+/** Regiones reales de Tiendas, para la condición "Región de la tienda". Distinct en DB (`condition_store_regions`). */
 export async function listConditionStoreRegions(): Promise<ConditionOption[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("tiendas").select("region")
+  const { data, error } = await supabase.rpc("condition_store_regions")
   if (error) throw error
-  return distinctTextValues((data ?? []).map((t) => t.region))
+  return (data ?? []).map((row) => ({ value: row.region, label: row.region }))
 }
 
 export type ConditionStoreGroup = { id: string; name: string }
@@ -1678,20 +1670,23 @@ export async function listConditionStoreGroups(): Promise<
   return (data ?? []).map((g) => ({ id: g.id, name: g.nombre }))
 }
 
-/** Marcas reales de Catálogo, para la condición "Marca del producto". */
+/** Marcas reales de Catálogo, para la condición "Marca del producto". Distinct en DB (`condition_brands`). */
 export async function listConditionBrands(): Promise<ConditionOption[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("productos").select("marca")
+  const { data, error } = await supabase.rpc("condition_brands")
   if (error) throw error
-  return distinctTextValues((data ?? []).map((p) => p.marca))
+  return (data ?? []).map((row) => ({ value: row.marca, label: row.marca }))
 }
 
-/** Proveedores/laboratorios reales de Catálogo, para la condición "Proveedor / laboratorio". */
+/** Proveedores/laboratorios reales de Catálogo, para la condición "Proveedor / laboratorio". Distinct en DB (`condition_suppliers`). */
 export async function listConditionSuppliers(): Promise<ConditionOption[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("productos").select("proveedor")
+  const { data, error } = await supabase.rpc("condition_suppliers")
   if (error) throw error
-  return distinctTextValues((data ?? []).map((p) => p.proveedor))
+  return (data ?? []).map((row) => ({
+    value: row.proveedor,
+    label: row.proveedor,
+  }))
 }
 
 export type SupplierOption = { id: string; name: string }

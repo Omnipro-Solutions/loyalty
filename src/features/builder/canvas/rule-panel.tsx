@@ -99,7 +99,7 @@ export function RulePanel({
       </div>
 
       {openTab && (
-        <div className="h-[240px] overflow-y-auto border-t border-border p-4">
+        <div className="h-[240px] scrollbar-thin overflow-y-auto border-t border-border p-4">
           {openTab === "lectura" && <Reading clauses={clauses} />}
           {openTab === "actividad" && (
             <Activity entries={activity} displayStatus={displayStatus} />

@@ -53,7 +53,7 @@ export function VersionHistoryDialog({
         <DialogHeader>
           <DialogTitle>Historial de versiones</DialogTitle>
         </DialogHeader>
-        <div className="flex max-h-[360px] flex-col gap-2 overflow-y-auto">
+        <div className="flex max-h-[360px] scrollbar-thin flex-col gap-2 overflow-y-auto">
           {versions?.length === 0 && (
             <p className="text-[13px] text-muted-foreground">
               Todavía no hay versiones publicadas de este workflow.

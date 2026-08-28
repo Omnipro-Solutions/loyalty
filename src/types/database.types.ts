@@ -2959,6 +2959,30 @@ export type Database = {
       }
     }
     Functions: {
+      condition_brands: {
+        Args: Record<PropertyKey, never>
+        Returns: { marca: string }[]
+      }
+      condition_cities: {
+        Args: Record<PropertyKey, never>
+        Returns: { ciudad: string; total_stores: number }[]
+      }
+      condition_provinces: {
+        Args: Record<PropertyKey, never>
+        Returns: { provincia: string }[]
+      }
+      condition_store_regions: {
+        Args: Record<PropertyKey, never>
+        Returns: { region: string }[]
+      }
+      condition_suppliers: {
+        Args: Record<PropertyKey, never>
+        Returns: { proveedor: string }[]
+      }
+      coupon_batch_status_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: { status: string; total: number }[]
+      }
       coupon_event_actor: { Args: never; Returns: Record<string, unknown> }
       create_system_roles_for_org: {
         Args: { target_org_id: string }

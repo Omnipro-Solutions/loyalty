@@ -125,7 +125,7 @@ export function MemberPromotionsCard({
         </p>
       ) : (
         <>
-          <div className="flex w-full flex-col gap-2.5">
+          <div className="flex max-h-[320px] w-full scrollbar-thin flex-col gap-2.5 overflow-y-auto">
             {promotions.map((promotion) => {
               const Icon = PROMOTION_TYPE_ICON[promotion.tipo]
               const color = PROMOTION_TYPE_COLOR[promotion.tipo]
