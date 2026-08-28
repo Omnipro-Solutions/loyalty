@@ -2,7 +2,7 @@ import type { Action, Resource } from "@/lib/permissions"
 import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
-import { getAuthStatusByProfileId } from "./admin-auth"
+import { getAuthStatusByProfileId, getUserAuthDetail } from "./admin-auth"
 
 export type RoleRow = Database["public"]["Tables"]["roles"]["Row"]
 export type StoreOption = Pick<
@@ -33,6 +33,30 @@ const USER_WITH_ROLE_AND_STORE =
 /** PostgREST interpreta `,()%` dentro de un filtro `.or()` — se descartan del texto de búsqueda. */
 function sanitizeSearch(value: string): string {
   return value.replace(/[,()%]/g, "").trim()
+}
+
+/**
+ * RLS (`profiles_select_org`) ya acota a la organización del llamante — un
+ * id de otro tenant devuelve `null`. Usa `getUserAuthDetail` (no
+ * `getAuthStatusByProfileId`) para no pagar el `listUsers({perPage:1000})`
+ * que un array de un solo id dispararía — ver el docblock de esa función.
+ */
+export async function getUserById(id: string): Promise<User | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(USER_WITH_ROLE_AND_STORE)
+    .eq("id", id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+
+  const authDetail = await getUserAuthDetail(data.id)
+  return {
+    ...data,
+    lastAccessAt: authDetail.lastAccessAt,
+    has2fa: authDetail.factors.length > 0,
+  }
 }
 
 export async function listUsers(

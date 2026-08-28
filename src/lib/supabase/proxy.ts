@@ -125,16 +125,19 @@ export async function updateSession(request: NextRequest) {
     if (!hasFullSession) {
       return NextResponse.redirect(new URL("/verificacion", request.url))
     }
-    // La raíz no tiene pantalla propia: es un alias de /resumen. Se resuelve
-    // aquí, después de las dos comprobaciones de sesión, y no con un
-    // `app/page.tsx` que llame a `redirect()`. Ese patrón sí RENDERIZA un
-    // componente que aborta a mitad, y React 19.2 intenta medir ese render
-    // abortado en su performance track de desarrollo con un `startTime`
-    // incoherente: "Failed to execute 'measure' on 'Performance':
-    // '\u200bRootPage' cannot have a negative time stamp". Redirigiendo
-    // antes de entrar al renderer no hay render que medir.
-    if (pathname === "/") {
-      return NextResponse.redirect(new URL("/resumen", request.url))
+    // `ban_duration` (ver features/team/actions/users.ts) bloquea el login,
+    // pero no invalida un access token ya emitido — sin esto, una sesión
+    // desactivada seguiría entrando a (app) hasta que ese token expire por
+    // su cuenta. Consulta indexada por PK, una por request de (app).
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("estado")
+      .eq("id", user.id)
+      .maybeSingle()
+    if (profile?.estado === "inactivo") {
+      return NextResponse.redirect(
+        new URL("/login?error=cuenta_inactiva", request.url)
+      )
     }
     return response
   }

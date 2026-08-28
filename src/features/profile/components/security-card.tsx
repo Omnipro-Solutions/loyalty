@@ -1,11 +1,11 @@
 import { KeyRound, LogIn, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 
+import { DetailField } from "@/components/data/detail-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 import type { SecurityInfo } from "../lib/queries"
-import { Field } from "./field"
 
 const ACCESS_METHOD_LABELS: Record<string, string> = {
   microsoft_entra_id: "SSO · Microsoft Entra ID",
@@ -30,7 +30,7 @@ export function SecurityCard({ security, tenantIdp }: SecurityCardProps) {
         Seguridad de la cuenta
       </p>
       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-        <Field
+        <DetailField
           icon={ShieldCheck}
           label="VERIFICACIÓN EN DOS PASOS"
           value={
@@ -39,7 +39,7 @@ export function SecurityCard({ security, tenantIdp }: SecurityCardProps) {
             </Badge>
           }
         />
-        <Field
+        <DetailField
           icon={KeyRound}
           label="CÓDIGOS DE RESPALDO"
           value={
@@ -48,7 +48,11 @@ export function SecurityCard({ security, tenantIdp }: SecurityCardProps) {
               : "—"
           }
         />
-        <Field icon={LogIn} label="MÉTODO DE ACCESO" value={accessMethod} />
+        <DetailField
+          icon={LogIn}
+          label="MÉTODO DE ACCESO"
+          value={accessMethod}
+        />
       </div>
       {!security.mfaEnrolled && (
         <div className="flex items-center justify-between gap-3.5 rounded-2xl border border-border px-4 py-3">

@@ -1,7 +1,12 @@
 import { z } from "zod"
 
 import { ACTIONS, RESOURCES } from "@/lib/permissions"
-import { CHANNEL_SCOPES, STORE_SCOPES, ROLES } from "@/types/domain"
+import {
+  CHANNEL_SCOPES,
+  PROFILE_STATUSES,
+  STORE_SCOPES,
+  ROLES,
+} from "@/types/domain"
 
 const permissionSchema = z.object({
   resource: z.enum(RESOURCES),
@@ -46,4 +51,29 @@ export type InviteUserValues = z.infer<typeof inviteUserSchema>
 
 export const cancelInvitationSchema = z.object({
   invitationId: z.string().uuid(),
+})
+
+export const sendUserPasswordResetSchema = z.object({
+  profileId: z.string().uuid(),
+})
+
+export const updateUserAccessSchema = z.object({
+  profileId: z.string().uuid(),
+  roleId: z.string().uuid("Selecciona un rol"),
+  storeId: z.string().uuid().optional(),
+})
+
+export type UpdateUserAccessValues = z.infer<typeof updateUserAccessSchema>
+
+export const setUserStatusSchema = z.object({
+  profileId: z.string().uuid(),
+  status: z.enum(PROFILE_STATUSES),
+})
+
+export const resetUserMfaSchema = z.object({
+  profileId: z.string().uuid(),
+})
+
+export const revokeUserDevicesSchema = z.object({
+  profileId: z.string().uuid(),
 })

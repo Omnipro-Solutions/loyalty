@@ -7,10 +7,10 @@ import {
   UserCog,
 } from "lucide-react"
 
+import { DetailField } from "@/components/data/detail-field"
 import { formatDate, formatDateTime } from "@/lib/format"
 
 import type { Profile } from "../lib/queries"
-import { Field } from "./field"
 
 type ProfileInfoCardProps = { profile: Profile }
 
@@ -21,24 +21,28 @@ export function ProfileInfoCard({ profile }: ProfileInfoCardProps) {
         Información de la cuenta
       </p>
       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-        <Field icon={Mail} label="CORREO CORPORATIVO" value={profile.email} />
-        <Field icon={UserCog} label="ROL" value={profile.role.nombre} />
-        <Field
+        <DetailField
+          icon={Mail}
+          label="CORREO CORPORATIVO"
+          value={profile.email}
+        />
+        <DetailField icon={UserCog} label="ROL" value={profile.role.nombre} />
+        <DetailField
           icon={Building2}
           label="ORGANIZACIÓN"
           value={profile.organization?.nombre ?? "—"}
         />
-        <Field
+        <DetailField
           icon={Globe}
           label="DOMINIO CORPORATIVO"
           value={profile.organization?.dominio_correo ?? "—"}
         />
-        <Field
+        <DetailField
           icon={CalendarDays}
           label="MIEMBRO DESDE"
           value={formatDate(profile.creado_en)}
         />
-        <Field
+        <DetailField
           icon={Clock}
           label="ÚLTIMO ACCESO"
           value={

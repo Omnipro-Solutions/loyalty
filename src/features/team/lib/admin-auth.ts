@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import type { Database } from "@/types/database.types"
 
 export type UserAuthStatus = {
   lastAccessAt: string | null
@@ -62,4 +63,84 @@ export async function getAuthStatusByProfileId(
   // llave de caché, sin importar el orden en que `profiles` los devolvió.
   const entries = await getCachedAuthStatusEntries([...profileIds].sort())
   return new Map(entries)
+}
+
+export type MfaFactorDetail = {
+  id: string
+  friendlyName: string | null
+  verifiedAt: string | null
+}
+
+export type UserAuthDetail = {
+  lastAccessAt: string | null
+  banned: boolean
+  factors: MfaFactorDetail[]
+}
+
+/**
+ * Equivalente a `getAuthStatusByProfileId` pero para UN perfil, con el
+ * detalle completo de sus factores MFA (09.1 detalle → tab Seguridad).
+ * `getAuthStatusByProfileId([id])` sería un desperdicio aquí: cachea por
+ * *conjunto* de ids, así que un array de 1 genera una clave de caché nueva y
+ * dispara un `listUsers({perPage:1000})` completo solo para leer a una
+ * persona. Comparte el tag `"team-auth-status"` con la lista — así un solo
+ * `revalidateTag` sincroniza ambas vistas.
+ */
+const getCachedUserAuthDetail = unstable_cache(
+  async (profileId: string): Promise<UserAuthDetail> => {
+    const admin = createAdminClient()
+    const [{ data: userResponse }, { data: factorsResponse }] =
+      await Promise.all([
+        admin.auth.admin.getUserById(profileId),
+        admin.auth.admin.mfa.listFactors({ userId: profileId }),
+      ])
+
+    const bannedUntil = userResponse?.user?.banned_until
+    return {
+      lastAccessAt: userResponse?.user?.last_sign_in_at ?? null,
+      banned: !!bannedUntil && new Date(bannedUntil) > new Date(),
+      factors: (factorsResponse?.factors ?? [])
+        .filter((f) => f.status === "verified")
+        .map((f) => ({
+          id: f.id,
+          friendlyName: f.friendly_name ?? null,
+          verifiedAt: f.updated_at ?? null,
+        })),
+    }
+  },
+  ["team-auth-detail"],
+  { revalidate: 300, tags: ["team-auth-status"] }
+)
+
+export async function getUserAuthDetail(
+  profileId: string
+): Promise<UserAuthDetail> {
+  return getCachedUserAuthDetail(profileId)
+}
+
+export type TrustedDeviceSummary = Pick<
+  Database["public"]["Tables"]["trusted_devices"]["Row"],
+  "id" | "creado_en" | "expira_en"
+>
+
+/**
+ * `trusted_devices_own` (RLS) es estrictamente self (`profile_id =
+ * auth.uid()`) — un admin no puede leer los dispositivos de otro perfil con
+ * el cliente de sesión, igual que no puede escribirlos (ver
+ * `features/team/actions/users.ts`). Llamar solo después de confirmar que
+ * `profileId` pertenece a la organización del llamante (ej. vía
+ * `getUserById`, acotado por `profiles_select_org`) — este helper, con
+ * service role, no repite esa comprobación.
+ */
+export async function listUserTrustedDevices(
+  profileId: string
+): Promise<TrustedDeviceSummary[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("trusted_devices")
+    .select("id, creado_en, expira_en")
+    .eq("profile_id", profileId)
+    .order("creado_en", { ascending: false })
+  if (error) throw error
+  return data ?? []
 }

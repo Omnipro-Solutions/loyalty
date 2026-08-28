@@ -3,14 +3,20 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-type FieldProps = {
+type DetailFieldProps = {
   label: string
   value: ReactNode
   icon?: LucideIcon
   className?: string
 }
 
-export function Field({ label, value, icon: Icon, className }: FieldProps) {
+/** Icono + label + valor — usado por las cards de detalle de solo lectura (perfil, equipo). */
+export function DetailField({
+  label,
+  value,
+  icon: Icon,
+  className,
+}: DetailFieldProps) {
   return (
     <div className={cn("flex min-w-0 items-start gap-2.5", className)}>
       {Icon && (

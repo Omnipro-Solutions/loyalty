@@ -9,7 +9,9 @@ export default async function LoginPage({
   const initialError =
     error === "enlace_invalido"
       ? "Tu enlace expiró o ya se usó. Pide uno nuevo."
-      : undefined
+      : error === "cuenta_inactiva"
+        ? "Tu cuenta está desactivada. Contacta a un administrador."
+        : undefined
 
   return (
     <LoginForm

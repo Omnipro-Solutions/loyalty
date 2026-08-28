@@ -7,6 +7,7 @@ import {
   useTable,
 } from "@tanstack/react-table"
 import { AlertTriangle, Check } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 
 import { DataTable } from "@/components/data/data-table"
@@ -140,8 +141,14 @@ type UsersTableProps = { users: User[] }
 
 /** Figma "09.1 · Equipo · usuarios" (720:3027): mismo `Table / Tabla de datos` que el resto de la app. */
 export function UsersTable({ users }: UsersTableProps) {
+  const router = useRouter()
   const data = useMemo(() => users, [users])
   const table = useTable({ features, columns, data })
 
-  return <DataTable table={table} />
+  return (
+    <DataTable
+      table={table}
+      onRowClick={(user) => router.push(`/ajustes/equipo/usuarios/${user.id}`)}
+    />
+  )
 }
