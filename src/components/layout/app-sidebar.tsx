@@ -40,10 +40,10 @@ export function AppSidebar({
         <BrandMark className="size-8 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] leading-5 font-semibold text-foreground">
-            Loyalty System
+            etteer
           </p>
           <p className="truncate text-[11px] leading-[14px] text-muted-foreground">
-            Motor de promociones
+            Loyalty System
           </p>
         </div>
         {onCollapse && (

@@ -151,13 +151,20 @@
   /* Tercer stop del gradiente del panel de marca de Acceso (634:774 y
      análogos) — no coincide con ningún token de marca existente. */
   --brand-violet: #9b63f1;
-  /* Panel de marca de las 5 pantallas de 01 · Acceso. Primer y segundo stop
-     reutilizan primary-800/brand para no introducir tokens duplicados. */
+  /* Panel de marca de las 5 pantallas de 01 · Acceso, detrás de la foto de
+     `img-bg.png`. Mismos tonos que primary-900/700/brand en claro, pero
+     como hex fijos y declarado solo aquí — no en `.dark` — por la misma
+     razón que `--gradient-loyalty-card` abajo: esos tokens se INVIERTEN en
+     oscuro (ahí primary-900 pasa a ser el tinte claro para texto sobre
+     fondo oscuro), así que reusarlos como variables lavaría el panel.
+     Deliberadamente más oscuro/desaturado que la escala brand pura (nunca
+     llega a brand-violet, el stop más claro de la versión anterior): un
+     violeta vívido competía con los tonos neutros/cálidos de la foto. */
   --gradient-auth-panel: linear-gradient(
-    113.2deg,
-    var(--primary-800) 0%,
-    var(--brand) 39.3%,
-    var(--brand-violet) 71.4%
+    165deg,
+    #1b1760 0%,
+    #322a9e 55%,
+    #4f46e5 100%
   );
   --primary-100: #e0e1fc;
   --primary-200: #c7c9f9;
@@ -298,12 +305,6 @@
   --brand-subtle: #2b2489;
   --brand-accent: #9a9bf0;
   --brand-violet: #9b63f1;
-  --gradient-auth-panel: linear-gradient(
-    113.2deg,
-    var(--primary-800) 0%,
-    var(--brand) 39.3%,
-    var(--brand-violet) 71.4%
-  );
   --primary-100: #1b1760;
   --primary-200: #2b2489;
   --primary-300: #322a9e;

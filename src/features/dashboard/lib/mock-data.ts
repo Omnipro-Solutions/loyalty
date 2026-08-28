@@ -199,7 +199,6 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
       sources: ["Audiencia En riesgo", "Ledger de puntos", "Journey Winback"],
       primaryAction: "Crear journey",
       secondaryAction: "Ver segmento",
-      typingHint: "analizando ledger de puntos…",
     },
   },
   {
@@ -218,7 +217,6 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
       sources: ["Ledger de puntos", "ROI promocional", "Journey Winback"],
       primaryAction: "Activar regla",
       secondaryAction: "Ver detalle",
-      typingHint: "calculando margen con 15% de descuento…",
     },
   },
   {
@@ -237,7 +235,6 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
       sources: ["Ledger de puntos", "Audiencia En riesgo"],
       primaryAction: "Crear journey",
       secondaryAction: "Ver segmento",
-      typingHint: "revisando vencimientos en el ledger de puntos…",
     },
   },
   {
@@ -256,7 +253,6 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
       sources: ["ROI promocional", "Catálogo de promociones"],
       primaryAction: "Pausar promoción",
       secondaryAction: "Ver promoción",
-      typingHint: "calculando ROI por promoción…",
     },
   },
   {
@@ -275,7 +271,6 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
       sources: ["Catálogo de promociones", "Segmento Casual Shoppers"],
       primaryAction: "Crear promoción",
       secondaryAction: "Ver simulación",
-      typingHint: "simulando impacto en Casual Shoppers…",
     },
   },
   {
@@ -294,7 +289,6 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
       sources: ["Audiencia En riesgo", "Insight del motor"],
       primaryAction: "Crear journey",
       secondaryAction: "Ver segmento",
-      typingHint: "comparando segmentos por riesgo…",
     },
   },
 ]

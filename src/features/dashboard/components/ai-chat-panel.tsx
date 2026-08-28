@@ -36,7 +36,7 @@ type ChatEntry =
   | { id: string; role: "user"; text: string }
   | { id: string; role: "assistant"; reply: AiChatReply }
 
-const TYPING_DELAY_MS = 1100
+const TYPING_DELAY_MS = 4000
 
 /**
  * Figma "Panel · Chat IA" (1057:37, estado abierto en 02.4). Sigue sin haber
@@ -50,7 +50,7 @@ export function AiChatPanel({
   askRequest,
 }: AiChatPanelProps) {
   const [entries, setEntries] = useState<ChatEntry[]>([])
-  const [pendingHint, setPendingHint] = useState<string | null>(null)
+  const [isPending, setIsPending] = useState(false)
   const [composerValue, setComposerValue] = useState("")
   const nextId = useRef(0)
   const lastToken = useRef(0)
@@ -65,7 +65,7 @@ export function AiChatPanel({
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [entries, pendingHint])
+  }, [entries, isPending])
 
   function askQuestion(question: string) {
     const trimmed = question.trim()
@@ -80,7 +80,7 @@ export function AiChatPanel({
       ...prev,
       { id: `msg-${nextId.current}`, role: "user", text: trimmed },
     ])
-    setPendingHint(reply.typingHint)
+    setIsPending(true)
 
     timeoutRef.current = setTimeout(() => {
       nextId.current += 1
@@ -88,7 +88,7 @@ export function AiChatPanel({
         ...prev,
         { id: `msg-${nextId.current}`, role: "assistant", reply },
       ])
-      setPendingHint(null)
+      setIsPending(false)
       timeoutRef.current = null
     }, TYPING_DELAY_MS)
   }
@@ -98,7 +98,7 @@ export function AiChatPanel({
     lastToken.current = askRequest.token
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setEntries([])
-    setPendingHint(null)
+    setIsPending(false)
     askQuestion(askRequest.question)
   }, [askRequest])
 
@@ -111,7 +111,7 @@ export function AiChatPanel({
   function handleReset() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setEntries([])
-    setPendingHint(null)
+    setIsPending(false)
     setComposerValue("")
   }
 
@@ -265,7 +265,7 @@ export function AiChatPanel({
               )
             )}
 
-            {pendingHint && (
+            {isPending && (
               <div className="flex w-fit items-center gap-2 rounded-tl-md rounded-tr-2xl rounded-br-2xl rounded-bl-2xl border border-border bg-background py-3 pr-4 pl-3.5">
                 <span className="flex gap-1">
                   <span className="size-[7px] animate-pulse rounded-full bg-primary" />
@@ -273,7 +273,7 @@ export function AiChatPanel({
                   <span className="size-[7px] animate-pulse rounded-full bg-border [animation-delay:300ms]" />
                 </span>
                 <span className="text-[11px] leading-[15px] whitespace-nowrap text-muted-foreground">
-                  {pendingHint}
+                  Pensando…
                 </span>
               </div>
             )}

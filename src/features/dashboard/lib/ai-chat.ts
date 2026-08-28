@@ -14,7 +14,6 @@ export type AiChatReply = {
   sources: string[]
   primaryAction: string
   secondaryAction: string
-  typingHint: string
 }
 
 export type AiChatScenario = {
@@ -33,7 +32,6 @@ export const AI_CHAT_FALLBACK_REPLY: AiChatReply = {
   sources: [],
   primaryAction: "Crear journey",
   secondaryAction: "Ver segmento",
-  typingHint: "buscando en tus datos…",
 }
 
 function normalize(value: string): string {
