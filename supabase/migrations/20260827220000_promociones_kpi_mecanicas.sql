@@ -116,9 +116,9 @@ select
   'Cashback 8 % · Alto valor', 'PROMO-CASHBACK-VIP', 'segmento', 8,
   false, 'pos_ecommerce',
   jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(
-    jsonb_build_object('campo', 'segmento', 'valor', jsonb_build_array(
+    jsonb_build_object('campo', 'segmento', 'valor',
       (select id::text from segments
-       where codigo = 'seg_vip_gold' and org_id = (select id from org))))
+       where codigo = 'seg_vip_gold' and org_id = (select id from org)))
   )),
   'cashback', 8, 40, 'subtotal_carrito',
   'porcentaje', 'canjeable', 60, 'diferido', '[]'::jsonb,
@@ -197,9 +197,9 @@ select
   'Doble puntos · Compradores frecuentes', 'PROMO-2X-PUNTOS', 'segmento', 9,
   true, 'pos_ecommerce',
   jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(
-    jsonb_build_object('campo', 'segmento', 'valor', jsonb_build_array(
+    jsonb_build_object('campo', 'segmento', 'valor',
       (select id::text from segments
-       where codigo = 'seg_freq_2026' and org_id = (select id from org)))),
+       where codigo = 'seg_freq_2026' and org_id = (select id from org))),
     jsonb_build_object('campo', 'socio_nivel', 'valor', jsonb_build_array('oro', 'diamante'))
   )),
   'multiplicador_puntos', null::numeric, 2000, 'subtotal_carrito',
@@ -225,9 +225,9 @@ select
   'Continuidad · Tratamiento crónico', 'PROMO-CONTINUIDAD-CRON', 'categoria', 8,
   false, 'pos_ecommerce',
   jsonb_build_object('combinador', 'todas', 'condiciones', jsonb_build_array(
-    jsonb_build_object('campo', 'segmento', 'valor', jsonb_build_array(
+    jsonb_build_object('campo', 'segmento', 'valor',
       (select id::text from segments
-       where codigo = 'seg_alta_frecuencia_farmacia' and org_id = (select id from org))))
+       where codigo = 'seg_alta_frecuencia_farmacia' and org_id = (select id from org)))
   )),
   'descuento_continuidad', null::numeric, 35, 'subtotal_carrito',
   jsonb_build_array(
