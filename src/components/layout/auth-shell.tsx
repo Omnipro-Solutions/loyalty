@@ -1,12 +1,19 @@
 import type { ReactNode } from "react"
-import Image from "next/image"
 
 import { BrandMark } from "@/components/layout/brand-mark"
 
+const STATS = [
+  { value: "42", label: "tiendas conectadas" },
+  { value: "8.412", label: "clientes activos" },
+  { value: "99,9%", label: "disponibilidad" },
+] as const
+
 /**
  * Split-screen shared by the 5 "01 · Acceso" screens (634:774 and
- * analogous): brand panel (gradient backdrop + `img-bg.png` illustration)
- * on the left, and a slot on the right for each screen's card.
+ * analogous): gradient brand panel + 3 stats on the left, and a slot on the
+ * right for each screen's card. The panel copy is identical across 4 of the
+ * Figma's 5 screens; 01.2 has a variant with "POS y el e-commerce" that's
+ * treated as a file inconsistency and normalized to the common text.
  *
  * The Figma only covers desktop width. Below `lg` the brand panel is
  * hidden (it doesn't fit next to the card without clipping it) and is
@@ -55,38 +62,30 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-dvh overflow-hidden bg-shell-background p-3 min-[1441px]:pt-0 min-[1441px]:pb-0 min-[1441px]:pl-0 sm:p-4 lg:p-[22px]">
       <div
-        className="hidden shrink-0 flex-col overflow-hidden rounded-[22px] text-primary-foreground min-[1441px]:w-auto min-[1441px]:flex-1 lg:flex lg:w-[40rem]"
+        className="hidden shrink-0 flex-col justify-center gap-4 overflow-hidden rounded-[22px] p-10 text-primary-foreground min-[1441px]:w-auto min-[1441px]:flex-1 lg:flex lg:w-140"
         style={{ backgroundImage: "var(--gradient-auth-panel)" }}
       >
-        <div className="flex shrink-0 items-center gap-2.5 px-10 pt-10">
-          <BrandMark variant="inverse" className="size-8 shrink-0" />
-          <div className="flex flex-col leading-tight">
-            <p className="text-2xl font-semibold">etteer</p>
-            <p className="text-[11px] font-extrabold text-primary-100">
-              Loyalty System
-            </p>
+        <div className="flex items-center gap-3">
+          <BrandMark variant="inverse" className="size-10 shrink-0" />
+          <div className="flex flex-col leading-[26px]">
+            <p className="text-4xl font-semibold">etteer</p>
+            <p className="text-sm font-extrabold">Loyalty System</p>
           </div>
         </div>
-        {/*
-          Own relative/flex-1 box below the header (padding moved off the
-          panel and onto the header above), instead of the image filling
-          the whole panel: `fill` sizes off the nearest positioned
-          ancestor's padding box, so if the panel itself were that ancestor
-          the image would extend up under the header and overlap the brand
-          text. A dedicated flex child below it — `min-h-0` so it can
-          actually shrink inside the flex column instead of overflowing —
-          keeps the two from ever competing for the same space, regardless
-          of viewport height or the image's own aspect ratio.
-        */}
-        <div className="relative mt-4 min-h-0 flex-1">
-          <Image
-            src="/img-bg.png"
-            alt=""
-            fill
-            priority
-            sizes="(min-width: 1441px) 45vw, 640px"
-            className="object-contain object-bottom"
-          />
+        <p className="text-[34px] leading-[44px] font-semibold text-balance">
+          El motor de promociones que tus tiendas entienden.
+        </p>
+        <p className="text-[15px] leading-6 text-primary-100">
+          Reglas, catálogo y campañas sincronizadas en tiempo real con el
+          e-commerce.
+        </p>
+        <div className="flex gap-8 pt-4">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="flex flex-col gap-0.5">
+              <p className="text-4xl leading-7 font-semibold">{stat.value}</p>
+              <p className="text-xs leading-4 text-primary-100">{stat.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
