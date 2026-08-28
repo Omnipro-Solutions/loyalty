@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  ChevronLeft,
   CircleCheck,
   History,
   Lock,
@@ -13,7 +14,7 @@ import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { formatDate, formatRelativeTime } from "@/lib/format"
+import { formatRelativeTime, formatShortDate } from "@/lib/format"
 import {
   isLocked as isPublicationLocked,
   type DisplayStatus,
@@ -37,8 +38,6 @@ export function EditorBar({
   exclusivityGroup,
   validFrom,
   validTo,
-  version,
-  authorName,
   updatedAt,
   saving,
   hasUnsavedChanges,
@@ -70,8 +69,6 @@ export function EditorBar({
   exclusivityGroup: string | null
   validFrom: string
   validTo: string | null
-  version: number
-  authorName: string | null
   updatedAt: string
   saving: boolean
   /** El builder no autoguarda — habilita el botón "Guardar" y el aviso "Cambios sin guardar". */
@@ -101,6 +98,21 @@ export function EditorBar({
     <div className="flex items-center gap-4 border-b border-border bg-background px-6 py-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Dentro de la misma fila que el nombre, no como hermano del
+              bloque completo — ese quedaba centrado contra las dos/tres
+              líneas del bloque (nombre, candado, vigencia) y el botón
+              terminaba flotando a media altura en vez de alineado con el
+              nombre. */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title="Volver a Loyalty Builder"
+            aria-label="Volver a Loyalty Builder"
+            nativeButton={false}
+            render={<Link href="/journeys" />}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
           <input
             value={name}
             readOnly={locked}
@@ -120,24 +132,25 @@ export function EditorBar({
               ? `exclusiva en «${exclusivityGroup}»`
               : EXCLUSIVITY_LABEL[exclusivity]}
           </Badge>
-          {/* La consecuencia de publicar, dicha donde se nota — no en un
-              tooltip que hay que ir a buscar cuando algo no se deja editar. */}
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Lock className="size-3" />
-            {locked
-              ? "publicada · los bloques quedan de solo lectura, lo único editable es el estado"
-              : "borrador · todo editable"}
-          </span>
         </div>
-        <p className="px-1.5 text-[11px] text-muted-foreground">
-          Vigente {formatDate(validFrom)} –{" "}
-          {validTo ? formatDate(validTo) : "sin fin"} · v{version} ·{" "}
-          {saving
-            ? "Guardando…"
-            : hasUnsavedChanges
-              ? "Cambios sin guardar"
-              : `Guardado ${formatRelativeTime(updatedAt)}`}
-          {authorName && ` · editado por ${authorName}`}
+        {/* Una sola línea con lo que decide qué se puede tocar (el candado)
+            y si hay algo pendiente de guardar — la consecuencia de publicar,
+            dicha donde se nota, no en un tooltip que hay que ir a buscar. La
+            versión y el autor ya viven en "Historial de versiones". */}
+        <p className="flex min-w-0 items-center gap-1 px-1.5 text-[11px] text-muted-foreground">
+          <Lock className="size-3 shrink-0" />
+          <span className="truncate">
+            {locked
+              ? "Publicada · solo el estado es editable"
+              : "Borrador · todo editable"}{" "}
+            · Vigente {formatShortDate(validFrom)} –{" "}
+            {validTo ? formatShortDate(validTo) : "sin fin"} ·{" "}
+            {saving
+              ? "Guardando…"
+              : hasUnsavedChanges
+                ? "Cambios sin guardar"
+                : `Guardado ${formatRelativeTime(updatedAt)}`}
+          </span>
         </p>
       </div>
 

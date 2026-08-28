@@ -27,13 +27,21 @@ type PedidoRow = {
   creado_en: string
 }
 
-/** Todos los pedidos completados de la org (RLS ya filtra por `org_id`) — el dataset es pequeño, se agrega en JS. */
+/**
+ * Pedidos completados de la org (RLS ya filtra por `org_id`) acotados al
+ * horizonte que de verdad se consume — `lastMonths(4)` es el rango más largo
+ * que agrega `getResumenDashboardData` — para no traer el historial completo
+ * en cada carga de "Resumen" a medida que la tabla crece.
+ */
 async function getPedidos(): Promise<PedidoRow[]> {
   const supabase = await createClient()
+  const cutoff = lastMonths(4)[0]
+  const cutoffDate = new Date(cutoff.year, cutoff.month, 1)
   const { data, error } = await supabase
     .from("pedidos")
     .select("member_id, total, canal, creado_en")
     .eq("estado", "completado")
+    .gte("creado_en", cutoffDate.toISOString())
   if (error) throw error
   return data ?? []
 }

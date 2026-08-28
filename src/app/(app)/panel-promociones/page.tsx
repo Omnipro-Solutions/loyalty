@@ -1,4 +1,8 @@
+import { Suspense } from "react"
+
 import { AppPage } from "@/components/layout/app-page"
+import { KpiRowSkeleton } from "@/components/feedback/kpi-row-skeleton"
+import { PromotionsTabContentSkeleton } from "@/components/feedback/promotions-tab-skeleton"
 import { PromotionsAverageCart } from "@/features/promotions/components/promotions-average-cart"
 import { PromotionsBudgetBlock } from "@/features/promotions/components/promotions-budget-block"
 import { PromotionsBudgetByCostNature } from "@/features/promotions/components/promotions-budget-by-cost-nature"
@@ -216,29 +220,54 @@ async function PromotionsResultView({ params }: { params: PanelSearchParams }) {
     ? (firstValue(params.vista) as PromotionsPanelTab)
     : "resumen"
 
-  const kpis = await getResultKpis(filters)
-
   return (
     <>
       <PromotionsDashboardFilters promotionOptions={promotionOptions} />
-      <PromotionsResultKpiRow kpis={kpis} />
+      {/* KPIs y contenido del tab activo cada uno en su propio boundary: ni
+          uno bloquea al otro, y ninguno bloquea los filtros de arriba —
+          antes los tres esperaban a que terminara la más lenta de ~10
+          queries en paralelo. El fallback reproduce el mismo skeleton de
+          `loading.tsx` para que no haya un salto visual entre el que se ve
+          en la navegación inicial y el de este boundary interno. */}
+      <Suspense
+        fallback={
+          <KpiRowSkeleton
+            variant="card"
+            count={6}
+            className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3"
+          />
+        }
+      >
+        <PromotionsResultKpis filters={filters} />
+      </Suspense>
       <PromotionsPanelTabs active={vista} params={params} />
-      {vista === "resumen" && (
-        <ResultadosTab
-          filters={filters}
-          params={params}
-          promocionIds={promocionIds}
-        />
-      )}
-      {vista === "rendimiento" && (
-        <RendimientoTab
-          filters={filters}
-          params={params}
-          promocionIds={promocionIds}
-        />
-      )}
+      <Suspense key={vista} fallback={<PromotionsTabContentSkeleton />}>
+        {vista === "resumen" && (
+          <ResultadosTab
+            filters={filters}
+            params={params}
+            promocionIds={promocionIds}
+          />
+        )}
+        {vista === "rendimiento" && (
+          <RendimientoTab
+            filters={filters}
+            params={params}
+            promocionIds={promocionIds}
+          />
+        )}
+      </Suspense>
     </>
   )
+}
+
+async function PromotionsResultKpis({
+  filters,
+}: {
+  filters: DashboardFilters
+}) {
+  const kpis = await getResultKpis(filters)
+  return <PromotionsResultKpiRow kpis={kpis} />
 }
 
 /**

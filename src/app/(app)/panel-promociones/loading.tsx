@@ -1,17 +1,7 @@
 import { AppPage } from "@/components/layout/app-page"
 import { KpiRowSkeleton } from "@/components/feedback/kpi-row-skeleton"
+import { PromotionsTabContentSkeleton } from "@/components/feedback/promotions-tab-skeleton"
 import { Skeleton } from "@/components/feedback/skeleton"
-
-function CardSkeleton({ rows = 4 }: { rows?: number }) {
-  return (
-    <div className="flex w-full flex-col gap-3.5 rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
-      <Skeleton className="h-5 w-48" />
-      {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-9 w-full" />
-      ))}
-    </div>
-  )
-}
 
 export default function PromotionsDashboardLoading() {
   return (
@@ -32,18 +22,7 @@ export default function PromotionsDashboardLoading() {
         count={6}
         className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3"
       />
-      <div className="grid w-full grid-cols-1 items-start gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <div className="flex w-full flex-col gap-4">
-          <CardSkeleton rows={4} />
-          <CardSkeleton rows={4} />
-        </div>
-        <div className="flex w-full flex-col gap-4">
-          <CardSkeleton rows={3} />
-          <CardSkeleton rows={2} />
-          <CardSkeleton rows={2} />
-        </div>
-      </div>
-      <CardSkeleton rows={5} />
+      <PromotionsTabContentSkeleton />
     </AppPage>
   )
 }

@@ -37,19 +37,17 @@ export function UserAccessCard({
 }: UserAccessCardProps) {
   const [roleId, setRoleId] = useState(user.role.id)
   const [storeId, setStoreId] = useState(user.store?.id ?? "")
-  const [result, setResult] = useState<{ ok: boolean; message?: string }>()
 
   const selectedRole = roles.find((r) => r.id === roleId)
   const requiresStore = selectedRole?.alcance_tiendas === "propia"
 
-  const save = useAction(updateUserAccessAction, {
-    onSuccess: ({ data }) =>
-      setResult(
-        data?.ok ? { ok: true } : { ok: false, message: data?.message }
-      ),
-    onError: () =>
-      setResult({ ok: false, message: "No se pudo actualizar el acceso." }),
-  })
+  const save = useAction(updateUserAccessAction)
+  const errorMessage = save.result.serverError
+    ? "No se pudo actualizar el acceso."
+    : save.result.data?.ok === false
+      ? (save.result.data.message ?? "Intenta de nuevo.")
+      : undefined
+  const success = save.result.data?.ok === true
 
   const dirty =
     roleId !== user.role.id || (storeId || null) !== (user.store?.id ?? null)
@@ -85,14 +83,14 @@ export function UserAccessCard({
         </p>
       ) : (
         <>
-          {result?.ok === false && (
+          {errorMessage && (
             <Message
               variant="error"
               title="No se pudo guardar"
-              description={result.message ?? "Intenta de nuevo."}
+              description={errorMessage}
             />
           )}
-          {result?.ok === true && (
+          {success && (
             <Message
               variant="success"
               title="Acceso actualizado"
@@ -123,7 +121,7 @@ export function UserAccessCard({
                   value={roleId}
                   onValueChange={(v) => {
                     setRoleId(v ?? "")
-                    setResult(undefined)
+                    save.reset()
                   }}
                 >
                   <SelectTrigger className="w-56 bg-background">
@@ -151,7 +149,7 @@ export function UserAccessCard({
                     value={storeId}
                     onValueChange={(v) => {
                       setStoreId(v ?? "")
-                      setResult(undefined)
+                      save.reset()
                     }}
                   >
                     <SelectTrigger className="w-56 bg-background">

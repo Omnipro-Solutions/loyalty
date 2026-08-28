@@ -522,8 +522,6 @@ function CanvasArea({
         exclusivityGroup={workflow.grupo_exclusividad}
         validFrom={validFrom}
         validTo={validTo}
-        version={workflow.version_actual}
-        authorName={workflow.authorName}
         updatedAt={updatedAt}
         saving={save.isPending || create.isPending}
         hasUnsavedChanges={hasUnsavedChanges}

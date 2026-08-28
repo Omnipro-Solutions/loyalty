@@ -93,11 +93,13 @@ export default async function UserDetailPage({
   const sp = await searchParams
   const tab = (firstValue(sp.tab) ?? USER_DETAIL_TABS[0].value) as UserDetailTab
 
-  const user = await getUserById(id)
+  const [user, profile, currentUser] = await Promise.all([
+    getUserById(id),
+    getProfileWithPermissions(),
+    getAuthenticatedUser(),
+  ])
   if (!user) notFound()
 
-  const profile = await getProfileWithPermissions()
-  const currentUser = await getAuthenticatedUser()
   const canManage = profile
     ? hasPermission(profile.permissions, "equipo", "editar")
     : false

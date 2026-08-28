@@ -38,6 +38,19 @@ async function assertSameOrgProfile(
   return data
 }
 
+/**
+ * Repite la búsqueda de `assertSameOrgProfile` y empaqueta el error "no
+ * encontrado" que las 5 acciones devuelven igual. Comprobar con
+ * `"ok" in profile` en el call site: si está, es el error; si no, es la fila.
+ */
+async function requireSameOrgProfile(
+  supabase: SessionClient,
+  profileId: string
+) {
+  const profile = await assertSameOrgProfile(supabase, profileId)
+  return profile ?? { ok: false as const, message: "Usuario no encontrado." }
+}
+
 async function isTeamManagerRole(supabase: SessionClient, roleId: string) {
   const { data } = await supabase
     .from("role_permissions")
@@ -76,6 +89,28 @@ async function countOtherActiveManagers(
   return count ?? 0
 }
 
+/**
+ * `null` si el cambio puede proceder. Si el perfil ya era el único manager
+ * activo de la organización y el cambio se lo quita, el mensaje a devolver.
+ * `willStayManager` se evalúa solo si el perfil ya era manager — evita esa
+ * segunda consulta en el caso común (no lo era).
+ */
+async function guardLastManager(
+  supabase: SessionClient,
+  orgId: string,
+  profile: { id: string; estado: string; role_id: string },
+  willStayManager: () => Promise<boolean>,
+  message: string
+) {
+  const wasManager =
+    profile.estado === "activo" &&
+    (await isTeamManagerRole(supabase, profile.role_id))
+  if (!wasManager || (await willStayManager())) return null
+
+  const others = await countOtherActiveManagers(supabase, orgId, profile.id)
+  return others === 0 ? message : null
+}
+
 function revalidateUser(profileId: string) {
   revalidatePath("/ajustes/equipo")
   revalidatePath(`/ajustes/equipo/usuarios/${profileId}`)
@@ -84,13 +119,11 @@ function revalidateUser(profileId: string) {
 export const sendUserPasswordResetAction = teamActionClient
   .inputSchema(sendUserPasswordResetSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const profile = await assertSameOrgProfile(
+    const profile = await requireSameOrgProfile(
       ctx.supabase,
       parsedInput.profileId
     )
-    if (!profile) {
-      return { ok: false as const, message: "Usuario no encontrado." }
-    }
+    if ("ok" in profile) return profile
 
     const origin = await getSiteOrigin()
     // Mismo flujo implícito que el reset self-service (`features/auth`): el
@@ -105,13 +138,11 @@ export const sendUserPasswordResetAction = teamActionClient
 export const updateUserAccessAction = teamActionClient
   .inputSchema(updateUserAccessSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const profile = await assertSameOrgProfile(
+    const profile = await requireSameOrgProfile(
       ctx.supabase,
       parsedInput.profileId
     )
-    if (!profile) {
-      return { ok: false as const, message: "Usuario no encontrado." }
-    }
+    if ("ok" in profile) return profile
     if (profile.id === ctx.userId) {
       return {
         ok: false as const,
@@ -147,24 +178,14 @@ export const updateUserAccessAction = teamActionClient
       tiendaId = store.id
     }
 
-    const wasManager =
-      profile.estado === "activo" &&
-      (await isTeamManagerRole(ctx.supabase, profile.role_id))
-    const willBeManager = await isTeamManagerRole(ctx.supabase, role.id)
-    if (wasManager && !willBeManager) {
-      const others = await countOtherActiveManagers(
-        ctx.supabase,
-        ctx.orgId,
-        profile.id
-      )
-      if (others === 0) {
-        return {
-          ok: false as const,
-          message:
-            "No puedes quitarle la gestión del equipo: es el único administrador activo de la organización.",
-        }
-      }
-    }
+    const guardMessage = await guardLastManager(
+      ctx.supabase,
+      ctx.orgId,
+      profile,
+      () => isTeamManagerRole(ctx.supabase, role.id),
+      "No puedes quitarle la gestión del equipo: es el único administrador activo de la organización."
+    )
+    if (guardMessage) return { ok: false as const, message: guardMessage }
 
     const admin = createAdminClient()
     const { error } = await admin
@@ -183,13 +204,11 @@ export const updateUserAccessAction = teamActionClient
 export const setUserStatusAction = teamActionClient
   .inputSchema(setUserStatusSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const profile = await assertSameOrgProfile(
+    const profile = await requireSameOrgProfile(
       ctx.supabase,
       parsedInput.profileId
     )
-    if (!profile) {
-      return { ok: false as const, message: "Usuario no encontrado." }
-    }
+    if ("ok" in profile) return profile
     if (profile.id === ctx.userId) {
       return {
         ok: false as const,
@@ -198,23 +217,14 @@ export const setUserStatusAction = teamActionClient
     }
 
     if (parsedInput.status === "inactivo") {
-      const wasManager =
-        profile.estado === "activo" &&
-        (await isTeamManagerRole(ctx.supabase, profile.role_id))
-      if (wasManager) {
-        const others = await countOtherActiveManagers(
-          ctx.supabase,
-          ctx.orgId,
-          profile.id
-        )
-        if (others === 0) {
-          return {
-            ok: false as const,
-            message:
-              "No puedes desactivar al único administrador activo de la organización.",
-          }
-        }
-      }
+      const guardMessage = await guardLastManager(
+        ctx.supabase,
+        ctx.orgId,
+        profile,
+        () => Promise.resolve(false),
+        "No puedes desactivar al único administrador activo de la organización."
+      )
+      if (guardMessage) return { ok: false as const, message: guardMessage }
     }
 
     const admin = createAdminClient()
@@ -247,13 +257,11 @@ export const setUserStatusAction = teamActionClient
 export const resetUserMfaAction = teamActionClient
   .inputSchema(resetUserMfaSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const profile = await assertSameOrgProfile(
+    const profile = await requireSameOrgProfile(
       ctx.supabase,
       parsedInput.profileId
     )
-    if (!profile) {
-      return { ok: false as const, message: "Usuario no encontrado." }
-    }
+    if ("ok" in profile) return profile
 
     const admin = createAdminClient()
     const { data: factorsResponse } = await admin.auth.admin.mfa.listFactors({
@@ -261,16 +269,16 @@ export const resetUserMfaAction = teamActionClient
     })
 
     // `deleteFactor` ya cierra las sesiones activas del usuario si el
-    // factor borrado estaba verificado (ver auth-js `GoTrueAdminMFAApi`).
-    for (const factor of factorsResponse?.factors ?? []) {
-      await admin.auth.admin.mfa.deleteFactor({
-        id: factor.id,
-        userId: profile.id,
-      })
-    }
-
-    await admin.from("mfa_backup_codes").delete().eq("profile_id", profile.id)
-    await admin.from("trusted_devices").delete().eq("profile_id", profile.id)
+    // factor borrado estaba verificado (ver auth-js `GoTrueAdminMFAApi`);
+    // los factores son independientes entre sí, igual que los dos deletes
+    // de abajo, así que corren en paralelo en vez de uno tras otro.
+    await Promise.all([
+      ...(factorsResponse?.factors ?? []).map((factor) =>
+        admin.auth.admin.mfa.deleteFactor({ id: factor.id, userId: profile.id })
+      ),
+      admin.from("mfa_backup_codes").delete().eq("profile_id", profile.id),
+      admin.from("trusted_devices").delete().eq("profile_id", profile.id),
+    ])
 
     revalidateUser(profile.id)
     updateTag("team-auth-status")
@@ -280,13 +288,11 @@ export const resetUserMfaAction = teamActionClient
 export const revokeUserDevicesAction = teamActionClient
   .inputSchema(revokeUserDevicesSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const profile = await assertSameOrgProfile(
+    const profile = await requireSameOrgProfile(
       ctx.supabase,
       parsedInput.profileId
     )
-    if (!profile) {
-      return { ok: false as const, message: "Usuario no encontrado." }
-    }
+    if ("ok" in profile) return profile
 
     const admin = createAdminClient()
     const { error } = await admin

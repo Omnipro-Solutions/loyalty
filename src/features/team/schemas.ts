@@ -63,8 +63,6 @@ export const updateUserAccessSchema = z.object({
   storeId: z.string().uuid().optional(),
 })
 
-export type UpdateUserAccessValues = z.infer<typeof updateUserAccessSchema>
-
 export const setUserStatusSchema = z.object({
   profileId: z.string().uuid(),
   status: z.enum(PROFILE_STATUSES),
