@@ -129,8 +129,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <div className="relative -mx-10 min-w-56 flex-1 self-stretch">
             <div
               aria-hidden
-              className="absolute top-1/2 left-1/2 size-80 -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-[3rem] border-8 border-primary-foreground/10"
-            />
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-12"
+            >
+              <BrandMark
+                variant="inverse"
+                className="size-[28rem] text-primary-foreground/10"
+              />
+            </div>
             <div
               aria-hidden
               className="absolute top-1/2 left-1/2 size-2/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground/10 blur-3xl"
