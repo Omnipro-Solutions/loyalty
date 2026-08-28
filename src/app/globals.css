@@ -77,6 +77,8 @@
   --color-avatar-amber-fg: var(--avatar-amber-fg);
   --color-avatar-violet-bg: var(--avatar-violet-bg);
   --color-avatar-violet-fg: var(--avatar-violet-fg);
+  --color-avatar-navy-bg: var(--avatar-navy-bg);
+  --color-avatar-navy-fg: var(--avatar-navy-fg);
   --color-neutral-50: var(--neutral-50);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -240,6 +242,14 @@
   --avatar-amber-fg: #a15c07;
   --avatar-violet-bg: #f4edfe;
   --avatar-violet-fg: #43188a;
+  /* Sexto par, para el KPI de presupuesto de "Resultados de promociones".
+     A diferencia de los cinco de arriba NO sale de una variable de Figma:
+     el archivo solo expone cinco pares (los cinco grupos del catálogo de
+     bloques). Se deriva de --data-navy, que sí está verificado, siguiendo
+     el mismo criterio que el resto de la sección: -fg es el tono saturado y
+     -bg su tinte muy claro. */
+  --avatar-navy-bg: #e9eef5;
+  --avatar-navy-fg: #1c2b3f;
   --neutral-50: #fafaf9;
 
   /* shadcn Sidebar primitive (our AppSidebar is hand-built per Figma, not
@@ -344,6 +354,8 @@
   --avatar-amber-fg: #fbdca0;
   --avatar-violet-bg: #341064;
   --avatar-violet-fg: #dfc9fb;
+  --avatar-navy-bg: #1b2a3d;
+  --avatar-navy-fg: #c3d4e8;
   --neutral-50: #201f1c;
 
   --sidebar: #1f1e1b;

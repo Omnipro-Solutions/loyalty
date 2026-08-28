@@ -39,7 +39,7 @@ export function PromotionsBudgetByFinancier({
   return (
     <div
       className={cn(
-        "flex w-full flex-col items-start gap-3.5 rounded-[20px] bg-background px-5 py-[18px] shadow-form-section",
+        "flex h-full w-full flex-col items-start gap-3.5 rounded-[20px] bg-background px-5 py-[18px] shadow-form-section",
         className
       )}
     >

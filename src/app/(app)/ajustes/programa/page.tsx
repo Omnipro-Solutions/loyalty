@@ -1,37 +1,27 @@
 import { AppPage } from "@/components/layout/app-page"
-import { ProgramParametersForm } from "@/features/settings/components/program-parameters-form"
-import { getProgramParameters } from "@/lib/program-parameters"
-import { REGULATION_EXCLUSIONS, type RegulationExclusion } from "@/types/domain"
-
-function isRegulationExclusion(value: string): value is RegulationExclusion {
-  return (REGULATION_EXCLUSIONS as readonly string[]).includes(value)
-}
+import { RestrictedPlaceholder } from "@/components/layout/restricted-placeholder"
 
 /**
  * "Parámetros del programa" — sin equivalente en el Figma, ver
  * `config/navigation.ts` y la Fase 0 del plan de cobertura en
  * `docs/promociones.md`.
+ *
+ * Cerrado al rol de la demo: lo que se configura aquí (valor del punto,
+ * breakage, techo de descuento apilado, exclusiones del reglamento) mueve
+ * la economía de TODO el programa, no la de una promoción — es decisión de
+ * superusuario, no de administración diaria.
+ *
+ * El formulario sigue en el repo y funciona: para reactivarlo basta
+ * devolver `<ProgramParametersForm>` con los `initialValues` de
+ * `getProgramParameters()` (ver `features/settings/components/program-parameters-form.tsx`).
  */
-export default async function ProgramParametersPage() {
-  const parameters = await getProgramParameters()
-
+export default function ProgramParametersPage() {
   return (
     <AppPage
       breadcrumb="Configuración  ›  Parámetros del programa"
       title="Parámetros del programa"
     >
-      <ProgramParametersForm
-        initialValues={{
-          valorPunto: parameters.valorPunto,
-          breakageEstimadoPct: parameters.breakageEstimadoPct,
-          redencionCashbackPct: parameters.redencionCashbackPct,
-          techoDescuentoApiladoPct: parameters.techoDescuentoApiladoPct,
-          vigenciaPuntosDias: parameters.vigenciaPuntosDias ?? undefined,
-          exclusionesReglamento: parameters.exclusionesReglamento.filter(
-            isRegulationExclusion
-          ),
-        }}
-      />
+      <RestrictedPlaceholder submodule="Parámetros del programa" />
     </AppPage>
   )
 }

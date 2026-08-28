@@ -13,7 +13,7 @@ type PromotionsBudgetPaceProps = { items: BudgetPaceItem[] }
  */
 export function PromotionsBudgetPace({ items }: PromotionsBudgetPaceProps) {
   return (
-    <div className="flex w-full flex-col gap-3.5 rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
+    <div className="flex h-full w-full flex-col gap-3.5 rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
       <div className="flex flex-col gap-0.5">
         <p className="text-sm font-semibold text-foreground">
           Ritmo de consumo

@@ -1760,6 +1760,7 @@ export type Database = {
           actor_id: string | null
           actor_tipo: string
           canal: string | null
+          member_id: string | null
           codigo_motivo: string | null
           detalle: string | null
           id: string
@@ -1777,6 +1778,7 @@ export type Database = {
           actor_id?: string | null
           actor_tipo: string
           canal?: string | null
+          member_id?: string | null
           codigo_motivo?: string | null
           detalle?: string | null
           id?: string
@@ -1794,6 +1796,7 @@ export type Database = {
           actor_id?: string | null
           actor_tipo?: string
           canal?: string | null
+          member_id?: string | null
           codigo_motivo?: string | null
           detalle?: string | null
           id?: string
@@ -1812,6 +1815,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_eventos_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
             referencedColumns: ["id"]
           },
           {

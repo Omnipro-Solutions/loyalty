@@ -43,7 +43,9 @@ type DenseDashboardFiltersProps = { segments: SegmentOption[] }
  *
  * Se eliminó el control "Tienda" del Figma: `points_ledger` no tiene
  * `tienda_id` y el reparto demo de `pedidos` entre tiendas es inservible
- * (49% en una sola tienda). "Exportar reporte" sigue sin implementar — fuera
+ * (49% en una sola tienda). "Exportar reporte" está deshabilitado y lo dice:
+ * en el ambiente de demo no hay generación de reportes, y un botón que no
+ * responde sin explicar por qué se lee como un fallo. Fuera
  * de alcance de este cambio, no es un control roto.
  */
 export function DenseDashboardFilters({
@@ -140,10 +142,25 @@ export function DenseDashboardFilters({
 
       <div className="flex-1" />
 
-      <Button className="h-auto gap-2 rounded-[9px] px-3.5 py-2 text-xs font-medium">
-        <Download className="size-3.5" />
-        Exportar reporte
-      </Button>
+      {/* El `title` va en el envoltorio y no en el botón: un elemento
+          `disabled` no recibe eventos de puntero, así que su propio tooltip
+          nunca llegaría a mostrarse. */}
+      <span
+        title="La exportación de reportes no está disponible en el ambiente de demo."
+        className="shrink-0"
+      >
+        <Button
+          disabled
+          aria-describedby="export-demo-hint"
+          className="h-auto gap-2 rounded-[9px] px-3.5 py-2 text-xs font-medium"
+        >
+          <Download className="size-3.5" />
+          Exportar reporte
+        </Button>
+      </span>
+      <span id="export-demo-hint" className="sr-only">
+        La exportación de reportes no está disponible en el ambiente de demo.
+      </span>
     </div>
   )
 }

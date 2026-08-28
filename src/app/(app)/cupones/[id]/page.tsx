@@ -63,11 +63,11 @@ async function EventsTabContent({ couponId }: { couponId: string }) {
           Log append-only: los eventos no se editan ni se borran. Incluye actor,
           sello de tiempo e IP cuando aplica.
         </p>
-        {/* Fase 4 conecta la exportación real del log. */}
+        {/* Deshabilitado y explicado: en demo no se exporta. */}
         <button
           type="button"
           disabled
-          title="Exportar log (próximamente)"
+          title="La exportación del log no está disponible en el ambiente de demo."
           className="shrink-0 text-xs font-medium text-primary opacity-50"
         >
           Exportar log
