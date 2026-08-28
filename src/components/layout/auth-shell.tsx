@@ -89,7 +89,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-3 py-2 min-[1441px]:max-w-[880px] sm:px-6">
+      <div className="flex min-w-0 flex-1 scrollbar-thin flex-col overflow-y-auto px-3 py-2 min-[1441px]:max-w-[880px] sm:px-6">
         <div className="m-auto flex w-full flex-col items-center gap-2">
           {/*
             Icon only (no text) on mobile: with the most content-heavy

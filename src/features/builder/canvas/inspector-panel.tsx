@@ -183,7 +183,10 @@ export function InspectorPanel({
       <div
         key={node.id}
         inert={readOnly || undefined}
-        className={cn("flex-1 overflow-y-auto p-4", readOnly && "opacity-70")}
+        className={cn(
+          "flex-1 scrollbar-thin overflow-y-auto p-4",
+          readOnly && "opacity-70"
+        )}
       >
         {activeTab === "Configuración" &&
           (tipo === "acumular_puntos" ? (

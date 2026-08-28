@@ -123,7 +123,7 @@ export function StoreGroupsDialog({
           />
         )}
 
-        <div className="flex max-h-72 flex-col gap-2 overflow-y-auto">
+        <div className="flex max-h-72 scrollbar-thin flex-col gap-2 overflow-y-auto">
           {groups.length === 0 && (
             <p className="text-xs text-muted-foreground">
               Todavía no hay grupos.

@@ -185,12 +185,12 @@ export async function listCouponBatches(
   return { batches: (data ?? []) as CouponBatchListItem[], total: count ?? 0 }
 }
 
-/** Conteo por estado (chips de 13.1, "Todas/Borrador/Generando/Emitidas/Cerradas/Anuladas") sobre el universo completo, no la página cargada. */
+/** Conteo por estado (chips de 13.1, "Todas/Borrador/Generando/Emitidas/Cerradas/Anuladas") sobre el universo completo, no la página cargada. Agregado en DB (`coupon_batch_status_counts`) — antes traía `coupon_batch` completa para contar en JS. */
 export async function getCouponBatchStatusCounts(): Promise<
   Record<CouponBatchStatus, number>
 > {
   const supabase = await createClient()
-  const { data, error } = await supabase.from("coupon_batch").select("status")
+  const { data, error } = await supabase.rpc("coupon_batch_status_counts")
   if (error) throw error
 
   const counts = Object.fromEntries(
@@ -198,7 +198,7 @@ export async function getCouponBatchStatusCounts(): Promise<
   ) as Record<CouponBatchStatus, number>
   for (const row of data ?? []) {
     const status = row.status as CouponBatchStatus
-    counts[status] = (counts[status] ?? 0) + 1
+    counts[status] = row.total
   }
   return counts
 }

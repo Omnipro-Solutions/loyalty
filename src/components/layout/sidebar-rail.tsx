@@ -35,7 +35,7 @@ export function SidebarRail({
     >
       <BrandMark className="size-8 shrink-0" />
 
-      <nav className="no-scrollbar flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto">
+      <nav className="flex min-h-0 flex-1 scrollbar-thin flex-col items-center gap-1.5 overflow-y-auto">
         {NAVIGATION.map((group, i) => (
           <div key={group.title} className="flex flex-col items-center gap-1.5">
             {i > 0 && <div className="my-1 h-px w-7 bg-border" />}

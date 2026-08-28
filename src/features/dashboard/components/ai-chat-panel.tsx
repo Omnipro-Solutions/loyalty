@@ -165,7 +165,7 @@ export function AiChatPanel({
           {/* Conversación */}
           <div
             ref={scrollRef}
-            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-neutral-50 px-5 py-[18px]"
+            className="flex min-h-0 flex-1 scrollbar-thin flex-col gap-4 overflow-y-auto bg-neutral-50 px-5 py-[18px]"
           >
             <div className="flex items-center gap-2.5">
               <div className="h-px flex-1 bg-border" />

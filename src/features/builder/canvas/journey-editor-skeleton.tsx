@@ -19,7 +19,7 @@ export function JourneyEditorSkeleton() {
         </div>
       </div>
       <div className="flex min-h-0 flex-1">
-        <div className="flex h-full w-[220px] shrink-0 flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4">
+        <div className="flex h-full w-[220px] shrink-0 scrollbar-thin flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-9 w-full rounded-lg" />
           ))}

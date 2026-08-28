@@ -10,7 +10,7 @@ export function hasPermission(
   return permissions.has(`${resource}:${action}`)
 }
 
-/** Set de permisos (`recurso:accion`) de un rol — comparte la consulta a `role_permissions` entre `membersPermissionActionClient` y `getMemberProfilePermissions`. */
+/** Set de permisos (`recurso:accion`) de un rol, para `membersPermissionActionClient` — ya tiene `roleId` en `ctx` sin pagar una consulta extra a `profiles`. */
 export async function getPermissionsSet(roleId: string): Promise<Set<string>> {
   const supabase = await createClient()
   const { data: permissions } = await supabase
@@ -33,6 +33,9 @@ export type MemberProfilePermissions = {
  * promoción"/"Aplicar regla" del Hero, para nunca abrir un diálogo solo
  * para mostrar "no tienes permiso"). Duplicado a propósito (CLAUDE.md §2):
  * las features no se importan entre sí.
+ *
+ * Una sola consulta con `role_permissions` embebido vía `roles` (en vez de
+ * `profiles` + `getPermissionsSet` por separado, dos round-trips).
  */
 export async function getMemberProfilePermissions(): Promise<MemberProfilePermissions | null> {
   const supabase = await createClient()
@@ -41,10 +44,15 @@ export async function getMemberProfilePermissions(): Promise<MemberProfilePermis
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role_id")
+    .select("role:roles(role_permissions(recurso, accion))")
     .eq("id", user.id)
     .maybeSingle()
   if (!profile) return null
 
-  return { permissions: await getPermissionsSet(profile.role_id) }
+  const permissions = new Set(
+    (profile.role?.role_permissions ?? []).map(
+      (p) => `${p.recurso}:${p.accion}`
+    )
+  )
+  return { permissions }
 }

@@ -140,7 +140,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
         </div>
         <Separator />
 
-        <div className="flex max-h-[360px] flex-col overflow-y-auto">
+        <div className="flex max-h-[360px] scrollbar-thin flex-col overflow-y-auto">
           {notifications.map((notification) => {
             const Icon = notification.icon
             return (

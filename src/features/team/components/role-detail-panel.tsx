@@ -286,7 +286,7 @@ export function RoleDetailPanel({
             ))}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
             {RESOURCES.map((resource) => (
               <div
                 key={resource}

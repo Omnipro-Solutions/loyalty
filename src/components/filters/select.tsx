@@ -83,7 +83,7 @@ export function FilterSelect({
         <ChevronDown className="size-[11px] text-muted-foreground" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 gap-0 p-1.5">
-        <div className="max-h-72 overflow-y-auto">
+        <div className="max-h-72 scrollbar-thin overflow-y-auto">
           {options.map((option) => {
             const selected = value.includes(option.value)
             return (

@@ -13,7 +13,7 @@ export function BlockPalette({ disabled = false }: { disabled?: boolean }) {
   return (
     <div
       className={cn(
-        "flex h-full w-[220px] shrink-0 flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4",
+        "flex h-full w-[220px] shrink-0 scrollbar-thin flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4",
         // Una regla publicada es de solo lectura (`isLocked`). Se atenúa y
         // se apaga el puntero en vez de esconder la paleta: el catálogo
         // sigue siendo información útil al revisar una regla que ya corre,

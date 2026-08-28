@@ -51,9 +51,9 @@ export function MemberAudiencesCard({ audiences }: MemberAudiencesCardProps) {
           Este socio no pertenece a ninguna audiencia activa por ahora.
         </p>
       ) : (
-        <div className="flex flex-col overflow-hidden rounded-[14px]">
+        <div className="flex max-h-[280px] scrollbar-thin flex-col overflow-auto rounded-[14px]">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10">
               <TableRow className="bg-accent hover:bg-accent">
                 <TableHead>AUDIENCIA</TableHead>
                 <TableHead className="w-24">ORIGEN</TableHead>
