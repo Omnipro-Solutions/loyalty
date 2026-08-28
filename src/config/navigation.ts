@@ -55,7 +55,9 @@ export const NAVIGATION: NavGroup[] = [
       { label: "Resumen", href: "/resumen", icon: LayoutGrid },
       { label: "Analítica", href: "/analitica", icon: BarChart3 },
       {
-        label: "Panel de promociones",
+        // La ruta se queda como está: renombrarla rompería los enlaces
+        // guardados y no aporta nada que el título de la página no diga ya.
+        label: "Resultados de promociones",
         href: "/panel-promociones",
         icon: Gauge,
       },
@@ -104,11 +106,13 @@ export const NAVIGATION: NavGroup[] = [
         href: "/ajustes/programa",
         icon: Settings2,
       },
-      // Antes vivía como pestaña "Logs" de /panel-promociones — movida aquí
-      // a pedido del usuario, como ítem propio de Configuración.
+      // Nació como pestaña "Logs" de /panel-promociones, pasó a ítem propio
+      // de Configuración y hoy es la bitácora de los TRES módulos
+      // transaccionales (promociones, cupones y builder) en un solo hilo
+      // cronológico — ver `lib/system-log.ts`.
       {
-        label: "Logs de promociones",
-        href: "/ajustes/logs-promociones",
+        label: "Logs del sistema",
+        href: "/ajustes/logs-sistema",
         icon: History,
       },
     ],

@@ -14,11 +14,25 @@ import type {
   PromotionEventType,
   PromotionPublicationStatus,
   PromotionType,
+  SettlementPeriod,
 } from "@/types/domain"
 
-import { detectCollisions } from "./collision"
-import { toDateParam, type DateWindow } from "./dashboard-filters"
-import { promotionStatus, type PromotionStatus } from "./status"
+import {
+  mechanicKpis,
+  type MechanicBreakdown,
+  type MechanicMetric,
+} from "./mechanic-kpis"
+import {
+  BENEFIT_TYPE_LABEL,
+  FINANCIADOR_LABEL,
+  PROMOTION_TYPE_LABEL,
+} from "./labels"
+import {
+  toDateParam,
+  type DateWindow,
+  type PromotionDimension,
+} from "./dashboard-filters"
+import { promotionStatus } from "./status"
 
 export type PromotionRow = Database["public"]["Tables"]["promociones"]["Row"]
 
@@ -561,6 +575,8 @@ export type PromotionsDashboardFilters = {
   canales?: ChannelScope[]
   financiadores?: Financiador[]
   promocionIds?: string[]
+  /** Mecánica (`tipo_beneficio`) — el eje que la vista de resultados usa para decidir qué widgets tienen sentido. */
+  mecanicas?: BenefitType[]
 }
 
 /**
@@ -571,7 +587,7 @@ export type PromotionsDashboardFilters = {
  * evento con fecha real detrás, solo la vigencia de la fila (ver
  * `dashboard-filters.ts`).
  */
-function applyDashboardFilters<
+export function applyDashboardFilters<
   T extends {
     in(column: string, values: readonly string[]): T
     lt(column: string, value: string): T
@@ -581,6 +597,9 @@ function applyDashboardFilters<
   let q = query
   if (filters.tipos && filters.tipos.length > 0) {
     q = q.in("tipo", filters.tipos)
+  }
+  if (filters.mecanicas && filters.mecanicas.length > 0) {
+    q = q.in("tipo_beneficio", filters.mecanicas)
   }
   if (filters.canales && filters.canales.length > 0) {
     q = q.in("canal_aplicacion", filters.canales)
@@ -598,86 +617,6 @@ function applyDashboardFilters<
     )
   }
   return q
-}
-
-export type PromotionsDashboardKpis = {
-  /** Un contador por estado — `Record` sobre `PromotionStatus` para que añadir un estado no deje este conteo desincronizado. */
-  statusCounts: Record<PromotionStatus, number>
-  assignedBudget: number
-  consumedBudget: number
-  consumedBudgetPct: number
-  totalRedemptions: number
-  avgCostPerRedemption: number | null
-  alertCount: number
-  avgRoi: number | null
-  roiSampleSize: number
-}
-
-/**
- * KPIs de "Panel de promociones" (sin nodo Figma — nueva a pedido del
- * usuario). Todo sale de columnas reales de `promociones`: no hay tabla de
- * eventos de canje, así que esto es un corte transversal (snapshot), no una
- * serie de tiempo — mismo criterio que `getPromotionsSummary`.
- */
-export async function getPromotionsDashboardKpis(
-  filters: PromotionsDashboardFilters = {}
-): Promise<PromotionsDashboardKpis> {
-  const supabase = await createClient()
-  const { data, error } = await applyDashboardFilters(
-    supabase
-      .from("promociones")
-      .select(
-        "estado_publicacion, vigente_desde, vigente_hasta, presupuesto_asignado, presupuesto_consumido, canjes, umbral_alerta_presupuesto_pct, roi"
-      ),
-    filters
-  )
-  if (error) throw error
-
-  const statusCounts: Record<PromotionStatus, number> = {
-    activa: 0,
-    programada: 0,
-    borrador: 0,
-    inactiva: 0,
-    finalizada: 0,
-  }
-  let assignedBudget = 0
-  let consumedBudget = 0
-  let totalRedemptions = 0
-  let alertCount = 0
-  let roiSum = 0
-  let roiSampleSize = 0
-
-  for (const row of data ?? []) {
-    statusCounts[promotionStatus(row)] += 1
-    assignedBudget += row.presupuesto_asignado
-    consumedBudget += row.presupuesto_consumido
-    totalRedemptions += row.canjes
-    if (
-      row.umbral_alerta_presupuesto_pct != null &&
-      row.presupuesto_asignado > 0 &&
-      row.presupuesto_consumido / row.presupuesto_asignado >=
-        row.umbral_alerta_presupuesto_pct / 100
-    ) {
-      alertCount += 1
-    }
-    if (row.roi != null) {
-      roiSum += row.roi
-      roiSampleSize += 1
-    }
-  }
-
-  return {
-    statusCounts,
-    assignedBudget,
-    consumedBudget,
-    consumedBudgetPct: assignedBudget > 0 ? consumedBudget / assignedBudget : 0,
-    totalRedemptions,
-    avgCostPerRedemption:
-      totalRedemptions > 0 ? consumedBudget / totalRedemptions : null,
-    alertCount,
-    avgRoi: roiSampleSize > 0 ? roiSum / roiSampleSize : null,
-    roiSampleSize,
-  }
 }
 
 export type TopPromotionByRedemptions = {
@@ -800,74 +739,6 @@ export async function getPromotionsRoiRanking(
   return { top, bottom }
 }
 
-export type PromotionAlert =
-  | {
-      id: string
-      severity: "warning"
-      type: "presupuesto"
-      nombre: string
-      consumedPct: number
-      thresholdPct: number
-    }
-  | {
-      id: string
-      severity: "destructive"
-      type: "roi"
-      nombre: string
-      roi: number
-    }
-
-/**
- * Alertas reales (sin motor de reglas detrás, solo dos condiciones sobre
- * columnas existentes): sobreconsumo contra `umbral_alerta_presupuesto_pct`,
- * y `roi < 1` (el retorno registrado no cubre lo invertido).
- */
-export async function getPromotionAlerts(
-  limit = 4,
-  filters: PromotionsDashboardFilters = {}
-): Promise<PromotionAlert[]> {
-  const supabase = await createClient()
-  const { data, error } = await applyDashboardFilters(
-    supabase
-      .from("promociones")
-      .select(
-        "id, nombre, presupuesto_asignado, presupuesto_consumido, umbral_alerta_presupuesto_pct, roi"
-      ),
-    filters
-  )
-  if (error) throw error
-
-  const alerts: PromotionAlert[] = []
-  for (const row of data ?? []) {
-    if (
-      row.umbral_alerta_presupuesto_pct != null &&
-      row.presupuesto_asignado > 0
-    ) {
-      const consumedPct = row.presupuesto_consumido / row.presupuesto_asignado
-      if (consumedPct >= row.umbral_alerta_presupuesto_pct / 100) {
-        alerts.push({
-          id: `${row.id}-presupuesto`,
-          severity: "warning",
-          type: "presupuesto",
-          nombre: row.nombre,
-          consumedPct,
-          thresholdPct: row.umbral_alerta_presupuesto_pct,
-        })
-      }
-    }
-    if (row.roi != null && row.roi < 1) {
-      alerts.push({
-        id: `${row.id}-roi`,
-        severity: "destructive",
-        type: "roi",
-        nombre: row.nombre,
-        roi: row.roi,
-      })
-    }
-  }
-  return alerts.slice(0, limit)
-}
-
 export type PromotionEventItem = {
   id: string
   promocionId: string
@@ -881,55 +752,6 @@ export type PromotionEventItem = {
   notaMotivo: string | null
   metadatos: Record<string, unknown>
   ocurridoEn: string
-}
-
-/**
- * Bitácora de "Panel de promociones · Logs" — todos los eventos de
- * `promocion_eventos` de la org, más recientes primero. Es una muestra
- * representativa de actividad reciente, no un ledger reconciliado con
- * `canjes`/`presupuesto_consumido` (ver comentario de la migración
- * `20260826160000_promociones_eventos.sql`). Sin límite: a esta escala de
- * datos demo no hace falta paginar server-side — el filtro y el "cargar
- * más" corren en cliente, igual que `ProductHistoryCard` — que sí trae su
- * propio `.limit(200)` server-side (`catalog/lib/queries.ts`); esta lista
- * lo replica para no dejar entrar sin techo eventos de TODA la org.
- */
-export async function listPromotionEvents(): Promise<PromotionEventItem[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("promocion_eventos")
-    .select(
-      "id, promocion_id, tipo, titulo, detalle, actor_etiqueta, canal, codigo_motivo, nota_motivo, metadatos, ocurrido_en"
-    )
-    .order("ocurrido_en", { ascending: false })
-    .limit(200)
-  if (error) throw error
-
-  const promocionIds = [...new Set((data ?? []).map((row) => row.promocion_id))]
-  const nameById = new Map<string, string>()
-  if (promocionIds.length > 0) {
-    const { data: promos, error: promosError } = await supabase
-      .from("promociones")
-      .select("id, nombre")
-      .in("id", promocionIds)
-    if (promosError) throw promosError
-    for (const promo of promos ?? []) nameById.set(promo.id, promo.nombre)
-  }
-
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    promocionId: row.promocion_id,
-    promocionNombre: nameById.get(row.promocion_id) ?? "—",
-    tipo: row.tipo as PromotionEventType,
-    titulo: row.titulo,
-    detalle: row.detalle,
-    actorEtiqueta: row.actor_etiqueta,
-    canal: row.canal as ChannelScope | null,
-    codigoMotivo: row.codigo_motivo,
-    notaMotivo: row.nota_motivo,
-    metadatos: (row.metadatos as Record<string, unknown>) ?? {},
-    ocurridoEn: row.ocurrido_en,
-  }))
 }
 
 /**
@@ -1137,60 +959,6 @@ export async function listPromotionOptions(): Promise<PromotionOption[]> {
   return (data ?? []).map((row) => ({ id: row.id, name: row.nombre }))
 }
 
-export type ExpiringPromotion = {
-  id: string
-  nombre: string
-  diasRestantes: number
-}
-
-/** Día calendario en UTC como entero comparable — mismo criterio que `dateOnly` de `./status.ts` (evita que la hora del día o el huso corran el límite). */
-function daysUntil(dateStr: string): number {
-  const target = new Date(dateStr)
-  const targetUTC = Date.UTC(
-    target.getUTCFullYear(),
-    target.getUTCMonth(),
-    target.getUTCDate()
-  )
-  const now = new Date()
-  const todayUTC = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate()
-  )
-  return Math.round((targetUTC - todayUTC) / 86_400_000)
-}
-
-/**
- * Promociones activas (de verdad activas hoy, no solo `estado_publicacion`)
- * cuya `vigente_hasta` cae dentro de `withinDays` — real, de la misma
- * columna que ya usa `validitySummary`. Rellena la barra lateral del panel
- * con una alerta operativa real en vez de dejarla vacía.
- */
-export async function getPromotionsExpiringSoon(
-  filters: PromotionsDashboardFilters = {},
-  withinDays = 7
-): Promise<ExpiringPromotion[]> {
-  const supabase = await createClient()
-  const { data, error } = await applyDashboardFilters(
-    supabase
-      .from("promociones")
-      .select("id, nombre, estado_publicacion, vigente_desde, vigente_hasta"),
-    filters
-  )
-  if (error) throw error
-
-  const results: ExpiringPromotion[] = []
-  for (const row of data ?? []) {
-    if (!row.vigente_hasta) continue
-    if (promotionStatus(row) !== "activa") continue
-    const diasRestantes = daysUntil(row.vigente_hasta)
-    if (diasRestantes >= 0 && diasRestantes <= withinDays) {
-      results.push({ id: row.id, nombre: row.nombre, diasRestantes })
-    }
-  }
-  return results.sort((a, b) => a.diasRestantes - b.diasRestantes)
-}
-
 export type AverageCartByPromotion = {
   id: string
   nombre: string
@@ -1291,6 +1059,23 @@ export async function getBudgetByCostNature(
     }))
 }
 
+/** Día calendario en UTC como entero comparable — mismo criterio que `dateOnly` de `./status.ts` (evita que la hora del día o el huso corran el límite). */
+function daysUntil(dateStr: string): number {
+  const target = new Date(dateStr)
+  const targetUTC = Date.UTC(
+    target.getUTCFullYear(),
+    target.getUTCMonth(),
+    target.getUTCDate()
+  )
+  const now = new Date()
+  const todayUTC = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  )
+  return Math.round((targetUTC - todayUTC) / 86_400_000)
+}
+
 export type BudgetPaceItem = {
   id: string
   nombre: string
@@ -1357,47 +1142,6 @@ export async function getPromotionsBudgetPace(
   )
 }
 
-export type PromotionCollisionSummaryItem = {
-  id: string
-  nombre: string
-  priority: number
-  collisionCount: number
-  reasons: string[]
-}
-
-/**
- * Colisiones reales del portafolio completo: para cada promoción activa,
- * cuántas otras activas comparten canal y al menos una condición
- * (`detectCollisions`, mismo cálculo que el panel lateral del formulario de
- * creación/edición), aplicado a todas en vez de a un solo borrador.
- */
-export async function getPromotionsCollisionSummary(): Promise<
-  PromotionCollisionSummaryItem[]
-> {
-  const active = await listActivePromotions()
-
-  return active
-    .map((promotion) => {
-      const collisions = detectCollisions(
-        {
-          conditions: flattenConditionNodes(promotion.condiciones),
-          channelScope: promotion.canal_aplicacion,
-          priority: promotion.prioridad,
-        },
-        active.filter((other) => other.id !== promotion.id)
-      )
-      return {
-        id: promotion.id,
-        nombre: promotion.nombre,
-        priority: promotion.prioridad,
-        collisionCount: collisions.length,
-        reasons: [...new Set(collisions.map((c) => c.reason))],
-      }
-    })
-    .filter((item) => item.collisionCount > 0)
-    .sort((a, b) => b.collisionCount - a.collisionCount)
-}
-
 export type GiftedUnitsByProduct = {
   productId: string
   productName: string
@@ -1448,51 +1192,6 @@ export async function getGiftedUnitsByProduct(
       unidades,
     }))
     .sort((a, b) => b.unidades - a.unidades)
-}
-
-export type PromotionLifecycleEvent = Pick<
-  PromotionEventItem,
-  "id" | "promocionId" | "promocionNombre" | "tipo" | "ocurridoEn"
->
-
-/**
- * Hitos de ciclo de vida de "Panel de promociones" — mismos eventos que
- * `listPromotionEvents`, excluyendo `canje`/`canje_rechazado` (ya tienen su
- * propia tendencia semanal y tasa de rechazo) y acotados por los filtros
- * del panel. Sin límite server-side por lo mismo que `listPromotionEvents`
- * (escala de datos demo) — el corte a `limit` ocurre en cliente, aquí.
- */
-export async function listPromotionLifecycleEvents(
-  filters: PromotionsDashboardFilters = {},
-  limit = 8
-): Promise<PromotionLifecycleEvent[]> {
-  const supabase = await createClient()
-  const { data: promos, error } = await applyDashboardFilters(
-    supabase.from("promociones").select("id, nombre"),
-    filters
-  )
-  if (error) throw error
-  const promoIds = (promos ?? []).map((p) => p.id)
-  if (promoIds.length === 0) return []
-  const nameById = new Map((promos ?? []).map((p) => [p.id, p.nombre]))
-
-  const { data: events, error: eventsError } = await supabase
-    .from("promocion_eventos")
-    .select("id, promocion_id, tipo, ocurrido_en")
-    .in("promocion_id", promoIds)
-    .order("ocurrido_en", { ascending: false })
-  if (eventsError) throw eventsError
-
-  return (events ?? [])
-    .filter((row) => row.tipo !== "canje" && row.tipo !== "canje_rechazado")
-    .slice(0, limit)
-    .map((row) => ({
-      id: row.id,
-      promocionId: row.promocion_id,
-      promocionNombre: nameById.get(row.promocion_id) ?? "—",
-      tipo: row.tipo as PromotionEventType,
-      ocurridoEn: row.ocurrido_en,
-    }))
 }
 
 export type PointsAwardedByPromotion = {
@@ -1812,4 +1511,532 @@ export type ConditionOptions = {
   suppliers: ConditionOption[]
   genders: ConditionOption[]
   maritalStatuses: ConditionOption[]
+}
+
+// ── Panel de promociones · KPI universales, por mecánica y cofinanciación ──
+
+export type DimensionSlice = {
+  key: string
+  label: string
+  canjes: number
+  inversion: number
+  /**
+   * Suma de `metadatos.monto_carrito` de los canjes. Es venta que PASÓ por
+   * la promoción, no venta incremental: sin grupo de control no hay forma
+   * de saber cuánta habría ocurrido igual. El nombre lo dice a propósito.
+   */
+  ventaAsociada: number
+  /**
+   * Las promociones que componen el corte, no solo cuántas son. Es lo que
+   * deja pasar de "el laboratorio puso X" a "el laboratorio puso X, y el
+   * 80 % se fue en una sola promoción" — que es la pregunta que sigue
+   * siempre a la primera.
+   */
+  promociones: {
+    id: string
+    nombre: string
+    canjes: number
+    inversion: number
+    ventaAsociada: number
+  }[]
+}
+
+/** Las hojas del árbol de condiciones, sin importar cuán anidado esté. */
+function conditionLeaves(
+  condiciones: unknown
+): { campo: string; valor: unknown }[] {
+  if (!condiciones || typeof condiciones !== "object") return []
+  const node = condiciones as Record<string, unknown>
+  if (Array.isArray(node.condiciones)) {
+    return node.condiciones.flatMap(conditionLeaves)
+  }
+  if (typeof node.campo === "string") {
+    return [{ campo: node.campo, valor: node.valor }]
+  }
+  return []
+}
+
+/** Un campo de condición puede traer un valor suelto o un array — el panel siempre necesita la lista. */
+function conditionValues(valor: unknown): string[] {
+  if (Array.isArray(valor))
+    return valor.filter((v): v is string => typeof v === "string")
+  if (typeof valor === "string") return [valor]
+  return []
+}
+
+/**
+ * El panel recortado por una dimensión. Un canje se atribuye a CADA valor
+ * de la dimensión al que apunta su promoción: una promoción dirigida a dos
+ * segmentos suma sus canjes en los dos. Es reparto, no doble conteo —
+ * sumar las barras no da el total del panel, y por eso la tarjeta lo dice
+ * en pantalla en vez de dejar que alguien lo sume y se confunda.
+ *
+ * Las promociones sin ningún valor para la dimensión pedida (una promoción
+ * de carrito no tiene segmento) caen en "Sin segmento": esconderlas haría
+ * que el gráfico contara menos canjes que el KPI de arriba sin explicar por qué.
+ */
+export async function getRedemptionsByDimension(
+  dimension: PromotionDimension,
+  filters: PromotionsDashboardFilters = {}
+): Promise<{ dimension: PromotionDimension; items: DimensionSlice[] }> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase
+      .from("promociones")
+      .select(
+        "id, nombre, tipo, tipo_beneficio, financiador, condiciones, presupuesto_consumido"
+      ),
+    filters
+  )
+  if (error) throw error
+  const rows = promos ?? []
+  if (rows.length === 0) return { dimension, items: [] }
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("promocion_id, metadatos")
+    .eq("tipo", "canje")
+    .in(
+      "promocion_id",
+      rows.map((p) => p.id)
+    )
+  if (eventsError) throw eventsError
+
+  const canjesByPromo = new Map<string, { canjes: number; venta: number }>()
+  for (const row of events ?? []) {
+    const acc = canjesByPromo.get(row.promocion_id) ?? { canjes: 0, venta: 0 }
+    acc.canjes += 1
+    const monto = (row.metadatos as Record<string, unknown>).monto_carrito
+    if (typeof monto === "number") acc.venta += monto
+    canjesByPromo.set(row.promocion_id, acc)
+  }
+
+  // Los ids de segmento y categoría se resuelven a nombre en una sola
+  // consulta por tabla: sin esto el eje del gráfico serían UUID.
+  const labelById = new Map<string, string>()
+  if (dimension === "segmento" || dimension === "categoria") {
+    const ids = new Set<string>()
+    for (const p of rows) {
+      for (const leaf of conditionLeaves(p.condiciones)) {
+        if (leaf.campo === dimension)
+          conditionValues(leaf.valor).forEach((v) => ids.add(v))
+      }
+    }
+    if (ids.size > 0) {
+      const table = dimension === "segmento" ? "segments" : "categorias"
+      const { data: named } = await supabase
+        .from(table)
+        .select("id, nombre")
+        .in("id", [...ids])
+      for (const n of named ?? []) labelById.set(n.id, n.nombre)
+    }
+  }
+
+  const EMPTY_LABEL: Record<PromotionDimension, string> = {
+    segmento: "Sin segmento",
+    categoria: "Sin categoría",
+    socio_nivel: "Sin nivel",
+    mecanica: "—",
+    tipo: "—",
+    financiador: "—",
+  }
+
+  function keysFor(
+    promo: (typeof rows)[number]
+  ): { key: string; label: string }[] {
+    if (dimension === "mecanica") {
+      return [
+        {
+          key: promo.tipo_beneficio,
+          label: BENEFIT_TYPE_LABEL[promo.tipo_beneficio as BenefitType],
+        },
+      ]
+    }
+    if (dimension === "tipo") {
+      return [
+        {
+          key: promo.tipo,
+          label: PROMOTION_TYPE_LABEL[promo.tipo as PromotionType],
+        },
+      ]
+    }
+    if (dimension === "financiador") {
+      return [
+        {
+          key: promo.financiador,
+          label: FINANCIADOR_LABEL[promo.financiador as Financiador],
+        },
+      ]
+    }
+    const values = conditionLeaves(promo.condiciones)
+      .filter((l) => l.campo === dimension)
+      .flatMap((l) => conditionValues(l.valor))
+    if (values.length === 0)
+      return [{ key: "__sin__", label: EMPTY_LABEL[dimension] }]
+    return values.map((v) => ({ key: v, label: labelById.get(v) ?? v }))
+  }
+
+  const slices = new Map<string, DimensionSlice>()
+  for (const promo of rows) {
+    const activity = canjesByPromo.get(promo.id) ?? { canjes: 0, venta: 0 }
+    for (const { key, label } of keysFor(promo)) {
+      const slice = slices.get(key) ?? {
+        key,
+        label,
+        canjes: 0,
+        inversion: 0,
+        ventaAsociada: 0,
+        promociones: [],
+      }
+      slice.canjes += activity.canjes
+      slice.ventaAsociada += activity.venta
+      slice.inversion += promo.presupuesto_consumido
+      slice.promociones.push({
+        id: promo.id,
+        nombre: promo.nombre,
+        canjes: activity.canjes,
+        inversion: promo.presupuesto_consumido,
+        ventaAsociada: activity.venta,
+      })
+      slices.set(key, slice)
+    }
+  }
+
+  return {
+    dimension,
+    items: [...slices.values()]
+      .map((slice) => ({
+        ...slice,
+        // La promoción que más pesa primero: es la que explica el corte.
+        promociones: slice.promociones.sort(
+          (a, b) => b.inversion - a.inversion || b.canjes - a.canjes
+        ),
+      }))
+      .sort((a, b) => b.canjes - a.canjes || b.inversion - a.inversion),
+  }
+}
+
+export type PromotionMechanicResults = {
+  id: string
+  nombre: string
+  mecanica: BenefitType
+  mecanicaLabel: string
+  /** Canjes con metadatos en la bitácora — la muestra sobre la que se calculan los KPI. */
+  sampleSize: number
+  /** El contador de la fila. Distinto de `sampleSize` a propósito: ver el comentario de la función. */
+  canjesTotales: number
+  inversion: number
+  ventaAsociada: number
+  metrics: MechanicMetric[]
+  breakdown: MechanicBreakdown | null
+}
+
+/**
+ * Lo que hay que mirar cuando el panel está enfocado en UNA promoción: los
+ * KPI de su mecánica, no los agregados que sirven para comparar campañas
+ * entre sí. Un 3x2 y un cashback no se juzgan con el mismo número.
+ *
+ * `sampleSize` (canjes con bitácora) y `canjesTotales` (el contador de la
+ * fila) se devuelven los dos y no coinciden: la bitácora es una muestra de
+ * actividad reciente, no el ledger completo — no existe motor de checkout
+ * (ver `20260823120000_promociones.sql`). Mostrar solo uno haría creer que
+ * los KPI cubren todos los canjes; mostrar los dos deja claro sobre cuántos
+ * se calcularon.
+ */
+export async function getPromotionMechanicResults(
+  promocionId: string
+): Promise<PromotionMechanicResults | null> {
+  const supabase = await createClient()
+  const { data: promo, error } = await supabase
+    .from("promociones")
+    .select("id, nombre, tipo_beneficio, canjes, presupuesto_consumido")
+    .eq("id", promocionId)
+    .maybeSingle()
+  if (error) throw error
+  if (!promo) return null
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("metadatos")
+    .eq("tipo", "canje")
+    .eq("promocion_id", promocionId)
+  if (eventsError) throw eventsError
+
+  const canjes = (events ?? []).map(
+    (e) => (e.metadatos as Record<string, unknown>) ?? {}
+  )
+  const mecanica = promo.tipo_beneficio as BenefitType
+  const { metrics, breakdown } = mechanicKpis(mecanica, canjes)
+
+  // Los desgloses por producto vienen con el UUID como etiqueta — se
+  // resuelven aquí y no en `mechanic-kpis.ts` para que esa siga siendo
+  // pura (sin Supabase) y testeable.
+  let resolved = breakdown
+  if (breakdown && breakdown.label === "Piezas por producto") {
+    const { data: productos } = await supabase
+      .from("productos")
+      .select("id, nombre")
+      .in(
+        "id",
+        breakdown.items.map((i) => i.key)
+      )
+    const nameById = new Map((productos ?? []).map((p) => [p.id, p.nombre]))
+    resolved = {
+      ...breakdown,
+      items: breakdown.items.map((i) => ({
+        ...i,
+        label: nameById.get(i.key) ?? i.label,
+      })),
+    }
+  }
+
+  const ventaAsociada = canjes.reduce((acc, c) => {
+    const monto = c.monto_carrito
+    return acc + (typeof monto === "number" ? monto : 0)
+  }, 0)
+
+  return {
+    id: promo.id,
+    nombre: promo.nombre,
+    mecanica,
+    mecanicaLabel: BENEFIT_TYPE_LABEL[mecanica],
+    sampleSize: canjes.length,
+    canjesTotales: promo.canjes,
+    inversion: promo.presupuesto_consumido,
+    ventaAsociada,
+    metrics,
+    breakdown: resolved,
+  }
+}
+
+export type CofinancingRow = {
+  proveedorId: string | null
+  proveedor: string
+  /** Promociones distintas que ese proveedor cofinancia dentro del filtro. */
+  promociones: number
+  inversionTotal: number
+  /** `inversionTotal × porcentaje_costo_proveedor` — lo que se le factura. */
+  aCargoProveedor: number
+  aCargoRetailer: number
+  /** Unidades físicas entregadas con cargo al proveedor (`costo_producto`/`costo_tercero`). */
+  piezas: number
+  periodos: SettlementPeriod[]
+  contratos: string[]
+}
+
+/**
+ * Lo que hay que liquidar con cada proveedor. Es la mitad de "Economía" que
+ * el panel no tenía: el formulario ya capturaba quién paga y en qué
+ * porcentaje, pero nadie consolidaba el resultado, que es justo lo que
+ * comercial necesita cuando llega el cierre del periodo.
+ *
+ * Dos monedas de cambio, no una: **dinero** (porcentaje del costo) y
+ * **piezas** (unidades físicas que el laboratorio repone). Un 3x2 se
+ * liquida en cajas, no en pesos, y consolidarlo solo en dinero obliga a
+ * volver a abrir cada promoción para contar unidades.
+ *
+ * Las piezas solo cuentan cuando la naturaleza del costo es de producto o
+ * de tercero: en un descuento de margen no hay pieza que reponer, y sumar
+ * ahí las unidades del carrito daría un número que nadie puede facturar.
+ */
+export async function getCofinancingConsolidation(
+  filters: PromotionsDashboardFilters = {}
+): Promise<CofinancingRow[]> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase.from("promociones").select(
+      `id, financiador, naturaleza_costo, porcentaje_costo_proveedor,
+         periodo_liquidacion, contrato_id, presupuesto_consumido,
+         proveedor:proveedores!proveedor_id(id, nombre)`
+    ),
+    filters
+  )
+  if (error) throw error
+
+  const cofinanced = (promos ?? []).filter((p) => p.financiador !== "retailer")
+  if (cofinanced.length === 0) return []
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("promocion_id, metadatos")
+    .eq("tipo", "canje")
+    .in(
+      "promocion_id",
+      cofinanced.map((p) => p.id)
+    )
+  if (eventsError) throw eventsError
+
+  const piezasByPromo = new Map<string, number>()
+  for (const row of events ?? []) {
+    const cantidad = (row.metadatos as Record<string, unknown>).cantidad
+    if (typeof cantidad !== "number") continue
+    piezasByPromo.set(
+      row.promocion_id,
+      (piezasByPromo.get(row.promocion_id) ?? 0) + cantidad
+    )
+  }
+
+  const byProvider = new Map<string, CofinancingRow>()
+  for (const promo of cofinanced) {
+    const proveedor = promo.proveedor
+    const key = proveedor?.id ?? "__sin_proveedor__"
+    const row = byProvider.get(key) ?? {
+      proveedorId: proveedor?.id ?? null,
+      // Un financiador no-retailer sin proveedor enlazado es un dato
+      // incompleto del formulario, no una categoría: se nombra como tal
+      // para que se vea y se corrija, en vez de repartirlo en "otros".
+      proveedor: proveedor?.nombre ?? "Sin proveedor asignado",
+      promociones: 0,
+      inversionTotal: 0,
+      aCargoProveedor: 0,
+      aCargoRetailer: 0,
+      piezas: 0,
+      periodos: [],
+      contratos: [],
+    }
+    const pct = (promo.porcentaje_costo_proveedor ?? 0) / 100
+    row.promociones += 1
+    row.inversionTotal += promo.presupuesto_consumido
+    row.aCargoProveedor += promo.presupuesto_consumido * pct
+    row.aCargoRetailer += promo.presupuesto_consumido * (1 - pct)
+    if (
+      promo.naturaleza_costo === "costo_producto" ||
+      promo.naturaleza_costo === "costo_tercero"
+    ) {
+      row.piezas += piezasByPromo.get(promo.id) ?? 0
+    }
+    const periodo = promo.periodo_liquidacion as SettlementPeriod | null
+    if (periodo && !row.periodos.includes(periodo)) row.periodos.push(periodo)
+    if (promo.contrato_id && !row.contratos.includes(promo.contrato_id)) {
+      row.contratos.push(promo.contrato_id)
+    }
+    byProvider.set(key, row)
+  }
+
+  return [...byProvider.values()].sort(
+    (a, b) => b.aCargoProveedor - a.aCargoProveedor
+  )
+}
+
+export type TopPromotionTrendSeries = {
+  id: string
+  nombre: string
+  /** Canjes por semana, indexados por `weekKey` — 0 en las semanas sin actividad. */
+  counts: Record<string, number>
+  canjes: number
+  inversion: number
+  ventaAsociada: number
+  /** Venta asociada / inversión, en múltiplos. `null` cuando falta cualquiera de los dos. */
+  retorno: number | null
+}
+
+/**
+ * Las promociones que más se canjean, como serie semanal en vez de como
+ * lista. Una lista dice quién va primero; la serie dice si va subiendo o
+ * cayendo, que es lo que decide si hay que hacer algo esta semana.
+ *
+ * El ranking sale de los canjes de la BITÁCORA, no de `promociones.canjes`.
+ * Son números distintos (el contador de fila no tiene historia, ver
+ * `20260823120000_promociones.sql`) y ordenar por uno mientras se dibuja el
+ * otro produce el peor error posible en un top: que la línea más alta no sea
+ * la primera de la lista.
+ *
+ * Las semanas se emiten completas para todas las series —incluidas las que
+ * valen 0— para que recharts no una dos puntos saltándose el hueco y
+ * dibuje una caída como si fuera una pendiente suave.
+ */
+export async function getTopPromotionsCanjesTrend(
+  limit = 4,
+  filters: PromotionsDashboardFilters = {}
+): Promise<{
+  weeks: { weekKey: string; weekLabel: string }[]
+  series: TopPromotionTrendSeries[]
+}> {
+  const supabase = await createClient()
+  const { data: promos, error } = await applyDashboardFilters(
+    supabase.from("promociones").select("id, nombre, presupuesto_consumido"),
+    filters
+  )
+  if (error) throw error
+  const rows = promos ?? []
+  if (rows.length === 0) return { weeks: [], series: [] }
+
+  const { data: events, error: eventsError } = await supabase
+    .from("promocion_eventos")
+    .select("promocion_id, ocurrido_en, metadatos")
+    .eq("tipo", "canje")
+    .in(
+      "promocion_id",
+      rows.map((p) => p.id)
+    )
+  if (eventsError) throw eventsError
+
+  const mondayByWeekKey = new Map<string, Date>()
+  const byPromo = new Map<
+    string,
+    { counts: Map<string, number>; canjes: number; venta: number }
+  >()
+  for (const row of events ?? []) {
+    const occurred = new Date(row.ocurrido_en)
+    const monday = new Date(occurred)
+    const day = monday.getDay()
+    monday.setDate(monday.getDate() - (day === 0 ? 6 : day - 1))
+    monday.setHours(0, 0, 0, 0)
+    const weekKey = toDateParam(monday)
+    mondayByWeekKey.set(weekKey, monday)
+
+    const acc = byPromo.get(row.promocion_id) ?? {
+      counts: new Map<string, number>(),
+      canjes: 0,
+      venta: 0,
+    }
+    acc.counts.set(weekKey, (acc.counts.get(weekKey) ?? 0) + 1)
+    acc.canjes += 1
+    const monto = (row.metadatos as Record<string, unknown>).monto_carrito
+    if (typeof monto === "number") acc.venta += monto
+    byPromo.set(row.promocion_id, acc)
+  }
+
+  const top = rows
+    .map((promo) => ({ promo, activity: byPromo.get(promo.id) }))
+    .filter(
+      (
+        r
+      ): r is {
+        promo: (typeof rows)[number]
+        activity: NonNullable<typeof r.activity>
+      } => Boolean(r.activity && r.activity.canjes > 0)
+    )
+    .sort((a, b) => b.activity.canjes - a.activity.canjes)
+    .slice(0, limit)
+
+  if (top.length === 0) return { weeks: [], series: [] }
+
+  // Solo las semanas en las que el top tuvo actividad: una semana vacía
+  // arrastrada desde una promoción que quedó fuera del corte alarga el eje
+  // sin añadir nada.
+  const weekKeys = [
+    ...new Set(top.flatMap(({ activity }) => [...activity.counts.keys()])),
+  ].sort()
+
+  return {
+    weeks: weekKeys.map((weekKey) => ({
+      weekKey,
+      weekLabel: formatShortDate(mondayByWeekKey.get(weekKey)!),
+    })),
+    series: top.map(({ promo, activity }) => ({
+      id: promo.id,
+      nombre: promo.nombre,
+      counts: Object.fromEntries(
+        weekKeys.map((k) => [k, activity.counts.get(k) ?? 0])
+      ),
+      canjes: activity.canjes,
+      inversion: promo.presupuesto_consumido,
+      ventaAsociada: activity.venta,
+      retorno:
+        promo.presupuesto_consumido > 0 && activity.venta > 0
+          ? activity.venta / promo.presupuesto_consumido
+          : null,
+    })),
+  }
 }

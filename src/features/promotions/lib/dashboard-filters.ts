@@ -11,6 +11,30 @@ import { addDays, startOfDay, subDays, subYears } from "date-fns"
  * "eventos ocurridos en esta ventana".
  */
 
+/**
+ * Los ejes por los que se puede recortar el panel. No son filtros (esos ya
+ * existen y acotan el universo): son la dimensión por la que se AGRUPA lo
+ * que queda — el mismo conjunto de canjes contado por segmento, por
+ * categoría o por nivel del socio cuenta tres historias distintas.
+ *
+ * `segmento`, `categoria` y `socio_nivel` salen del árbol de condiciones de
+ * la promoción; los otros tres son columnas. Es la diferencia entre "a
+ * quién apunta la regla" y "qué es la regla", y las dos preguntas se hacen.
+ *
+ * Vive aquí y no en `queries.ts` porque el selector del eje es un Client
+ * Component: importarla de `queries.ts` arrastraría `lib/supabase/server`
+ * (y con él `next/headers`) al bundle del navegador.
+ */
+export const PROMOTION_DIMENSIONS = [
+  "segmento",
+  "categoria",
+  "socio_nivel",
+  "mecanica",
+  "tipo",
+  "financiador",
+] as const
+export type PromotionDimension = (typeof PROMOTION_DIMENSIONS)[number]
+
 export const DASHBOARD_VIGENCIA_RANGES = ["7d", "30d", "90d", "12m"] as const
 export type DashboardVigenciaRange = (typeof DASHBOARD_VIGENCIA_RANGES)[number]
 export const DEFAULT_VIGENCIA_RANGE = "todo"

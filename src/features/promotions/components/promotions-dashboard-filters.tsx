@@ -1,10 +1,17 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useTransition } from "react"
+import { RotateCcw } from "lucide-react"
 
 import { FilterSelect } from "@/components/filters/select"
 import { Segmented } from "@/components/filters/segmented"
-import { CHANNEL_SCOPES, FINANCIADORES, PROMOTION_TYPES } from "@/types/domain"
+import {
+  BENEFIT_TYPES,
+  CHANNEL_SCOPES,
+  FINANCIADORES,
+  PROMOTION_TYPES,
+} from "@/types/domain"
 
 import {
   DASHBOARD_VIGENCIA_RANGES,
@@ -14,6 +21,7 @@ import {
   toDateParam,
 } from "../lib/dashboard-filters"
 import {
+  BENEFIT_TYPE_LABEL,
   CHANNEL_SCOPE_LABEL,
   FINANCIADOR_LABEL,
   PROMOTION_TYPE_LABEL,
@@ -68,11 +76,37 @@ export function PromotionsDashboardFilters({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  const [isPending, startTransition] = useTransition()
+
+  /**
+   * `replace` y no `push`: cada toque de un filtro es un ajuste de la misma
+   * vista, no un destino nuevo. Con `push`, volver atrás obligaba a deshacer
+   * clic a clic todos los filtros tocados antes de salir de la pantalla.
+   *
+   * `scroll: false` por lo mismo: los filtros están arriba pero los
+   * selectores de la gráfica y de la tabla están a media página, y saltar al
+   * inicio en cada cambio hacía perder de vista justo el bloque que se
+   * estaba ajustando. Mismo criterio que `PromotionsDimensionPicker`.
+   */
   function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
     mutate(params)
-    router.push(`${pathname}?${params.toString()}`)
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
   }
+
+  /** Todo lo que este componente sabe poner en la URL — y por tanto todo lo que "Limpiar" tiene que poder quitar. */
+  const FILTER_PARAMS = [
+    "rango",
+    "desde",
+    "hasta",
+    "promocion",
+    "mecanica",
+    "tipo",
+    "canal",
+    "financiador",
+  ]
 
   const rangoParam = searchParams.get("rango") ?? undefined
   const desde = searchParams.get("desde") ?? undefined
@@ -90,6 +124,9 @@ export function PromotionsDashboardFilters({
   const canales = parseList(searchParams.get("canal"))
   const financiadores = parseList(searchParams.get("financiador"))
   const promociones = parseList(searchParams.get("promocion"))
+  const mecanicas = parseList(searchParams.get("mecanica"))
+
+  const hasActiveFilters = FILTER_PARAMS.some((key) => searchParams.has(key))
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -114,6 +151,30 @@ export function PromotionsDashboardFilters({
             params.set("desde", toDateParam(range.from))
             params.set("hasta", toDateParam(range.to))
           })
+        }
+      />
+      <FilterSelect
+        label="Promoción"
+        multiple
+        options={promotionOptions.map((promotion) => ({
+          value: promotion.id,
+          label: promotion.name,
+        }))}
+        value={promociones}
+        onChange={(value) =>
+          update((params) => setListParam(params, "promocion", value))
+        }
+      />
+      <FilterSelect
+        label="Mecánica"
+        multiple
+        options={BENEFIT_TYPES.map((mecanica) => ({
+          value: mecanica,
+          label: BENEFIT_TYPE_LABEL[mecanica],
+        }))}
+        value={mecanicas}
+        onChange={(value) =>
+          update((params) => setListParam(params, "mecanica", value))
         }
       />
       <FilterSelect
@@ -152,18 +213,26 @@ export function PromotionsDashboardFilters({
           update((params) => setListParam(params, "financiador", value))
         }
       />
-      <FilterSelect
-        label="Promoción"
-        multiple
-        options={promotionOptions.map((promotion) => ({
-          value: promotion.id,
-          label: promotion.name,
-        }))}
-        value={promociones}
-        onChange={(value) =>
-          update((params) => setListParam(params, "promocion", value))
+      {/* Deseleccionar de a uno es posible en cada desplegable, pero con seis
+          filtros abiertos volver al estado inicial eran seis viajes. El botón
+          se desactiva —no se esconde— cuando no hay nada que limpiar: que
+          aparezca y desaparezca movería el resto de la barra. */}
+      <button
+        type="button"
+        disabled={!hasActiveFilters}
+        onClick={() =>
+          update((params) => {
+            for (const key of FILTER_PARAMS) params.delete(key)
+          })
         }
-      />
+        className="flex items-center gap-1.5 rounded-[10px] border border-border bg-background py-[9px] pr-3 pl-3.5 text-xs leading-4 text-muted-foreground transition-colors enabled:hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <RotateCcw className="size-[11px]" />
+        Limpiar filtros
+      </button>
+      {isPending && (
+        <span className="text-[11px] text-muted-foreground">Actualizando…</span>
+      )}
     </div>
   )
 }

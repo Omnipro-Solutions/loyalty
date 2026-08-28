@@ -125,6 +125,17 @@ export async function updateSession(request: NextRequest) {
     if (!hasFullSession) {
       return NextResponse.redirect(new URL("/verificacion", request.url))
     }
+    // La raíz no tiene pantalla propia: es un alias de /resumen. Se resuelve
+    // aquí, después de las dos comprobaciones de sesión, y no con un
+    // `app/page.tsx` que llame a `redirect()`. Ese patrón sí RENDERIZA un
+    // componente que aborta a mitad, y React 19.2 intenta medir ese render
+    // abortado en su performance track de desarrollo con un `startTime`
+    // incoherente: "Failed to execute 'measure' on 'Performance':
+    // '\u200bRootPage' cannot have a negative time stamp". Redirigiendo
+    // antes de entrar al renderer no hay render que medir.
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/resumen", request.url))
+    }
     return response
   }
 

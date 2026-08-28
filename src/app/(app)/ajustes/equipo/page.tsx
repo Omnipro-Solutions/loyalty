@@ -2,7 +2,7 @@ import { Suspense } from "react"
 
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
-import { RoutePlaceholder } from "@/components/layout/route-placeholder"
+import { RestrictedPlaceholder } from "@/components/layout/restricted-placeholder"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import {
   TeamTabsNav,
@@ -79,7 +79,9 @@ export default async function TeamPage({
       {tab === "invitaciones" && (
         <InvitationsTabContent canManage={canManage} />
       )}
-      {tab === "auditoria" && <RoutePlaceholder phase="Fase 5" />}
+      {tab === "auditoria" && (
+        <RestrictedPlaceholder submodule="Registro de auditoría" />
+      )}
     </AppPage>
   )
 }

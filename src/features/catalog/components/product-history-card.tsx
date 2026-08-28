@@ -201,6 +201,7 @@ export function ProductHistoryCard({ events }: ProductHistoryCardProps) {
           <button
             type="button"
             disabled
+            title="La exportación de la bitácora no está disponible en el ambiente de demo."
             className="shrink-0 cursor-not-allowed rounded-[10px] bg-muted px-4 py-2 text-xs font-medium text-muted-foreground"
           >
             Exportar bitácora
