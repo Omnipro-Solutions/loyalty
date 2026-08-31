@@ -12,6 +12,7 @@ import {
 } from "@/config/system-status"
 import { ActiveConnectionsCard } from "@/features/integrations/components/active-connections-card"
 import { SystemViewCard } from "@/features/integrations/components/system-view-card"
+import { listIntegrationConnections } from "@/features/integrations/lib/queries"
 import {
   ObservabilityTabsNav,
   type ObservabilityTab,
@@ -20,10 +21,7 @@ import { IncidentTimeline } from "@/features/system-status/components/incident-t
 import { ServiceStatusList } from "@/features/system-status/components/service-status-list"
 import { SystemStatusSummary } from "@/features/system-status/components/system-status-summary"
 import { TrendMultiLineChart } from "@/features/dashboard/components/trend-multi-line-chart"
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value
-}
+import { firstValue } from "@/lib/search-params"
 
 /**
  * Sin equivalente en Figma — pedido de usuario: observabilidad de sistema e
@@ -37,6 +35,8 @@ export default async function ObservabilityPage({
 }: PageProps<"/ajustes/observabilidad">) {
   const params = await searchParams
   const tab = (firstValue(params.tab) ?? "sistema") as ObservabilityTab
+  const connections =
+    tab === "integraciones" ? await listIntegrationConnections() : []
 
   const services = getAllServices()
   const incidents = resolveIncidents()
@@ -93,7 +93,7 @@ export default async function ObservabilityPage({
       {tab === "integraciones" && (
         <div className="flex flex-col gap-4">
           <SystemViewCard />
-          <ActiveConnectionsCard />
+          <ActiveConnectionsCard connections={connections} />
           <ServiceStatusList services={getIntegrationServices()} />
         </div>
       )}

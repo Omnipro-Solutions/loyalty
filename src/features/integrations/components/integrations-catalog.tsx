@@ -8,18 +8,17 @@ import { EmptyState } from "@/components/feedback/empty-state"
 import { FilterSearch } from "@/components/filters/search"
 import { Button } from "@/components/ui/button"
 import type { IntegrationGroup } from "@/config/integrations-catalog"
-import {
-  ACTIVE_CONNECTIONS,
-  type ConnectionStatus,
-} from "@/config/integrations-connections"
+import type { ConnectionStatus } from "@/config/integrations-connections"
 
 import { IntegrationCard } from "./integration-card"
 import { IntegrationDetailPanel } from "./integration-detail-panel"
 import { IntegrationsRail } from "./integrations-rail"
+import type { IntegrationConnectionRow } from "../lib/queries"
 
 type IntegrationsCatalogProps = {
   direction: "origen" | "destino"
   groups: IntegrationGroup[]
+  connections: IntegrationConnectionRow[]
   initialSelectionId: string
   title: string
   description: string
@@ -32,16 +31,17 @@ type IntegrationsCatalogProps = {
 
 /**
  * Orquesta el "12.1/12.2 · Integraciones" completo (encabezado, rail de
- * categorías, grilla y panel de detalle) — sin backend detrás: es el
- * catálogo de la Fase 1, por eso "Configurar" y las acciones del
- * encabezado quedan deshabilitadas, igual que en el Figma. La tarjeta y
- * "Mis conexiones" sí reflejan `ACTIVE_CONNECTIONS` en tiempo real (estado
- * en vez de "Configurar", grilla filtrada) para no prometer un estado de
- * conexión que la demo no tiene.
+ * categorías, grilla y panel de detalle). Las acciones del encabezado
+ * ("Nueva conexión"/"Nuevo destino") siguen deshabilitadas, igual que en el
+ * Figma — solo "Configurar" (dentro de `IntegrationDetailPanel`) tiene
+ * backend real detrás (`integracion_conexiones`). `connections` viene del
+ * servidor (`listIntegrationConnections`, ver `page.tsx`) y alimenta el
+ * estado real de cada tarjeta y "Mis conexiones".
  */
 export function IntegrationsCatalog({
   direction,
   groups,
+  connections,
   initialSelectionId,
   title,
   description,
@@ -86,13 +86,13 @@ export function IntegrationsCatalog({
 
   const connectedStatusById = useMemo(() => {
     const map = new Map<string, ConnectionStatus>()
-    for (const connection of ACTIVE_CONNECTIONS) {
-      if (connection.direction === direction) {
-        map.set(connection.integrationId, connection.status)
+    for (const connection of connections) {
+      if (connection.direccion === direction) {
+        map.set(connection.integration_id, connection.estado)
       }
     }
     return map
-  }, [direction])
+  }, [connections, direction])
   const hasConnections = connectedStatusById.size > 0
 
   const visibleGroups = useMemo(() => {

@@ -1020,3 +1020,31 @@ export const PROMOTION_EVENT_ACTOR_TYPES = [
 ] as const
 export type PromotionEventActorType =
   (typeof PROMOTION_EVENT_ACTOR_TYPES)[number]
+
+// 12 · Integraciones — dirección de una conexión respecto al catálogo
+// estático (`src/config/integrations-catalog.ts`: SOURCES/DESTINATIONS).
+export const INTEGRATION_CONNECTION_DIRECTIONS = ["origen", "destino"] as const
+export type IntegrationConnectionDirection =
+  (typeof INTEGRATION_CONNECTION_DIRECTIONS)[number]
+
+export const INTEGRATION_CONNECTION_STATUSES = [
+  "activa",
+  "con_error",
+  "pausada",
+] as const
+export type IntegrationConnectionStatus =
+  (typeof INTEGRATION_CONNECTION_STATUSES)[number]
+
+// Método de autenticación de una conexión — deriva del campo `method` de
+// cada integración en el catálogo estático (ver comentario de cabecera de
+// `supabase/migrations/20260831110000_integraciones_conexiones.sql`).
+export const INTEGRATION_AUTH_TYPES = [
+  "oauth2",
+  "api_key",
+  "app_key_token",
+  "token_personal",
+  "token_integracion",
+  "certificado",
+  "usuario_tecnico",
+] as const
+export type IntegrationAuthType = (typeof INTEGRATION_AUTH_TYPES)[number]

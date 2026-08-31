@@ -3075,6 +3075,139 @@ export type Database = {
           },
         ]
       }
+      integracion_conexiones: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          creado_por: string | null
+          detalle: string | null
+          direccion: string
+          estado: string
+          frecuencia: string | null
+          id: string
+          integration_id: string
+          org_id: string
+          ultima_sincronizacion: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          creado_por?: string | null
+          detalle?: string | null
+          direccion: string
+          estado?: string
+          frecuencia?: string | null
+          id?: string
+          integration_id: string
+          org_id: string
+          ultima_sincronizacion?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          creado_por?: string | null
+          detalle?: string | null
+          direccion?: string
+          estado?: string
+          frecuencia?: string | null
+          id?: string
+          integration_id?: string
+          org_id?: string
+          ultima_sincronizacion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracion_conexiones_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integracion_conexiones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integracion_credenciales: {
+        Row: {
+          conexion_id: string
+          creado_en: string
+          datos: Json
+          expira_en: string | null
+          id: string
+          rotado_en: string
+          tipo_auth: string
+        }
+        Insert: {
+          conexion_id: string
+          creado_en?: string
+          datos?: Json
+          expira_en?: string | null
+          id?: string
+          rotado_en?: string
+          tipo_auth: string
+        }
+        Update: {
+          conexion_id?: string
+          creado_en?: string
+          datos?: Json
+          expira_en?: string | null
+          id?: string
+          rotado_en?: string
+          tipo_auth?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracion_credenciales_conexion_id_fkey"
+            columns: ["conexion_id"]
+            isOneToOne: true
+            referencedRelation: "integracion_conexiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integracion_mapeos_campos: {
+        Row: {
+          campo_destino: string
+          campo_origen: string
+          conexion_id: string
+          creado_en: string
+          id: string
+          orden: number
+          transformacion: string | null
+        }
+        Insert: {
+          campo_destino: string
+          campo_origen: string
+          conexion_id: string
+          creado_en?: string
+          id?: string
+          orden?: number
+          transformacion?: string | null
+        }
+        Update: {
+          campo_destino?: string
+          campo_origen?: string
+          conexion_id?: string
+          creado_en?: string
+          id?: string
+          orden?: number
+          transformacion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracion_mapeos_campos_conexion_id_fkey"
+            columns: ["conexion_id"]
+            isOneToOne: false
+            referencedRelation: "integracion_conexiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       coupon_search: {
@@ -3151,6 +3284,10 @@ export type Database = {
           total: number
           done: boolean
         }[]
+      }
+      integracion_conexion_owned_by_current_org: {
+        Args: { target_conexion_id: string }
+        Returns: boolean
       }
       lookup_org_idp_by_domain: {
         Args: { p_dominio: string }

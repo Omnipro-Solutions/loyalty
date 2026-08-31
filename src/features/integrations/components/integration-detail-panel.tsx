@@ -1,4 +1,5 @@
 import { FileText, Info, Settings2, X } from "lucide-react"
+import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 
@@ -44,16 +45,16 @@ export function IntegrationDetailPanel({
       </div>
 
       <div className="flex flex-col gap-1 px-3 pb-3">
-        <div
-          className="flex items-center gap-2.5 rounded-lg p-2 opacity-45"
-          title="Disponible en una próxima fase"
+        <Link
+          href={`/ajustes/integraciones/${integration.id}?direccion=${direction}`}
+          className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-muted"
         >
           <Settings2 className="size-[15px] text-secondary-foreground" />
-          <span className="flex-1 text-xs font-medium text-secondary-foreground">
+          <span className="flex-1 text-xs font-medium text-foreground">
             Configurar
           </span>
           <Info className="size-3.5 text-secondary-foreground" />
-        </div>
+        </Link>
         <div
           className="flex items-center gap-2.5 rounded-lg p-2 opacity-45"
           title="Disponible en una próxima fase"
