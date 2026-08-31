@@ -7,7 +7,7 @@ type ProductsTableSectionProps = {
   pageSize: number
 }
 
-/** Comparte la promesa con `ProductsCount`/`ProductsExportSlot` (ver `products-count.tsx`). Catálogo no tiene un estado vacío dedicado. */
+/** Comparte la promesa con `ProductsCount` (ver `products-count.tsx`). Catálogo no tiene un estado vacío dedicado. */
 export async function ProductsTableSection({
   productsPromise,
   pageSize,

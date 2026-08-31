@@ -1,18 +1,25 @@
 "use client"
 
-import { Download } from "lucide-react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useRef } from "react"
 
-import { Button } from "@/components/ui/button"
+import { ExportCsvButton } from "@/components/data/export-csv-button"
+import { ExportDialog } from "@/components/data/export-dialog"
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
+import { notifyExportStatus } from "@/components/feedback/export-toast"
+import { useCsvExportDialog } from "@/hooks/use-csv-export-dialog"
+import { formatNumber } from "@/lib/format"
+import { enumValue } from "@/lib/search-params"
 import { WORKFLOW_STATUSES } from "@/types/domain"
 
 import { PUBLICATION_STATUS_LABEL } from "@/lib/publication-status"
 
-import type { WorkflowListItem } from "./queries"
+import { WORKFLOWS_EXPORT_COLUMN_OPTIONS } from "./export-columns"
+import { exportWorkflowsAction, previewWorkflowsExportAction } from "./export"
 import { NewJourneyButton } from "./new-journey-button"
+import type { WorkflowsExportFiltersInput } from "./schemas"
 
 // El filtro va contra la COLUMNA, así que ofrece los 4 estados guardados —
 // no `programada`, que se deriva de la vigencia y no existe en la base
@@ -23,27 +30,7 @@ const STATUS_OPTIONS = WORKFLOW_STATUSES.map((estado) => ({
   label: PUBLICATION_STATUS_LABEL[estado],
 }))
 
-/** Genera un CSV a partir de las filas visibles (la página actual, ya filtrada). */
-function exportCsv(items: WorkflowListItem[]) {
-  const header = ["Workflow", "Estado", "Nodos", "Editado por", "Actualizado"]
-  const rows = items.map((w) => [
-    w.nombre,
-    w.estado,
-    String(w.totalNodes),
-    w.authorName ?? "",
-    w.actualizado_en,
-  ])
-  const csv = [header, ...rows]
-    .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
-    .join("\n")
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = "workflows.csv"
-  a.click()
-  URL.revokeObjectURL(url)
-}
+const ENTITY = { singular: "journey", plural: "journeys" }
 
 export function JourneysToolbar({
   total,
@@ -51,14 +38,14 @@ export function JourneysToolbar({
   paused,
   published,
   membersInJourney,
-  visibleItems,
+  pendingApprovals,
 }: {
   total: number
   drafts: number
   paused: number
   published: number
   membersInJourney: string
-  visibleItems: WorkflowListItem[]
+  pendingApprovals: number
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -78,6 +65,18 @@ export function JourneysToolbar({
   }
 
   const selectedStatus = searchParams.get("estado")
+  const filters: WorkflowsExportFiltersInput = {
+    status: enumValue(selectedStatus ?? undefined, WORKFLOW_STATUSES),
+    q: searchParams.get("q") ?? undefined,
+  }
+
+  const dialog = useCsvExportDialog({
+    previewAction: previewWorkflowsExportAction,
+    exportAction: exportWorkflowsAction,
+    columnOptions: WORKFLOWS_EXPORT_COLUMN_OPTIONS,
+    filters,
+    onStatus: notifyExportStatus,
+  })
 
   return (
     <div className="flex w-full items-center gap-2.5 pt-[18px] pb-4">
@@ -106,14 +105,25 @@ export function JourneysToolbar({
         value={selectedStatus ? [selectedStatus] : []}
         onChange={(v) => updateParam("estado", v[0] ?? null)}
       />
-      <Button
-        variant="outline"
-        className="gap-1.5 rounded-[10px] text-xs"
-        onClick={() => exportCsv(visibleItems)}
-      >
-        <Download className="size-3.5" />
-        Exportar
-      </Button>
+      <ExportCsvButton
+        className="rounded-[10px] text-xs"
+        onExport={dialog.openDialog}
+      />
+      <ExportDialog
+        {...dialog}
+        title="Exportar journeys"
+        entity={ENTITY}
+        columns={WORKFLOWS_EXPORT_COLUMN_OPTIONS}
+      />
+      {pendingApprovals > 0 && (
+        <Link
+          href="/aprobaciones"
+          className="flex shrink-0 items-center gap-[7px] rounded-[10px] border border-warning/40 bg-warning-bg px-3.5 py-2.5 text-xs font-medium text-warning"
+        >
+          {formatNumber(pendingApprovals)} pendiente
+          {pendingApprovals === 1 ? "" : "s"} de aprobación
+        </Link>
+      )}
       <NewJourneyButton />
     </div>
   )

@@ -6,6 +6,7 @@ import {
   MARITAL_STATUSES,
   GENDERS,
   LANGUAGES,
+  MEMBER_SEARCH_SCOPES,
   MEMBER_STATUSES,
 } from "@/types/domain"
 
@@ -50,4 +51,28 @@ export const pointsAdjustmentSchema = z.object({
   direction: z.enum(["otorgar", "restar"]),
   amount: z.number().int().positive(),
   reason: z.string().min(1, "Elige un motivo").max(120),
+})
+
+/**
+ * Filtros del listado (05.1), sin `page`/`pageSize` — "Exportar" siempre pide
+ * el universo completo, así que la paginación no aplica en esta ruta. Sin
+ * `satisfies z.ZodType<MemberExportFilters>`: forzaría a este archivo (lo
+ * importa react-hook-form en el cliente) a depender de `lib/queries.ts`, que
+ * importa `lib/supabase/server.ts` — la llamada `listAllMembers(parsedInput)`
+ * en la action ya es una comprobación de tipos equivalente. La comparte
+ * `previewMembersAction` (conteo antes de exportar, `ExportDialog`) y
+ * `exportMembersAction` (que además valida `columns`).
+ */
+export const memberExportFiltersSchema = z.object({
+  search: z.string().max(200).optional(),
+  searchScope: z.enum(MEMBER_SEARCH_SCOPES).optional(),
+  tierId: z.string().uuid().optional(),
+  accountStatus: z.enum(MEMBER_STATUSES).optional(),
+})
+export type MemberExportFiltersInput = z.infer<typeof memberExportFiltersSchema>
+
+/** `columns`: keys de `MEMBERS_EXPORT_COLUMN_OPTIONS` marcadas en el diálogo
+ *  — vacío o ausente exporta todas (`pickColumns`, `@/lib/csv`). */
+export const exportMembersSchema = memberExportFiltersSchema.extend({
+  columns: z.array(z.string()).optional(),
 })

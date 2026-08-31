@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 
+import { canPublishDirectly } from "@/lib/approval-flow"
+
 import { promotionsActionClient } from "./action-client"
+import { logPromotionEvent } from "./log-event"
+import { applyPublicationTarget } from "./publish-gate"
 import { detectCollisions } from "../lib/collision"
 import { hasPermission } from "../lib/permissions"
 import {
@@ -26,87 +30,30 @@ import {
   simulatePromotionSchema,
 } from "../schemas"
 import { getProgramParameters } from "@/lib/program-parameters"
-import type { createClient } from "@/lib/supabase/server"
-import type { Json } from "@/types/database.types"
-import type {
-  PromotionEventType,
-  PromotionPublicationStatus,
-} from "@/types/domain"
-
-type SupabaseClient = Awaited<ReturnType<typeof createClient>>
-
-/** Estado → evento de bitácora que lo registra. `borrador` no aparece: ninguna transición vuelve a borrador (ver `ALLOWED_STATUS_TRANSITIONS`). */
-const STATUS_EVENT_TYPE: Record<
-  Exclude<PromotionPublicationStatus, "borrador">,
-  PromotionEventType
-> = {
-  activa: "activada",
-  inactiva: "inactivada",
-  finalizada: "finalizada",
-}
-
-/**
- * Inserta una fila en `promocion_eventos` — la bitácora que alimenta
- * "Historial" en la vista de la promoción y "Logs" en el panel.
- *
- * Nunca hace fallar la acción que la llama: si la promoción se guardó pero
- * el evento no, perder la traza es mejor que dejar creer que el cambio no
- * ocurrió (la tabla es append-only, así que un reintento tampoco podría
- * corregirlo).
- */
-async function logPromotionEvent(
-  ctx: {
-    supabase: SupabaseClient
-    orgId: string
-    userId: string
-    actorLabel: string
-  },
-  event: {
-    promocionId: string
-    tipo: PromotionEventType
-    titulo: string
-    detalle?: string
-    codigoMotivo?: string
-    notaMotivo?: string
-    metadatos?: Record<string, unknown>
-  }
-): Promise<void> {
-  const { error } = await ctx.supabase.from("promocion_eventos").insert({
-    org_id: ctx.orgId,
-    promocion_id: event.promocionId,
-    tipo: event.tipo,
-    titulo: event.titulo,
-    detalle: event.detalle ?? null,
-    actor_tipo: "usuario",
-    actor_id: ctx.userId,
-    actor_etiqueta: ctx.actorLabel,
-    codigo_motivo: event.codigoMotivo ?? null,
-    nota_motivo: event.notaMotivo ?? null,
-    metadatos: (event.metadatos ?? {}) as Json,
-  })
-  if (error) {
-    console.error("No se pudo registrar el evento de la promoción", error)
-  }
-}
+import type { PromotionPublicationStatus } from "@/types/domain"
 
 export const createPromotionAction = promotionsActionClient
   .inputSchema(promotionSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const requiredAction =
-      parsedInput.publicationStatus === "activa" ? "aprobar" : "crear"
-    if (!hasPermission(ctx.permissionsSet, "promociones", requiredAction)) {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "crear")) {
       return {
         ok: false as const,
-        message:
-          requiredAction === "aprobar"
-            ? "No tienes permiso para activar promociones — guárdala como borrador."
-            : "No tienes permiso para crear promociones.",
+        message: "No tienes permiso para crear promociones.",
       }
     }
 
+    // Siempre nace en `borrador` — el trigger `promociones_insert_guard` lo
+    // exige igual (`20260831090000_promociones_journeys_doble_aprobacion.sql`):
+    // publicar directo desde el INSERT queda cerrado, así que el estado
+    // elegido en el wizard se aplica DESPUÉS, con `applyPublicationTarget`,
+    // que es quien decide si eso significa publicar o pedir aprobación.
     const { data, error } = await ctx.supabase
       .from("promociones")
-      .insert({ org_id: ctx.orgId, ...toRow(parsedInput) })
+      .insert({
+        org_id: ctx.orgId,
+        ...toRow(parsedInput),
+        estado_publicacion: "borrador",
+      })
       .select("id")
       .single()
 
@@ -124,13 +71,28 @@ export const createPromotionAction = promotionsActionClient
     await logPromotionEvent(ctx, {
       promocionId: id,
       tipo: "creada",
-      titulo: `Creada como ${PROMOTION_STATUS_LABEL[parsedInput.publicationStatus]}`,
+      titulo: PROMOTION_STATUS_LABEL.borrador,
       metadatos: {
         codigo: parsedInput.code,
-        estado_inicial: parsedInput.publicationStatus,
+        estado_inicial: "borrador",
         mecanica: parsedInput.benefitType,
       },
     })
+
+    if (parsedInput.publicationStatus !== "borrador") {
+      const gate = await applyPublicationTarget(ctx, {
+        promotionId: id,
+        from: "borrador",
+        to: parsedInput.publicationStatus,
+        // El wizard de creación no pregunta un motivo aparte para el
+        // estado inicial — mismo default que usa el diálogo de cambio de
+        // estado (`PromotionStatusActions`) al abrirse.
+        reasonCode: "decision_comercial",
+      })
+      if (!gate.ok) {
+        return { ok: false as const, message: gate.message }
+      }
+    }
 
     revalidatePath("/promociones")
     return { ok: true as const, id }
@@ -139,15 +101,10 @@ export const createPromotionAction = promotionsActionClient
 export const updatePromotionAction = promotionsActionClient
   .inputSchema(updatePromotionSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const requiredAction =
-      parsedInput.publicationStatus === "activa" ? "aprobar" : "editar"
-    if (!hasPermission(ctx.permissionsSet, "promociones", requiredAction)) {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "editar")) {
       return {
         ok: false as const,
-        message:
-          requiredAction === "aprobar"
-            ? "No tienes permiso para activar promociones — guárdala como borrador."
-            : "No tienes permiso para editar promociones.",
+        message: "No tienes permiso para editar promociones.",
       }
     }
 
@@ -175,9 +132,13 @@ export const updatePromotionAction = promotionsActionClient
       }
     }
 
+    // Igual que en `createPromotionAction`: el UPDATE deja el estado en
+    // `borrador` (sin cambio real, así que el trigger de la migración de
+    // aprobación ni interviene) y `applyPublicationTarget` se encarga
+    // aparte de la transición, si el formulario pidió una.
     const { error } = await ctx.supabase
       .from("promociones")
-      .update(toRow(values))
+      .update({ ...toRow(values), estado_publicacion: "borrador" })
       .eq("id", id)
 
     if (error) {
@@ -188,16 +149,24 @@ export const updatePromotionAction = promotionsActionClient
       return { ok: false as const, message }
     }
 
-    const next = values.publicationStatus
-    await logPromotionEvent(ctx, {
-      promocionId: id,
-      tipo: next === "borrador" ? "editada" : STATUS_EVENT_TYPE[next],
-      titulo:
-        next === "borrador"
-          ? "Borrador actualizado"
-          : `${PROMOTION_STATUS_LABEL[previous]} → ${PROMOTION_STATUS_LABEL[next]}`,
-      metadatos: { estado_anterior: previous, estado_nuevo: next },
-    })
+    if (values.publicationStatus === "borrador") {
+      await logPromotionEvent(ctx, {
+        promocionId: id,
+        tipo: "editada",
+        titulo: "Borrador actualizado",
+        metadatos: { estado_anterior: previous, estado_nuevo: "borrador" },
+      })
+    } else {
+      const gate = await applyPublicationTarget(ctx, {
+        promotionId: id,
+        from: "borrador",
+        to: values.publicationStatus,
+        reasonCode: "decision_comercial",
+      })
+      if (!gate.ok) {
+        return { ok: false as const, message: gate.message }
+      }
+    }
 
     revalidatePath("/promociones")
     revalidatePath(`/promociones/${id}/editar`)
@@ -213,15 +182,10 @@ export const updatePromotionAction = promotionsActionClient
 export const updatePromotionStatusAction = promotionsActionClient
   .inputSchema(updatePromotionStatusSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const requiredAction =
-      parsedInput.publicationStatus === "activa" ? "aprobar" : "editar"
-    if (!hasPermission(ctx.permissionsSet, "promociones", requiredAction)) {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "editar")) {
       return {
         ok: false as const,
-        message:
-          requiredAction === "aprobar"
-            ? "No tienes permiso para activar promociones."
-            : "No tienes permiso para editar promociones.",
+        message: "No tienes permiso para editar promociones.",
       }
     }
 
@@ -243,8 +207,7 @@ export const updatePromotionStatusAction = promotionsActionClient
     if (from === to) return { ok: true as const, publicationStatus: to }
 
     // Explícito además de `canTransitionStatus` (que también lo rechaza):
-    // así el mensaje dice por qué, y `to` queda tipado sin `borrador` para
-    // indexar `STATUS_EVENT_TYPE`.
+    // así el mensaje dice por qué.
     if (to === "borrador") {
       return {
         ok: false as const,
@@ -260,34 +223,33 @@ export const updatePromotionStatusAction = promotionsActionClient
       }
     }
 
-    const { error } = await ctx.supabase
-      .from("promociones")
-      .update({ estado_publicacion: to })
-      .eq("id", parsedInput.id)
-
-    if (error) {
-      return {
-        ok: false as const,
-        message: "No se pudo cambiar el estado de la promoción.",
-      }
-    }
-
-    await logPromotionEvent(ctx, {
-      promocionId: parsedInput.id,
-      tipo: STATUS_EVENT_TYPE[to],
-      titulo: `${PROMOTION_STATUS_LABEL[from]} → ${PROMOTION_STATUS_LABEL[to]}`,
-      codigoMotivo: parsedInput.reasonCode,
-      notaMotivo: parsedInput.reasonNote,
-      metadatos: { estado_anterior: from, estado_nuevo: to },
+    // `applyPublicationTarget` solo sustituye por `pendiente_aprobacion`
+    // cuando `from === "borrador" && to === "activa"` — el resto de
+    // transiciones que puede pedir esta acción (reactivar/inactivar/
+    // finalizar) se guardan tal cual, como siempre.
+    const gate = await applyPublicationTarget(ctx, {
+      promotionId: parsedInput.id,
+      from,
+      to,
+      reasonCode: parsedInput.reasonCode,
+      reasonNote: parsedInput.reasonNote,
     })
+    if (!gate.ok) {
+      return { ok: false as const, message: gate.message }
+    }
 
     revalidatePath("/promociones")
     revalidatePath(`/promociones/${parsedInput.id}/editar`)
-    return { ok: true as const, publicationStatus: to }
+    return { ok: true as const, publicationStatus: gate.status }
   })
 
 export type ActivatePromotionsResult =
-  | { ok: true; activated: number; skipped: { name: string; reason: string }[] }
+  | {
+      ok: true
+      activated: number
+      sentToApproval: number
+      skipped: { name: string; reason: string }[]
+    }
   | { ok: false; message: string }
 
 /**
@@ -296,16 +258,23 @@ export type ActivatePromotionsResult =
  *
  * Solo toca las que están en `borrador`; el resto se devuelven en `skipped`
  * con el motivo, en vez de fallar la operación entera o activarlas en
- * silencio. Cada activación deja su evento en la bitácora, igual que si se
- * hubiera hecho una por una desde el detalle.
+ * silencio. Igual que en el resto de caminos que llegan a `activa`
+ * (`publish-gate.ts`), quien no puede publicar directo (`rolBase !== "admin"`)
+ * no activa nada aquí: cada promoción del lote pasa a
+ * `pendiente_aprobacion` con su propia solicitud — no una sola solicitud
+ * para todo el lote, para que el aprobador pueda decidirlas una por una en
+ * la bandeja. Se resuelve en bloque (un solo UPDATE/INSERT para todo el
+ * lote) y no promoción por promoción porque la decisión ("¿publica
+ * directo?") es la misma para las 200 — depende de quién ejecuta la
+ * acción, no de cada fila.
  */
 export const activatePromotionsAction = promotionsActionClient
   .inputSchema(activatePromotionsSchema)
   .action(async ({ parsedInput, ctx }): Promise<ActivatePromotionsResult> => {
-    if (!hasPermission(ctx.permissionsSet, "promociones", "aprobar")) {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "editar")) {
       return {
         ok: false,
-        message: "No tienes permiso para activar promociones.",
+        message: "No tienes permiso para editar promociones.",
       }
     }
 
@@ -333,40 +302,73 @@ export const activatePromotionsAction = promotionsActionClient
     }
 
     if (activatable.length === 0) {
-      return { ok: true, activated: 0, skipped }
+      return { ok: true, activated: 0, sentToApproval: 0, skipped }
     }
+
+    const ids = activatable.map((row) => row.id)
+    const direct = canPublishDirectly(ctx.rolBase)
+    const targetStatus = direct ? "activa" : "pendiente_aprobacion"
 
     const { error } = await ctx.supabase
       .from("promociones")
-      .update({ estado_publicacion: "activa" })
-      .in(
-        "id",
-        activatable.map((row) => row.id)
-      )
+      .update({ estado_publicacion: targetStatus })
+      .in("id", ids)
 
     if (error) {
       return { ok: false, message: "No se pudieron activar las promociones." }
     }
 
+    if (!direct) {
+      const { error: approvalError } = await ctx.supabase
+        .from("promotion_approval")
+        .insert(
+          ids.map((promocionId) => ({
+            org_id: ctx.orgId,
+            promocion_id: promocionId,
+            requested_by: ctx.userId,
+            codigo_motivo: parsedInput.reasonCode,
+            nota_motivo: parsedInput.reasonNote ?? null,
+          }))
+        )
+      if (approvalError) {
+        return {
+          ok: false,
+          message: "No se pudieron crear las solicitudes de aprobación.",
+        }
+      }
+    }
+
+    const detalle =
+      parsedInput.ids.length > 1
+        ? `${direct ? "Activación" : "Solicitud de aprobación"} masiva de ${activatable.length} promociones.`
+        : undefined
+
     await Promise.all(
       activatable.map((row) =>
         logPromotionEvent(ctx, {
           promocionId: row.id,
-          tipo: "activada",
-          titulo: `${PROMOTION_STATUS_LABEL.borrador} → ${PROMOTION_STATUS_LABEL.activa}`,
-          detalle:
-            parsedInput.ids.length > 1
-              ? `Activación masiva de ${activatable.length} promociones.`
-              : undefined,
+          tipo: direct ? "activada" : "aprobacion_solicitada",
+          titulo: direct
+            ? `${PROMOTION_STATUS_LABEL.borrador} → ${PROMOTION_STATUS_LABEL.activa}`
+            : PROMOTION_STATUS_LABEL.pendiente_aprobacion,
+          detalle,
           codigoMotivo: parsedInput.reasonCode,
           notaMotivo: parsedInput.reasonNote,
-          metadatos: { estado_anterior: "borrador", estado_nuevo: "activa" },
+          metadatos: {
+            estado_anterior: "borrador",
+            estado_nuevo: targetStatus,
+          },
         })
       )
     )
 
     revalidatePath("/promociones")
-    return { ok: true, activated: activatable.length, skipped }
+    return {
+      ok: true,
+      activated: direct ? activatable.length : 0,
+      sentToApproval: direct ? 0 : activatable.length,
+      skipped,
+    }
   })
 
 export type DeletePromotionsResult =

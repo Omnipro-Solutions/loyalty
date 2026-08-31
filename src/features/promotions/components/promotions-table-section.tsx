@@ -10,7 +10,6 @@ type PromotionsTableSectionProps = {
   segmentNameById: Map<string, string>
 }
 
-/** Comparte la promesa con `PromotionsExportSection` — ver el docblock de esa función. */
 export async function PromotionsTableSection({
   promotionsPromise,
   pageSize,

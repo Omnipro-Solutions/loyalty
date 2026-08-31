@@ -2,11 +2,8 @@ import { Suspense } from "react"
 
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { ExportStoresButton } from "@/features/stores/components/export-stores-button"
 import { StoresCard } from "@/features/stores/components/stores-card"
-import {
-  ExportButtonSkeleton,
-  StoresExportSlot,
-} from "@/features/stores/components/stores-export-slot"
 import { StoresTableSection } from "@/features/stores/components/stores-table-section"
 import {
   STORES_PAGE_SIZE,
@@ -15,10 +12,13 @@ import {
   listStoreGroups,
   listStores,
 } from "@/features/stores/lib/queries"
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value
-}
+import {
+  firstValue,
+  enumValue,
+  parsePage,
+  parsePageSize,
+} from "@/lib/search-params"
+import { STORE_FORMATS } from "@/types/domain"
 
 /** Igual al `size` de cada `ColumnDef` en `stores-table.tsx`. */
 const STORES_TABLE_COLUMNS = [220, 190, 210, 190, 90, 130, 44]
@@ -30,9 +30,9 @@ export default async function StoresPage({
   const params = await searchParams
   const search = firstValue(params.q)
   const city = firstValue(params.ciudad)
-  const format = firstValue(params.formato)
-  const page = Number(firstValue(params.page) ?? "1")
-  const pageSize = Number(firstValue(params.pageSize) ?? STORES_PAGE_SIZE)
+  const format = enumValue(params.formato, STORE_FORMATS)
+  const page = parsePage(params.page)
+  const pageSize = parsePageSize(params.pageSize, STORES_PAGE_SIZE)
 
   // No dependen de los filtros — `getStoresSummary()` es una consulta aparte.
   const [cities, summary, storeGroups] = await Promise.all([
@@ -54,11 +54,7 @@ export default async function StoresPage({
         cities={cities}
         summary={summary}
         storeGroups={storeGroups}
-        exportSlot={
-          <Suspense fallback={<ExportButtonSkeleton />}>
-            <StoresExportSlot storesPromise={storesPromise} />
-          </Suspense>
-        }
+        exportSlot={<ExportStoresButton filters={{ search, city, format }} />}
       >
         <Suspense
           key={dataKey}

@@ -25,17 +25,22 @@ import {
   ALLOWED_STATUS_TRANSITIONS,
   PUBLICATION_STATUS_DESCRIPTION,
   PUBLICATION_STATUS_LABEL,
-  PUBLICATION_STATUSES,
+  SELECTABLE_PUBLICATION_STATUSES,
   STATUS_CHANGE_REASON_LABEL,
   statusChangeNeedsNote,
   TRANSITION_VERB,
   type PublicationStatus,
+  type SelectablePublicationStatus,
   type StatusChangeReason,
 } from "@/lib/publication-status"
 import { STATUS_CHANGE_REASONS } from "@/types/domain"
 
 export type StatusChangePayload = {
-  status: PublicationStatus
+  // `options` (más abajo) nunca ofrece `pendiente_aprobacion` — ni en modo
+  // "publicar" (`SELECTABLE_PUBLICATION_STATUSES`) ni en "cambiar"
+  // (`ALLOWED_STATUS_TRANSITIONS` nunca lo incluye como destino) — así que
+  // este diálogo nunca puede producir ese valor.
+  status: SelectablePublicationStatus
   reason: StatusChangeReason
   note: string
   /** Solo al publicar: la vigencia decide si el estado mostrado será Activa o Programada. */
@@ -85,11 +90,14 @@ export function StatusChangeDialog({
   onConfirm: (payload: StatusChangePayload) => void
 }) {
   const transitions = ALLOWED_STATUS_TRANSITIONS[currentStatus]
+  // `pendiente_aprobacion` nunca es una opción del cliente: no está en
+  // `SELECTABLE_PUBLICATION_STATUSES` ni en ningún array de
+  // `ALLOWED_STATUS_TRANSITIONS` — lo decide el servidor.
   const options: readonly PublicationStatus[] =
-    mode === "publicar" ? PUBLICATION_STATUSES : transitions
+    mode === "publicar" ? SELECTABLE_PUBLICATION_STATUSES : transitions
 
-  const [status, setStatus] = useState<PublicationStatus>(
-    options[0] ?? "activa"
+  const [status, setStatus] = useState<SelectablePublicationStatus>(
+    (options[0] as SelectablePublicationStatus | undefined) ?? "activa"
   )
   const [reason, setReason] = useState<StatusChangeReason>("decision_comercial")
   const [note, setNote] = useState("")
@@ -140,7 +148,7 @@ export function StatusChangeDialog({
           >
             <Select
               value={status}
-              onValueChange={(v) => setStatus(v as PublicationStatus)}
+              onValueChange={(v) => setStatus(v as SelectablePublicationStatus)}
             >
               <SelectTrigger id="status-target" className="w-full">
                 <SelectValue>

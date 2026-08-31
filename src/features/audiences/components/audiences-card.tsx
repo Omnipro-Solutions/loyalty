@@ -5,8 +5,7 @@ import { AudiencesSearch } from "./audiences-search"
 type AudiencesCardProps = {
   /** Pill de conteo — su propio `<Suspense>`, misma promesa que `children`. */
   count: ReactNode
-  /** `ExportAudiencesButton` necesita las audiencias filtradas — su propio `<Suspense>` sin key. */
-  exportButton: ReactNode
+  exportSlot: ReactNode
   /** Tabla + paginación, o `EmptyState` — dentro de un `<Suspense>` con key. */
   children: ReactNode
 }
@@ -19,7 +18,7 @@ type AudiencesCardProps = {
  */
 export function AudiencesCard({
   count,
-  exportButton,
+  exportSlot,
   children,
 }: AudiencesCardProps) {
   return (
@@ -32,7 +31,7 @@ export function AudiencesCard({
           {count}
         </div>
         <AudiencesSearch />
-        {exportButton}
+        {exportSlot}
       </div>
 
       {children}

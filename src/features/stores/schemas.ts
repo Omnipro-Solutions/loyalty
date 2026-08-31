@@ -42,3 +42,19 @@ export const updateStoreGroupSchema = storeGroupSchema.extend({
 export const deleteStoreGroupSchema = z.object({
   id: z.string().uuid(),
 })
+
+/** Filtros del listado (04.1), sin `page`/`pageSize` — comparte
+ *  `previewStoresExportAction` (conteo) y `exportStoresAction` (además
+ *  valida `columns`). `city` no tiene un enum cerrado (viene de
+ *  `listCities()`, dinámico), así que se queda como string libre. */
+export const storesExportFiltersSchema = z.object({
+  search: z.string().max(200).optional(),
+  city: z.string().max(200).optional(),
+  format: z.enum(STORE_FORMATS).optional(),
+})
+export type StoresExportFiltersInput = z.infer<typeof storesExportFiltersSchema>
+
+/** `columns`: keys de `STORES_EXPORT_COLUMN_OPTIONS` marcadas en el diálogo — vacío exporta todas. */
+export const exportStoresSchema = storesExportFiltersSchema.extend({
+  columns: z.array(z.string()).optional(),
+})

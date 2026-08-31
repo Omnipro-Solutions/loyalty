@@ -1,3 +1,4 @@
+import { fetchAllPaged, type PagedAll } from "@/lib/supabase/paginate"
 import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import {
@@ -130,6 +131,75 @@ export type CouponBatchListItem = CouponBatch & {
   approved_by_profile: { nombre: string } | null
 }
 
+export type CouponBatchExportFilters = Omit<
+  CouponBatchFilters,
+  "page" | "pageSize"
+>
+
+const COUPON_BATCH_EMBED =
+  "*, free_product:productos!coupon_batch_free_product_id_fkey(sku), authorized_by_profile:profiles!coupon_batch_authorized_by_fkey(nombre), approved_by_profile:profiles!coupon_batch_approved_by_fkey(nombre)"
+
+/**
+ * Resuelve el `.or()` de búsqueda UNA vez (no por página): el ámbito
+ * "persona"/"código"/"todo" necesita `batchIdsMatchingCouponSearch`, una
+ * consulta async aparte — repetirla en cada página de `fetchAllPaged`
+ * multiplicaría esa consulta hasta por 10 en un export grande.
+ */
+async function resolveCouponBatchSearchOr(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  search: string,
+  scope: CouponSearchScope
+): Promise<string> {
+  if (scope === "batch") {
+    return `name.ilike.%${search}%,reference.ilike.%${search}%`
+  }
+  const matchedIds = await batchIdsMatchingCouponSearch(supabase, search, scope)
+  const idFilter =
+    matchedIds.length > 0
+      ? `id.in.(${matchedIds.join(",")})`
+      : "id.eq.00000000-0000-0000-0000-000000000000"
+  return scope === "all"
+    ? `name.ilike.%${search}%,reference.ilike.%${search}%,${idFilter}`
+    : idFilter
+}
+
+function applyCouponBatchFilters<
+  T extends {
+    or: (f: string) => T
+    eq: (c: string, v: string) => T
+    lte: (c: string, v: string) => T
+  },
+>(query: T, filters: CouponBatchExportFilters, searchOr: string | null): T {
+  if (searchOr) query = query.or(searchOr)
+  if (filters.status) query = query.eq("status", filters.status)
+  if (filters.origin) query = query.eq("origin", filters.origin)
+  // "Vigente en el rango": la emisión sigue vigente en la fecha de inicio
+  // del rango (o no tiene fin) y ya arrancó antes del fin del rango.
+  if (filters.validFrom) {
+    query = query.or(`valid_to.is.null,valid_to.gte.${filters.validFrom}`)
+  }
+  if (filters.validTo) query = query.lte("valid_from", filters.validTo)
+  return query
+}
+
+/** `.order("id")` desempata `created_at`: sin un desempate único, paginar
+ *  con `.range()` en llamadas separadas puede repetir o saltar filas entre
+ *  páginas. Compartida por `listCouponBatches` (paginado) y
+ *  `listAllCouponBatches` (universo completo para export). */
+function buildCouponBatchesQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: CouponBatchExportFilters,
+  searchOr: string | null
+) {
+  const query = supabase
+    .from("coupon_batch")
+    .select(COUPON_BATCH_EMBED, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .order("id")
+
+  return applyCouponBatchFilters(query, filters, searchOr)
+}
+
 export async function listCouponBatches(
   filters: CouponBatchFilters = {}
 ): Promise<{ batches: CouponBatchListItem[]; total: number }> {
@@ -139,50 +209,69 @@ export async function listCouponBatches(
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  let query = supabase
-    .from("coupon_batch")
-    .select(
-      "*, free_product:productos!coupon_batch_free_product_id_fkey(sku), authorized_by_profile:profiles!coupon_batch_authorized_by_fkey(nombre), approved_by_profile:profiles!coupon_batch_approved_by_fkey(nombre)",
-      { count: "exact" }
-    )
-    .order("created_at", { ascending: false })
-    .range(from, to)
-
   const search = filters.search ? sanitizeSearch(filters.search) : ""
-  if (search) {
-    const scope = filters.searchScope ?? "all"
-    if (scope === "batch") {
-      query = query.or(`name.ilike.%${search}%,reference.ilike.%${search}%`)
-    } else {
-      const matchedIds = await batchIdsMatchingCouponSearch(
+  const searchOr = search
+    ? await resolveCouponBatchSearchOr(
         supabase,
         search,
-        scope
+        filters.searchScope ?? "all"
       )
-      const idFilter =
-        matchedIds.length > 0
-          ? `id.in.(${matchedIds.join(",")})`
-          : "id.eq.00000000-0000-0000-0000-000000000000"
-      query =
-        scope === "all"
-          ? query.or(
-              `name.ilike.%${search}%,reference.ilike.%${search}%,${idFilter}`
-            )
-          : query.or(idFilter)
-    }
-  }
-  if (filters.status) query = query.eq("status", filters.status)
-  if (filters.origin) query = query.eq("origin", filters.origin)
-  // "Vigente en el rango": la emisión sigue vigente en la fecha de inicio
-  // del rango (o no tiene fin) y ya arrancó antes del fin del rango.
-  if (filters.validFrom) {
-    query = query.or(`valid_to.is.null,valid_to.gte.${filters.validFrom}`)
-  }
-  if (filters.validTo) query = query.lte("valid_from", filters.validTo)
+    : null
 
-  const { data, error, count } = await query
+  const { data, error, count } = await buildCouponBatchesQuery(
+    supabase,
+    filters,
+    searchOr
+  ).range(from, to)
   if (error) throw error
   return { batches: (data ?? []) as CouponBatchListItem[], total: count ?? 0 }
+}
+
+/** Universo completo filtrado, para "Exportar" (13.1) — sin la paginación
+ *  de `listCouponBatches`. */
+export async function listAllCouponBatches(filters: CouponBatchExportFilters) {
+  const supabase = await createClient()
+  const search = filters.search ? sanitizeSearch(filters.search) : ""
+  const searchOr = search
+    ? await resolveCouponBatchSearchOr(
+        supabase,
+        search,
+        filters.searchScope ?? "all"
+      )
+    : null
+
+  const { rows, total, truncated } = await fetchAllPaged<CouponBatchListItem>(
+    (from, to) =>
+      buildCouponBatchesQuery(supabase, filters, searchOr).range(from, to)
+  )
+  return { batches: rows, total, truncated }
+}
+
+/** Conteo de emisiones que matchean los filtros, sin traer datos — para el
+ *  diálogo de export. */
+export async function countCouponBatches(
+  filters: CouponBatchExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  const search = filters.search ? sanitizeSearch(filters.search) : ""
+  const searchOr = search
+    ? await resolveCouponBatchSearchOr(
+        supabase,
+        search,
+        filters.searchScope ?? "all"
+      )
+    : null
+
+  const query = supabase
+    .from("coupon_batch")
+    .select("id", { count: "exact", head: true })
+  const { count, error } = await applyCouponBatchFilters(
+    query,
+    filters,
+    searchOr
+  )
+  if (error) throw error
+  return count ?? 0
 }
 
 /** Conteo por estado (chips de 13.1, "Todas/Borrador/Generando/Emitidas/Cerradas/Anuladas") sobre el universo completo, no la página cargada. Agregado en DB (`coupon_batch_status_counts`) — antes traía `coupon_batch` completa para contar en JS. */
@@ -243,22 +332,16 @@ export type CouponFilters = {
   pageSize?: number
 }
 
-/** Regla 7.8 del doc: la búsqueda corre en servidor sobre el universo completo, vía la vista `coupon_search` (denormaliza persona/emisión para poder hacer un `.or()` sobre una sola relación). */
-export async function listCoupons(
-  filters: CouponFilters = {}
-): Promise<{ coupons: CouponSearchRow[]; total: number }> {
-  const supabase = await createClient()
-  const page = filters.page ?? 1
-  const pageSize = filters.pageSize ?? COUPONS_PAGE_SIZE
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+export type CouponExportFilters = Omit<CouponFilters, "page" | "pageSize">
 
-  let query = supabase
-    .from("coupon_search")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(from, to)
-
+function applyCouponFilters<
+  T extends {
+    or: (f: string) => T
+    ilike: (c: string, v: string) => T
+    eq: (c: string, v: string) => T
+    lte: (c: string, v: string) => T
+  },
+>(query: T, filters: CouponExportFilters): T {
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
     query = applyCouponSearchFilter(query, search, filters.searchScope ?? "all")
@@ -269,10 +352,67 @@ export async function listCoupons(
     query = query.or(`valid_to.is.null,valid_to.gte.${filters.validFrom}`)
   }
   if (filters.validTo) query = query.lte("valid_from", filters.validTo)
+  return query
+}
 
-  const { data, error, count } = await query
+/** `.order("id")` desempata `created_at`, mismo motivo que
+ *  `buildCouponBatchesQuery`. Compartida por `listCoupons` (paginado) y
+ *  `listAllCoupons` (universo completo para export). Regla 7.8 del doc: la
+ *  búsqueda corre en servidor sobre el universo completo, vía la vista
+ *  `coupon_search` (denormaliza persona/emisión para poder hacer un `.or()`
+ *  sobre una sola relación). */
+function buildCouponsQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: CouponExportFilters
+) {
+  const query = supabase
+    .from("coupon_search")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .order("id")
+
+  return applyCouponFilters(query, filters)
+}
+
+export async function listCoupons(
+  filters: CouponFilters = {}
+): Promise<{ coupons: CouponSearchRow[]; total: number }> {
+  const supabase = await createClient()
+  const page = filters.page ?? 1
+  const pageSize = filters.pageSize ?? COUPONS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await buildCouponsQuery(
+    supabase,
+    filters
+  ).range(from, to)
   if (error) throw error
   return { coupons: (data ?? []).map(toCouponSearchRow), total: count ?? 0 }
+}
+
+/** Universo completo filtrado, para "Exportar" (13.1, vista "cupones") —
+ *  sin la paginación de `listCoupons`. */
+export async function listAllCoupons(filters: CouponExportFilters) {
+  const supabase = await createClient()
+  const { rows, total, truncated } = await fetchAllPaged<CouponSearchViewRow>(
+    (from, to) => buildCouponsQuery(supabase, filters).range(from, to)
+  )
+  return { coupons: rows.map(toCouponSearchRow), total, truncated }
+}
+
+/** Conteo de cupones que matchean los filtros, sin traer datos — para el
+ *  diálogo de export. */
+export async function countCoupons(
+  filters: CouponExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  const query = supabase
+    .from("coupon_search")
+    .select("id", { count: "exact", head: true })
+  const { count, error } = await applyCouponFilters(query, filters)
+  if (error) throw error
+  return count ?? 0
 }
 
 /** Mismos embebidos que `listCouponBatches` (SKU del regalo, quien autorizó) — "Emisión de origen" de 13.4 los necesita igual que la fila expandida de 13.1. */
@@ -992,18 +1132,40 @@ export async function listDecidedApprovals(
   return (data ?? []) as unknown as CouponApprovalWithBatch[]
 }
 
-/** Sin el límite de 25 de `listCoupons` — "Exportar CSV" de una emisión necesita el universo de esa emisión, no una página. */
+/**
+ * Sin el límite de 25 de `listCoupons` — "Exportar CSV" de una emisión
+ * necesita el universo de esa emisión, no una página. Pagina en bucle
+ * (`fetchAllPaged`) hasta `EXPORT_ROW_CAP`: sin esto, `max_rows = 1000` de
+ * PostgREST (`supabase/config.toml`) recortaba el resultado en silencio en
+ * cualquier emisión de más de 1000 cupones.
+ */
 export async function listAllCouponsForBatch(
   batchId: string
-): Promise<CouponSearchRow[]> {
+): Promise<PagedAll<CouponSearchRow>> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { rows, total, truncated } = await fetchAllPaged<CouponSearchViewRow>(
+    (from, to) =>
+      supabase
+        .from("coupon_search")
+        .select("*", { count: "exact" })
+        .eq("batch_id", batchId)
+        .order("created_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+  )
+  return { rows: rows.map(toCouponSearchRow), total, truncated }
+}
+
+/** Conteo de cupones de una emisión, sin traer datos — para `ExportDialog`
+ *  ("vas a exportar N cupones") antes de pedir el universo completo. */
+export async function countCouponsForBatch(batchId: string): Promise<number> {
+  const supabase = await createClient()
+  const { count, error } = await supabase
     .from("coupon_search")
-    .select("*")
+    .select("id", { count: "exact", head: true })
     .eq("batch_id", batchId)
-    .order("created_at", { ascending: true })
   if (error) throw error
-  return (data ?? []).map(toCouponSearchRow)
+  return count ?? 0
 }
 
 /** IDs de cupones de la emisión sin evento `viewed` — universo de "Reenviar no vistos". Cancelados quedan fuera: reenviar un cupón anulado no tiene sentido. */

@@ -2,8 +2,9 @@ import { z } from "zod"
 
 import {
   BUILDER_NODE_TYPES,
-  PUBLICATION_STATUSES,
+  SELECTABLE_PUBLICATION_STATUSES,
   STATUS_CHANGE_REASONS,
+  WORKFLOW_STATUSES,
   type BuilderNodeType,
 } from "@/types/domain"
 
@@ -79,7 +80,10 @@ export const runInputSchema = z.object({
 export const statusChangeSchema = z
   .object({
     workflowId: z.string().uuid(),
-    estado: z.enum(PUBLICATION_STATUSES),
+    // `pendiente_aprobacion` no es un destino elegible por el cliente — lo
+    // decide el servidor según el `rol_base` de quien publica (ver
+    // `canvas/publish-gate.ts`).
+    estado: z.enum(SELECTABLE_PUBLICATION_STATUSES),
     motivo: z.enum(STATUS_CHANGE_REASONS),
     nota: z.string().max(500).default(""),
     vigente_desde: z.string().optional(),
@@ -91,9 +95,35 @@ export const statusChangeSchema = z
   })
 
 export const publishWorkflowSchema = runInputSchema.extend({
-  estado: z.enum(PUBLICATION_STATUSES).default("activa"),
+  estado: z.enum(SELECTABLE_PUBLICATION_STATUSES).default("activa"),
   motivo: z.enum(STATUS_CHANGE_REASONS).default("decision_comercial"),
   nota: z.string().max(500).default(""),
   vigente_desde: z.string(),
   vigente_hasta: z.string().nullable().default(null),
+})
+
+/** Aprobar/rechazar una solicitud de `workflow_approval` — calco de `features/promotions/schemas.ts` `decideApprovalSchema`. */
+export const decideApprovalSchema = z.object({
+  approvalId: z.string().uuid(),
+  note: z.string().optional(),
+})
+
+export const withdrawApprovalSchema = z.object({
+  approvalId: z.string().uuid(),
+})
+
+/** Filtros del toolbar de `/journeys`, sin `page`/`pageSize` — comparte
+ *  `previewWorkflowsExportAction` (conteo) y `exportWorkflowsAction`
+ *  (además valida `columns`). */
+export const workflowsExportFiltersSchema = z.object({
+  status: z.enum(WORKFLOW_STATUSES).optional(),
+  q: z.string().max(200).optional(),
+})
+export type WorkflowsExportFiltersInput = z.infer<
+  typeof workflowsExportFiltersSchema
+>
+
+/** `columns`: keys de `WORKFLOWS_EXPORT_COLUMN_OPTIONS` marcadas en el diálogo — vacío exporta todas. */
+export const exportWorkflowsSchema = workflowsExportFiltersSchema.extend({
+  columns: z.array(z.string()).optional(),
 })

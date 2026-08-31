@@ -530,14 +530,30 @@ export type StackingMode = (typeof STACKING_MODES)[number]
  *
  * `programada` no es un estado guardado: se deriva de cruzar `activa` con
  * la vigencia.
+ *
+ * `pendiente_aprobacion` (`20260831090000_promociones_journeys_doble_aprobacion.sql`)
+ * tampoco es elegible por quien publica — lo escribe el servidor cuando
+ * quien publica no es admin, nunca el cliente. Por eso NO está en
+ * `SELECTABLE_PUBLICATION_STATUSES`, la tupla que sí deben usar los
+ * `<Select>` y los `z.enum` de los formularios.
  */
 export const PUBLICATION_STATUSES = [
   "borrador",
+  "pendiente_aprobacion",
   "activa",
   "inactiva",
   "finalizada",
 ] as const
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number]
+
+export const SELECTABLE_PUBLICATION_STATUSES = [
+  "borrador",
+  "activa",
+  "inactiva",
+  "finalizada",
+] as const satisfies readonly PublicationStatus[]
+export type SelectablePublicationStatus =
+  (typeof SELECTABLE_PUBLICATION_STATUSES)[number]
 
 export const PROMOTION_PUBLICATION_STATUSES = PUBLICATION_STATUSES
 export type PromotionPublicationStatus = PublicationStatus
@@ -936,7 +952,7 @@ export const CONTINUITY_WINDOW_UNITS = [
 ] as const
 export type ContinuityWindowUnit = (typeof CONTINUITY_WINDOW_UNITS)[number]
 
-/** Vocabulario de `tipo` en `promocion_eventos` — ciclo de vida + canjes, ver comentario de la migración `20260826160000_promociones_eventos.sql`. */
+/** Vocabulario de `tipo` en `promocion_eventos` — ciclo de vida + canjes, ver comentario de la migración `20260826160000_promociones_eventos.sql`. Los cuatro `aprobacion_*` se añadieron en `20260831090000_promociones_journeys_doble_aprobacion.sql`, mismo criterio que los `approval_*` de `COUPON_EVENT_TYPES`. */
 export const PROMOTION_EVENT_TYPES = [
   "creada",
   "editada",
@@ -949,8 +965,21 @@ export const PROMOTION_EVENT_TYPES = [
   "cancelada",
   "canje",
   "canje_rechazado",
+  "aprobacion_solicitada",
+  "aprobacion_concedida",
+  "aprobacion_rechazada",
+  "aprobacion_retirada",
 ] as const
 export type PromotionEventType = (typeof PROMOTION_EVENT_TYPES)[number]
+
+/** Espejo de `COUPON_APPROVAL_STATUSES`, para `promotion_approval`/`workflow_approval` (misma migración). Se mantiene como tupla propia y no reutilizada por cupones — no hay ningún motivo para que un cambio en uno de los tres flujos de aprobación afecte a los otros dos. */
+export const APPROVAL_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+] as const
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number]
 
 /**
  * Motivo obligatorio al cambiar el estado de una promoción publicada — se

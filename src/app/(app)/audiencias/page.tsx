@@ -2,26 +2,28 @@ import { Suspense } from "react"
 
 import { KpiWidget } from "@/components/data/kpi-widget"
 import { AppPage } from "@/components/layout/app-page"
-import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { AudiencesCard } from "@/features/audiences/components/audiences-card"
 import {
   AudiencesCount,
   CountPillSkeleton,
 } from "@/features/audiences/components/audiences-count"
-import { AudiencesExportSection } from "@/features/audiences/components/audiences-export-section"
+import { ExportAudiencesButton } from "@/features/audiences/components/export-audiences-button"
 import { AudiencesTableSection } from "@/features/audiences/components/audiences-table-section"
 import {
   AUDIENCES_PAGE_SIZE,
+  AUDIENCES_SORTS,
   getAudiencesKpis,
   listAudiences,
   type AudiencesSort,
 } from "@/features/audiences/lib/queries"
 import { formatNumber, formatPercent } from "@/lib/format"
-
-function primerValor(valor: string | string[] | undefined) {
-  return Array.isArray(valor) ? valor[0] : valor
-}
+import {
+  enumValue,
+  firstValue,
+  parsePage,
+  parsePageSize,
+} from "@/lib/search-params"
 
 /** `formatPercent` ya antepone "-" a los negativos (Intl) pero no "+" a los positivos — esta sí, para que el signo sea explícito en el pill de variación. */
 function formatDeltaPercent(valor: number): string {
@@ -36,11 +38,12 @@ export default async function AudiencesPage({
   searchParams,
 }: PageProps<"/audiencias">) {
   const params = await searchParams
-  const busqueda = primerValor(params.q)
-  const sort = (primerValor(params.sort) ?? "tamano") as AudiencesSort
-  const dir = primerValor(params.dir) === "asc" ? "asc" : "desc"
-  const page = Number(primerValor(params.page) ?? "1")
-  const pageSize = Number(primerValor(params.pageSize) ?? AUDIENCES_PAGE_SIZE)
+  const busqueda = firstValue(params.q)
+  const sort: AudiencesSort =
+    enumValue(params.sort, AUDIENCES_SORTS) ?? "tamano"
+  const dir = firstValue(params.dir) === "asc" ? "asc" : "desc"
+  const page = parsePage(params.page)
+  const pageSize = parsePageSize(params.pageSize, AUDIENCES_PAGE_SIZE)
 
   // No depende de los filtros — se queda esperada aquí.
   const kpis = await getAudiencesKpis()
@@ -95,10 +98,8 @@ export default async function AudiencesPage({
             <AudiencesCount audiencesPromise={audiencesPromise} />
           </Suspense>
         }
-        exportButton={
-          <Suspense fallback={<Skeleton className="h-9 w-24 rounded-[10px]" />}>
-            <AudiencesExportSection audiencesPromise={audiencesPromise} />
-          </Suspense>
+        exportSlot={
+          <ExportAudiencesButton filters={{ search: busqueda, sort, dir }} />
         }
       >
         <Suspense

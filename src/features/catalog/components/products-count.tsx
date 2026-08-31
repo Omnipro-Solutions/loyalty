@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/feedback/skeleton"
 import { formatNumber } from "@/lib/format"
 
-import { ExportProductsButton } from "./export-products-button"
 import type { Product } from "../lib/queries"
 
 type ProductsPromise = Promise<{ products: Product[]; total: number }>
@@ -21,18 +20,4 @@ export async function ProductsCount({ productsPromise }: ProductsCountProps) {
 /** Mismo alto que el pill real para que el título no se mueva al resolver. */
 export function CountPillSkeleton() {
   return <Skeleton className="h-[19px] w-9 rounded-full" />
-}
-
-type ProductsExportSlotProps = { productsPromise: ProductsPromise }
-
-/** `ExportProductsButton` necesita el array de `products` ya resuelto — vive en el mismo boundary que la tabla, no en el shell síncrono. */
-export async function ProductsExportSlot({
-  productsPromise,
-}: ProductsExportSlotProps) {
-  const { products } = await productsPromise
-  return <ExportProductsButton products={products} />
-}
-
-export function ExportButtonSkeleton() {
-  return <Skeleton className="h-9 w-[104px] rounded-[10px]" />
 }

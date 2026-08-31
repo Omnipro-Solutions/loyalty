@@ -41,6 +41,7 @@ import {
   PROMOTION_STATUS_CHANGE_REASONS,
   type PromotionPublicationStatus,
   type PromotionStatusChangeReason,
+  type SelectablePublicationStatus,
 } from "@/types/domain"
 
 import { updatePromotionStatusAction } from "../actions/promotions"
@@ -55,6 +56,11 @@ import { ALLOWED_STATUS_TRANSITIONS, type PromotionStatus } from "../lib/status"
 /** Verbo de la acción, no nombre del estado: el botón es una orden ("Inactivar"), la insignia es un estado ("Inactiva"). */
 const TRANSITION_VERB: Record<PromotionPublicationStatus, string> = {
   borrador: "Volver a borrador",
+  // Nunca se ofrece como botón (ver `ALLOWED_STATUS_TRANSITIONS` en
+  // `lib/publication-status.ts`): el servidor decide por su cuenta cuándo
+  // una promoción cae en este estado. El valor existe solo para que el mapa
+  // sea exhaustivo.
+  pendiente_aprobacion: "Enviar a aprobación",
   activa: "Reactivar",
   inactiva: "Inactivar",
   finalizada: "Finalizar",
@@ -62,6 +68,7 @@ const TRANSITION_VERB: Record<PromotionPublicationStatus, string> = {
 
 const TRANSITION_ICON: Record<PromotionPublicationStatus, LucideIcon> = {
   borrador: CirclePause,
+  pendiente_aprobacion: CirclePause,
   activa: CircleCheck,
   inactiva: CirclePause,
   finalizada: Flag,
@@ -131,7 +138,11 @@ export function PromotionStatusActions({
     setError(undefined)
     update.execute({
       id: promotionId,
-      publicationStatus: target,
+      // `target` solo se asigna desde `ALLOWED_STATUS_TRANSITIONS`, que
+      // nunca incluye `pendiente_aprobacion` como destino — el cast es
+      // seguro; si algún día dejara de serlo, la acción lo rechazaría igual
+      // por el `z.enum(SELECTABLE_PUBLICATION_STATUSES)` de su schema.
+      publicationStatus: target as SelectablePublicationStatus,
       reasonCode,
       reasonNote: note || undefined,
     })

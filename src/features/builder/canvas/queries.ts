@@ -1,5 +1,6 @@
 import { formatNumber } from "@/lib/format"
 import { STATUS_CHANGE_REASON_LABEL } from "@/lib/publication-status"
+import { fetchAllPaged } from "@/lib/supabase/paginate"
 import { createClient } from "@/lib/supabase/server"
 import {
   hasStatusEventsTable,
@@ -355,6 +356,91 @@ export async function listWorkflows(
   }
 }
 
+export type WorkflowExportFilters = { status?: WorkflowStatus; q?: string }
+
+export type WorkflowExportRow = {
+  id: string
+  nombre: string
+  estado: WorkflowStatus
+  actualizado_en: string
+  authorName: string | null
+  totalNodes: number
+}
+
+/** Cascada de filtros para export — independiente de `listWorkflows`: las
+ *  5 columnas que hoy se exportan (`journeys-toolbar.tsx`) no usan
+ *  atribución ni vigencia, así que no hace falta reconstruir ese join para
+ *  el universo completo. `v2` resuelto una sola vez afuera del bucle de
+ *  `fetchAllPaged`, no en cada página. */
+function applyWorkflowExportFilters<
+  T extends { or: (f: string) => T; eq: (c: string, v: string) => T },
+>(query: T, filters: WorkflowExportFilters, v2: boolean): T {
+  if (filters.status)
+    query = query.eq("estado", statusToDb(filters.status, !v2))
+  if (filters.q) {
+    query = query.or(
+      `nombre.ilike.%${filters.q}%,descripcion.ilike.%${filters.q}%`
+    )
+  }
+  return query
+}
+
+function buildWorkflowExportQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: WorkflowExportFilters,
+  v2: boolean
+) {
+  const query = supabase
+    .from("workflows")
+    .select(
+      "id, nombre, estado, actualizado_en, author:profiles!actualizado_por(nombre), nodes:workflow_nodes(count)",
+      { count: "exact" }
+    )
+    .order("actualizado_en", { ascending: false })
+    .order("id")
+
+  return applyWorkflowExportFilters(query, filters, v2)
+}
+
+/** Universo completo filtrado, para "Exportar" (el toolbar de `/journeys`)
+ *  — sin la paginación de `listWorkflows`. */
+export async function listAllWorkflows(
+  filters: WorkflowExportFilters
+): Promise<{ items: WorkflowExportRow[]; total: number; truncated: boolean }> {
+  const supabase = await createClient()
+  const v2 = await hasV2Schema(supabase)
+  const { rows, total, truncated } = await fetchAllPaged((from, to) =>
+    buildWorkflowExportQuery(supabase, filters, v2).range(from, to)
+  )
+  return {
+    items: rows.map((w) => ({
+      id: w.id,
+      nombre: w.nombre,
+      estado: statusFromDb(w.estado),
+      actualizado_en: w.actualizado_en,
+      authorName: w.author?.nombre ?? null,
+      totalNodes: w.nodes?.[0]?.count ?? 0,
+    })),
+    total,
+    truncated,
+  }
+}
+
+/** Conteo de journeys que matchean los filtros, sin traer datos — para el
+ *  diálogo de export. */
+export async function countWorkflows(
+  filters: WorkflowExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  const v2 = await hasV2Schema(supabase)
+  const query = supabase
+    .from("workflows")
+    .select("id", { count: "exact", head: true })
+  const { count, error } = await applyWorkflowExportFilters(query, filters, v2)
+  if (error) throw error
+  return count ?? 0
+}
+
 export type JourneysKpis = {
   active: number
   publishedThisWeek: number
@@ -395,7 +481,13 @@ export async function getJourneysKpis(): Promise<JourneysKpis> {
         r.estado === "activa" &&
         now - new Date(r.actualizado_en).getTime() <= SEVEN_DAYS_MS
     ).length,
-    drafts: rows.filter((r) => r.estado === "borrador").length,
+    // `pendiente_aprobacion` cuenta como borrador aquí: "todavía no está en
+    // vivo" es lo que importa para este tablero, no si además espera una
+    // decisión de otra persona (eso lo muestra `/aprobaciones`) — mismo
+    // criterio que `getPromotionsPlanningKpis`.
+    drafts: rows.filter(
+      (r) => r.estado === "borrador" || r.estado === "pendiente_aprobacion"
+    ).length,
     paused: rows.filter((r) => r.estado === "inactiva").length,
     ...attribution,
   }

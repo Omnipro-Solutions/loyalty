@@ -9,6 +9,10 @@ const STATUS_META: Record<
   { dotClassName: string; textClassName: string }
 > = {
   activa: { dotClassName: "bg-success", textClassName: "text-foreground" },
+  pendiente_aprobacion: {
+    dotClassName: "bg-warning",
+    textClassName: "text-foreground",
+  },
   programada: {
     dotClassName: "bg-warning",
     textClassName: "text-foreground",

@@ -68,18 +68,27 @@ const OPERATIONAL_RESOURCES: readonly Resource[] = [
 const COUPON_ONLY_RESOURCES: readonly Resource[] = ["cupones"]
 
 /**
+ * `exportar` no es exclusiva de cupones: `clientes` saca a un CSV el mismo
+ * tipo de dato sensible (email, teléfono, documento) que ya justificaba
+ * negar `cupones:exportar` a Analista/lector (ver la migración de permisos
+ * de cupones) — mismo criterio, mismo candado. El resto de recursos queda
+ * fuera hasta que tengan su propio export server-side con gate.
+ */
+const EXPORTABLE_RESOURCES: readonly Resource[] = ["cupones", "clientes"]
+
+/**
  * A qué recursos aplica cada acción. Una acción ausente del mapa aplica a
  * todos los recursos (caso de `ver/crear/editar/eliminar`). `emitir`,
- * `anular`, `imprimir` y `exportar` son propias del módulo de cupones — en
- * el resto de recursos la celda queda bloqueada con candado, igual que
- * `aprobar` ya hacía fuera de `APPROVABLE_RESOURCES`.
+ * `anular` e `imprimir` son propias del módulo de cupones — en el resto de
+ * recursos la celda queda bloqueada con candado, igual que `aprobar` ya
+ * hacía fuera de `APPROVABLE_RESOURCES`.
  */
 const ACTION_SCOPE: Partial<Record<Action, readonly Resource[]>> = {
   aprobar: APPROVABLE_RESOURCES,
   emitir: COUPON_ONLY_RESOURCES,
   anular: COUPON_ONLY_RESOURCES,
   imprimir: COUPON_ONLY_RESOURCES,
-  exportar: COUPON_ONLY_RESOURCES,
+  exportar: EXPORTABLE_RESOURCES,
 }
 
 /** If a resource×action combination doesn't apply, the matrix cell is disabled instead of shown unchecked. */
@@ -100,12 +109,14 @@ const MATRIX: Matrix = {
     resumen: ["ver"],
     catalogo: ["ver", "crear", "editar"],
     tiendas: ["ver", "editar"],
-    clientes: ["ver", "crear", "editar"],
-    promociones: ["ver", "crear", "editar", "eliminar", "aprobar"],
-    reglas: ["ver", "crear", "editar", "aprobar"],
-    journeys: ["ver", "crear", "editar", "aprobar"],
-    // Sin "aprobar": el gestor es quien solicita la emisión, no quien la
-    // aprueba — dárselo recrearía el agujero que cierra la doble aprobación.
+    clientes: ["ver", "crear", "editar", "exportar"],
+    // Sin "aprobar" en ninguno de los tres: el gestor es quien solicita la
+    // publicación, no quien la aprueba — dárselo recrearía el agujero que
+    // cierra la doble aprobación (mismo criterio que ya aplicaba a
+    // "cupones", ver `20260831090000_promociones_journeys_doble_aprobacion.sql`).
+    promociones: ["ver", "crear", "editar", "eliminar"],
+    reglas: ["ver", "crear", "editar"],
+    journeys: ["ver", "crear", "editar"],
     cupones: ["ver", "crear", "editar", "emitir", "imprimir", "exportar"],
   },
   aprobador: {

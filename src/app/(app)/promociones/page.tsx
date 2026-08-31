@@ -3,12 +3,12 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { AppPage } from "@/components/layout/app-page"
-import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
-import { formatUSD } from "@/lib/format"
+import { formatNumber, formatUSD } from "@/lib/format"
+import { countPendingPromotionApprovals } from "@/features/promotions/lib/approval-queries"
+import { ExportPromotionsButton } from "@/features/promotions/components/export-promotions-button"
 import { PromotionsCard } from "@/features/promotions/components/promotions-card"
 import { PromotionsPlanningKpis } from "@/features/promotions/components/promotions-planning-kpis"
-import { PromotionsExportSection } from "@/features/promotions/components/promotions-export-section"
 import { PromotionsTableSection } from "@/features/promotions/components/promotions-table-section"
 import {
   PROMOTIONS_PAGE_SIZE,
@@ -19,11 +19,13 @@ import {
   listPromotions,
   listConditionSegments,
 } from "@/features/promotions/lib/queries"
-import { PROMOTION_PUBLICATION_STATUSES } from "@/types/domain"
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value
-}
+import {
+  firstValue,
+  enumValue,
+  parsePage,
+  parsePageSize,
+} from "@/lib/search-params"
+import { CHANNEL_SCOPES, PROMOTION_PUBLICATION_STATUSES } from "@/types/domain"
 
 /** Igual al `size` de cada `ColumnDef` en `promotions-table.tsx`. */
 const PROMOTIONS_TABLE_COLUMNS = [40, 240, 130, 90, 130, 88, 120, 110, 56]
@@ -34,31 +36,37 @@ export default async function PromotionsPage({
 }: PageProps<"/promociones">) {
   const params = await searchParams
   const search = firstValue(params.q)
-  // `find` en vez de un cast: descarta un `?estado=` inventado a mano en
-  // la URL, que si no llegaría al `.eq()` de la consulta.
-  const estado = firstValue(params.estado)
-  const publicationStatus = PROMOTION_PUBLICATION_STATUSES.find(
-    (status) => status === estado
+  const publicationStatus = enumValue(
+    params.estado,
+    PROMOTION_PUBLICATION_STATUSES
   )
-  const channel = firstValue(params.canal)
-  const page = Number(firstValue(params.page) ?? "1")
-  const pageSize = Number(firstValue(params.pageSize) ?? PROMOTIONS_PAGE_SIZE)
+  const channel = enumValue(params.canal, CHANNEL_SCOPES)
+  const page = parsePage(params.page)
+  const pageSize = parsePageSize(params.pageSize, PROMOTIONS_PAGE_SIZE)
 
   // No dependen de los filtros de la tabla — se quedan esperados aquí.
-  const [planningKpis, summary, totalStores, categories, segments] =
-    await Promise.all([
-      getPromotionsPlanningKpis(),
-      getPromotionsSummary(),
-      getTotalStores(),
-      listConditionCategories(),
-      listConditionSegments(),
-    ])
+  const [
+    planningKpis,
+    summary,
+    totalStores,
+    categories,
+    segments,
+    pendingApprovals,
+  ] = await Promise.all([
+    getPromotionsPlanningKpis(),
+    getPromotionsSummary(),
+    getTotalStores(),
+    listConditionCategories(),
+    listConditionSegments(),
+    countPendingPromotionApprovals(),
+  ])
 
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
   const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
 
-  // Sin `await`: la comparten `PromotionsExportSection` (botón de exportar,
-  // sin key — solo espera) y `PromotionsTableSection` (con key).
+  // Sin `await`: `PromotionsTableSection` la resuelve dentro de su propio
+  // `<Suspense key={dataKey}>` (el export ya no la comparte — pide su propio
+  // universo server-side vía `exportPromotionsAction`).
   const promotionsPromise = listPromotions({
     search,
     publicationStatus,
@@ -100,6 +108,15 @@ export default async function PromotionsPage({
             <Upload className="size-4" />
             Importar
           </Link>
+          {pendingApprovals > 0 && (
+            <Link
+              href="/aprobaciones"
+              className="flex items-center gap-[7px] rounded-[10px] border border-warning/40 bg-warning-bg px-3.5 py-2.5 text-sm font-medium text-warning"
+            >
+              {formatNumber(pendingApprovals)} pendiente
+              {pendingApprovals === 1 ? "" : "s"} de aprobación
+            </Link>
+          )}
           <Link
             href="/promociones/nueva"
             className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
@@ -114,10 +131,10 @@ export default async function PromotionsPage({
 
       <PromotionsCard
         summary={summary}
-        exportButton={
-          <Suspense fallback={<Skeleton className="h-9 w-24 rounded-[10px]" />}>
-            <PromotionsExportSection promotionsPromise={promotionsPromise} />
-          </Suspense>
+        exportSlot={
+          <ExportPromotionsButton
+            filters={{ search, publicationStatus, channel }}
+          />
         }
       >
         <Suspense

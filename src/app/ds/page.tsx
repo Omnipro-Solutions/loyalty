@@ -43,6 +43,9 @@ import { Stepper } from "@/components/form/stepper"
 
 import { CellActions, CellEntity } from "@/components/data/cells"
 import { DataTable } from "@/components/data/data-table"
+import { ExportCsvButton } from "@/components/data/export-csv-button"
+import { ExportDialog } from "@/components/data/export-dialog"
+import { notifyExportStatus } from "@/components/feedback/export-toast"
 import { Pagination } from "@/components/data/pagination"
 
 import { Chip } from "@/components/filters/chip"
@@ -221,6 +224,13 @@ export default function DesignSystemPage() {
   const [range, setRange] = React.useState("30d")
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
+  const [exportDialogOpen, setExportDialogOpen] = React.useState(false)
+  const [exportDialogColumns, setExportDialogColumns] = React.useState<
+    string[]
+  >(["nombre", "email"])
+  const [exportDialogState, setExportDialogState] = React.useState<
+    "ready" | "pending" | "error" | "empty"
+  >("ready")
   const table = useTable({
     features: tableFeaturesConfig,
     columns: COLUMNS,
@@ -464,6 +474,135 @@ export default function DesignSystemPage() {
             setPage(1)
           }}
         />
+      </section>
+
+      <section
+        data-ds="export-csv-button"
+        className="flex flex-wrap items-start gap-6 bg-white p-6"
+      >
+        <ExportCsvButton onExport={() => {}} />
+        <ExportCsvButton onExport={() => {}} pending />
+        <ExportCsvButton
+          variant="compact"
+          label="Exportar CSV"
+          onExport={() => {}}
+        />
+        <ExportCsvButton
+          variant="compact"
+          label="Exportar CSV"
+          onExport={() => {}}
+          pending
+        />
+      </section>
+
+      <section
+        data-ds="export-dialog"
+        className="flex flex-wrap items-center gap-2.5 bg-white p-6"
+      >
+        <Button
+          variant="outline"
+          onClick={() => {
+            setExportDialogState("ready")
+            setExportDialogOpen(true)
+          }}
+        >
+          Abrir diálogo de export
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setExportDialogState("pending")
+            setExportDialogOpen(true)
+          }}
+        >
+          Calculando
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setExportDialogState("empty")
+            setExportDialogOpen(true)
+          }}
+        >
+          Sin filas
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setExportDialogState("error")
+            setExportDialogOpen(true)
+          }}
+        >
+          Error
+        </Button>
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          title="Exportar clientes"
+          entity={{ singular: "cliente", plural: "clientes" }}
+          total={
+            exportDialogState === "ready"
+              ? 1234
+              : exportDialogState === "empty"
+                ? 0
+                : null
+          }
+          totalPending={exportDialogState === "pending"}
+          totalError={
+            exportDialogState === "error"
+              ? "No se pudo calcular el total."
+              : undefined
+          }
+          columns={[
+            { key: "nombre", label: "Nombre" },
+            { key: "email", label: "Email" },
+            { key: "telefono", label: "Teléfono" },
+            { key: "estado", label: "Estado" },
+          ]}
+          selectedKeys={exportDialogColumns}
+          onToggleColumn={(key, checked) =>
+            setExportDialogColumns((prev) =>
+              checked ? [...prev, key] : prev.filter((k) => k !== key)
+            )
+          }
+          onToggleAll={(checked) =>
+            setExportDialogColumns(
+              checked ? ["nombre", "email", "telefono", "estado"] : []
+            )
+          }
+          onConfirm={() => setExportDialogOpen(false)}
+          pending={false}
+        />
+      </section>
+
+      <section
+        data-ds="toast"
+        className="flex flex-wrap items-center gap-2.5 bg-white p-6"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            notifyExportStatus({
+              tone: "error",
+              text: "No tienes permiso para exportar clientes.",
+            })
+          }
+        >
+          Toast de error
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            notifyExportStatus({
+              tone: "info",
+              text: "Exportadas las primeras 10.000 filas de 24.531.",
+            })
+          }
+        >
+          Toast de info
+        </Button>
       </section>
 
       <section

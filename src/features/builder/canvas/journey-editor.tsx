@@ -208,10 +208,11 @@ function CanvasArea({
   const publish = useAction(publishWorkflowAction, {
     onSuccess: ({ data, input }) => {
       if (data?.ok) {
-        // `input` es el parsedInput del schema, que tiene defaults para
-        // estos tres — TS los ve opcionales igual, así que se cae al valor
-        // que ya estaba en pantalla en vez de escribir `undefined`.
-        setStatus(input.estado ?? "activa")
+        // `data.estado`, no `input.estado`: es el estado que de verdad
+        // quedó guardado — si quien publica no es admin, el servidor lo
+        // manda a `pendiente_aprobacion` en vez de lo pedido (ver
+        // `publish-gate.ts`).
+        setStatus(data.estado)
         setValidFrom(input.vigente_desde)
         setValidTo(input.vigente_hasta ?? null)
         setPublishMessage(undefined)

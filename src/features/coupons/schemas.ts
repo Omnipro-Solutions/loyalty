@@ -2,11 +2,14 @@ import { z } from "zod"
 
 import {
   COUPON_AUDIENCE_MODES,
+  COUPON_BATCH_STATUSES,
   COUPON_DELIVERY_CHANNELS,
   COUPON_DISCOUNT_TYPES,
   COUPON_ORIGINS,
   COUPON_POINTS_CHARGE_TIMINGS,
   COUPON_PRINT_LAYOUTS,
+  COUPON_SEARCH_SCOPES,
+  COUPON_STATUSES,
 } from "@/types/domain"
 
 const importRowSchema = z.object({
@@ -207,8 +210,13 @@ export const generateChunkSchema = z.object({
   batchId: z.string().uuid(),
 })
 
-export const exportBatchCouponsSchema = z.object({
+export const previewBatchCouponsExportSchema = z.object({
   batchId: z.string().uuid(),
+})
+
+/** `columns`: keys de `BATCH_COUPONS_EXPORT_COLUMNS` marcadas en `ExportDialog` — vacío exporta todas. */
+export const exportBatchCouponsSchema = previewBatchCouponsExportSchema.extend({
+  columns: z.array(z.string()).optional(),
 })
 
 export const resendUnviewedSchema = z.object({
@@ -221,11 +229,48 @@ export const registerPrintJobSchema = z.object({
   layout: z.enum(COUPON_PRINT_LAYOUTS),
 })
 
-export const exportCouponsSchema = z.object({
-  search: z.string().optional(),
-  status: z.string().optional(),
-  batchId: z.string().uuid().optional(),
+/** Filtros del listado (13.1) por vista — "batches" y "coupons" tienen
+ *  espacios de `status` distintos (`CouponBatchStatus` vs `CouponStatus`) y
+ *  solo "batches" filtra por `origin`, así que es una unión discriminada
+ *  por `view`, no un objeto con todo opcional (el stub anterior no
+ *  distinguía vistas ni validaba `searchScope`/`origin`/`status` contra un
+ *  enum). Comparte `previewCouponsListExportSchema` (conteo) y
+ *  `exportCouponsListSchema` (además valida `columns`). */
+const couponBatchesExportFiltersSchema = z.object({
+  view: z.literal("batches"),
+  search: z.string().max(200).optional(),
+  searchScope: z.enum(COUPON_SEARCH_SCOPES).optional(),
+  status: z.enum(COUPON_BATCH_STATUSES).optional(),
+  origin: z.enum(COUPON_ORIGINS).optional(),
+  validFrom: z.string().optional(),
+  validTo: z.string().optional(),
 })
+
+const couponsListExportFiltersSchema = z.object({
+  view: z.literal("coupons"),
+  search: z.string().max(200).optional(),
+  searchScope: z.enum(COUPON_SEARCH_SCOPES).optional(),
+  status: z.enum(COUPON_STATUSES).optional(),
+  validFrom: z.string().optional(),
+  validTo: z.string().optional(),
+})
+
+export const previewCouponsListExportSchema = z.discriminatedUnion("view", [
+  couponBatchesExportFiltersSchema,
+  couponsListExportFiltersSchema,
+])
+export type CouponsListExportFiltersInput = z.infer<
+  typeof previewCouponsListExportSchema
+>
+
+export const exportCouponsListSchema = z.discriminatedUnion("view", [
+  couponBatchesExportFiltersSchema.extend({
+    columns: z.array(z.string()).optional(),
+  }),
+  couponsListExportFiltersSchema.extend({
+    columns: z.array(z.string()).optional(),
+  }),
+])
 
 export const registerRedemptionSchema = z.object({
   couponId: z.string().uuid(),

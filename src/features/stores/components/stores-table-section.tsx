@@ -7,7 +7,7 @@ type StoresTableSectionProps = {
   pageSize: number
 }
 
-/** Comparte la promesa con `StoresExportSlot` (ver `stores-export-slot.tsx`). Tiendas no tiene un estado vacío dedicado. */
+/** Tiendas no tiene un estado vacío dedicado. */
 export async function StoresTableSection({
   storesPromise,
   pageSize,

@@ -3,27 +3,21 @@
 import { Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { buildCsvRows, downloadCsv, type CsvColumn } from "@/lib/csv"
 
 import type { RunSummary } from "./analytics-queries"
 
+type Step = RunSummary["steps"][number]
+
+const COLUMNS: CsvColumn<Step>[] = [
+  { key: "bloque", header: "Bloque", value: (p) => p.label },
+  { key: "puerto", header: "Puerto", value: (p) => p.port ?? "" },
+  { key: "entrada", header: "Entrada", value: (p) => String(p.entryCount) },
+  { key: "salida", header: "Salida", value: (p) => String(p.exitCount) },
+]
+
 function exportCsv(run: RunSummary) {
-  const header = ["Bloque", "Puerto", "Entrada", "Salida"]
-  const rows = run.steps.map((p) => [
-    p.label,
-    p.port ?? "",
-    String(p.entryCount),
-    String(p.exitCount),
-  ])
-  const csv = [header, ...rows]
-    .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
-    .join("\n")
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = "analitica-workflow.csv"
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadCsv("analitica-workflow.csv", buildCsvRows(COLUMNS, run.steps))
 }
 
 export function AnalyticsExportButton({ run }: { run: RunSummary }) {

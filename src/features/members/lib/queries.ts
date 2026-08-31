@@ -1,3 +1,4 @@
+import { fetchAllPaged } from "@/lib/supabase/paginate"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import type { MemberSearchScope, PromotionType } from "@/types/domain"
@@ -53,21 +54,20 @@ function applyMemberSearchFilter<
   )
 }
 
-export async function listMembers(
-  filters: MemberFilters = {}
-): Promise<{ members: Member[]; total: number }> {
-  const supabase = await createClient()
-  const page = filters.page ?? 1
-  const pageSize = filters.pageSize ?? MEMBERS_PAGE_SIZE
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+export type MemberExportFilters = Omit<MemberFilters, "page" | "pageSize">
 
-  let query = supabase
-    .from("members")
-    .select(MEMBER_WITH_TIER_AND_STORE, { count: "exact" })
-    .order("creado_en", { ascending: false })
-    .range(from, to)
-
+/** Cascada de filtros, sin `.select()` — la comparten `buildMembersQuery`
+ *  (universo con datos) y `countMembers` (conteo `head: true`, para el
+ *  diálogo de export) para no repetir cada `if`. Genérico solo sobre los
+ *  métodos que usa, así funciona igual sobre cualquiera de los dos
+ *  `.select()`. */
+function applyMemberFilters<
+  T extends {
+    or: (f: string) => T
+    ilike: (c: string, v: string) => T
+    eq: (c: string, v: string) => T
+  },
+>(query: T, filters: MemberExportFilters): T {
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
     query = applyMemberSearchFilter(
@@ -79,11 +79,67 @@ export async function listMembers(
   if (filters.accountStatus)
     query = query.eq("estado_cuenta", filters.accountStatus)
   if (filters.tierId) query = query.eq("tier_id", filters.tierId)
+  return query
+}
 
-  const { data, error, count } = await query
+/** `.order("id")` desempata `creado_en`: sin un desempate único, paginar con
+ *  `.range()` en llamadas separadas puede repetir o saltar filas entre
+ *  páginas. Compartida por `listMembers` (paginado) y `listAllMembers`
+ *  (universo completo para export). */
+function buildMembersQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: MemberExportFilters
+) {
+  const query = supabase
+    .from("members")
+    .select(MEMBER_WITH_TIER_AND_STORE, { count: "exact" })
+    .order("creado_en", { ascending: false })
+    .order("id")
+
+  return applyMemberFilters(query, filters)
+}
+
+/** Conteo de filas que matchean los filtros, sin traer datos — para el
+ *  diálogo de export ("vas a exportar N clientes") antes de pedir el
+ *  universo completo. */
+export async function countMembers(
+  filters: MemberExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  const query = supabase
+    .from("members")
+    .select("id", { count: "exact", head: true })
+  const { count, error } = await applyMemberFilters(query, filters)
+  if (error) throw error
+  return count ?? 0
+}
+
+export async function listMembers(
+  filters: MemberFilters = {}
+): Promise<{ members: Member[]; total: number }> {
+  const supabase = await createClient()
+  const page = filters.page ?? 1
+  const pageSize = filters.pageSize ?? MEMBERS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await buildMembersQuery(
+    supabase,
+    filters
+  ).range(from, to)
   if (error) throw error
 
   return { members: (data ?? []) as Member[], total: count ?? 0 }
+}
+
+/** Universo completo filtrado, para "Exportar" (05.1) — sin la paginación
+ *  de `listMembers`. */
+export async function listAllMembers(filters: MemberExportFilters) {
+  const supabase = await createClient()
+  const { rows, total, truncated } = await fetchAllPaged<Member>((from, to) =>
+    buildMembersQuery(supabase, filters).range(from, to)
+  )
+  return { members: rows, total, truncated }
 }
 
 export async function getMemberById(id: string): Promise<Member | null> {

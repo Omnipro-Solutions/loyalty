@@ -3,13 +3,20 @@ import { Suspense } from "react"
 import { AppPage } from "@/components/layout/app-page"
 import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { countPendingWorkflowApprovals } from "@/features/builder/canvas/approval-queries"
 import { JourneysContent } from "@/features/builder/canvas/journeys-content"
 import { JourneysKpiRow } from "@/features/builder/canvas/journeys-kpis"
 import {
   getJourneysKpis,
   listWorkflows,
 } from "@/features/builder/canvas/queries"
-import type { WorkflowStatus } from "@/types/domain"
+import {
+  enumValue,
+  firstValue,
+  parsePage,
+  parsePageSize,
+} from "@/lib/search-params"
+import { WORKFLOW_STATUSES } from "@/types/domain"
 
 const DEFAULT_PAGE_SIZE = 25
 
@@ -20,21 +27,23 @@ export default async function JourneysPage({
   searchParams,
 }: PageProps<"/journeys">) {
   const params = await searchParams
-  const page = Number(params.page) > 0 ? Number(params.page) : 1
-  const pageSize =
-    Number(params.pageSize) > 0 ? Number(params.pageSize) : DEFAULT_PAGE_SIZE
-  const status = typeof params.estado === "string" ? params.estado : undefined
-  const q = typeof params.q === "string" ? params.q : undefined
+  const page = parsePage(params.page)
+  const pageSize = parsePageSize(params.pageSize, DEFAULT_PAGE_SIZE)
+  const status = enumValue(params.estado, WORKFLOW_STATUSES)
+  const q = firstValue(params.q)
 
-  // No depende de los filtros — `JourneysKpiRow` hace su propia llamada
-  // (duplicada, preexistente) y no necesita boundary.
-  const kpis = await getJourneysKpis()
+  // No dependen de los filtros — `JourneysKpiRow` hace su propia llamada de
+  // `kpis` (duplicada, preexistente) y ninguna de las dos necesita boundary.
+  const [kpis, pendingApprovals] = await Promise.all([
+    getJourneysKpis(),
+    countPendingWorkflowApprovals(),
+  ])
 
   // Sin `await`: se resuelve dentro de `JourneysContent`, ya en el boundary.
   const workflowsPromise = listWorkflows({
     page,
     pageSize,
-    status: status as WorkflowStatus | undefined,
+    status,
     q,
   })
 
@@ -66,6 +75,7 @@ export default async function JourneysPage({
             pageSize={pageSize}
             page={page}
             hasFiltersApplied={!!(status || q)}
+            pendingApprovals={pendingApprovals}
           />
         </Suspense>
       </div>

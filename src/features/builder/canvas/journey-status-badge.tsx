@@ -13,6 +13,7 @@ import {
 const STATUS_VARIANT: Record<DisplayStatus, "neutral" | "success" | "warning"> =
   {
     borrador: "neutral",
+    pendiente_aprobacion: "warning",
     activa: "success",
     // Publicada pero todavía fuera de vigencia: ni verde (no está evaluando)
     // ni gris (no está detenida) — va a empezar sola.

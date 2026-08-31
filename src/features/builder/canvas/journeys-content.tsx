@@ -14,6 +14,7 @@ type JourneysContentProps = {
   pageSize: number
   page: number
   hasFiltersApplied: boolean
+  pendingApprovals: number
 }
 
 /**
@@ -22,9 +23,8 @@ type JourneysContentProps = {
  * `MembersFiltersBar`, usa un input no controlado (`defaultValue`), así que
  * remontarlo no pierde texto ni rompe su debounce interno — solo resetea al
  * `q` ya vigente en la URL. Eso evita tener que separar un pill de conteo
- * aparte: el toolbar también necesita las filas resueltas (`visibleItems`,
- * para el botón de exportar CSV), así que de todos modos no podía quedar
- * fuera del boundary.
+ * aparte: el toolbar también necesita `total` (`kpis`/`published`), que
+ * solo se conoce al resolver `workflowsPromise`.
  */
 export async function JourneysContent({
   workflowsPromise,
@@ -32,6 +32,7 @@ export async function JourneysContent({
   pageSize,
   page,
   hasFiltersApplied,
+  pendingApprovals,
 }: JourneysContentProps) {
   const { items, total } = await workflowsPromise
 
@@ -44,7 +45,7 @@ export async function JourneysContent({
           drafts={kpis.drafts}
           paused={kpis.paused}
           membersInJourney="—"
-          visibleItems={items}
+          pendingApprovals={pendingApprovals}
         />
       </div>
 

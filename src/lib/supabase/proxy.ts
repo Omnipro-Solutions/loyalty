@@ -15,6 +15,11 @@ function isAppRoute(pathname: string) {
     !pathname.startsWith("/sso") &&
     !pathname.startsWith("/ds") &&
     !pathname.startsWith("/api") &&
+    // Página pública tipo statuspage.io (`src/app/estado/page.tsx`) — debe
+    // poder consultarse incluso si el login está caído. Match estricto
+    // (no `startsWith` suelto) para no abrir sin querer `/estado-lo-que-sea`.
+    pathname !== "/estado" &&
+    !pathname.startsWith("/estado/") &&
     // `/auth/*` son los Route Handlers de intercambio de sesión (OAuth,
     // recuperación de contraseña, activación de cuenta) — corren SIN
     // sesión todavía (justo la están estableciendo), así que tratarlos como

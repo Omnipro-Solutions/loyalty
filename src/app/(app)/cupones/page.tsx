@@ -3,12 +3,11 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { AppPage } from "@/components/layout/app-page"
-import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { BatchesTableSection } from "@/features/coupons/components/batches-table-section"
 import { CouponsCard } from "@/features/coupons/components/coupons-card"
 import { CouponsKpiRow } from "@/features/coupons/components/coupons-kpi-row"
-import { CouponsExportSection } from "@/features/coupons/components/coupons-export-section"
+import { ExportCouponsButton } from "@/features/coupons/components/export-coupons-button"
 import { CouponsStatusChips } from "@/features/coupons/components/coupons-status-chips"
 import { CouponsTableSection } from "@/features/coupons/components/coupons-table-section"
 import { LevelNote } from "@/features/coupons/components/level-note"
@@ -31,17 +30,18 @@ import {
 } from "@/features/coupons/lib/queries"
 import { formatNumber } from "@/lib/format"
 import {
+  enumValue,
+  firstValue,
+  parsePage,
+  parsePageSize,
+} from "@/lib/search-params"
+import {
   COUPON_BATCH_STATUSES,
   COUPON_DISPLAY_STATUSES,
-  type CouponBatchStatus,
-  type CouponOrigin,
-  type CouponSearchScope,
-  type CouponStatus,
+  COUPON_ORIGINS,
+  COUPON_SEARCH_SCOPES,
+  COUPON_STATUSES,
 } from "@/types/domain"
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value
-}
 
 /** Igual al `size` de cada `ColumnDef` en `batches-table.tsx`/`coupons-table.tsx`. */
 const BATCHES_TABLE_COLUMNS = [280, 170, 170, 140, 140, 140, 56]
@@ -53,28 +53,29 @@ export default async function CouponsPage({
   const params = await searchParams
   const vista = firstValue(params.vista) === "coupons" ? "coupons" : "batches"
   const search = firstValue(params.q)
-  const scope = firstValue(params.ambito) as CouponSearchScope | undefined
-  const status = firstValue(params.estado)
-  const origin = firstValue(params.origen)
+  const scope = enumValue(params.ambito, COUPON_SEARCH_SCOPES)
+  const batchStatus = enumValue(params.estado, COUPON_BATCH_STATUSES)
+  const couponStatus = enumValue(params.estado, COUPON_STATUSES)
+  const origin = enumValue(params.origen, COUPON_ORIGINS)
   const validFrom = firstValue(params.desde)
   const validTo = firstValue(params.hasta)
-  const page = Number(firstValue(params.page) ?? "1")
-  const pageSize = Number(
-    firstValue(params.pageSize) ??
-      (vista === "batches" ? COUPON_BATCHES_PAGE_SIZE : COUPONS_PAGE_SIZE)
+  const page = parsePage(params.page)
+  const pageSize = parsePageSize(
+    params.pageSize,
+    vista === "batches" ? COUPON_BATCHES_PAGE_SIZE : COUPONS_PAGE_SIZE
   )
   const [pendingApprovals, kpis] = await Promise.all([
     getPendingApprovalsCount(),
     getCouponCommercialKpis(),
   ])
 
-  // Sin `await`: la comparten `CouponsExportSection` (sin key) y
-  // `*TableSection` (con key) — mismo patrón que `promociones/page.tsx`.
+  // Sin `await`: la consume `*TableSection` (con key) — el export ya no
+  // necesita esta promesa, corre su propia consulta server-side.
   const batchesPromise = listCouponBatches({
     search,
     searchScope: scope,
-    status: status as CouponBatchStatus | undefined,
-    origin: origin as CouponOrigin | undefined,
+    status: batchStatus,
+    origin,
     validFrom,
     validTo,
     page,
@@ -83,7 +84,7 @@ export default async function CouponsPage({
   const couponsPromise = listCoupons({
     search,
     searchScope: scope,
-    status: status as CouponStatus | undefined,
+    status: couponStatus,
     validFrom,
     validTo,
     page,
@@ -91,8 +92,7 @@ export default async function CouponsPage({
   })
 
   // Solo una de las dos vistas consume su promesa (la otra vive sin
-  // `await`, compartida con `CouponsExportSection`) — si la promesa de la
-  // vista NO renderizada llega a rechazar, Node la reporta como
+  // `await`) — si la promesa de la vista NO renderizada llega a rechazar, Node la reporta como
   // `unhandledRejection` porque nadie más la esperó. `.catch` engancha un
   // manejador sobre la promesa ya creada sin reemplazarla, así que no
   // afecta a quien sí la consume; solo evita ese ruido.
@@ -104,6 +104,7 @@ export default async function CouponsPage({
   // cuando la búsqueda se asienta. `scope` (ámbito) también entra: antes se
   // quedaba fuera por descuido y cambiarlo no mostraba el `TableSkeleton`
   // aunque `update()` lo aplica al instante, igual que origen/vigencia.
+  const status = vista === "batches" ? batchStatus : couponStatus
   const dataKey = `${vista}|${search ?? ""}|${scope ?? ""}|${status ?? ""}|${origin ?? ""}|${validFrom ?? ""}|${validTo ?? ""}|${page}|${pageSize}`
 
   const title =
@@ -247,19 +248,28 @@ export default async function CouponsPage({
             <Printer className="size-3.5" />
             Imprimir selección
           </button>
-          <Suspense fallback={<Skeleton className="h-9 w-24 rounded-[10px]" />}>
-            {vista === "batches" ? (
-              <CouponsExportSection
-                view="batches"
-                batchesPromise={batchesPromise}
-              />
-            ) : (
-              <CouponsExportSection
-                view="coupons"
-                couponsPromise={couponsPromise}
-              />
-            )}
-          </Suspense>
+          <ExportCouponsButton
+            filters={
+              vista === "batches"
+                ? {
+                    view: "batches",
+                    search,
+                    searchScope: scope,
+                    status: batchStatus,
+                    origin,
+                    validFrom,
+                    validTo,
+                  }
+                : {
+                    view: "coupons",
+                    search,
+                    searchScope: scope,
+                    status: couponStatus,
+                    validFrom,
+                    validTo,
+                  }
+            }
+          />
           {pendingApprovals > 0 && (
             <Link
               href="/cupones/aprobaciones"

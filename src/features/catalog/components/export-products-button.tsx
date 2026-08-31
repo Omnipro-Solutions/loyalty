@@ -1,43 +1,41 @@
 "use client"
 
-import { Download } from "lucide-react"
+import { ExportCsvButton } from "@/components/data/export-csv-button"
+import { ExportDialog } from "@/components/data/export-dialog"
+import { notifyExportStatus } from "@/components/feedback/export-toast"
+import { useCsvExportDialog } from "@/hooks/use-csv-export-dialog"
 
-import { csvCell, downloadCsv } from "@/lib/csv"
+import {
+  exportProductsAction,
+  previewProductsExportAction,
+} from "../actions/export"
+import { PRODUCTS_EXPORT_COLUMN_OPTIONS } from "../lib/export-columns"
+import type { CatalogExportFiltersInput } from "../schemas"
 
-import type { Product } from "../lib/queries"
+const ENTITY = { singular: "producto", plural: "productos" }
 
-const COLUMNS: { header: string; value: (p: Product) => string }[] = [
-  { header: "SKU", value: (p) => p.sku },
-  { header: "Producto", value: (p) => p.nombre },
-  {
-    header: "Categoría",
-    value: (p) => p.paths.map((r) => r.name).join("; ") || "",
-  },
-  { header: "Precio", value: (p) => String(p.precio) },
-  { header: "Puntos", value: (p) => String(p.puntos) },
-  { header: "Estado", value: (p) => p.estado },
-  { header: "Receta", value: (p) => (p.requiere_receta ? "RX" : "OTC") },
-]
+type ExportProductsButtonProps = { filters: CatalogExportFiltersInput }
 
-type ExportProductsButtonProps = { products: Product[] }
-
-/** Exporta la página actual de la tabla (03.1 "Exportar") como CSV. */
-export function ExportProductsButton({ products }: ExportProductsButtonProps) {
-  function exportCsv() {
-    downloadCsv("catalogo-productos.csv", [
-      COLUMNS.map((c) => csvCell(c.header)),
-      ...products.map((p) => COLUMNS.map((c) => csvCell(c.value(p)))),
-    ])
-  }
+/** "Exportar" (03.1): abre un diálogo de revisión — cuántos productos
+ *  matchean los filtros y qué columnas incluir — antes de descargar. */
+export function ExportProductsButton({ filters }: ExportProductsButtonProps) {
+  const dialog = useCsvExportDialog({
+    previewAction: previewProductsExportAction,
+    exportAction: exportProductsAction,
+    columnOptions: PRODUCTS_EXPORT_COLUMN_OPTIONS,
+    filters,
+    onStatus: notifyExportStatus,
+  })
 
   return (
-    <button
-      type="button"
-      onClick={exportCsv}
-      className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-[9px] pr-3.5 pl-3 text-xs font-medium text-secondary-foreground"
-    >
-      <Download className="size-3.5" />
-      Exportar
-    </button>
+    <>
+      <ExportCsvButton onExport={dialog.openDialog} />
+      <ExportDialog
+        {...dialog}
+        title="Exportar catálogo"
+        entity={ENTITY}
+        columns={PRODUCTS_EXPORT_COLUMN_OPTIONS}
+      />
+    </>
   )
 }

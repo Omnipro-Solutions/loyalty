@@ -9,7 +9,9 @@ import {
   FilePlus2,
   Flag,
   PiggyBank,
+  Send,
   Ticket,
+  Undo2,
   type LucideIcon,
 } from "lucide-react"
 
@@ -28,6 +30,10 @@ export const PROMOTION_EVENT_ICON: Record<PromotionEventType, LucideIcon> = {
   cancelada: CircleSlash,
   canje: Ticket,
   canje_rechazado: CircleX,
+  aprobacion_solicitada: Send,
+  aprobacion_concedida: CircleCheck,
+  aprobacion_rechazada: CircleX,
+  aprobacion_retirada: Undo2,
 }
 
 export type PromotionEventBadgeVariant =
@@ -48,4 +54,8 @@ export const PROMOTION_EVENT_BADGE_VARIANT: Record<
   cancelada: "error",
   canje: "success",
   canje_rechazado: "error",
+  aprobacion_solicitada: "warning",
+  aprobacion_concedida: "success",
+  aprobacion_rechazada: "error",
+  aprobacion_retirada: "neutral",
 }

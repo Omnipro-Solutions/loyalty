@@ -66,7 +66,11 @@ export function PromotionActivateDialog({
       }
       // Las omitidas se muestran en el propio diálogo en vez de cerrarlo en
       // silencio: es la única forma de enterarse de que alguna no se activó.
-      if (data.skipped.length > 0 && data.activated === 0) {
+      if (
+        data.skipped.length > 0 &&
+        data.activated === 0 &&
+        data.sentToApproval === 0
+      ) {
         setSkipped(data.skipped)
         router.refresh()
         return
@@ -110,8 +114,8 @@ export function PromotionActivateDialog({
           </DialogTitle>
           <DialogDescription>
             {count === 1
-              ? "¿Confirmas que quieres activarla? Pasará de Borrador a Activa y el motor empezará a evaluarla dentro de su vigencia."
-              : `¿Confirmas que quieres activar las ${count}? Pasarán de Borrador a Activa y las que ya estén publicadas se omiten.`}{" "}
+              ? "¿Confirmas que quieres activarla? Pasará de Borrador a Activa (o a Pendiente de aprobación, si tu rol no puede publicar directo)."
+              : `¿Confirmas que quieres activar las ${count}? Pasarán de Borrador a Activa —o a Pendiente de aprobación, según tu rol— y las que ya estén publicadas se omiten.`}{" "}
             El motivo queda en la bitácora de cada promoción junto a tu nombre y
             la fecha.
           </DialogDescription>

@@ -1,7 +1,12 @@
 import { statusFromDb } from "@/lib/publication-status"
+import { fetchAllPaged } from "@/lib/supabase/paginate"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import type { SegmentStatus, TierName } from "@/types/domain"
+
+import { AUDIENCES_SORTS, type AudiencesSort } from "./sort"
+
+export { AUDIENCES_SORTS, type AudiencesSort }
 
 export const AUDIENCES_PAGE_SIZE = 10
 
@@ -18,8 +23,6 @@ export type AudienceListItem = {
   series: number[]
   positiveTrend: boolean
 }
-
-export type AudiencesSort = "nombre" | "tamano" | "journeys"
 
 export type AudiencesFilters = {
   search?: string
@@ -90,24 +93,49 @@ async function getLinkedJourneysBySegment(): Promise<Map<string, Set<string>>> {
   return map
 }
 
-export async function listAudiences(
-  filters: AudiencesFilters = {}
-): Promise<{ audiences: AudienceListItem[]; total: number }> {
+export type AudiencesExportFilters = Omit<AudiencesFilters, "page" | "pageSize">
+
+/**
+ * Filtra y ordena el universo de audiencias, hasta `EXPORT_ROW_CAP` — a
+ * diferencia del resto de features, `segments` no tiene una cascada de
+ * `.eq()` que compartir (el filtro de texto ya es toda la condición), así
+ * que `listAudiences` (paginado) y `listAllAudiences` (export) comparten
+ * esta función entera, cada una aplicando su propio recorte al resultado
+ * ya paginado con `fetchAllPaged` (antes traía `segments` con un `.select()`
+ * sin `.range()`, así que un tenant con más de 1000 audiencias se truncaba
+ * en silencio contra `max_rows` de PostgREST y `truncated` no lo detectaba).
+ * `getHistoryBySegment`/`getLinkedJourneysBySegment` siguen sin paginar —
+ * afectan el sparkline y el conteo de journeys vinculados, no el total ni
+ * el corte de filas; el mismo riesgo, sin resolver, que ya señalaba el plan.
+ */
+async function collectAudiences(filters: AudiencesExportFilters): Promise<{
+  audiences: AudienceListItem[]
+  total: number
+  truncated: boolean
+}> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("segments")
-    .select(
-      "id, nombre, codigo, nivel_dominante, conteo_estimado, estado, sincronizado_con_ajo, actualizado_en"
-    )
-    .order("nombre")
-  if (error) throw error
+  const {
+    rows: segments,
+    total,
+    truncated,
+  } = await fetchAllPaged((from, to) =>
+    supabase
+      .from("segments")
+      .select(
+        "id, nombre, codigo, nivel_dominante, conteo_estimado, estado, sincronizado_con_ajo, actualizado_en",
+        { count: "exact" }
+      )
+      .order("nombre")
+      .order("id")
+      .range(from, to)
+  )
 
   const [historyBySegment, linkedJourneysBySegment] = await Promise.all([
     getHistoryBySegment(),
     getLinkedJourneysBySegment(),
   ])
 
-  let audiences: AudienceListItem[] = (data ?? []).map((s) => {
+  let audiences: AudienceListItem[] = segments.map((s) => {
     const series = historyBySegment.get(s.id) ?? []
     const size = s.conteo_estimado ?? 0
     const first = series[0] ?? size
@@ -146,7 +174,16 @@ export async function listAudiences(
     return sign * (a.size - b.size)
   })
 
-  const total = audiences.length
+  // El filtro de texto corre en JS después de paginar, así que el `total`
+  // real (para "Exportar N audiencias" y para la paginación en pantalla) es
+  // el tamaño ya filtrado, no el total sin filtrar que devuelve `fetchAllPaged`.
+  return { audiences, total: search ? audiences.length : total, truncated }
+}
+
+export async function listAudiences(
+  filters: AudiencesFilters = {}
+): Promise<{ audiences: AudienceListItem[]; total: number }> {
+  const { audiences, total } = await collectAudiences(filters)
   const page = filters.page ?? 1
   const pageSize = filters.pageSize ?? AUDIENCES_PAGE_SIZE
   const from = (page - 1) * pageSize
@@ -154,6 +191,38 @@ export async function listAudiences(
     audiences: audiences.slice(from, from + pageSize),
     total,
   }
+}
+
+/** Universo completo filtrado y ordenado, para "Exportar" (11.1) — el CSV
+ *  respeta el mismo orden que se ve en pantalla. */
+export async function listAllAudiences(
+  filters: AudiencesExportFilters
+): Promise<{
+  audiences: AudienceListItem[]
+  total: number
+  truncated: boolean
+}> {
+  return collectAudiences(filters)
+}
+
+/** Conteo de audiencias que matchean el texto de búsqueda, sin traer datos
+ *  ni las dos consultas de enriquecimiento (historial, journeys vinculados)
+ *  que `collectAudiences` también trae y que un conteo no necesita — para
+ *  el diálogo de export. */
+export async function countAudiences(
+  filters: AudiencesExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  let query = supabase
+    .from("segments")
+    .select("id", { count: "exact", head: true })
+  const search = filters.search ? sanitizeSearch(filters.search) : ""
+  if (search) {
+    query = query.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`)
+  }
+  const { count, error } = await query
+  if (error) throw error
+  return count ?? 0
 }
 
 export type AudiencesKpis = {

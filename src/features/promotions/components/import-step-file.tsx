@@ -9,7 +9,7 @@ import { Message } from "@/components/form/message"
 import { OptionPicker } from "@/components/form/option-picker"
 import { Section } from "@/components/form/section"
 import { Button } from "@/components/ui/button"
-import { csvCell, downloadCsv, parseCsv, type ParsedCsv } from "@/lib/csv"
+import { downloadCsv, parseCsv, type ParsedCsv } from "@/lib/csv"
 import { formatBytes, formatNumber } from "@/lib/format"
 
 import { BENEFIT_TYPE_LABEL } from "../lib/labels"
@@ -114,7 +114,7 @@ export function ImportStepFile({
             onClick={() =>
               downloadCsv(
                 `plantilla-${templateMechanic.replace(/_/g, "-")}.csv`,
-                template.csv.map((row) => row.map(csvCell))
+                template.csv
               )
             }
           >
@@ -127,7 +127,7 @@ export function ImportStepFile({
             onClick={() =>
               downloadCsv(
                 "plantilla-promociones-completa.csv",
-                buildTemplateCsv().map((row) => row.map(csvCell))
+                buildTemplateCsv()
               )
             }
           >

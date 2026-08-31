@@ -1,61 +1,41 @@
 "use client"
 
-import { Download } from "lucide-react"
+import { ExportCsvButton } from "@/components/data/export-csv-button"
+import { ExportDialog } from "@/components/data/export-dialog"
+import { notifyExportStatus } from "@/components/feedback/export-toast"
+import { useCsvExportDialog } from "@/hooks/use-csv-export-dialog"
 
-import { formatDateTime } from "@/lib/format"
+import {
+  exportAudiencesAction,
+  previewAudiencesExportAction,
+} from "../actions/export"
+import { AUDIENCES_EXPORT_COLUMN_OPTIONS } from "../lib/export-columns"
+import type { AudiencesExportFiltersInput } from "../schemas"
 
-import { AUDIENCE_ORIGIN, SEGMENT_STATUS_LABEL } from "../lib/labels"
-import type { AudienceListItem } from "../lib/queries"
+const ENTITY = { singular: "audiencia", plural: "audiencias" }
 
-const COLUMNS: {
-  header: string
-  value: (a: AudienceListItem) => string
-}[] = [
-  { header: "ID", value: (a) => a.id },
-  { header: "Nombre", value: (a) => a.name },
-  { header: "Código", value: (a) => a.code },
-  { header: "Tamaño", value: (a) => String(a.size) },
-  { header: "Actualizada", value: (a) => formatDateTime(a.updatedAt) },
-  { header: "Estado", value: (a) => SEGMENT_STATUS_LABEL[a.status] },
-  { header: "Origen", value: () => AUDIENCE_ORIGIN.label },
-]
+type ExportAudiencesButtonProps = { filters: AudiencesExportFiltersInput }
 
-function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`
-}
-
-type ExportAudiencesButtonProps = { audiences: AudienceListItem[] }
-
-/** Exporta la página actual de la tabla (11.1 "Exportar") como CSV — mismo patrón que `ExportPromotionsButton`. */
-export function ExportAudiencesButton({
-  audiences,
-}: ExportAudiencesButtonProps) {
-  function exportCsv() {
-    const rows = [
-      COLUMNS.map((c) => csvCell(c.header)).join(","),
-      ...audiences.map((a) =>
-        COLUMNS.map((c) => csvCell(c.value(a))).join(",")
-      ),
-    ]
-    const blob = new Blob([rows.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "audiencias.csv"
-    link.click()
-    URL.revokeObjectURL(url)
-  }
+/** "Exportar" (11.1): abre un diálogo de revisión — cuántas audiencias
+ *  matchean los filtros y qué columnas incluir — antes de descargar. */
+export function ExportAudiencesButton({ filters }: ExportAudiencesButtonProps) {
+  const dialog = useCsvExportDialog({
+    previewAction: previewAudiencesExportAction,
+    exportAction: exportAudiencesAction,
+    columnOptions: AUDIENCES_EXPORT_COLUMN_OPTIONS,
+    filters,
+    onStatus: notifyExportStatus,
+  })
 
   return (
-    <button
-      type="button"
-      onClick={exportCsv}
-      className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-[9px] pr-3.5 pl-3 text-xs font-medium text-secondary-foreground"
-    >
-      <Download className="size-3.5" />
-      Exportar
-    </button>
+    <>
+      <ExportCsvButton onExport={dialog.openDialog} />
+      <ExportDialog
+        {...dialog}
+        title="Exportar audiencias"
+        entity={ENTITY}
+        columns={AUDIENCES_EXPORT_COLUMN_OPTIONS}
+      />
+    </>
   )
 }

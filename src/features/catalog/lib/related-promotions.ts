@@ -131,7 +131,10 @@ export async function listPromotionsByCategories(
     .select(
       "id, nombre, tipo, tipo_beneficio, valor_beneficio, compra_cantidad, paga_cantidad, multiplicador_puntos, bono_puntos, precio_promocional, tipo_monedero, vigente_desde, vigente_hasta, estado_publicacion, canal_aplicacion, condiciones, creado_en"
     )
-    .neq("estado_publicacion", "borrador")
+    // Ni borrador ni pendiente_aprobacion: una promoción esperando
+    // aprobación no está publicada — mostrarla en la ficha del producto
+    // sería filtrar un cambio que todavía nadie autorizó.
+    .in("estado_publicacion", ["activa", "inactiva", "finalizada"])
     .order("creado_en", { ascending: false })
   if (error) throw error
 

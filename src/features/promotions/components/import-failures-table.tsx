@@ -3,7 +3,7 @@
 import { Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { csvCell, downloadCsv } from "@/lib/csv"
+import { downloadCsv } from "@/lib/csv"
 
 import { buildFailuresCsv, type ImportFailure } from "../lib/promotion-import"
 
@@ -24,7 +24,7 @@ export function ImportFailuresTable({ failures }: ImportFailuresTableProps) {
           onClick={() =>
             downloadCsv(
               "errores-importacion-promociones.csv",
-              buildFailuresCsv(failures).map((row) => row.map(csvCell))
+              buildFailuresCsv(failures)
             )
           }
         >

@@ -7,8 +7,7 @@ import type { PromotionsSummary } from "../lib/queries"
 
 type PromotionsCardProps = {
   summary: PromotionsSummary
-  /** `ExportPromotionsButton` necesita las promociones filtradas — vive en su propio `<Suspense>` sin key (no hace falta remontarlo, solo esperar). */
-  exportButton: ReactNode
+  exportSlot: ReactNode
   /** Tabla + paginación, dentro de un `<Suspense>` con key. */
   children: ReactNode
 }
@@ -23,7 +22,7 @@ type PromotionsCardProps = {
  */
 export function PromotionsCard({
   summary,
-  exportButton,
+  exportSlot,
   children,
 }: PromotionsCardProps) {
   return (
@@ -45,7 +44,7 @@ export function PromotionsCard({
           </p>
         </div>
         <PromotionsFiltersBar />
-        {exportButton}
+        {exportSlot}
       </div>
       {children}
     </div>

@@ -31,7 +31,7 @@ import {
   DAYS_OF_WEEK,
   FINANCIADORES,
   PRICE_BASES,
-  PROMOTION_PUBLICATION_STATUSES,
+  SELECTABLE_PUBLICATION_STATUSES,
   PROMOTION_TYPES,
   RX_APPLICABILITIES,
   SETTLEMENT_PERIODS,
@@ -55,6 +55,7 @@ import {
   type PointsDebitTiming,
   type PriceBasis,
   type PromotionPublicationStatus,
+  type SelectablePublicationStatus,
   type BenefitType,
   type DiscountTierCalculationMode,
   type DiscountTierThresholdType,
@@ -398,8 +399,13 @@ export function PromotionForm({
           descuentoAcumulaPuntos: promotion.descuento_acumula_puntos,
           aplicaARx: (promotion.aplica_a_rx as RxApplicability) ?? "permitido",
           aprobacionRegulatoria: promotion.aprobacion_regulatoria,
+          // El campo del formulario solo admite los 4 estados elegibles
+          // (`promotionSchema` usa `SELECTABLE_PUBLICATION_STATUSES`) —
+          // `pendiente_aprobacion` (`savedStatus`, más abajo) solo se
+          // muestra, nunca se reenvía: el `<fieldset>` ya está bloqueado
+          // para cualquier estado que no sea `borrador`.
           publicationStatus:
-            promotion.estado_publicacion as PromotionPublicationStatus,
+            promotion.estado_publicacion as SelectablePublicationStatus,
         }
       : createPromotionDefaults("descuento_porcentual"),
   })
@@ -514,7 +520,7 @@ export function PromotionForm({
    */
   const statusOptions: readonly PromotionPublicationStatus[] = savedStatus
     ? [savedStatus, ...ALLOWED_STATUS_TRANSITIONS[savedStatus]]
-    : PROMOTION_PUBLICATION_STATUSES
+    : SELECTABLE_PUBLICATION_STATUSES
 
   const ruleReadingNames = buildRuleReadingNames({
     categories: options.categories,
@@ -608,7 +614,7 @@ export function PromotionForm({
                       onValueChange={(v) =>
                         setValue(
                           "publicationStatus",
-                          v as PromotionPublicationStatus
+                          v as SelectablePublicationStatus
                         )
                       }
                     >

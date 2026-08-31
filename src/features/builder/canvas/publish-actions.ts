@@ -2,9 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import type { SupabaseClient } from "@supabase/supabase-js"
-
-import type { Database, Json } from "@/types/database.types"
+import type { Json } from "@/types/database.types"
 
 import {
   simulateWorkflow,
@@ -16,14 +14,10 @@ import { validateGraph } from "../validation/graph-validation"
 import { canTransitionStatus } from "@/lib/publication-status"
 
 import { builderActionClient } from "./action-client"
+import { hasPermission } from "./permissions"
 import { persistGraph } from "./persist-graph"
-import {
-  hasStatusEventsTable,
-  hasV2Schema,
-  lifecycleUpdate,
-  statusFromDb,
-  statusToDb,
-} from "./schema-compat"
+import { applyWorkflowPublicationTarget } from "./publish-gate"
+import { hasV2Schema, lifecycleUpdate, statusFromDb } from "./schema-compat"
 import {
   publishWorkflowSchema,
   runInputSchema,
@@ -36,41 +30,6 @@ type RunStepRow = {
   port: string | null
   conteo_entrada: number
   conteo_salida: number
-}
-
-/**
- * Una fila en la bitácora por cada cambio de estado. Es lo que hace
- * auditable el ciclo de vida: sin el motivo (y su nota cuando es «otro»)
- * queda registrado QUÉ cambió pero no por qué, que es justo lo que se busca
- * al revisar por qué una regla dejó de aplicar.
- *
- * No revienta la publicación si falla: la regla ya quedó publicada y perder
- * el registro es peor que quedarse a medias, pero no es motivo para
- * deshacer lo que sí funcionó.
- */
-async function recordStatusEvent(
-  ctx: { supabase: SupabaseClient<Database>; userId: string },
-  event: {
-    workflowId: string
-    estadoAnterior: string
-    estadoNuevo: string
-    motivo: string
-    nota: string
-  }
-) {
-  // La tabla puede no existir todavía (migración sin aplicar). Se comprueba
-  // antes en vez de dejar que el insert falle porque el error de PostgREST
-  // ensuciaría los logs de cada publicación con algo ya conocido.
-  if (!(await hasStatusEventsTable(ctx.supabase))) return
-
-  await ctx.supabase.from("workflow_status_events").insert({
-    workflow_id: event.workflowId,
-    estado_anterior: event.estadoAnterior,
-    estado_nuevo: event.estadoNuevo,
-    codigo_motivo: event.motivo,
-    nota: event.nota || null,
-    actor_id: ctx.userId,
-  })
 }
 
 /** Compartido por Simular y Publicar — ambos corren el mismo motor puro y guardan las mismas filas de `workflow_run_steps`. */
@@ -178,6 +137,13 @@ export const simulateWorkflowAction = builderActionClient
 export const publishWorkflowAction = builderActionClient
   .inputSchema(publishWorkflowSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para publicar reglas.",
+      }
+    }
+
     const {
       workflowId,
       nombre,
@@ -217,7 +183,7 @@ export const publishWorkflowAction = builderActionClient
 
     const { data: workflow } = await ctx.supabase
       .from("workflows")
-      .select("version_actual")
+      .select("version_actual, estado")
       .eq("id", workflowId)
       .single()
     const newVersion = (workflow?.version_actual ?? 0) + 1
@@ -244,23 +210,29 @@ export const publishWorkflowAction = builderActionClient
     await ctx.supabase
       .from("workflows")
       .update({
-        // El estado con el que se cierra lo elige quien publica — no
-        // siempre es `activa`: publicar algo que empieza el mes que viene,
-        // o dejarlo listo pero suspendido, son decisiones legítimas.
-        estado: statusToDb(estado, legacy),
         ...lifecycleUpdate({ vigente_desde, vigente_hasta }, legacy),
         version_actual: newVersion,
         actualizado_por: ctx.userId,
       })
       .eq("id", workflowId)
 
-    await recordStatusEvent(ctx, {
+    // El estado con el que se cierra lo elige quien publica — no siempre es
+    // `activa`: publicar algo que empieza el mes que viene, o dejarlo listo
+    // pero suspendido, son decisiones legítimas. Aparte del UPDATE de
+    // arriba porque `applyWorkflowPublicationTarget` decide por su cuenta
+    // si eso significa publicar de verdad o pedir aprobación (ver
+    // `publish-gate.ts`) — y solo toca la columna `estado`.
+    const current = statusFromDb(workflow?.estado ?? "borrador")
+    const gate = await applyWorkflowPublicationTarget(ctx, {
       workflowId,
-      estadoAnterior: "borrador",
-      estadoNuevo: estado,
+      from: current,
+      to: estado,
       motivo,
       nota,
     })
+    if (!gate.ok) {
+      return { ok: false as const, message: gate.message }
+    }
 
     const simNodes: SimNode[] = nodes.map((n) => ({
       id: n.id,
@@ -295,7 +267,10 @@ export const publishWorkflowAction = builderActionClient
 
     revalidatePath("/journeys")
     revalidatePath(`/journeys/${workflowId}`)
-    return { ok: true as const, version: newVersion }
+    // `gate.estado`, no `estado` (lo pedido): si quien publica no es admin,
+    // esto es `pendiente_aprobacion`, no `activa` — la UI necesita
+    // enterarse de eso sin esperar a un refresh.
+    return { ok: true as const, version: newVersion, estado: gate.estado }
   })
 
 /**
@@ -313,6 +288,13 @@ export const publishWorkflowAction = builderActionClient
 export const changeWorkflowStatusAction = builderActionClient
   .inputSchema(statusChangeSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para cambiar el estado de reglas.",
+      }
+    }
+
     const { workflowId, estado, motivo, nota, vigente_desde, vigente_hasta } =
       parsedInput
 
@@ -341,7 +323,6 @@ export const changeWorkflowStatusAction = builderActionClient
     const { error } = await ctx.supabase
       .from("workflows")
       .update({
-        estado: statusToDb(estado, legacy),
         actualizado_por: ctx.userId,
         ...lifecycleUpdate({ vigente_desde, vigente_hasta }, legacy),
       })
@@ -351,15 +332,26 @@ export const changeWorkflowStatusAction = builderActionClient
       return { ok: false as const, message: "No se pudo cambiar el estado." }
     }
 
-    await recordStatusEvent(ctx, {
+    // `applyWorkflowPublicationTarget` solo sustituye por
+    // `pendiente_aprobacion` cuando `from === "borrador" && to === "activa"`
+    // — el resto de transiciones que puede pedir esta acción (reactivar/
+    // inactivar/finalizar) se guardan tal cual, como siempre.
+    const gate = await applyWorkflowPublicationTarget(ctx, {
       workflowId,
-      estadoAnterior: current,
-      estadoNuevo: estado,
+      from: current,
+      to: estado,
       motivo,
       nota,
     })
+    if (!gate.ok) {
+      return { ok: false as const, message: gate.message }
+    }
 
     revalidatePath("/journeys")
     revalidatePath(`/journeys/${workflowId}`)
-    return { ok: true as const, estado }
+    // El estado devuelto es el que quedó guardado de verdad — no
+    // necesariamente `estado` (lo pedido): si el gate lo mandó a
+    // `pendiente_aprobacion`, la UI necesita enterarse de eso, no de que
+    // "activa" se aplicó.
+    return { ok: true as const, estado: gate.estado }
   })

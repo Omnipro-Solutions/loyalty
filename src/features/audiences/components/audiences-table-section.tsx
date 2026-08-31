@@ -14,7 +14,7 @@ type AudiencesTableSectionProps = {
   dir: "asc" | "desc"
 }
 
-/** Comparte la promesa con `AudiencesCount`/`AudiencesExportSection` — ver el docblock de esa función. */
+/** Comparte la promesa con `AudiencesCount` — ver el docblock de esa función. */
 export async function AudiencesTableSection({
   audiencesPromise,
   hasFiltersApplied,

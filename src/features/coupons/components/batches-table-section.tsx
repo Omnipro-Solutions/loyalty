@@ -8,7 +8,6 @@ type BatchesTableSectionProps = {
   pageSize: number
 }
 
-/** Comparte la promesa con `CouponsExportSection` cuando `vista=batches` (una sola consulta a `listCouponBatches`). */
 export async function BatchesTableSection({
   batchesPromise,
   pageSize,

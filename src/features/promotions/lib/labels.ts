@@ -66,18 +66,27 @@ export const CHANNEL_SCOPE_LABEL: Record<ChannelScope, string> = {
  */
 export const PROMOTION_STATUS_LABEL: Record<PromotionStatus, string> = {
   borrador: "Borrador",
+  pendiente_aprobacion: "Pendiente de aprobación",
   activa: "Activa",
   programada: "Programada",
   inactiva: "Inactiva",
   finalizada: "Finalizada",
 }
 
-/** Descripción de cada estado elegible, para el hint del campo "Estado". */
+/**
+ * Descripción de cada estado, para el hint del campo "Estado". Cubre los
+ * cinco valores de `PromotionPublicationStatus` aunque solo cuatro son
+ * elegibles en el `<Select>` (`SELECTABLE_PUBLICATION_STATUSES`,
+ * `promotion-form.tsx`) — `pendiente_aprobacion` solo lo escribe el
+ * servidor, pero igual necesita descripción en la tarjeta de estado.
+ */
 export const PROMOTION_PUBLICATION_STATUS_DESCRIPTION: Record<
   PromotionPublicationStatus,
   string
 > = {
   borrador: "Aún no publicada — se puede seguir editando.",
+  pendiente_aprobacion:
+    "Esperando que otra persona la apruebe — bloqueada para edición.",
   activa: "Publicada: el motor la evalúa dentro de su vigencia.",
   inactiva: "Publicada pero suspendida — el motor la ignora.",
   finalizada: "Cerrada: no vuelve a aplicarse mientras siga en este estado.",
@@ -86,6 +95,7 @@ export const PROMOTION_PUBLICATION_STATUS_DESCRIPTION: Record<
 /** Punto de color del estado (columna ESTADO de 06.1 y tarjeta de estado). */
 export const PROMOTION_STATUS_DOT: Record<PromotionStatus, string> = {
   activa: "bg-success",
+  pendiente_aprobacion: "bg-warning",
   programada: "bg-warning",
   finalizada: "bg-border-strong",
   inactiva: "bg-destructive",
@@ -680,6 +690,10 @@ export const PROMOTION_EVENT_TYPE_LABEL: Record<PromotionEventType, string> = {
   cancelada: "Cancelada",
   canje: "Canje",
   canje_rechazado: "Canje rechazado",
+  aprobacion_solicitada: "Aprobación solicitada",
+  aprobacion_concedida: "Aprobación concedida",
+  aprobacion_rechazada: "Aprobación rechazada",
+  aprobacion_retirada: "Solicitud retirada",
 }
 
 /** Motivo del cambio de estado (`promocion_eventos.codigo_motivo`). */

@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { buildCsvRows, downloadCsv, type CsvColumn } from "@/lib/csv"
 import { formatDateTime, formatNumber, formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -38,9 +39,25 @@ const PERIODS = [
 
 type Period = (typeof PERIODS)[number]["value"]
 
-function csvCell(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`
-}
+const COLUMNS: CsvColumn<LedgerEntryWithBalance>[] = [
+  {
+    key: "cuando",
+    header: "Cuándo",
+    value: (m) => formatDateTime(m.creado_en),
+  },
+  {
+    key: "movimiento",
+    header: "Movimiento",
+    value: (m) => TYPE_LABEL[m.tipo] ?? m.tipo,
+  },
+  {
+    key: "canal",
+    header: "Canal",
+    value: (m) => (m.canal ? (CHANNEL_LABEL[m.canal] ?? m.canal) : ""),
+  },
+  { key: "puntos", header: "Puntos", value: (m) => String(m.puntos) },
+  { key: "saldo", header: "Saldo", value: (m) => String(m.balanceAfter) },
+]
 
 type MemberRedemptionsCardProps = { entries: LedgerEntryWithBalance[] }
 
@@ -60,31 +77,7 @@ export function MemberRedemptionsCard({ entries }: MemberRedemptionsCardProps) {
   const net = filtered.reduce((acc, m) => acc + m.puntos, 0)
 
   function exportCsv() {
-    const rows = [
-      ["Cuándo", "Movimiento", "Canal", "Puntos", "Saldo"]
-        .map(csvCell)
-        .join(","),
-      ...filtered.map((m) =>
-        [
-          formatDateTime(m.creado_en),
-          TYPE_LABEL[m.tipo] ?? m.tipo,
-          m.canal ? (CHANNEL_LABEL[m.canal] ?? m.canal) : "",
-          String(m.puntos),
-          String(m.balanceAfter),
-        ]
-          .map(csvCell)
-          .join(",")
-      ),
-    ]
-    const blob = new Blob([rows.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "log-redenciones.csv"
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadCsv("log-redenciones.csv", buildCsvRows(COLUMNS, filtered))
   }
 
   return (

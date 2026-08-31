@@ -127,10 +127,7 @@ export function BatchExpandedPanel({
         >
           Vista previa de impresión
         </Link>
-        <ExportBatchCouponsButton
-          batchId={batch.id}
-          batchReference={batch.reference}
-        />
+        <ExportBatchCouponsButton batchId={batch.id} />
         <ResendUnviewedDialog batchId={batch.id} />
         {/* Fase 6 no la conecta: sin un evento propio en COUPON_EVENT_TYPES
             para "cierre de emisión", queda como próximamente en vez de

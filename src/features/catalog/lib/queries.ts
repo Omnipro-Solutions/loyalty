@@ -1,3 +1,4 @@
+import { fetchAllPaged } from "@/lib/supabase/paginate"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 
@@ -76,31 +77,39 @@ function resolveClassificationPaths(
 const PRODUCT_WITH_CLASSIFICATION =
   "*, producto_categorias(es_principal, category:categorias(id, nombre, parent_id))"
 
-export async function listProducts(
-  filters: CatalogFilters = {}
-): Promise<{ products: Product[]; total: number }> {
-  const supabase = await createClient()
-  const page = filters.page ?? 1
-  const pageSize = filters.pageSize ?? CATALOG_PAGE_SIZE
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+export type CatalogExportFilters = Omit<CatalogFilters, "page" | "pageSize">
 
-  let idsByCategory: string[] | null = null
-  if (filters.categoryIds?.length) {
-    const { data: matches, error } = await supabase
+/**
+ * IDs de producto que matchean las categorías filtradas — pre-consulta
+ * paginada con `fetchAllPaged` (mismo tope que el resto de exports) para no
+ * truncar en silencio con `max_rows` en un tenant con muchos productos por
+ * categoría. Riesgo conocido y NO resuelto en esta fase: con miles de IDs,
+ * el `.in("id", ...)` que consume este resultado puede exceder el límite de
+ * longitud de URL de PostgREST/el proxy — ver el plan (R2). Para el volumen
+ * de este tenant de demo no aplica.
+ */
+async function resolveIdsByCategory(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryIds: string[] | undefined
+): Promise<string[] | null> {
+  if (!categoryIds?.length) return null
+  const { rows } = await fetchAllPaged<{ producto_id: string }>((from, to) =>
+    supabase
       .from("producto_categorias")
-      .select("producto_id")
-      .in("categoria_id", filters.categoryIds)
-    if (error) throw error
-    idsByCategory = [...new Set((matches ?? []).map((c) => c.producto_id))]
-  }
+      .select("producto_id", { count: "exact" })
+      .in("categoria_id", categoryIds)
+      .range(from, to)
+  )
+  return [...new Set(rows.map((r) => r.producto_id))]
+}
 
-  let query = supabase
-    .from("productos")
-    .select(PRODUCT_WITH_CLASSIFICATION, { count: "exact" })
-    .order("nombre")
-    .range(from, to)
-
+function applyCatalogFilters<
+  T extends {
+    or: (f: string) => T
+    eq: (c: string, v: string) => T
+    in: (c: string, v: string[]) => T
+  },
+>(query: T, filters: CatalogExportFilters, idsByCategory: string[] | null): T {
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
     query = query.or(`nombre.ilike.%${search}%,sku.ilike.%${search}%`)
@@ -111,17 +120,98 @@ export async function listProducts(
   if (filters.status) {
     query = query.eq("estado", filters.status)
   }
+  return query
+}
 
-  const { data, error, count } = await query
-  if (error) throw error
+/** `.order("id")` desempata `nombre`: sin un desempate único, paginar con
+ *  `.range()` en llamadas separadas puede repetir o saltar filas entre
+ *  páginas. Compartida por `listProducts` (paginado) y `listAllProducts`
+ *  (universo completo para export). */
+function buildProductsQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: CatalogExportFilters,
+  idsByCategory: string[] | null
+) {
+  const query = supabase
+    .from("productos")
+    .select(PRODUCT_WITH_CLASSIFICATION, { count: "exact" })
+    .order("nombre")
+    .order("id")
 
+  return applyCatalogFilters(query, filters, idsByCategory)
+}
+
+/** `producto_categorias`/`paths` post-procesados en memoria contra el
+ *  árbol completo de categorías — ver `resolveClassificationPaths`. */
+async function withClassificationPaths<
+  T extends { producto_categorias: ProductCategoryRow[] },
+>(rows: T[]): Promise<(T & { paths: ClassificationPath[] })[]> {
   const categoryById = new Map((await listCategories()).map((c) => [c.id, c]))
-  const products = (data ?? []).map((p) => ({
+  return rows.map((p) => ({
     ...p,
     paths: resolveClassificationPaths(p.producto_categorias, categoryById),
   }))
+}
 
+export async function listProducts(
+  filters: CatalogFilters = {}
+): Promise<{ products: Product[]; total: number }> {
+  const supabase = await createClient()
+  const page = filters.page ?? 1
+  const pageSize = filters.pageSize ?? CATALOG_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const idsByCategory = await resolveIdsByCategory(
+    supabase,
+    filters.categoryIds
+  )
+  const { data, error, count } = await buildProductsQuery(
+    supabase,
+    filters,
+    idsByCategory
+  ).range(from, to)
+  if (error) throw error
+
+  const products = await withClassificationPaths(data ?? [])
   return { products, total: count ?? 0 }
+}
+
+/** Universo completo filtrado, para "Exportar" (03.1) — sin la paginación
+ *  de `listProducts`. */
+export async function listAllProducts(filters: CatalogExportFilters) {
+  const supabase = await createClient()
+  const idsByCategory = await resolveIdsByCategory(
+    supabase,
+    filters.categoryIds
+  )
+  const { rows, total, truncated } = await fetchAllPaged((from, to) =>
+    buildProductsQuery(supabase, filters, idsByCategory).range(from, to)
+  )
+  const products = await withClassificationPaths(rows)
+  return { products, total, truncated }
+}
+
+/** Conteo de productos que matchean los filtros, sin traer datos — para el
+ *  diálogo de export. */
+export async function countProducts(
+  filters: CatalogExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  const idsByCategory = await resolveIdsByCategory(
+    supabase,
+    filters.categoryIds
+  )
+  const query = supabase
+    .from("productos")
+    .select("id", { count: "exact", head: true })
+  const { count, error } = await applyCatalogFilters(
+    query,
+    filters,
+    idsByCategory
+  )
+  if (error) throw error
+  return count ?? 0
 }
 
 export async function getProductById(id: string): Promise<Product | null> {

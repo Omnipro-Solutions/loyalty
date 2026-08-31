@@ -1,73 +1,56 @@
 "use client"
 
-import { Download } from "lucide-react"
+import { ExportCsvButton } from "@/components/data/export-csv-button"
+import { ExportDialog } from "@/components/data/export-dialog"
+import { notifyExportStatus } from "@/components/feedback/export-toast"
+import { useCsvExportDialog } from "@/hooks/use-csv-export-dialog"
 
-import type { CouponBatchStatus, CouponOrigin } from "@/types/domain"
+import {
+  exportCouponsListAction,
+  previewCouponsListExportAction,
+} from "../actions/export"
+import {
+  COUPON_BATCHES_EXPORT_COLUMN_OPTIONS,
+  COUPONS_EXPORT_COLUMN_OPTIONS,
+} from "../lib/export-columns"
+import type { CouponsListExportFiltersInput } from "../schemas"
 
-import { csvCell, downloadCsv } from "../lib/csv"
-import { COUPON_BATCH_STATUS_LABEL, COUPON_ORIGIN_LABEL } from "../lib/labels"
-import type { CouponBatch, CouponSearchRow } from "../lib/queries"
+const BATCHES_ENTITY = { singular: "emisión", plural: "emisiones" }
+const COUPONS_ENTITY = { singular: "cupón", plural: "cupones" }
 
-const BATCH_COLUMNS: { header: string; value: (b: CouponBatch) => string }[] = [
-  { header: "Referencia", value: (b) => b.reference },
-  { header: "Nombre", value: (b) => b.name },
-  {
-    header: "Origen",
-    value: (b) => COUPON_ORIGIN_LABEL[b.origin as CouponOrigin],
-  },
-  { header: "Solicitados", value: (b) => String(b.requested_quantity) },
-  { header: "Generados", value: (b) => String(b.generated_count) },
-  {
-    header: "Estado",
-    value: (b) => COUPON_BATCH_STATUS_LABEL[b.status as CouponBatchStatus],
-  },
-  { header: "Creada", value: (b) => b.created_at },
-]
+type ExportCouponsButtonProps = { filters: CouponsListExportFiltersInput }
 
-const COUPON_COLUMNS: {
-  header: string
-  value: (c: CouponSearchRow) => string
-}[] = [
-  { header: "Código", value: (c) => c.code },
-  { header: "Persona", value: (c) => c.member_nombre ?? "Al portador" },
-  { header: "Email", value: (c) => c.member_email ?? "" },
-  { header: "Emisión", value: (c) => c.batch_reference ?? "" },
-  { header: "Estado", value: (c) => c.status },
-  { header: "Creado", value: (c) => c.created_at },
-]
+/**
+ * "Exportar" (13.1): una sola action para las dos vistas, discriminada por
+ * `filters.view` — un solo `useCsvExportDialog`, en vez de llamar el hook
+ * dos veces condicionalmente (regla de hooks de React).
+ */
+export function ExportCouponsButton({ filters }: ExportCouponsButtonProps) {
+  const columnOptions =
+    filters.view === "batches"
+      ? COUPON_BATCHES_EXPORT_COLUMN_OPTIONS
+      : COUPONS_EXPORT_COLUMN_OPTIONS
+  const entity = filters.view === "batches" ? BATCHES_ENTITY : COUPONS_ENTITY
+  const title =
+    filters.view === "batches" ? "Exportar emisiones" : "Exportar cupones"
 
-/** Exporta la página actual (25 filas), mismo alcance que `ExportPromotionsButton` — regla 7.8 del doc (exportar el universo completo) queda para una acción de servidor futura. */
-export function ExportCouponsButton(
-  props:
-    | { view: "batches"; batches: CouponBatch[] }
-    | { view: "coupons"; coupons: CouponSearchRow[] }
-) {
-  function handleExport() {
-    if (props.view === "batches") {
-      downloadCsv("emisiones.csv", [
-        BATCH_COLUMNS.map((c) => csvCell(c.header)),
-        ...props.batches.map((b) =>
-          BATCH_COLUMNS.map((c) => csvCell(c.value(b)))
-        ),
-      ])
-    } else {
-      downloadCsv("cupones.csv", [
-        COUPON_COLUMNS.map((c) => csvCell(c.header)),
-        ...props.coupons.map((c) =>
-          COUPON_COLUMNS.map((col) => csvCell(col.value(c)))
-        ),
-      ])
-    }
-  }
+  const dialog = useCsvExportDialog({
+    previewAction: previewCouponsListExportAction,
+    exportAction: exportCouponsListAction,
+    columnOptions,
+    filters,
+    onStatus: notifyExportStatus,
+  })
 
   return (
-    <button
-      type="button"
-      onClick={handleExport}
-      className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-[9px] pr-3.5 pl-3 text-xs font-medium text-secondary-foreground"
-    >
-      <Download className="size-3.5" />
-      Exportar
-    </button>
+    <>
+      <ExportCsvButton onExport={dialog.openDialog} />
+      <ExportDialog
+        {...dialog}
+        title={title}
+        entity={entity}
+        columns={columnOptions}
+      />
+    </>
   )
 }

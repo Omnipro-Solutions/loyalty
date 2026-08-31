@@ -1,7 +1,9 @@
 import {
   PUBLICATION_STATUSES,
+  SELECTABLE_PUBLICATION_STATUSES,
   STATUS_CHANGE_REASONS_REQUIRING_NOTE,
   type PublicationStatus,
+  type SelectablePublicationStatus,
   type StatusChangeReason,
 } from "@/types/domain"
 
@@ -76,7 +78,18 @@ export const ALLOWED_STATUS_TRANSITIONS: Record<
   PublicationStatus,
   readonly PublicationStatus[]
 > = {
+  // "activa" es el destino que pide quien publica — el servidor decide por
+  // su cuenta si eso significa publicar directo o dejarla en
+  // `pendiente_aprobacion` (ver `guard_promotion_publication_transition` /
+  // `guard_workflow_publication_transition`, migración
+  // `20260831090000_promociones_journeys_doble_aprobacion.sql`). Esta tabla
+  // no modela esa sustitución porque no es una transición que el cliente
+  // pueda elegir.
   borrador: ["activa", "inactiva", "finalizada"],
+  // Sin salida manual: mientras espera aprobación, la única acción posible
+  // es retirar la solicitud desde la bandeja de aprobaciones, no un cambio
+  // de estado genérico.
+  pendiente_aprobacion: [],
   activa: ["inactiva", "finalizada"],
   inactiva: ["activa", "finalizada"],
   finalizada: ["activa", "inactiva"],
@@ -91,6 +104,7 @@ export function canTransitionStatus(
 
 export const PUBLICATION_STATUS_LABEL: Record<DisplayStatus, string> = {
   borrador: "Borrador",
+  pendiente_aprobacion: "Pendiente de aprobación",
   activa: "Activa",
   programada: "Programada",
   inactiva: "Inactiva",
@@ -101,14 +115,17 @@ export const PUBLICATION_STATUS_LABEL: Record<DisplayStatus, string> = {
 export const PUBLICATION_STATUS_DESCRIPTION: Record<PublicationStatus, string> =
   {
     borrador: "Aún no publicada — se puede seguir editando.",
+    pendiente_aprobacion:
+      "Esperando que otra persona la apruebe — bloqueada para edición.",
     activa: "Publicada: el motor la evalúa dentro de su vigencia.",
     inactiva: "Publicada pero suspendida — el motor la ignora.",
     finalizada: "Cerrada: no vuelve a aplicarse mientras siga en este estado.",
   }
 
-/** Verbo en el botón, sustantivo en la insignia. */
+/** Verbo en el botón, sustantivo en la insignia. `pendiente_aprobacion` nunca aparece en un botón (ver `ALLOWED_STATUS_TRANSITIONS`) — el valor existe solo para que el mapa sea exhaustivo. */
 export const TRANSITION_VERB: Record<PublicationStatus, string> = {
   borrador: "Volver a borrador",
+  pendiente_aprobacion: "Enviar a aprobación",
   activa: "Reactivar",
   inactiva: "Inactivar",
   finalizada: "Finalizar",
@@ -117,6 +134,7 @@ export const TRANSITION_VERB: Record<PublicationStatus, string> = {
 /** Cómo se lee el cambio en la bitácora, ya ocurrido. */
 export const STATUS_EVENT_LABEL: Record<PublicationStatus, string> = {
   borrador: "Devuelta a borrador",
+  pendiente_aprobacion: "Enviada a aprobación",
   activa: "Activada",
   inactiva: "Inactivada",
   finalizada: "Finalizada",
@@ -150,8 +168,16 @@ export function statusChangeNeedsNote(reason: StatusChangeReason): boolean {
  * entre sí. Es una biyección exacta, así que no pierde nada; desaparece
  * cuando la migración esté aplicada en todos los entornos.
  */
+// `pendiente_aprobacion` no tiene equivalente en el vocabulario viejo: solo
+// puede existir en una base donde ya corrió
+// `20260831090000_promociones_journeys_doble_aprobacion.sql`, que a su vez
+// exige que `20260827140000_builder_ciclo_vida.sql` (la que introduce este
+// vocabulario) ya estuviera aplicada — así que `legacy` nunca es `true`
+// cuando este valor está en juego. Se mapea a sí mismo solo para que el
+// `Record` sea exhaustivo, no porque el caso vaya a ocurrir.
 const STATUS_TO_LEGACY: Record<PublicationStatus, string> = {
   borrador: "borrador",
+  pendiente_aprobacion: "pendiente_aprobacion",
   activa: "publicado",
   inactiva: "pausado",
   finalizada: "archivado",
@@ -162,7 +188,11 @@ const STATUS_FROM_LEGACY: Record<string, PublicationStatus> = {
   publicado: "activa",
   pausado: "inactiva",
   archivado: "finalizada",
-  // Una base ya migrada devuelve los valores nuevos tal cual.
+  // Una base ya migrada devuelve los valores nuevos tal cual. Sin la entrada
+  // de `pendiente_aprobacion` aquí, `statusFromDb` la leería como
+  // `borrador` por el `?? "borrador"` de abajo — y una regla esperando
+  // aprobación volvería a ser editable.
+  pendiente_aprobacion: "pendiente_aprobacion",
   activa: "activa",
   inactiva: "inactiva",
   finalizada: "finalizada",
@@ -178,5 +208,9 @@ export function statusToDb(estado: PublicationStatus, legacy: boolean): string {
   return legacy ? STATUS_TO_LEGACY[estado] : estado
 }
 
-export { PUBLICATION_STATUSES }
-export type { PublicationStatus, StatusChangeReason }
+export { PUBLICATION_STATUSES, SELECTABLE_PUBLICATION_STATUSES }
+export type {
+  PublicationStatus,
+  SelectablePublicationStatus,
+  StatusChangeReason,
+}

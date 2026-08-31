@@ -1,4 +1,5 @@
 import { formatShortDate } from "@/lib/format"
+import { fetchAllPaged } from "@/lib/supabase/paginate"
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/database.types"
 import type {
@@ -156,21 +157,17 @@ function sanitizeSearch(value: string): string {
   return value.replace(/[,()%]/g, "").trim()
 }
 
-export async function listPromotions(
-  filters: PromotionsFilters = {}
-): Promise<{ promotions: Promotion[]; total: number }> {
-  const supabase = await createClient()
-  const page = filters.page ?? 1
-  const pageSize = filters.pageSize ?? PROMOTIONS_PAGE_SIZE
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+export type PromotionsExportFilters = Omit<
+  PromotionsFilters,
+  "page" | "pageSize"
+>
 
-  let query = supabase
-    .from("promociones")
-    .select("*", { count: "exact" })
-    .order("creado_en", { ascending: false })
-    .range(from, to)
-
+/** Cascada de filtros, sin `.select()` — la comparten `buildPromotionsQuery`
+ *  (universo con datos) y `countPromotions` (conteo `head: true`, para el
+ *  diálogo de export). */
+function applyPromotionsFilters<
+  T extends { or: (f: string) => T; eq: (c: string, v: string) => T },
+>(query: T, filters: PromotionsExportFilters): T {
   const search = filters.search ? sanitizeSearch(filters.search) : ""
   if (search) {
     query = query.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`)
@@ -181,13 +178,68 @@ export async function listPromotions(
   if (filters.channel) {
     query = query.eq("canal_aplicacion", filters.channel)
   }
+  return query
+}
 
-  const { data, error, count } = await query
+/** `.order("id")` desempata `creado_en`: sin un desempate único, paginar con
+ *  `.range()` en llamadas separadas puede repetir o saltar filas entre
+ *  páginas. Compartida por `listPromotions` (paginado) y `listAllPromotions`
+ *  (universo completo para export). */
+function buildPromotionsQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: PromotionsExportFilters
+) {
+  const query = supabase
+    .from("promociones")
+    .select("*", { count: "exact" })
+    .order("creado_en", { ascending: false })
+    .order("id")
+
+  return applyPromotionsFilters(query, filters)
+}
+
+export async function listPromotions(
+  filters: PromotionsFilters = {}
+): Promise<{ promotions: Promotion[]; total: number }> {
+  const supabase = await createClient()
+  const page = filters.page ?? 1
+  const pageSize = filters.pageSize ?? PROMOTIONS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await buildPromotionsQuery(
+    supabase,
+    filters
+  ).range(from, to)
   if (error) throw error
   return {
     promotions: (data ?? []).map(withTypedConditions),
     total: count ?? 0,
   }
+}
+
+/** Universo completo filtrado, para "Exportar" (06.1) — sin la paginación
+ *  de `listPromotions`. */
+export async function listAllPromotions(filters: PromotionsExportFilters) {
+  const supabase = await createClient()
+  const { rows, total, truncated } = await fetchAllPaged<PromotionRow>(
+    (from, to) => buildPromotionsQuery(supabase, filters).range(from, to)
+  )
+  return { promotions: rows.map(withTypedConditions), total, truncated }
+}
+
+/** Conteo de promociones que matchean los filtros, sin traer datos — para
+ *  el diálogo de export. */
+export async function countPromotions(
+  filters: PromotionsExportFilters
+): Promise<number> {
+  const supabase = await createClient()
+  const query = supabase
+    .from("promociones")
+    .select("id", { count: "exact", head: true })
+  const { count, error } = await applyPromotionsFilters(query, filters)
+  if (error) throw error
+  return count ?? 0
 }
 
 export async function getPromotionById(id: string): Promise<Promotion | null> {
@@ -343,7 +395,11 @@ export async function getPromotionsPlanningKpis(): Promise<PromotionsPlanningKpi
     else if (status === "programada") scheduled += 1
     else if (status === "inactiva") inactive += 1
     else if (status === "finalizada") finished += 1
-    else if (status === "borrador") {
+    // `pendiente_aprobacion` cuenta como borrador para este tablero: desde
+    // la óptica de planeación, lo que importa es "todavía no está en vivo",
+    // no si además espera una decisión de otra persona (eso lo muestra
+    // `/aprobaciones`).
+    else if (status === "borrador" || status === "pendiente_aprobacion") {
       drafts += 1
       const age = Math.floor(
         (now.getTime() - new Date(row.creado_en).getTime()) / 86_400_000

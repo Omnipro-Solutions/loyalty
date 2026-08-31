@@ -3,13 +3,12 @@ import { Suspense } from "react"
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { ExportProductsButton } from "@/features/catalog/components/export-products-button"
 import { InventoryHealthCard } from "@/features/catalog/components/inventory-health-card"
 import { ProductsCard } from "@/features/catalog/components/products-card"
 import {
   CountPillSkeleton,
-  ExportButtonSkeleton,
   ProductsCount,
-  ProductsExportSlot,
 } from "@/features/catalog/components/products-count"
 import { ProductsTableSection } from "@/features/catalog/components/products-table-section"
 import {
@@ -19,15 +18,14 @@ import {
   listProducts,
 } from "@/features/catalog/lib/queries"
 import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value
-}
-
-function allValues(value: string | string[] | undefined): string[] {
-  if (!value) return []
-  return Array.isArray(value) ? value : [value]
-}
+import {
+  allValues,
+  enumValue,
+  firstValue,
+  parsePage,
+  parsePageSize,
+} from "@/lib/search-params"
+import { PRODUCT_STATUSES } from "@/types/domain"
 
 /** Igual al `size` de cada `ColumnDef` en `products-table.tsx` (columna 0 es un checkbox, no un avatar). */
 const PRODUCTS_TABLE_COLUMNS = [44, 260, 96, 130, 100, 140, 90, 100, 56]
@@ -39,9 +37,9 @@ export default async function CatalogPage({
   const params = await searchParams
   const search = firstValue(params.q)
   const categoryIds = allValues(params.categoria)
-  const status = firstValue(params.estado) as "activo" | "inactivo" | undefined
-  const page = Number(firstValue(params.page) ?? "1")
-  const pageSize = Number(firstValue(params.pageSize) ?? CATALOG_PAGE_SIZE)
+  const status = enumValue(params.estado, PRODUCT_STATUSES)
+  const page = parsePage(params.page)
+  const pageSize = parsePageSize(params.pageSize, CATALOG_PAGE_SIZE)
 
   // No dependen de los filtros — se quedan esperadas aquí.
   const [categories, kpis] = await Promise.all([
@@ -49,8 +47,9 @@ export default async function CatalogPage({
     getCatalogKpis(),
   ])
 
-  // Sin `await`: pill, botón de exportar y tabla comparten esta promesa —
-  // una sola consulta a `listProducts`.
+  // Sin `await`: pill y tabla comparten esta promesa — una sola consulta a
+  // `listProducts`. El export ya no la necesita, corre su propia consulta
+  // server-side.
   const productsPromise = listProducts({
     search,
     categoryIds,
@@ -99,9 +98,7 @@ export default async function CatalogPage({
           </Suspense>
         }
         exportSlot={
-          <Suspense fallback={<ExportButtonSkeleton />}>
-            <ProductsExportSlot productsPromise={productsPromise} />
-          </Suspense>
+          <ExportProductsButton filters={{ search, categoryIds, status }} />
         }
       >
         <Suspense

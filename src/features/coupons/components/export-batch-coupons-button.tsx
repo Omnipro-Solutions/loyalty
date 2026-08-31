@@ -1,44 +1,44 @@
 "use client"
 
-import { Download } from "lucide-react"
-import { useAction } from "next-safe-action/hooks"
+import { ExportCsvButton } from "@/components/data/export-csv-button"
+import { ExportDialog } from "@/components/data/export-dialog"
+import { notifyExportStatus } from "@/components/feedback/export-toast"
+import { useCsvExportDialog } from "@/hooks/use-csv-export-dialog"
 
-import { exportBatchCouponsAction } from "../actions/export"
-import { csvCell, downloadCsv } from "../lib/csv"
+import {
+  exportBatchCouponsAction,
+  previewBatchCouponsExportAction,
+} from "../actions/export"
+import { BATCH_COUPONS_EXPORT_COLUMN_OPTIONS } from "../lib/export-columns"
 
-type ExportBatchCouponsButtonProps = { batchId: string; batchReference: string }
+const ENTITY = { singular: "cupón", plural: "cupones" }
+
+type ExportBatchCouponsButtonProps = { batchId: string }
 
 export function ExportBatchCouponsButton({
   batchId,
-  batchReference,
 }: ExportBatchCouponsButtonProps) {
-  const exportAction = useAction(exportBatchCouponsAction, {
-    onSuccess: ({ data }) => {
-      if (!data?.ok) return
-      downloadCsv(`${batchReference}.csv`, [
-        ["Código", "Persona", "Email", "Estado", "Creado"].map(csvCell),
-        ...data.rows.map((r) =>
-          [
-            r.code,
-            r.memberNombre ?? "Al portador",
-            r.memberEmail ?? "",
-            r.status,
-            r.createdAt,
-          ].map(csvCell)
-        ),
-      ])
-    },
+  const dialog = useCsvExportDialog({
+    previewAction: previewBatchCouponsExportAction,
+    exportAction: exportBatchCouponsAction,
+    columnOptions: BATCH_COUPONS_EXPORT_COLUMN_OPTIONS,
+    filters: { batchId },
+    onStatus: notifyExportStatus,
   })
 
   return (
-    <button
-      type="button"
-      disabled={exportAction.isPending}
-      onClick={() => exportAction.execute({ batchId })}
-      className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background px-3.5 py-2 text-xs font-medium text-secondary-foreground disabled:opacity-50"
-    >
-      <Download className="size-3.5" />
-      {exportAction.isPending ? "Exportando…" : "Exportar CSV"}
-    </button>
+    <>
+      <ExportCsvButton
+        variant="compact"
+        label="Exportar CSV"
+        onExport={dialog.openDialog}
+      />
+      <ExportDialog
+        {...dialog}
+        title="Exportar cupones de la emisión"
+        entity={ENTITY}
+        columns={BATCH_COUPONS_EXPORT_COLUMN_OPTIONS}
+      />
+    </>
   )
 }

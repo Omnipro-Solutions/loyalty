@@ -1,5 +1,7 @@
 import {
+  Activity,
   BarChart3,
+  ClipboardCheck,
   Gauge,
   History,
   LayoutGrid,
@@ -34,19 +36,28 @@ export type NavGroup = {
 }
 
 /**
- * Exact mirror of the Figma sidebar (624:561), with four exceptions: the
+ * Exact mirror of the Figma sidebar (624:561), with five exceptions: the
  * file doesn't give Journeys/Loyalty Builder its own item in the main nav
  * (the "trending-up" icon there is used by "Audiencias"), "Analítica" (02.1 ·
  * Dashboard · denso) isn't in this mock's sidebar at all — it's a second
  * dashboard variant, reachable only via its own frame's node id —, "Panel de
  * promociones" has no Figma node at all (user request, not in the Figma
- * plan), and "Logs de promociones" is likewise a user request (moved out of
- * `/panel-promociones`'s "Logs" tab into its own Configuración item). Since
- * all four are priority additions, they were added as new entries (Journeys
+ * plan), "Logs de promociones" is likewise a user request (moved out of
+ * `/panel-promociones`'s "Logs" tab into its own Configuración item), and
+ * "Aprobaciones" (bandeja unificada de doble aprobación de promociones,
+ * journeys y cupones — ver `20260831090000_promociones_journeys_doble_aprobacion.sql`)
+ * es otro pedido de usuario sin nodo en el Figma: se llegaba solo desde la
+ * insignia "N pendientes" de cada listado, pero un aprobador quiere poder
+ * entrar aunque no haya nada pendiente en ese momento. "Observabilidad"
+ * (`/ajustes/observabilidad`) es otro pedido de usuario sin nodo en el
+ * Figma: vista simulada tipo statuspage de sistema e integraciones — ver
+ * `config/system-status.ts` y su contraparte pública `/estado`. Since all
+ * six are priority additions, they were added as new entries (Journeys
  * under COMERCIAL, Analítica under Principal next to Resumen which now
  * renders 02.3 · Dashboard · IA, Panel de promociones as the first item
- * under Principal, Logs de promociones under Configuración) — everything
- * else (order, labels, icons) is literal.
+ * under Principal, Logs de promociones, Aprobaciones and Observabilidad
+ * under Configuración) — everything else (order, labels, icons) is
+ * literal.
  */
 export const NAVIGATION: NavGroup[] = [
   {
@@ -97,6 +108,11 @@ export const NAVIGATION: NavGroup[] = [
         href: "/ajustes/integraciones",
         icon: PlugZap,
       },
+      {
+        label: "Observabilidad",
+        href: "/ajustes/observabilidad",
+        icon: Activity,
+      },
       // Sin equivalente en el Figma — nace del plan de cobertura de
       // docs/promociones.md (Fase 0): parámetros de organización que
       // Promociones y Clientes comparten (valor del punto, breakage,
@@ -114,6 +130,16 @@ export const NAVIGATION: NavGroup[] = [
         label: "Logs del sistema",
         href: "/ajustes/logs-sistema",
         icon: History,
+      },
+      // Sin equivalente en el Figma — bandeja única de doble aprobación de
+      // promociones, journeys y cupones. Antes solo se llegaba desde la
+      // insignia "N pendientes" de cada listado; queda también como ítem
+      // propio para poder entrar aunque no haya nada pendiente en ese
+      // momento.
+      {
+        label: "Aprobaciones",
+        href: "/aprobaciones",
+        icon: ClipboardCheck,
       },
     ],
   },

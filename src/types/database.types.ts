@@ -2157,6 +2157,77 @@ export type Database = {
           },
         ]
       }
+      promotion_approval: {
+        Row: {
+          approver_id: string | null
+          codigo_motivo: string
+          decided_at: string | null
+          id: string
+          nota_motivo: string | null
+          note: string | null
+          org_id: string
+          promocion_id: string
+          requested_at: string
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          approver_id?: string | null
+          codigo_motivo: string
+          decided_at?: string | null
+          id?: string
+          nota_motivo?: string | null
+          note?: string | null
+          org_id: string
+          promocion_id: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          approver_id?: string | null
+          codigo_motivo?: string
+          decided_at?: string | null
+          id?: string
+          nota_motivo?: string | null
+          note?: string | null
+          org_id?: string
+          promocion_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_approval_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_approval_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_approval_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_approval_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedores: {
         Row: {
           creado_en: string
@@ -2595,6 +2666,67 @@ export type Database = {
           },
         ]
       }
+      workflow_approval: {
+        Row: {
+          approver_id: string | null
+          codigo_motivo: string
+          decided_at: string | null
+          id: string
+          nota_motivo: string | null
+          note: string | null
+          requested_at: string
+          requested_by: string | null
+          status: string
+          workflow_id: string
+        }
+        Insert: {
+          approver_id?: string | null
+          codigo_motivo: string
+          decided_at?: string | null
+          id?: string
+          nota_motivo?: string | null
+          note?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          workflow_id: string
+        }
+        Update: {
+          approver_id?: string | null
+          codigo_motivo?: string
+          decided_at?: string | null
+          id?: string
+          nota_motivo?: string | null
+          note?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_approval_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approval_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approval_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_edges: {
         Row: {
           creado_en: string
@@ -2999,7 +3131,16 @@ export type Database = {
         Returns: undefined
       }
       current_org_id: { Args: never; Returns: string }
+      current_rol_base: { Args: never; Returns: string }
       decide_coupon_approval: {
+        Args: { p_approval_id: string; p_decision: string; p_note?: string }
+        Returns: string
+      }
+      decide_promotion_approval: {
+        Args: { p_approval_id: string; p_decision: string; p_note?: string }
+        Returns: string
+      }
+      decide_workflow_approval: {
         Args: { p_approval_id: string; p_decision: string; p_note?: string }
         Returns: string
       }

@@ -7,7 +7,7 @@ type AudiencesCountProps = {
   audiencesPromise: Promise<{ audiences: AudienceListItem[]; total: number }>
 }
 
-/** Comparte la promesa con `AudiencesTableSection`/`AudiencesExportSection`: una sola consulta a `listAudiences`. */
+/** Comparte la promesa con `AudiencesTableSection`: una sola consulta a `listAudiences`. */
 export async function AudiencesCount({
   audiencesPromise,
 }: AudiencesCountProps) {

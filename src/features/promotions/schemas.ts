@@ -28,6 +28,7 @@ import {
   PRICE_BASES,
   PROMOTION_PUBLICATION_STATUSES,
   PROMOTION_STATUS_CHANGE_REASONS,
+  SELECTABLE_PUBLICATION_STATUSES,
   BENEFIT_TYPES,
   PROMOTION_TYPES,
   RETURN_EFFECTS,
@@ -498,7 +499,11 @@ const promotionBaseSchema = z.object({
   aplicaARx: z.enum(RX_APPLICABILITIES),
   aprobacionRegulatoria: z.boolean(),
 
-  publicationStatus: z.enum(PROMOTION_PUBLICATION_STATUSES),
+  // `pendiente_aprobacion` no es un destino que el cliente pueda pedir — lo
+  // decide el servidor (`applyPublicationTarget`, `actions/publish-gate.ts`)
+  // según el `rol_base` de quien publica. Restringir aquí a los 4 estados
+  // elegibles cierra la puerta a un POST hecho a mano con ese valor.
+  publicationStatus: z.enum(SELECTABLE_PUBLICATION_STATUSES),
 })
 
 /**
@@ -894,7 +899,8 @@ export const updatePromotionSchema = promotionBaseSchema
 export const updatePromotionStatusSchema = z
   .object({
     id: z.string().uuid(),
-    publicationStatus: z.enum(PROMOTION_PUBLICATION_STATUSES),
+    // Mismo criterio que en `promotionSchema`: no es un destino elegible.
+    publicationStatus: z.enum(SELECTABLE_PUBLICATION_STATUSES),
     reasonCode: z.enum(PROMOTION_STATUS_CHANGE_REASONS),
     reasonNote: z.string().trim().max(280, "Máximo 280 caracteres").optional(),
   })
@@ -953,6 +959,16 @@ export const deletePromotionsSchema = z.object({
     ),
 })
 
+/** Aprobar/rechazar una solicitud de `promotion_approval` — calco de `features/coupons/schemas.ts` `decideApprovalSchema`. */
+export const decideApprovalSchema = z.object({
+  approvalId: z.string().uuid(),
+  note: z.string().optional(),
+})
+
+export const withdrawApprovalSchema = z.object({
+  approvalId: z.string().uuid(),
+})
+
 export const simulatePromotionSchema = z.object({
   excludeId: z.string().uuid().optional(),
   conditions: z.array(conditionSchema),
@@ -962,4 +978,21 @@ export const simulatePromotionSchema = z.object({
   benefitValue: z.number().optional(),
   stackable: z.boolean().optional(),
   exclusionGroup: z.string().optional(),
+})
+
+/** Filtros del listado (06.1), sin `page`/`pageSize` — comparte
+ *  `previewPromotionsExportAction` (conteo) y `exportPromotionsAction`
+ *  (además valida `columns`). */
+export const promotionsExportFiltersSchema = z.object({
+  search: z.string().max(200).optional(),
+  publicationStatus: z.enum(PROMOTION_PUBLICATION_STATUSES).optional(),
+  channel: z.enum(CHANNEL_SCOPES).optional(),
+})
+export type PromotionsExportFiltersInput = z.infer<
+  typeof promotionsExportFiltersSchema
+>
+
+/** `columns`: keys de `PROMOTIONS_EXPORT_COLUMN_OPTIONS` marcadas en el diálogo — vacío exporta todas. */
+export const exportPromotionsSchema = promotionsExportFiltersSchema.extend({
+  columns: z.array(z.string()).optional(),
 })
