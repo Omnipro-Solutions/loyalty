@@ -17,10 +17,10 @@ import { membersPermissionActionClient } from "./action-client"
 export const applyPointsAdjustmentAction = membersPermissionActionClient
   .inputSchema(pointsAdjustmentSchema)
   .action(async ({ parsedInput, ctx }) => {
-    if (!hasPermission(ctx.permissionsSet, "reglas", "crear")) {
+    if (!hasPermission(ctx.permissionsSet, "puntos", "ajustar")) {
       return {
         ok: false as const,
-        message: "No tienes permiso para aplicar reglas de ajuste.",
+        message: "No tienes permiso para ajustar el saldo de puntos.",
       }
     }
 

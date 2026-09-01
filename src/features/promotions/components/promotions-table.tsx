@@ -50,6 +50,9 @@ type PromotionsTableProps = {
   totalStores: number
   categoryNameById: Map<string, string>
   segmentNameById: Map<string, string>
+  /** `promociones:editar` — activar es un cambio de estado, no una creación. */
+  canActivate: boolean
+  canDelete: boolean
 }
 
 /** Figma "Table" de 06.1 (706:2518): fila muestra ícono por tipo + nombre/subtítulo, alcance, canjes, presupuesto, ROI, vigencia, estado. */
@@ -58,11 +61,19 @@ export function PromotionsTable({
   totalStores,
   categoryNameById,
   segmentNameById,
+  canActivate,
+  canDelete,
 }: PromotionsTableProps) {
   const router = useRouter()
   const ctx = useMemo(
-    () => ({ totalStores, categoryNameById, segmentNameById }),
-    [totalStores, categoryNameById, segmentNameById]
+    () => ({
+      totalStores,
+      categoryNameById,
+      segmentNameById,
+      canActivate,
+      canDelete,
+    }),
+    [totalStores, categoryNameById, segmentNameById, canActivate, canDelete]
   )
 
   // Solo los borradores se pueden activar, así que son los únicos
@@ -306,22 +317,22 @@ export function PromotionsTable({
                         {isDraft ? "Editar borrador" : "Ver detalle"}
                       </span>
                     </DropdownMenuItem>
-                    {isDraft && (
-                      <>
-                        <DropdownMenuItem
-                          onClick={() => setActivateIds([promotion.id])}
-                        >
-                          <CircleCheck className="size-4" />
-                          <span className="whitespace-nowrap">Activar</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleteIds([promotion.id])}
-                        >
-                          <Trash2 className="size-4" />
-                          <span className="whitespace-nowrap">Eliminar</span>
-                        </DropdownMenuItem>
-                      </>
+                    {isDraft && ctx.canActivate && (
+                      <DropdownMenuItem
+                        onClick={() => setActivateIds([promotion.id])}
+                      >
+                        <CircleCheck className="size-4" />
+                        <span className="whitespace-nowrap">Activar</span>
+                      </DropdownMenuItem>
+                    )}
+                    {isDraft && ctx.canDelete && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setDeleteIds([promotion.id])}
+                      >
+                        <Trash2 className="size-4" />
+                        <span className="whitespace-nowrap">Eliminar</span>
+                      </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -378,23 +389,29 @@ export function PromotionsTable({
               su contenido, con un mínimo para que no quede angosto.
             */}
             <DropdownMenuContent align="end" className="w-auto min-w-[230px]">
-              <DropdownMenuItem onClick={() => setActivateIds(visibleSelected)}>
-                <CircleCheck className="size-4" />
-                <span className="whitespace-nowrap">
-                  Activar {visibleSelected.length}{" "}
-                  {visibleSelected.length === 1 ? "borrador" : "borradores"}
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setDeleteIds(visibleSelected)}
-              >
-                <Trash2 className="size-4" />
-                <span className="whitespace-nowrap">
-                  Eliminar {visibleSelected.length}{" "}
-                  {visibleSelected.length === 1 ? "borrador" : "borradores"}
-                </span>
-              </DropdownMenuItem>
+              {canActivate && (
+                <DropdownMenuItem
+                  onClick={() => setActivateIds(visibleSelected)}
+                >
+                  <CircleCheck className="size-4" />
+                  <span className="whitespace-nowrap">
+                    Activar {visibleSelected.length}{" "}
+                    {visibleSelected.length === 1 ? "borrador" : "borradores"}
+                  </span>
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setDeleteIds(visibleSelected)}
+                >
+                  <Trash2 className="size-4" />
+                  <span className="whitespace-nowrap">
+                    Eliminar {visibleSelected.length}{" "}
+                    {visibleSelected.length === 1 ? "borrador" : "borradores"}
+                  </span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { storesActionClient } from "./action-client"
 import { storeSchema, updateStoreSchema } from "../schemas"
+import { hasPermission } from "../lib/permissions"
 
 function toRow(values: {
   name: string
@@ -46,6 +47,13 @@ function toRow(values: {
 export const createStoreAction = storesActionClient
   .inputSchema(storeSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "crear")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para crear tiendas.",
+      }
+    }
+
     const { data, error } = await ctx.supabase
       .from("tiendas")
       .insert({ org_id: ctx.orgId, ...toRow(parsedInput) })
@@ -67,6 +75,13 @@ export const createStoreAction = storesActionClient
 export const updateStoreAction = storesActionClient
   .inputSchema(updateStoreSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para editar tiendas.",
+      }
+    }
+
     const { id, ...values } = parsedInput
     const { error } = await ctx.supabase
       .from("tiendas")

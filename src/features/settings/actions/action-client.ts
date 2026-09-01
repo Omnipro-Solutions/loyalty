@@ -2,10 +2,11 @@ import { actionClient } from "@/lib/safe-action"
 import { createClient, getAuthenticatedUser } from "@/lib/supabase/server"
 
 /**
- * Igual que `teamActionClient`: los parámetros del programa son
- * configuración de organización, así que se protegen con el mismo permiso
- * que el resto de Ajustes (`equipo:editar`) en vez de crear un recurso
- * nuevo en `role_permissions` solo para esta pantalla.
+ * Igual que `teamActionClient`, pero con su propio recurso: antes esta
+ * pantalla tomaba prestado `equipo:editar` «en vez de crear un recurso nuevo
+ * solo para ella», lo que ataba recalcular los parámetros del programa
+ * —niveles, caducidad de puntos, equivalencias— a poder gestionar el equipo.
+ * Son dos cosas distintas y ahora `programa` existe en `RESOURCES`.
  */
 export const settingsActionClient = actionClient.use(async ({ next }) => {
   const supabase = await createClient()
@@ -24,7 +25,7 @@ export const settingsActionClient = actionClient.use(async ({ next }) => {
       (p) => `${p.recurso}:${p.accion}`
     )
   )
-  if (!permissionsSet.has("equipo:editar")) {
+  if (!permissionsSet.has("programa:editar")) {
     throw new Error("No tienes permiso para editar los ajustes del programa.")
   }
 

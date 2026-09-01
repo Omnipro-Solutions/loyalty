@@ -39,6 +39,7 @@ export function JourneysToolbar({
   published,
   membersInJourney,
   pendingApprovals,
+  canCreate,
 }: {
   total: number
   drafts: number
@@ -46,6 +47,8 @@ export function JourneysToolbar({
   published: number
   membersInJourney: string
   pendingApprovals: number
+  /** Sin `journeys:crear` no se ofrece el gesto; la Server Action lo rechaza igual. */
+  canCreate: boolean
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -124,7 +127,7 @@ export function JourneysToolbar({
           {pendingApprovals === 1 ? "" : "s"} de aprobación
         </Link>
       )}
-      <NewJourneyButton />
+      {canCreate && <NewJourneyButton />}
     </div>
   )
 }

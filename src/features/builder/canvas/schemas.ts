@@ -1,6 +1,8 @@
 import { z } from "zod"
 
 import {
+  DECISION_REASONS,
+  DECISION_REASONS_REQUIRING_NOTE,
   BUILDER_NODE_TYPES,
   SELECTABLE_PUBLICATION_STATUSES,
   STATUS_CHANGE_REASONS,
@@ -102,11 +104,25 @@ export const publishWorkflowSchema = runInputSchema.extend({
   vigente_hasta: z.string().nullable().default(null),
 })
 
-/** Aprobar/rechazar una solicitud de `workflow_approval` — calco de `features/promotions/schemas.ts` `decideApprovalSchema`. */
-export const decideApprovalSchema = z.object({
-  approvalId: z.string().uuid(),
-  note: z.string().optional(),
-})
+/**
+ * Decidir una o VARIAS solicitudes de una vez — misma forma que
+ * `features/promotions/schemas.ts`, que documenta el porqué. La bandeja de
+ * `/aprobaciones` la usa tanto para el botón de una fila como para la barra
+ * de selección.
+ */
+export const decideApprovalsSchema = z
+  .object({
+    approvalIds: z.array(z.string().uuid()).min(1),
+    decision: z.enum(["approved", "rejected"]),
+    reasonCode: z.enum(DECISION_REASONS),
+    note: z.string().optional(),
+  })
+  .refine(
+    (v) =>
+      !DECISION_REASONS_REQUIRING_NOTE.includes(v.reasonCode) ||
+      !!v.note?.trim(),
+    { message: "Explica el motivo", path: ["note"] }
+  )
 
 export const withdrawApprovalSchema = z.object({
   approvalId: z.string().uuid(),

@@ -49,28 +49,32 @@ function useColumns(
   selected: Set<string>,
   onToggle: (id: string) => void,
   onToggleAll: (checkAll: boolean) => void,
-  allSelected: boolean
+  allSelected: boolean,
+  /** La selección múltiple existe solo para eliminar: sin el permiso, sobra la columna entera. */
+  canDelete: boolean
 ) {
   return columnHelper.columns([
     columnHelper.display({
       id: "seleccion",
-      size: 44,
-      header: () => (
-        <Checkbox
-          checked={allSelected}
-          onCheckedChange={(v) => onToggleAll(v === true)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Seleccionar todos"
-        />
-      ),
-      cell: (info) => (
-        <Checkbox
-          checked={selected.has(info.row.original.id)}
-          onCheckedChange={() => onToggle(info.row.original.id)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Seleccionar ${info.row.original.nombre}`}
-        />
-      ),
+      size: canDelete ? 44 : 0,
+      header: () =>
+        canDelete ? (
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={(v) => onToggleAll(v === true)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Seleccionar todos"
+          />
+        ) : null,
+      cell: (info) =>
+        canDelete ? (
+          <Checkbox
+            checked={selected.has(info.row.original.id)}
+            onCheckedChange={() => onToggle(info.row.original.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Seleccionar ${info.row.original.nombre}`}
+          />
+        ) : null,
     }),
     columnHelper.accessor("nombre", {
       header: "Workflow",
@@ -178,8 +182,11 @@ function useColumns(
 
 export function JourneysTable({
   workflows,
+  canDelete,
 }: {
   workflows: WorkflowListItem[]
+  /** Sin `journeys:eliminar` no se ofrece la selección múltiple: su única acción masiva es eliminar. */
+  canDelete: boolean
 }) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -209,7 +216,13 @@ export function JourneysTable({
   const allSelected =
     workflows.length > 0 && workflows.every((w) => selected.has(w.id))
 
-  const columns = useColumns(selected, onToggle, onToggleAll, allSelected)
+  const columns = useColumns(
+    selected,
+    onToggle,
+    onToggleAll,
+    allSelected,
+    canDelete
+  )
 
   const table = useTable({
     features: tableFeaturesConfig,
@@ -219,7 +232,7 @@ export function JourneysTable({
 
   return (
     <>
-      {selected.size > 0 && (
+      {canDelete && selected.size > 0 && (
         <div className="flex items-center gap-3 border-b border-border bg-accent px-[22px] py-2.5">
           <p className="flex-1 text-[12px] font-medium text-accent-foreground">
             {selected.size} seleccionado

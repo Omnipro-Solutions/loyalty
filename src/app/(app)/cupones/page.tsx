@@ -2,6 +2,7 @@ import { Plus, Printer } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { BatchesTableSection } from "@/features/coupons/components/batches-table-section"
@@ -64,9 +65,10 @@ export default async function CouponsPage({
     params.pageSize,
     vista === "batches" ? COUPON_BATCHES_PAGE_SIZE : COUPONS_PAGE_SIZE
   )
-  const [pendingApprovals, kpis] = await Promise.all([
+  const [pendingApprovals, kpis, permissions] = await Promise.all([
     getPendingApprovalsCount(),
     getCouponCommercialKpis(),
+    getSessionPermissions(),
   ])
 
   // Sin `await`: la consume `*TableSection` (con key) — el export ya no
@@ -279,13 +281,15 @@ export default async function CouponsPage({
               {pendingApprovals === 1 ? "" : "s"} de aprobación
             </Link>
           )}
-          <Link
-            href="/cupones/nuevo"
-            className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Nueva emisión
-          </Link>
+          {allows(permissions, "cupones", "crear") && (
+            <Link
+              href="/cupones/nuevo"
+              className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
+            >
+              <Plus className="size-4" />
+              Nueva emisión
+            </Link>
+          )}
         </div>
       </div>
 

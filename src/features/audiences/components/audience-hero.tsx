@@ -10,10 +10,19 @@ import { syncAudienceAction } from "../actions/sync"
 import { ExportMembersButton } from "./export-members-button"
 import type { Audience, AudienceMember } from "../lib/queries"
 
-type AudienceHeroProps = { audience: Audience; members: AudienceMember[] }
+type AudienceHeroProps = {
+  audience: Audience
+  members: AudienceMember[]
+  /** `clientes:editar` — sincronizar empuja la audiencia a los destinos conectados. */
+  canSync: boolean
+}
 
 /** Figma "11.2 · Audiencia · detalle" (842:6218) — Hero. */
-export function AudienceHero({ audience, members }: AudienceHeroProps) {
+export function AudienceHero({
+  audience,
+  members,
+  canSync,
+}: AudienceHeroProps) {
   const sync = useAction(syncAudienceAction)
 
   return (
@@ -56,12 +65,14 @@ export function AudienceHero({ audience, members }: AudienceHeroProps) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <Button
-          disabled={sync.isPending}
-          onClick={() => sync.execute({ segmentId: audience.id })}
-        >
-          Sincronizar ahora
-        </Button>
+        {canSync && (
+          <Button
+            disabled={sync.isPending}
+            onClick={() => sync.execute({ segmentId: audience.id })}
+          >
+            Sincronizar ahora
+          </Button>
+        )}
         <ExportMembersButton members={members} />
       </div>
     </div>

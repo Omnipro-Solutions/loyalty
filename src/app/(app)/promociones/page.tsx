@@ -5,6 +5,7 @@ import { Suspense } from "react"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { formatNumber, formatUSD } from "@/lib/format"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { countPendingPromotionApprovals } from "@/features/promotions/lib/approval-queries"
 import { ExportPromotionsButton } from "@/features/promotions/components/export-promotions-button"
 import { PromotionsCard } from "@/features/promotions/components/promotions-card"
@@ -52,6 +53,7 @@ export default async function PromotionsPage({
     categories,
     segments,
     pendingApprovals,
+    permissions,
   ] = await Promise.all([
     getPromotionsPlanningKpis(),
     getPromotionsSummary(),
@@ -59,7 +61,10 @@ export default async function PromotionsPage({
     listConditionCategories(),
     listConditionSegments(),
     countPendingPromotionApprovals(),
+    getSessionPermissions(),
   ])
+
+  const canCreate = allows(permissions, "promociones", "crear")
 
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
   const segmentNameById = new Map(segments.map((s) => [s.id, s.name]))
@@ -101,13 +106,15 @@ export default async function PromotionsPage({
             <Gauge className="size-4" />
             Panel
           </Link>
-          <Link
-            href="/promociones/importar"
-            className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-2.5 pr-4 pl-3.5 text-sm font-medium text-secondary-foreground"
-          >
-            <Upload className="size-4" />
-            Importar
-          </Link>
+          {canCreate && (
+            <Link
+              href="/promociones/importar"
+              className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-2.5 pr-4 pl-3.5 text-sm font-medium text-secondary-foreground"
+            >
+              <Upload className="size-4" />
+              Importar
+            </Link>
+          )}
           {pendingApprovals > 0 && (
             <Link
               href="/aprobaciones"
@@ -117,13 +124,15 @@ export default async function PromotionsPage({
               {pendingApprovals === 1 ? "" : "s"} de aprobación
             </Link>
           )}
-          <Link
-            href="/promociones/nueva"
-            className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Crear promoción
-          </Link>
+          {canCreate && (
+            <Link
+              href="/promociones/nueva"
+              className="flex items-center gap-[7px] rounded-[10px] bg-primary py-2.5 pr-4 pl-3.5 text-sm font-medium text-primary-foreground"
+            >
+              <Plus className="size-4" />
+              Crear promoción
+            </Link>
+          )}
         </div>
       </div>
 
@@ -157,6 +166,8 @@ export default async function PromotionsPage({
             totalStores={totalStores}
             categoryNameById={categoryNameById}
             segmentNameById={segmentNameById}
+            canActivate={allows(permissions, "promociones", "editar")}
+            canDelete={allows(permissions, "promociones", "eliminar")}
           />
         </Suspense>
       </PromotionsCard>

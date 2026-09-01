@@ -21,6 +21,8 @@ import {
   ACTIONS,
   RESOURCES,
   actionApplies,
+  applicablePermissions,
+  isFullAccessRole,
   type Action,
   type Resource,
 } from "@/lib/permissions"
@@ -49,14 +51,19 @@ const CHANNEL_SCOPE_LABEL: Record<string, string> = {
 }
 
 function initialPermissionsFrom(
-  permissions: RoleDetail["permissions"]
+  permissions: RoleDetail["permissions"],
+  fullAccess: boolean
 ): Record<string, boolean> {
   const map: Record<string, boolean> = {}
   for (const resource of RESOURCES) {
     for (const action of ACTIONS) {
       if (!actionApplies(resource, action)) continue
+      // Un rol de acceso total se pinta por lo que garantiza, no por lo que
+      // haya quedado en `role_permissions`: si alguien lo recortó antes de
+      // que existiera el blindaje, la pantalla lo muestra completo y el
+      // primer "Guardar cambios" lo restituye.
       map[`${resource}:${action}`] =
-        permissions[resource]?.includes(action) ?? false
+        fullAccess || (permissions[resource]?.includes(action) ?? false)
     }
   }
   return map
@@ -73,8 +80,9 @@ export function RoleDetailPanel({
   canManage,
 }: RoleDetailPanelProps) {
   const router = useRouter()
+  const fullAccess = isFullAccessRole(roleDetail)
   const [permissions, setPermissions] = useState(() =>
-    initialPermissionsFrom(roleDetail.permissions)
+    initialPermissionsFrom(roleDetail.permissions, fullAccess)
   )
   const [storeScope, setStoreScope] = useState(
     roleDetail.alcance_tiendas as StoreScope
@@ -91,14 +99,20 @@ export function RoleDetailPanel({
   }>()
 
   const readOnly = !canManage
+  // "Acceso total" no es una matriz por defecto que se pueda recortar, es lo
+  // que ese rol ES — y recortarla deja a la organización sin quien decida las
+  // aprobaciones pendientes. El servidor lo rechaza igual
+  // (`guardPermissionMatrix`); esto evita ofrecer el gesto, sobre todo el
+  // "Nada", que borra la matriz de un clic.
+  const matrixLocked = readOnly || fullAccess
 
   function set(resource: Resource, action: Action, value: boolean) {
-    if (readOnly || !actionApplies(resource, action)) return
+    if (matrixLocked || !actionApplies(resource, action)) return
     setPermissions((prev) => ({ ...prev, [`${resource}:${action}`]: value }))
   }
 
   function applyBulk(criteria: (action: Action) => boolean) {
-    if (readOnly) return
+    if (matrixLocked) return
     const next: Record<string, boolean> = {}
     for (const resource of RESOURCES) {
       for (const action of ACTIONS) {
@@ -138,7 +152,10 @@ export function RoleDetailPanel({
       storeScope,
       channelScope,
       maxDiscountPct: maxDiscountPct ? Number(maxDiscountPct) : undefined,
-      permissions: grantedPermissions,
+      // `applicablePermissions()` en vez del estado: para este rol la matriz
+      // completa es el único valor válido (lo exige `guardPermissionMatrix`),
+      // así que guardar cualquier otro campo la deja sana de paso.
+      permissions: fullAccess ? applicablePermissions() : grantedPermissions,
     })
   }
 
@@ -233,11 +250,12 @@ export function RoleDetailPanel({
               Permisos por módulo
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Ver incluye acceso de solo lectura. Aprobar habilita publicar
-              cambios que afectan a clientes.
+              {matrixLocked && !readOnly
+                ? "Acceso total a todos los módulos: esta matriz no se edita. Duplica el rol si necesitas una versión con menos permisos."
+                : "Ver incluye acceso de solo lectura. Aprobar habilita publicar cambios que afectan a clientes."}
             </p>
           </div>
-          {canManage && (
+          {canManage && !matrixLocked && (
             <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
@@ -312,7 +330,7 @@ export function RoleDetailPanel({
                           checked={
                             permissions[`${resource}:${action}`] ?? false
                           }
-                          disabled={readOnly}
+                          disabled={matrixLocked}
                           onCheckedChange={(checked) =>
                             set(resource, action, checked === true)
                           }

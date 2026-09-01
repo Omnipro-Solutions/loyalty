@@ -114,8 +114,8 @@ export function PromotionActivateDialog({
           </DialogTitle>
           <DialogDescription>
             {count === 1
-              ? "¿Confirmas que quieres activarla? Pasará de Borrador a Activa (o a Pendiente de aprobación, si tu rol no puede publicar directo)."
-              : `¿Confirmas que quieres activar las ${count}? Pasarán de Borrador a Activa —o a Pendiente de aprobación, según tu rol— y las que ya estén publicadas se omiten.`}{" "}
+              ? "Pasará a Pendiente de aprobación, no a Activa: publicar exige la firma de otra persona. Se activa sola en cuanto alguien apruebe la solicitud."
+              : `Las ${count} pasarán a Pendiente de aprobación, cada una con su propia solicitud para que se decidan por separado. Las que ya estén publicadas se omiten.`}{" "}
             El motivo queda en la bitácora de cada promoción junto a tu nombre y
             la fecha.
           </DialogDescription>

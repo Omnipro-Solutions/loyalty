@@ -1126,6 +1126,52 @@ export const STATUS_CHANGE_REASONS_REQUIRING_NOTE: readonly StatusChangeReason[]
 export const PROMOTION_STATUS_CHANGE_REASONS = STATUS_CHANGE_REASONS
 export type PromotionStatusChangeReason = StatusChangeReason
 
+/**
+ * Por qué se aprobó o se rechazó una solicitud de doble aprobación. Distinto
+ * de `STATUS_CHANGE_REASONS`, que explica por qué se PIDE publicar: aquí lo
+ * que se justifica es la decisión de otra persona, y una nota libre no basta
+ * para poder agrupar ni filtrar el historial después.
+ *
+ * Una sola tupla porque una sola columna (`codigo_decision`) guarda las dos
+ * decisiones — refleja exactamente su `check`. Los subconjuntos de abajo son
+ * los que cada diálogo ofrece: aprobar «por error de configuración» no
+ * significa nada, y rechazar «porque cumple la política», tampoco.
+ *
+ * Compartido por promociones, reglas y cupones: las tres tablas de
+ * aprobación tienen la columna y el mismo `check`.
+ */
+export const DECISION_REASONS = [
+  "cumple_politica",
+  "urgencia_comercial",
+  "revisado_con_solicitante",
+  "error_configuracion",
+  "fuera_de_politica",
+  "presupuesto",
+  "requiere_ajustes",
+  "otro",
+] as const
+export type DecisionReason = (typeof DECISION_REASONS)[number]
+
+export const APPROVAL_REASONS: readonly DecisionReason[] = [
+  "cumple_politica",
+  "urgencia_comercial",
+  "revisado_con_solicitante",
+  "otro",
+]
+
+export const REJECTION_REASONS: readonly DecisionReason[] = [
+  "error_configuracion",
+  "fuera_de_politica",
+  "presupuesto",
+  "requiere_ajustes",
+  "otro",
+]
+
+/** Mismo criterio que `STATUS_CHANGE_REASONS_REQUIRING_NOTE`. */
+export const DECISION_REASONS_REQUIRING_NOTE: readonly DecisionReason[] = [
+  "otro",
+]
+
 export const PROMOTION_EVENT_ACTOR_TYPES = [
   "usuario",
   "sistema",

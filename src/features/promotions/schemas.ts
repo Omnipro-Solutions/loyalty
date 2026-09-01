@@ -1,6 +1,8 @@
 import { z } from "zod"
 
 import {
+  DECISION_REASONS,
+  DECISION_REASONS_REQUIRING_NOTE,
   ACCRUAL_TIMINGS,
   APPLICATION_LEVELS,
   CHANNEL_SCOPES,
@@ -959,11 +961,29 @@ export const deletePromotionsSchema = z.object({
     ),
 })
 
-/** Aprobar/rechazar una solicitud de `promotion_approval` — calco de `features/coupons/schemas.ts` `decideApprovalSchema`. */
-export const decideApprovalSchema = z.object({
-  approvalId: z.string().uuid(),
-  note: z.string().optional(),
-})
+/**
+ * Decidir una o VARIAS solicitudes de una vez. La bandeja de `/aprobaciones`
+ * usa la misma acción para el botón de una fila (`approvalIds` de un
+ * elemento) y para la barra de selección — así la regla de cuatro ojos y el
+ * motivo se aplican igual por los dos caminos.
+ *
+ * `reasonCode` es obligatorio: una decisión sobre 12 filas con solo una nota
+ * libre no se puede agrupar ni filtrar después. `otro` exige la nota, mismo
+ * criterio que `STATUS_CHANGE_REASONS_REQUIRING_NOTE`.
+ */
+export const decideApprovalsSchema = z
+  .object({
+    approvalIds: z.array(z.string().uuid()).min(1),
+    decision: z.enum(["approved", "rejected"]),
+    reasonCode: z.enum(DECISION_REASONS),
+    note: z.string().optional(),
+  })
+  .refine(
+    (v) =>
+      !DECISION_REASONS_REQUIRING_NOTE.includes(v.reasonCode) ||
+      !!v.note?.trim(),
+    { message: "Explica el motivo", path: ["note"] }
+  )
 
 export const withdrawApprovalSchema = z.object({
   approvalId: z.string().uuid(),

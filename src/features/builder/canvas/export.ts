@@ -7,6 +7,7 @@ import {
   type CsvPreviewResult,
 } from "@/lib/csv"
 
+import { hasPermission } from "./permissions"
 import { builderActionClient } from "./action-client"
 import {
   WORKFLOWS_EXPORT_COLUMNS,
@@ -22,7 +23,14 @@ import { exportWorkflowsSchema, workflowsExportFiltersSchema } from "./schemas"
 /** Conteo previo a exportar — lo pide `ExportDialog` al abrirse. */
 export const previewWorkflowsExportAction = builderActionClient
   .inputSchema(workflowsExportFiltersSchema)
-  .action(async ({ parsedInput }): Promise<CsvPreviewResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvPreviewResult> => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar reglas.",
+      }
+    }
+
     const total = await countWorkflows(parsedInput)
     return { ok: true, total }
   })
@@ -30,7 +38,14 @@ export const previewWorkflowsExportAction = builderActionClient
 /** Universo completo filtrado (toolbar de `/journeys`), no la página en pantalla. */
 export const exportWorkflowsAction = builderActionClient
   .inputSchema(exportWorkflowsSchema)
-  .action(async ({ parsedInput }): Promise<CsvExportResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvExportResult> => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar reglas.",
+      }
+    }
+
     const { columns, ...filters } = parsedInput
     const { items, total, truncated } = await listAllWorkflows(filters)
     return {

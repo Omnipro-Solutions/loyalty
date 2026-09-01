@@ -2,20 +2,27 @@
 
 import { revalidatePath } from "next/cache"
 
+import { DECISION_REASON_LABEL } from "@/lib/approval-flow"
+import type { DecisionReason } from "@/types/domain"
+
 import { promotionsActionClient } from "./action-client"
 import { logPromotionEvent } from "./log-event"
 import { hasPermission } from "../lib/permissions"
-import { decideApprovalSchema, withdrawApprovalSchema } from "../schemas"
+import { decideApprovalsSchema, withdrawApprovalSchema } from "../schemas"
 
 /**
- * Aprueba una solicitud pendiente. `decide_promotion_approval` (SQL,
+ * Decide una o varias solicitudes. `decide_promotion_approvals` (SQL,
  * SECURITY DEFINER) hace la parte que no puede depender de este código: la
- * regla de cuatro ojos, el aislamiento por org y la transición de la
- * promoción a `activa` en una sola operación atómica — calco de
- * `features/coupons/actions/approvals.ts` `approveApprovalAction`.
+ * regla de cuatro ojos fila a fila, el aislamiento por org y la transición
+ * de cada promoción en una sola operación atómica.
+ *
+ * No falla al primer problema. Una solicitud que otra persona ya decidió, o
+ * una del propio aprobador colada en la selección, sale en `skipped` con su
+ * motivo y las demás siguen — en un lote de 12 no tiene sentido tirar once
+ * por una.
  */
-export const approvePromotionApprovalAction = promotionsActionClient
-  .inputSchema(decideApprovalSchema)
+export const decidePromotionApprovalsAction = promotionsActionClient
+  .inputSchema(decideApprovalsSchema)
   .action(async ({ parsedInput, ctx }) => {
     if (!hasPermission(ctx.permissionsSet, "promociones", "aprobar")) {
       return {
@@ -24,75 +31,49 @@ export const approvePromotionApprovalAction = promotionsActionClient
       }
     }
 
-    const { data: promocionId, error } = await ctx.supabase.rpc(
-      "decide_promotion_approval",
+    const approved = parsedInput.decision === "approved"
+    const { data, error } = await ctx.supabase.rpc(
+      "decide_promotion_approvals",
       {
-        p_approval_id: parsedInput.approvalId,
-        p_decision: "approved",
-        p_note: parsedInput.note || undefined,
+        p_approval_ids: parsedInput.approvalIds,
+        p_decision: parsedInput.decision,
+        p_codigo_decision: parsedInput.reasonCode,
+        p_note: parsedInput.note?.trim() || undefined,
       }
     )
-    if (error || !promocionId) {
+    if (error || !data) {
       return {
         ok: false as const,
-        message: error?.message ?? "No se pudo aprobar la solicitud.",
+        message: error?.message ?? "No se pudo decidir la solicitud.",
       }
     }
 
-    await logPromotionEvent(ctx, {
-      promocionId,
-      tipo: "aprobacion_concedida",
-      titulo: "Aprobación concedida",
-      detalle: parsedInput.note || undefined,
-    })
+    await Promise.all(
+      data.decided.map((row) =>
+        logPromotionEvent(ctx, {
+          promocionId: row.promocion_id as string,
+          tipo: approved ? "aprobacion_concedida" : "aprobacion_rechazada",
+          titulo: approved ? "Aprobación concedida" : "Aprobación rechazada",
+          detalle: decisionDetail(parsedInput.reasonCode, parsedInput.note),
+        })
+      )
+    )
 
     revalidatePath("/promociones")
     revalidatePath("/aprobaciones")
-    revalidatePath(`/promociones/${promocionId}/editar`)
-    return { ok: true as const, promocionId: promocionId as string }
+    return {
+      ok: true as const,
+      decided: data.decided.length,
+      skipped: data.skipped,
+    }
   })
 
-/**
- * Rechaza una solicitud pendiente. `decide_promotion_approval` deja la
- * promoción de vuelta en `borrador` — vuelve a ser editable.
- */
-export const rejectPromotionApprovalAction = promotionsActionClient
-  .inputSchema(decideApprovalSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    if (!hasPermission(ctx.permissionsSet, "promociones", "aprobar")) {
-      return {
-        ok: false as const,
-        message: "No tienes permiso para aprobar promociones.",
-      }
-    }
-
-    const { data: promocionId, error } = await ctx.supabase.rpc(
-      "decide_promotion_approval",
-      {
-        p_approval_id: parsedInput.approvalId,
-        p_decision: "rejected",
-        p_note: parsedInput.note || undefined,
-      }
-    )
-    if (error || !promocionId) {
-      return {
-        ok: false as const,
-        message: error?.message ?? "No se pudo rechazar la solicitud.",
-      }
-    }
-
-    await logPromotionEvent(ctx, {
-      promocionId,
-      tipo: "aprobacion_rechazada",
-      titulo: "Aprobación rechazada",
-      detalle: parsedInput.note || undefined,
-    })
-
-    revalidatePath("/promociones")
-    revalidatePath("/aprobaciones")
-    revalidatePath(`/promociones/${promocionId}/editar`)
-    return { ok: true as const, promocionId: promocionId as string }
-  })
+/** El motivo en la bitácora: el código siempre, la nota solo si la hay. */
+function decisionDetail(reasonCode: string, note?: string) {
+  const label = DECISION_REASON_LABEL[reasonCode as DecisionReason]
+  const trimmed = note?.trim()
+  return trimmed ? `${label} — ${trimmed}` : label
+}
 
 /**
  * Retira una solicitud propia mientras siga pendiente — no pasa por

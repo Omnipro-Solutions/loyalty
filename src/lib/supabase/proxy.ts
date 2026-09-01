@@ -144,6 +144,16 @@ export async function updateSession(request: NextRequest) {
         new URL("/login?error=cuenta_inactiva", request.url)
       )
     }
+    // `/` no tiene página: `(app)` es un route group y no crea segmento, así
+    // que la raíz caía en el 404 de la app en vez de llevar a ningún sitio.
+    // Va aquí y no en un `page.tsx` para no montar el shell de (app) solo
+    // para redirigir, y DESPUÉS del control de cuenta inactiva: una cuenta
+    // desactivada que entra por la raíz tiene que acabar en /login con su
+    // motivo, no en el dashboard. `/resumen` es la misma casa a la que ya
+    // llevan los redirects de /login y /sso cuando hay sesión completa.
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/resumen", request.url))
+    }
     return response
   }
 

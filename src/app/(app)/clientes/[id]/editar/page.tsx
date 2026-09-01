@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation"
 
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { MemberForm } from "@/features/members/components/member-form"
@@ -13,6 +15,10 @@ import {
 export default async function EditMemberPage({
   params,
 }: PageProps<"/clientes/[id]/editar">) {
+  if (!allows(await getSessionPermissions(), "clientes", "editar")) {
+    return <NoAccess action="editar" moduleLabel="Clientes y audiencias" />
+  }
+
   const { id } = await params
   const [member, stores, tiers] = await Promise.all([
     getMemberById(id),

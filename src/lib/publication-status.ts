@@ -78,13 +78,14 @@ export const ALLOWED_STATUS_TRANSITIONS: Record<
   PublicationStatus,
   readonly PublicationStatus[]
 > = {
-  // "activa" es el destino que pide quien publica — el servidor decide por
-  // su cuenta si eso significa publicar directo o dejarla en
-  // `pendiente_aprobacion` (ver `guard_promotion_publication_transition` /
+  // "activa" es el destino que pide quien publica; el servidor SIEMPRE lo
+  // sustituye por `pendiente_aprobacion` y abre una solicitud (ver
+  // `guard_promotion_publication_transition` /
   // `guard_workflow_publication_transition`, migración
-  // `20260831090000_promociones_journeys_doble_aprobacion.sql`). Esta tabla
-  // no modela esa sustitución porque no es una transición que el cliente
-  // pueda elegir.
+  // `20260901100000_aprobacion_obligatoria.sql`). Esta tabla no modela esa
+  // sustitución porque no es una transición que el cliente pueda elegir.
+  // Vale igual para `inactiva → activa` y `finalizada → activa`: reactivar
+  // también pasa por la firma de otra persona.
   borrador: ["activa", "inactiva", "finalizada"],
   // Sin salida manual: mientras espera aprobación, la única acción posible
   // es retirar la solicitud desde la bandeja de aprobaciones, no un cambio
@@ -117,7 +118,12 @@ export const PUBLICATION_STATUS_DESCRIPTION: Record<PublicationStatus, string> =
     borrador: "Aún no publicada — se puede seguir editando.",
     pendiente_aprobacion:
       "Esperando que otra persona la apruebe — bloqueada para edición.",
-    activa: "Publicada: el motor la evalúa dentro de su vigencia.",
+    // Pedir `activa` ya no la deja activa: abre una solicitud y la deja en
+    // `pendiente_aprobacion` hasta que otra persona la apruebe
+    // (`20260901100000_aprobacion_obligatoria.sql`). La descripción dice la
+    // consecuencia real, no el nombre del estado que se eligió.
+    activa:
+      "Pasa a revisión: se activa sola en cuanto otra persona apruebe la solicitud.",
     inactiva: "Publicada pero suspendida — el motor la ignora.",
     finalizada: "Cerrada: no vuelve a aplicarse mientras siga en este estado.",
   }

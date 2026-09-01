@@ -2,8 +2,6 @@
 
 import { revalidatePath } from "next/cache"
 
-import { canPublishDirectly } from "@/lib/approval-flow"
-
 import { promotionsActionClient } from "./action-client"
 import { logPromotionEvent } from "./log-event"
 import { applyPublicationTarget } from "./publish-gate"
@@ -259,14 +257,12 @@ export type ActivatePromotionsResult =
  * Solo toca las que están en `borrador`; el resto se devuelven en `skipped`
  * con el motivo, en vez de fallar la operación entera o activarlas en
  * silencio. Igual que en el resto de caminos que llegan a `activa`
- * (`publish-gate.ts`), quien no puede publicar directo (`rolBase !== "admin"`)
- * no activa nada aquí: cada promoción del lote pasa a
- * `pendiente_aprobacion` con su propia solicitud — no una sola solicitud
+ * (`publish-gate.ts`), nadie activa nada aquí: cada promoción del lote pasa
+ * a `pendiente_aprobacion` con su propia solicitud — no una sola solicitud
  * para todo el lote, para que el aprobador pueda decidirlas una por una en
  * la bandeja. Se resuelve en bloque (un solo UPDATE/INSERT para todo el
- * lote) y no promoción por promoción porque la decisión ("¿publica
- * directo?") es la misma para las 200 — depende de quién ejecuta la
- * acción, no de cada fila.
+ * lote) y no promoción por promoción porque el destino es el mismo para las
+ * 200.
  */
 export const activatePromotionsAction = promotionsActionClient
   .inputSchema(activatePromotionsSchema)
@@ -306,57 +302,51 @@ export const activatePromotionsAction = promotionsActionClient
     }
 
     const ids = activatable.map((row) => row.id)
-    const direct = canPublishDirectly(ctx.rolBase)
-    const targetStatus = direct ? "activa" : "pendiente_aprobacion"
 
     const { error } = await ctx.supabase
       .from("promociones")
-      .update({ estado_publicacion: targetStatus })
+      .update({ estado_publicacion: "pendiente_aprobacion" })
       .in("id", ids)
 
     if (error) {
       return { ok: false, message: "No se pudieron activar las promociones." }
     }
 
-    if (!direct) {
-      const { error: approvalError } = await ctx.supabase
-        .from("promotion_approval")
-        .insert(
-          ids.map((promocionId) => ({
-            org_id: ctx.orgId,
-            promocion_id: promocionId,
-            requested_by: ctx.userId,
-            codigo_motivo: parsedInput.reasonCode,
-            nota_motivo: parsedInput.reasonNote ?? null,
-          }))
-        )
-      if (approvalError) {
-        return {
-          ok: false,
-          message: "No se pudieron crear las solicitudes de aprobación.",
-        }
+    const { error: approvalError } = await ctx.supabase
+      .from("promotion_approval")
+      .insert(
+        ids.map((promocionId) => ({
+          org_id: ctx.orgId,
+          promocion_id: promocionId,
+          requested_by: ctx.userId,
+          codigo_motivo: parsedInput.reasonCode,
+          nota_motivo: parsedInput.reasonNote ?? null,
+        }))
+      )
+    if (approvalError) {
+      return {
+        ok: false,
+        message: "No se pudieron crear las solicitudes de aprobación.",
       }
     }
 
     const detalle =
       parsedInput.ids.length > 1
-        ? `${direct ? "Activación" : "Solicitud de aprobación"} masiva de ${activatable.length} promociones.`
+        ? `Solicitud de aprobación masiva de ${activatable.length} promociones.`
         : undefined
 
     await Promise.all(
       activatable.map((row) =>
         logPromotionEvent(ctx, {
           promocionId: row.id,
-          tipo: direct ? "activada" : "aprobacion_solicitada",
-          titulo: direct
-            ? `${PROMOTION_STATUS_LABEL.borrador} → ${PROMOTION_STATUS_LABEL.activa}`
-            : PROMOTION_STATUS_LABEL.pendiente_aprobacion,
+          tipo: "aprobacion_solicitada",
+          titulo: PROMOTION_STATUS_LABEL.pendiente_aprobacion,
           detalle,
           codigoMotivo: parsedInput.reasonCode,
           notaMotivo: parsedInput.reasonNote,
           metadatos: {
             estado_anterior: "borrador",
-            estado_nuevo: targetStatus,
+            estado_nuevo: "pendiente_aprobacion",
           },
         })
       )
@@ -365,8 +355,8 @@ export const activatePromotionsAction = promotionsActionClient
     revalidatePath("/promociones")
     return {
       ok: true,
-      activated: direct ? activatable.length : 0,
-      sentToApproval: direct ? 0 : activatable.length,
+      activated: 0,
+      sentToApproval: activatable.length,
       skipped,
     }
   })
@@ -439,7 +429,14 @@ export const deletePromotionsAction = promotionsActionClient
 
 export const simulatePromotionAction = promotionsActionClient
   .inputSchema(simulatePromotionSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "ver")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para ver promociones.",
+      }
+    }
+
     const [activePromotions, cities, totalStores, programParameters] =
       await Promise.all([
         listActivePromotions(parsedInput.excludeId),

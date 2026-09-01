@@ -1,3 +1,5 @@
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { PromotionForm } from "@/features/promotions/components/promotion-form"
@@ -25,6 +27,10 @@ import { GENDERS, MARITAL_STATUSES, STORE_FORMATS } from "@/types/domain"
 
 /** Adaptado de Figma "07.1 · Regla · configuración" (633:658) — ver nota en la migración. */
 export default async function NewPromotionPage() {
+  if (!allows(await getSessionPermissions(), "promociones", "crear")) {
+    return <NoAccess action="crear" moduleLabel="Promociones" />
+  }
+
   const [
     categories,
     cities,

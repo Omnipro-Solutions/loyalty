@@ -7,6 +7,7 @@ import {
   type CsvPreviewResult,
 } from "@/lib/csv"
 
+import { hasPermission } from "../lib/permissions"
 import { catalogActionClient } from "./action-client"
 import {
   PRODUCTS_EXPORT_COLUMNS,
@@ -22,7 +23,14 @@ import { catalogExportFiltersSchema, exportProductsSchema } from "../schemas"
 /** Conteo previo a exportar — lo pide `ExportDialog` al abrirse. */
 export const previewProductsExportAction = catalogActionClient
   .inputSchema(catalogExportFiltersSchema)
-  .action(async ({ parsedInput }): Promise<CsvPreviewResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvPreviewResult> => {
+    if (!hasPermission(ctx.permissionsSet, "catalogo", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar el catálogo.",
+      }
+    }
+
     const total = await countProducts(parsedInput)
     return { ok: true, total }
   })
@@ -30,7 +38,14 @@ export const previewProductsExportAction = catalogActionClient
 /** Universo completo filtrado (03.1 "Exportar"), no la página en pantalla. */
 export const exportProductsAction = catalogActionClient
   .inputSchema(exportProductsSchema)
-  .action(async ({ parsedInput }): Promise<CsvExportResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvExportResult> => {
+    if (!hasPermission(ctx.permissionsSet, "catalogo", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar el catálogo.",
+      }
+    }
+
     const { columns, ...filters } = parsedInput
     const { products, total, truncated } = await listAllProducts(filters)
     return {

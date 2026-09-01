@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { builderActionClient } from "./action-client"
 import { persistGraph } from "./persist-graph"
+import { hasPermission } from "./permissions"
 import {
   createWorkflowSchema,
   deleteWorkflowsSchema,
@@ -19,6 +20,13 @@ import {
 export const createWorkflowAction = builderActionClient
   .inputSchema(createWorkflowSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "crear")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para crear reglas.",
+      }
+    }
+
     const { data, error } = await ctx.supabase
       .from("workflows")
       .insert({
@@ -57,6 +65,13 @@ export const createWorkflowAction = builderActionClient
 export const deleteWorkflowsAction = builderActionClient
   .inputSchema(deleteWorkflowsSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "eliminar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para eliminar reglas.",
+      }
+    }
+
     const { error } = await ctx.supabase
       .from("workflows")
       .delete()
@@ -79,6 +94,13 @@ export const deleteWorkflowsAction = builderActionClient
 export const saveGraphAction = builderActionClient
   .inputSchema(saveGraphSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para editar reglas.",
+      }
+    }
+
     const { workflowId, nombre, nodes, edges } = parsedInput
 
     const persisted = await persistGraph(

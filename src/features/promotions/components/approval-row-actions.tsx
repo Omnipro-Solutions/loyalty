@@ -4,6 +4,7 @@ import { useAction } from "next-safe-action/hooks"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { DecisionReasonFields } from "@/components/form/decision-reason-fields"
 import { Message } from "@/components/form/message"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,22 +15,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
+import {
+  APPROVAL_REASONS,
+  REJECTION_REASONS,
+  type DecisionReason,
+} from "@/types/domain"
 
 import {
-  approvePromotionApprovalAction,
-  rejectPromotionApprovalAction,
+  decidePromotionApprovalsAction,
   withdrawPromotionApprovalAction,
 } from "../actions/approvals"
 
 type PromotionApprovalRowActionsProps = {
   approvalId: string
   promotionName: string
-  /** Cuatro ojos también en la UI: quien solicitó solo ve "Retirar", nunca "Aprobar"/"Rechazar" sobre su propia solicitud (calco de `features/coupons/components/approval-row-actions.tsx`). */
+  /** Cuatro ojos también en la UI: quien solicitó solo ve "Retirar", nunca "Aprobar"/"Rechazar" sobre su propia solicitud. */
   isOwnRequest: boolean
   canDecide: boolean
 }
 
+/**
+ * Acciones de una fila de la bandeja. Usa la MISMA acción en bloque que la
+ * barra de selección, con un solo id: así el motivo y la regla de cuatro
+ * ojos se aplican igual se decida de una en una o de doce en doce.
+ */
 export function PromotionApprovalRowActions({
   approvalId,
   promotionName,
@@ -38,8 +47,11 @@ export function PromotionApprovalRowActions({
 }: PromotionApprovalRowActionsProps) {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState<
-    "approve" | "reject" | "withdraw" | null
+    "approved" | "rejected" | "withdraw" | null
   >(null)
+  const [reasonCode, setReasonCode] = useState<DecisionReason>(
+    APPROVAL_REASONS[0]
+  )
   const [note, setNote] = useState("")
   const [error, setError] = useState<string>()
 
@@ -47,6 +59,15 @@ export function PromotionApprovalRowActions({
     setOpenDialog(null)
     setNote("")
     setError(undefined)
+  }
+
+  function openDecision(decision: "approved" | "rejected") {
+    setReasonCode(
+      decision === "approved" ? APPROVAL_REASONS[0] : REJECTION_REASONS[0]
+    )
+    setNote("")
+    setError(undefined)
+    setOpenDialog(decision)
   }
 
   function onResult(data: { ok: boolean; message?: string } | undefined) {
@@ -58,30 +79,34 @@ export function PromotionApprovalRowActions({
     router.refresh()
   }
 
-  const approve = useAction(approvePromotionApprovalAction, {
+  const decide = useAction(decidePromotionApprovalsAction, {
     onSuccess: ({ data }) => onResult(data),
-    onError: () => setError("No se pudo aprobar la solicitud."),
-  })
-  const reject = useAction(rejectPromotionApprovalAction, {
-    onSuccess: ({ data }) => onResult(data),
-    onError: () => setError("No se pudo rechazar la solicitud."),
+    onError: () => setError("No se pudo completar la decisión."),
   })
   const withdraw = useAction(withdrawPromotionApprovalAction, {
     onSuccess: ({ data }) => onResult(data),
     onError: () => setError("No se pudo retirar la solicitud."),
   })
 
-  const pending = approve.isPending || reject.isPending || withdraw.isPending
+  const pending = decide.isPending || withdraw.isPending
 
   function confirm() {
     setError(undefined)
-    if (openDialog === "approve") {
-      approve.execute({ approvalId, note: note.trim() || undefined })
-    } else if (openDialog === "reject") {
-      reject.execute({ approvalId, note: note.trim() || undefined })
-    } else if (openDialog === "withdraw") {
+    if (openDialog === "withdraw") {
       withdraw.execute({ approvalId })
+      return
     }
+    if (!openDialog) return
+    if (reasonCode === "otro" && !note.trim()) {
+      setError("Explica el motivo para poder guardarlo.")
+      return
+    }
+    decide.execute({
+      approvalIds: [approvalId],
+      decision: openDialog,
+      reasonCode,
+      note: note.trim() || undefined,
+    })
   }
 
   if (isOwnRequest) {
@@ -135,41 +160,43 @@ export function PromotionApprovalRowActions({
       <button
         type="button"
         className="text-xs font-medium text-destructive"
-        onClick={() => setOpenDialog("reject")}
+        onClick={() => openDecision("rejected")}
       >
         Rechazar
       </button>
       <button
         type="button"
         className="text-xs font-medium text-primary"
-        onClick={() => setOpenDialog("approve")}
+        onClick={() => openDecision("approved")}
       >
         Aprobar
       </button>
 
       <Dialog
-        open={openDialog === "approve" || openDialog === "reject"}
+        open={openDialog === "approved" || openDialog === "rejected"}
         onOpenChange={(open) => !open && close()}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {openDialog === "approve" ? "Aprobar" : "Rechazar"} la solicitud
+              {openDialog === "approved" ? "Aprobar" : "Rechazar"} la solicitud
             </DialogTitle>
             <DialogDescription>
               «{promotionName}» —{" "}
-              {openDialog === "approve"
+              {openDialog === "approved"
                 ? "pasará a Activa."
                 : "volverá a Borrador y se podrá editar de nuevo."}
             </DialogDescription>
           </DialogHeader>
-          <Textarea
-            placeholder="Nota (opcional)"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            maxLength={280}
-          />
+          {openDialog && openDialog !== "withdraw" && (
+            <DecisionReasonFields
+              decision={openDialog}
+              reasonCode={reasonCode}
+              onReasonCodeChange={setReasonCode}
+              note={note}
+              onNoteChange={setNote}
+            />
+          )}
           {error && (
             <Message
               variant="error"
@@ -184,7 +211,7 @@ export function PromotionApprovalRowActions({
             <Button type="button" onClick={confirm} disabled={pending}>
               {pending
                 ? "Guardando…"
-                : openDialog === "approve"
+                : openDialog === "approved"
                   ? "Aprobar"
                   : "Rechazar"}
             </Button>

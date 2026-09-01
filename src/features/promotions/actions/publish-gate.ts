@@ -1,4 +1,4 @@
-import { canPublishDirectly } from "@/lib/approval-flow"
+import { requiresApproval } from "@/lib/approval-flow"
 import type { createClient } from "@/lib/supabase/server"
 import type {
   PromotionPublicationStatus,
@@ -22,21 +22,22 @@ export type PublishGateResult =
  * y `activatePromotionsAction`. Centralizarlo evita que alguno de los cuatro
  * se quede publicando directo por no repetir el chequeo.
  *
- * Regla (`20260831090000_promociones_journeys_doble_aprobacion.sql`): la
- * PRIMERA publicación (`borrador → activa`) de quien no es admin
- * (`current_rol_base()`, aquí `ctx.rolBase`) no escribe `activa` — escribe
- * `pendiente_aprobacion` y abre una solicitud en `promotion_approval`.
- * Cualquier otra transición (reactivar, inactivar, finalizar) no pasa por
- * esta regla y se guarda tal cual. El trigger de Postgres aplica lo mismo
- * de todas formas (defensa en profundidad ante un PATCH directo) — esto
- * solo evita que la app misma dispare esa excepción en el camino feliz.
+ * Regla (`20260901100000_aprobacion_obligatoria.sql`): NINGUNA transición a
+ * `activa` escribe `activa` — escribe `pendiente_aprobacion` y abre una
+ * solicitud en `promotion_approval`. Cubre la primera publicación y también
+ * la reactivación de una promoción pausada o finalizada; inactivar y
+ * finalizar se guardan tal cual, porque no publican nada.
+ *
+ * Ya no hay excepción por rol: el atajo de `rol_base = 'admin'` se retiró.
+ * El trigger de Postgres aplica lo mismo de todas formas (defensa en
+ * profundidad ante un PATCH directo) — esto solo evita que la app misma
+ * dispare esa excepción en el camino feliz.
  */
 export async function applyPublicationTarget(
   ctx: {
     supabase: SupabaseClient
     orgId: string
     userId: string
-    rolBase: string | null
     actorLabel: string
   },
   params: {
@@ -47,10 +48,11 @@ export async function applyPublicationTarget(
     reasonNote?: string
   }
 ): Promise<PublishGateResult> {
-  const sendsToApproval =
-    params.from === "borrador" &&
-    params.to === "activa" &&
-    !canPublishDirectly(ctx.rolBase)
+  // Cualquier entrada a `activa` abre solicitud, venga de `borrador` o de una
+  // reactivación (`inactiva`/`finalizada`). Antes solo se gateaba la primera
+  // publicación y solo para quien no fuera admin: las dos excepciones se
+  // retiraron a propósito.
+  const sendsToApproval = requiresApproval(params.to)
 
   const finalStatus: PromotionPublicationStatus = sendsToApproval
     ? "pendiente_aprobacion"

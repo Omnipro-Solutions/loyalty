@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { AppPage } from "@/components/layout/app-page"
 import { Skeleton } from "@/components/feedback/skeleton"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { countPendingWorkflowApprovals } from "@/features/builder/canvas/approval-queries"
 import { JourneysContent } from "@/features/builder/canvas/journeys-content"
 import { JourneysKpiRow } from "@/features/builder/canvas/journeys-kpis"
@@ -34,9 +35,10 @@ export default async function JourneysPage({
 
   // No dependen de los filtros — `JourneysKpiRow` hace su propia llamada de
   // `kpis` (duplicada, preexistente) y ninguna de las dos necesita boundary.
-  const [kpis, pendingApprovals] = await Promise.all([
+  const [kpis, pendingApprovals, permissions] = await Promise.all([
     getJourneysKpis(),
     countPendingWorkflowApprovals(),
+    getSessionPermissions(),
   ])
 
   // Sin `await`: se resuelve dentro de `JourneysContent`, ya en el boundary.
@@ -76,6 +78,8 @@ export default async function JourneysPage({
             page={page}
             hasFiltersApplied={!!(status || q)}
             pendingApprovals={pendingApprovals}
+            canCreate={allows(permissions, "journeys", "crear")}
+            canDelete={allows(permissions, "journeys", "eliminar")}
           />
         </Suspense>
       </div>

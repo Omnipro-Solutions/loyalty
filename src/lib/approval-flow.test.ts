@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest"
 
-import { canDecideApproval, canPublishDirectly } from "./approval-flow"
+import { canDecideApproval, requiresApproval } from "./approval-flow"
 
-describe("canPublishDirectly", () => {
-  it("solo el rol_base 'admin' publica sin pasar por aprobación", () => {
-    expect(canPublishDirectly("admin")).toBe(true)
+describe("requiresApproval", () => {
+  it("toda entrada a activa pasa por aprobación", () => {
+    expect(requiresApproval("activa")).toBe(true)
   })
 
-  it("cualquier otro rol_base (o ninguno) necesita solicitarla", () => {
-    for (const rolBase of ["gestor", "aprobador", "lector", null]) {
-      expect(canPublishDirectly(rolBase)).toBe(false)
-    }
+  it("inactivar y finalizar no publican nada, así que no la piden", () => {
+    expect(requiresApproval("inactiva")).toBe(false)
+    expect(requiresApproval("finalizada")).toBe(false)
+  })
+
+  it("no depende del rol: ya no hay atajo de administrador", () => {
+    // El caso que este cambio cierra — antes `canPublishDirectly("admin")`
+    // saltaba el flujo entero para quien más alcance tiene.
+    expect(requiresApproval("activa")).toBe(true)
   })
 })
 

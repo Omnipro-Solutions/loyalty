@@ -1,4 +1,4 @@
-import { canPublishDirectly } from "@/lib/approval-flow"
+import { requiresApproval } from "@/lib/approval-flow"
 import type { PublicationStatus } from "@/lib/publication-status"
 import type { createClient } from "@/lib/supabase/server"
 import type { SelectablePublicationStatus } from "@/types/domain"
@@ -17,10 +17,10 @@ export type WorkflowPublishGateResult =
  * en su lugar) — calco de `features/promotions/actions/publish-gate.ts`,
  * consumido por `publishWorkflowAction` y `changeWorkflowStatusAction`.
  *
- * Regla (`20260831090000_promociones_journeys_doble_aprobacion.sql`): la
- * PRIMERA publicación (`borrador → activa`) de quien no es admin no escribe
- * `activa` — escribe `pendiente_aprobacion` y abre una solicitud en
- * `workflow_approval`. Cualquier otra transición se guarda tal cual.
+ * Regla (`20260901100000_aprobacion_obligatoria.sql`): ninguna transición a
+ * `activa` escribe `activa` — escribe `pendiente_aprobacion` y abre una
+ * solicitud en `workflow_approval`. Cubre la primera publicación y la
+ * reactivación, y no tiene excepción por rol: el atajo de admin se retiró.
  *
  * Sobre una base sin migrar (`legacy: true`, ver `schema-compat.ts`) el gate
  * no aplica — `pendiente_aprobacion` no existe en el vocabulario viejo ni en
@@ -31,7 +31,6 @@ export async function applyWorkflowPublicationTarget(
   ctx: {
     supabase: SupabaseClient
     userId: string
-    rolBase: string | null
   },
   params: {
     workflowId: string
@@ -42,11 +41,9 @@ export async function applyWorkflowPublicationTarget(
   }
 ): Promise<WorkflowPublishGateResult> {
   const legacy = !(await hasV2Schema(ctx.supabase))
-  const sendsToApproval =
-    !legacy &&
-    params.from === "borrador" &&
-    params.to === "activa" &&
-    !canPublishDirectly(ctx.rolBase)
+  // Igual que en promociones: toda entrada a `activa` pasa por solicitud,
+  // incluida la reactivación de una regla pausada, y sin excepción por rol.
+  const sendsToApproval = !legacy && requiresApproval(params.to)
 
   const finalStatus = sendsToApproval ? "pendiente_aprobacion" : params.to
 

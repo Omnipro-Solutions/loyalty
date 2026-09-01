@@ -8,6 +8,8 @@ type PromotionsTableSectionProps = {
   totalStores: number
   categoryNameById: Map<string, string>
   segmentNameById: Map<string, string>
+  canActivate: boolean
+  canDelete: boolean
 }
 
 export async function PromotionsTableSection({
@@ -16,6 +18,8 @@ export async function PromotionsTableSection({
   totalStores,
   categoryNameById,
   segmentNameById,
+  canActivate,
+  canDelete,
 }: PromotionsTableSectionProps) {
   const { promotions, total } = await promotionsPromise
 
@@ -26,6 +30,8 @@ export async function PromotionsTableSection({
         totalStores={totalStores}
         categoryNameById={categoryNameById}
         segmentNameById={segmentNameById}
+        canActivate={canActivate}
+        canDelete={canDelete}
       />
       <PromotionsPagination total={total} pageSize={pageSize} />
     </>
