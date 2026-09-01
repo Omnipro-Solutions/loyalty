@@ -20,6 +20,7 @@ import {
   Target,
   TicketPercent,
   TrendingUp,
+  Undo2,
   UserCheck,
   UserCog,
   Users,
@@ -124,6 +125,14 @@ export const BUILDER_BLOCKS: Record<BuilderNodeType, BuilderBlockMeta> = {
     group: "loyalty",
     label: "Ajustar puntos",
     icon: SlidersHorizontal,
+  },
+  // El contra-flujo de todo lo anterior. Lee el desglose de lo que la orden
+  // otorgó (`pedido_efecto`) y lo deshace clase por clase; 5 puertos porque
+  // deshacer tiene 5 desenlaces que piden respuestas distintas del programa.
+  revertir_beneficios: {
+    group: "loyalty",
+    label: "Revertir beneficios",
+    icon: Undo2,
   },
 
   // Actions

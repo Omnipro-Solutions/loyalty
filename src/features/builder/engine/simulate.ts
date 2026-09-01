@@ -127,6 +127,41 @@ function distribute(
     ]
   }
 
+  // Reparto de los 5 desenlaces de una reversión. Estimación de producto,
+  // igual que `tasa_tope_estimada` — no hay telemetría de devoluciones
+  // todavía. Los defaults salen de lo razonable en retail: casi todo se
+  // revierte limpio, y lo que no se reparte entre saldo ya gastado, cupón ya
+  // canjeado y beneficio aún pendiente. El resto va por `revertido`, así que
+  // los 5 puertos siempre suman la entrada.
+  if (node.tipo === "revertir_beneficios") {
+    const parcialPct = clampPct(
+      configNumber(node.config, "tasa_parcial_estimada", 12)
+    )
+    const nadaPct = Math.min(
+      100 - parcialPct,
+      clampPct(configNumber(node.config, "tasa_nada_estimada", 8))
+    )
+    const noRevPct = Math.min(
+      100 - parcialPct - nadaPct,
+      clampPct(configNumber(node.config, "tasa_no_reversible_estimada", 4))
+    )
+    const saldoPct = Math.min(
+      100 - parcialPct - nadaPct - noRevPct,
+      clampPct(configNumber(node.config, "tasa_saldo_insuficiente_estimada", 6))
+    )
+    const parcial = Math.round((entrada * parcialPct) / 100)
+    const nada = Math.round((entrada * nadaPct) / 100)
+    const noRev = Math.round((entrada * noRevPct) / 100)
+    const saldo = Math.round((entrada * saldoPct) / 100)
+    return [
+      { port: "revertido", count: entrada - parcial - nada - noRev - saldo },
+      { port: "parcial", count: parcial },
+      { port: "nada_por_revertir", count: nada },
+      { port: "no_reversible", count: noRev },
+      { port: "saldo_insuficiente", count: saldo },
+    ]
+  }
+
   // Resultado tipado de una acción externa (ver `OUTPUT_HANDLES`): el
   // reparto es una estimación de producto, igual que `tasa_tope_estimada`
   // de `acumular_puntos` — no hay telemetría real de integraciones todavía.

@@ -19,6 +19,20 @@ describe("validateNodeConfig", () => {
     ).toEqual([])
   })
 
+  it("no reporta nada con disparadores adicionales elegidos", () => {
+    // `eventos_adicionales` es opcional y su valor es una lista de ids: al
+    // no tener case propio en `fieldSchema` se validaba como string y un
+    // bloque perfectamente configurado se marcaba como incompleto.
+    expect(
+      validateNodeConfig("evento", {
+        dominio: "compra",
+        evento_id: "order.returned",
+        modo_disparo: "al_ocurrir",
+        eventos_adicionales: ["order.completed", "order.paid"],
+      })
+    ).toEqual([])
+  })
+
   describe("evento · coherencia con el catálogo", () => {
     it("rechaza un evento que ya no está en el catálogo", () => {
       // El caso real: config guardada con el tipo de bloque anterior, o un

@@ -675,6 +675,14 @@ export const BUILDER_NODE_GROUPS = {
     "reto",
     "referido",
     "ajustar_puntos",
+    // Deshace lo que una orden otorgó cuando esa orden se cae (devolución,
+    // cancelación, contracargo). NO lo cubre `ajustar_puntos`: ese resta una
+    // cantidad FIJA escrita a mano, sin saber qué otorgó el pedido, sin
+    // distinguir puntos canjeables de calificadores, y sin poder ver si un
+    // tope truncó el otorgamiento original — con un tope de por medio,
+    // revertir un porcentaje del total le cobra al socio puntos que nunca
+    // recibió. Ver `engine/reversal.ts`.
+    "revertir_beneficios",
   ],
   actions: [
     "email",
@@ -987,6 +995,112 @@ export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number]
  * bitácora ("quién, cuándo y por qué"). `otro` exige además una nota
  * libre en `nota_motivo`.
  */
+/**
+ * Política de reversión — las 7 decisiones que gobiernan qué hacer cuando la
+ * orden que disparó una regla se cae (devolución, cancelación, contracargo).
+ *
+ * Viven a nivel de REGLA y no de bloque: «qué hago si la orden que me
+ * disparó se cae» no lo puede contestar ningún nodo por separado. Se
+ * resuelven en cascada **global → regla → nodo** (ver
+ * `features/builder/engine/reversal.ts`), donde el nivel global es una regla
+ * de ámbito `global` cuya política heredan todas las demás.
+ */
+
+/**
+ * Cómo se calcula cuánto quitar en una devolución parcial.
+ *
+ * `recalculo` es el default y no `proporcional`: con un tope o un umbral de
+ * por medio, repartir un porcentaje del total le cobra al socio puntos que
+ * sigue mereciendo. Sin tope ni umbral las dos bases dan el mismo número, así
+ * que elegir la correcta no cuesta nada.
+ */
+export const REVERSAL_BASES = ["proporcional", "recalculo"] as const
+export type ReversalBase = (typeof REVERSAL_BASES)[number]
+
+/** Qué hacer cuando la devolución rompe el umbral que habilitaba el beneficio. */
+export const REVERSAL_THRESHOLD_ACTIONS = ["revertir_todo", "mantener"] as const
+export type ReversalThresholdAction =
+  (typeof REVERSAL_THRESHOLD_ACTIONS)[number]
+
+/**
+ * Qué hacer cuando el socio ya gastó los puntos que hay que quitarle.
+ *
+ * `permitir_negativo` es el default por uniformidad: absorber regala dinero
+ * sin registro y bloquear frena la operación de caja. Un socio con deuda y
+ * uno al que se le perdonó no son lo mismo, por eso son valores distintos.
+ */
+export const REVERSAL_SHORT_BALANCE_ACTIONS = [
+  "permitir_negativo",
+  "topar_en_cero",
+  "deuda_futura",
+  "bloquear",
+] as const
+export type ReversalShortBalance =
+  (typeof REVERSAL_SHORT_BALANCE_ACTIONS)[number]
+
+/** Cuándo se recalcula el nivel tras mover los puntos. Espeja `permitir_descenso`/`periodo_gracia_dias` del bloque `cambio_nivel`. */
+export const REVERSAL_LEVEL_EFFECTS = [
+  "recalcular_inmediato",
+  "cierre_periodo",
+  "mantener_gracia",
+] as const
+export type ReversalLevelEffect = (typeof REVERSAL_LEVEL_EFFECTS)[number]
+
+/** Clases de beneficio que un paso de reversión puede tocar. Sin declararlas, un bloque suelto deshace todo lo que encuentra y el contra-flujo deja de ser auditable. */
+export const REVERSAL_CLASSES = [
+  "puntos",
+  "cupones",
+  "nivel",
+  "monedero",
+] as const
+export type ReversalClass = (typeof REVERSAL_CLASSES)[number]
+
+export type ReversalPolicy = {
+  base: ReversalBase
+  umbralRoto: ReversalThresholdAction
+  saldoInsuficiente: ReversalShortBalance
+  efectoNivel: ReversalLevelEffect
+  /** Días desde la compra dentro de los que se revierte. */
+  ventanaDias: number
+  /** Si el motivo es producto defectuoso, no se castiga al socio. */
+  exentoPorDefecto: boolean
+  clases: readonly ReversalClass[]
+}
+
+/**
+ * Ámbito de una regla del builder.
+ *
+ * `global` es la que define qué hacer con cualquier orden del programa; su
+ * política la heredan todas las de ámbito `journey`, que solo la
+ * sobreescriben cuando de verdad difieren. Por defecto todo workflow es
+ * `journey`, así que los existentes no cambian de comportamiento.
+ */
+export const WORKFLOW_SCOPES = ["journey", "global"] as const
+export type WorkflowScope = (typeof WORKFLOW_SCOPES)[number]
+
+/**
+ * Canales por los que puede llegar la caída de una orden. Cada uno con su
+ * latencia, su nivel de detalle y su propia costumbre de reintentar — ver
+ * las reglas de ingesta.
+ *
+ * Invariante que sostiene el modelo: **cada canal en exactamente una regla
+ * activa**. Sin cubrir se pierde la orden; en dos, se procesa dos veces.
+ */
+export const REVERSAL_CHANNELS = [
+  "pos",
+  "erp",
+  "ecommerce",
+  "call_center",
+] as const
+export type ReversalChannel = (typeof REVERSAL_CHANNELS)[number]
+
+export const REVERSAL_CHANNEL_LABEL: Record<ReversalChannel, string> = {
+  pos: "POS",
+  erp: "ERP",
+  ecommerce: "Ecommerce",
+  call_center: "Call center",
+}
+
 /**
  * Por qué cambió de estado. Es lo que hace auditable la bitácora —quién,
  * cuándo y por qué—, así que no hay cambio de estado sin uno. `otro` exige

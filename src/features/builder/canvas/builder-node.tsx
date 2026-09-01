@@ -7,6 +7,11 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { BUILDER_BLOCKS, BUILDER_GROUP_META } from "@/config/builder-blocks"
 import {
+  outputPortsFor,
+  STATIC_OUTPUT_PORTS,
+  type PortTone,
+} from "@/config/builder-ports"
+import {
   connectedMessageProviders,
   findFlow,
   isMessageNodeType,
@@ -42,124 +47,18 @@ export type BuilderNodeData = {
  * puerto único `out` de la mayoría de bloques no tienen una lectura
  * positiva/negativa real, así que se quedan sin tono.
  */
-export type PortTone = "success" | "warning" | "destructive"
+export type { PortTone }
 
 /**
- * Puertos de salida dinámicos: `ramificacion_valor`/`split_ab` leen las
- * ramas que el usuario definió en la pestaña "Ramas" del inspector
- * (`config.branches: {id, label}[]`) — si todavía no configuró ninguna,
- * caen a un placeholder de 2 salidas para que el nodo siga siendo
- * conectable mientras tanto. `condicion_multiple` NO es dinámico: su
- * salida es intrínsecamente binaria (cumple/no cumple el árbol de
- * condiciones), así que se queda fija.
+ * Puertos de salida y sus etiquetas — reexportados desde
+ * `config/builder-ports.ts`, la fuente única que comparten el canvas y
+ * `validation/graph-validation.ts`. Antes la tabla vivía aquí y estaba
+ * repetida a mano en la validación; con los 5 puertos de
+ * `revertir_beneficios` una divergencia dejó de ser teórica.
  */
-function branchesFromConfig(
-  config: Record<string, unknown>
-): { id: string; label: string }[] | null {
-  const branches = config.branches
-  if (!Array.isArray(branches) || branches.length === 0) return null
-  return branches
-    .filter(
-      (r): r is { id: string; label: string } =>
-        !!r &&
-        typeof r === "object" &&
-        typeof (r as Record<string, unknown>).id === "string" &&
-        typeof (r as Record<string, unknown>).label === "string"
-    )
-    .map((r) => ({ id: r.id, label: r.label }))
-}
-
-/**
- * Puertos de salida nombrados por tipo (ver comentario de `workflow_edges`
- * en la migración): los de lógica ramifican, `acumular_puntos` además
- * expone "tope alcanzado". El resto de nodos usa un único puerto `out`.
- * Los nodos de ramificación aquí muestran un set FIJO de 2 salidas de
- * ejemplo ("rama_1" + "por_defecto") — la paleta real de ramas (agregar/
- * quitar, atributo evaluado) es trabajo del inspector, que construye el
- * siguiente fork; esto es solo para que el canvas tenga algo conectable
- * mientras tanto.
- */
-export const OUTPUT_HANDLES: Partial<
-  Record<BuilderNodeType, { id: string; label: string; tone?: PortTone }[]>
-> = {
-  condicion_multiple: [
-    { id: "cumple", label: "Cumple", tone: "success" },
-    { id: "no_cumple", label: "No cumple", tone: "destructive" },
-  ],
-  ramificacion_valor: [
-    { id: "rama_1", label: "Rama 1" },
-    { id: "por_defecto", label: "Por defecto" },
-  ],
-  split_ab: [
-    { id: "rama_1", label: "Variante A" },
-    { id: "por_defecto", label: "Variante B" },
-  ],
-  // Resultado tipado (docs/builder.md §16-17): solo POINTS_GRANTED (`out`),
-  // CAP_REACHED (`tope_alcanzado`) y ZERO_POINTS (`sin_puntos`) — los
-  // únicos 3 códigos que este bloque puede determinar de verdad hoy (ver
-  // `resultCodeFor` en `inspector/accumulate-points-engine.ts`). Tono:
-  // otorgar puntos es el camino "bueno", el tope es una advertencia (algo
-  // lo limitó), cero puntos es un resultado neutro, no un error.
-  acumular_puntos: [
-    { id: "out", label: "Puntos otorgados", tone: "success" },
-    { id: "tope_alcanzado", label: "Tope alcanzado", tone: "warning" },
-    { id: "sin_puntos", label: "Sin puntos" },
-  ],
-  // Declarativo, sin motor real de aprobación (ver `field-specs.ts`) — 2
-  // salidas fijas, mismo espíritu que `condicion_multiple`.
-  esperar_aprobacion: [
-    { id: "aprobado", label: "Aprobado", tone: "success" },
-    { id: "rechazado", label: "Rechazado", tone: "destructive" },
-  ],
-  // Resultado tipado de una acción EXTERNA: hasta ahora el fallo se
-  // resolvía con el campo `si_falla` (continuar/detener el workflow), que
-  // es una decisión global y no un camino — no se podía dibujar "si falla,
-  // por acá". Con estos 3 puertos el resultado pasa a ser parte del grafo,
-  // igual que `acumular_puntos` ya hacía con tope/sin puntos.
-  //
-  // `error` sale al AGOTAR los reintentos, no en cada intento fallido: el
-  // reintento es interno al bloque (`reintentos` + `politica_reintento`) y
-  // no puede ser una arista de vuelta, porque `validateGraph` rechaza los
-  // ciclos. `timeout` se separa de `error` porque la respuesta operativa es
-  // distinta: un tiempo agotado no dice que la llamada fallara.
-  webhook_saliente: [
-    { id: "exito", label: "Éxito", tone: "success" },
-    { id: "error", label: "Error", tone: "destructive" },
-    { id: "timeout", label: "Timeout", tone: "warning" },
-  ],
-  // Mismo criterio para los bloques de mensajería: una entrega no es un
-  // camino único. Solo 2 puertos porque el proveedor reporta entrega o
-  // fallo (`mensaje.estado`), sin un tercer estado operativo propio.
-  email: [
-    { id: "entregado", label: "Entregado", tone: "success" },
-    { id: "fallido", label: "Fallido", tone: "destructive" },
-  ],
-  push: [
-    { id: "entregado", label: "Entregado", tone: "success" },
-    { id: "fallido", label: "Fallido", tone: "destructive" },
-  ],
-  sms_whatsapp: [
-    { id: "entregado", label: "Entregado", tone: "success" },
-    { id: "fallido", label: "Fallido", tone: "destructive" },
-  ],
-  fin_workflow: [],
-}
-
-const DEFAULT_OUTPUT = [{ id: "out", label: "" }]
-const DYNAMIC_BRANCHES: readonly BuilderNodeType[] = [
-  "ramificacion_valor",
-  "split_ab",
-]
-
-/** Etiquetas humanas de los puertos de salida de un nodo — misma fuente que usa el canvas del editor, reutilizada por la analítica (08.3) para las píldoras "vino de…", y por el color de las aristas (ver `journey-editor.tsx`). */
-export function outputsForNode(
-  tipo: BuilderNodeType,
-  config: Record<string, unknown>
-): { id: string; label: string; tone?: PortTone }[] {
-  const branchesConfig = DYNAMIC_BRANCHES.includes(tipo)
-    ? branchesFromConfig(config ?? {})
-    : null
-  return branchesConfig ?? OUTPUT_HANDLES[tipo] ?? DEFAULT_OUTPUT
+export {
+  STATIC_OUTPUT_PORTS as OUTPUT_HANDLES,
+  outputPortsFor as outputsForNode,
 }
 
 const TONE_DOT_CLASS: Record<PortTone, string> = {
@@ -247,7 +146,7 @@ export function BuilderNode({
   const isEntry = (BUILDER_ENTRY_NODE_TYPES as readonly string[]).includes(
     data.tipo
   )
-  const outputs = outputsForNode(data.tipo, data.config ?? {})
+  const outputs = outputPortsFor(data.tipo, data.config ?? {})
   const flowSummary = messageFlowSummary(data.tipo, data.config ?? {})
   const configSummary = configSummaryFor(data.tipo, data.config ?? {})
   const missingFields = validateNodeConfig(data.tipo, data.config ?? {})

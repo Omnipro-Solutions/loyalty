@@ -1,4 +1,5 @@
 import { BUILDER_BLOCKS } from "@/config/builder-blocks"
+import { outputPortIdsFor } from "@/config/builder-ports"
 import { isMessageNodeType } from "@/config/integration-flows"
 import {
   BUILDER_ENTRY_NODE_TYPES,
@@ -25,34 +26,16 @@ const ENTRY_TYPES = new Set<string>(BUILDER_ENTRY_NODE_TYPES)
 const LOGIC_TYPES = new Set<string>(BUILDER_LOGIC_NODE_TYPES)
 
 /**
- * Puertos de salida esperados por tipo — coincide con `OUTPUT_HANDLES` de
- * `canvas/builder-node.tsx` para los fijos; los de rama dinámica
- * (`ramificacion_valor`/`split_ab`) se resuelven desde `config.branches` de
- * cada nodo, así que esta función recibe el grafo ya con esa info.
+ * Puertos de salida esperados por tipo.
+ *
+ * Antes esta función repetía a mano la tabla de `OUTPUT_HANDLES` con un
+ * comentario en cada sitio pidiendo que coincidieran. Ahora las dos derivan
+ * de `config/builder-ports.ts`: lo que se pinta y lo que se valida no pueden
+ * divergir. Las ramas dinámicas (`ramificacion_valor`/`split_ab`) siguen
+ * resolviéndose desde `config.branches`, que el resolver ya contempla.
  */
 function expectedPorts(node: GraphNode, config: Record<string, unknown>) {
-  if (node.tipo === "condicion_multiple") return ["cumple", "no_cumple"]
-  if (node.tipo === "acumular_puntos") {
-    return ["out", "tope_alcanzado", "sin_puntos"]
-  }
-  if (node.tipo === "esperar_aprobacion") return ["aprobado", "rechazado"]
-  // Resultado tipado de las acciones externas y de mensajería — ver
-  // `OUTPUT_HANDLES` en `canvas/builder-node.tsx`, misma lista.
-  if (node.tipo === "webhook_saliente") return ["exito", "error", "timeout"]
-  if (isMessageNodeType(node.tipo)) return ["entregado", "fallido"]
-  if (node.tipo === "fin_workflow") return []
-  if (node.tipo === "ramificacion_valor" || node.tipo === "split_ab") {
-    const branches = config.branches
-    if (Array.isArray(branches) && branches.length > 0) {
-      return branches
-        .map((r) =>
-          r && typeof r === "object" ? (r as { id?: string }).id : undefined
-        )
-        .filter((id): id is string => typeof id === "string")
-    }
-    return ["rama_1", "por_defecto"]
-  }
-  return ["out"]
+  return outputPortIdsFor(node.tipo, config)
 }
 
 /**
