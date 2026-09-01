@@ -246,6 +246,20 @@ export function SimpleConfigForm({
             }
             onValueChange={(value) => set(spec.key, value)}
           />
+        ) : spec.kind === "additional-events" ? (
+          // Mismas opciones que `event-select` —los eventos del dominio ya
+          // elegido— menos el principal, que ya está declarado en
+          // `evento_id`. Ofrecerlo aquí también dejaría declarar dos veces
+          // el mismo disparador.
+          <Multiselect
+            options={eventsInDomain(config.dominio as EventDomain)
+              .filter((e) => e.id !== config.evento_id)
+              .map((e) => ({ value: e.id, label: e.label }))}
+            value={
+              Array.isArray(currentValue) ? (currentValue as string[]) : []
+            }
+            onValueChange={(value) => set(spec.key, value)}
+          />
         ) : pickerOptions ? (
           <div className="flex flex-col gap-1">
             <OptionPicker

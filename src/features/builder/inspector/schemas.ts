@@ -32,6 +32,14 @@ function fieldSchema(spec: FieldSpec) {
     case "trigger-mode-select":
       base = z.string().min(1)
       break
+    // Mismo motivo que los dos de arriba —sus opciones salen del dominio
+    // elegido, no de una lista fija— pero el valor es una lista de ids, no
+    // uno solo. Sin este case caía en el `default` (`z.string()`) y un
+    // bloque con disparadores adicionales elegidos se reportaba como
+    // "campo obligatorio sin completar".
+    case "additional-events":
+      base = z.array(z.string().min(1))
+      break
     case "multiselect":
       base = z.array(
         z.enum(spec.options.map((o) => o.value) as [string, ...string[]])

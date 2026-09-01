@@ -1,5 +1,5 @@
 import { EVENT_DOMAIN_LABEL, EVENT_DOMAINS } from "@/config/event-catalog"
-import type { BuilderNodeType } from "@/types/domain"
+import { REVERSAL_CLASSES, type BuilderNodeType } from "@/types/domain"
 
 /**
  * Obligatoriedad condicional: un campo que solo hace falta cuando OTRO campo
@@ -170,6 +170,18 @@ export type FieldSpec =
       required?: boolean
       requiredWhen?: FieldRequirement
     }
+  /**
+   * Disparadores adicionales al principal. Multiselección cuyas opciones
+   * salen del mismo dominio ya elegido —igual que `event-select`, por eso no
+   * es un `multiselect` con `options` fijas— menos el evento principal, que
+   * ya está declarado aparte.
+   */
+  | {
+      key: string
+      label: string
+      kind: "additional-events"
+      hint?: string
+    }
   | {
       key: string
       label: string
@@ -184,6 +196,7 @@ export type FieldSpec =
       label: string
       kind: "multiselect"
       options: { value: string; label: string }[]
+      hint?: string
       showWhen?: FieldRequirement
     }
   | {
@@ -250,6 +263,15 @@ const MESSAGE_GUARDRAIL_SPECS: FieldSpec[] = [
     ],
   },
 ]
+
+/** Cómo se lee cada clase de beneficio en el inspector. */
+const REVERSAL_CLASS_LABEL: Record<(typeof REVERSAL_CLASSES)[number], string> =
+  {
+    puntos: "Puntos canjeables",
+    cupones: "Cupones",
+    nivel: "Nivel",
+    monedero: "Monedero",
+  }
 
 /**
  * Especificación de formulario para los bloques "simples" —
@@ -339,6 +361,27 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
         kind: "trigger-mode-select",
         required: true,
         hint: "Al ocurrir · al cruzar un umbral · programado. Es lo que decide si el evento se emite una vez, en cada múltiplo o a una hora.",
+      },
+      // Disparadores ADICIONALES al principal, para reglas que reaccionan a
+      // toda una familia de eventos: una regla global de reversión tiene que
+      // atender devolución, cancelación, devolución parcial y contracargo, y
+      // partirla en cuatro reglas idénticas sería peor.
+      //
+      // Se añade como campo aparte en vez de convertir `evento_id` en array
+      // a propósito: `evento_id` ya está escrito en los nodos existentes y
+      // cambiarle la forma obligaría a migrar configs y a una capa de
+      // compatibilidad. Así el cambio es puramente aditivo — quien no lo use
+      // se comporta exactamente igual que antes.
+      //
+      // El principal sigue mandando en lo que importa: define el payload y,
+      // con él, las variables que quedan disponibles (ver `variablesForNode`).
+      // Los adicionales son del mismo dominio, así que su payload es
+      // compatible.
+      {
+        key: "eventos_adicionales",
+        label: "También dispara con",
+        kind: "additional-events",
+        hint: "Otros eventos del mismo dominio que entran por esta misma entrada. El payload declarado sigue siendo el del evento principal.",
       },
 
       // Los eventos de segmentación no dicen nada sin la audiencia: "un
@@ -754,6 +797,42 @@ export const SIMPLE_FIELD_SPECS: Partial<Record<BuilderNodeType, FieldSpec[]>> =
     // `amount` (entero positivo), `reason` (con los mismos presets que ya
     // usa `apply-points-rule-dialog.tsx`). Escribe a `points_ledger` con
     // `tipo: "ajuste"`.
+    // El contra-flujo. La política completa vive en la REGLA (ver
+    // `ReversalPolicy` en types/domain.ts) y se resuelve en cascada
+    // global → regla → nodo; aquí solo están las dos decisiones que un nodo
+    // concreto puede necesitar matizar.
+    revertir_beneficios: [
+      {
+        key: "clases",
+        label: "Clases que este paso deshace",
+        kind: "multiselect",
+        options: REVERSAL_CLASSES.map((c) => ({
+          value: c,
+          label: REVERSAL_CLASS_LABEL[c],
+        })),
+        hint: "Un paso que deshace el cupón no puede además restar puntos. Sin declararlas, el bloque toca todo lo que encuentra y el contra-flujo deja de ser auditable.",
+      },
+      {
+        key: "base",
+        label: "Base de cálculo",
+        kind: "select",
+        options: [
+          { value: "", label: "Heredar de la regla" },
+          { value: "recalculo", label: "Recalcular sobre lo que queda" },
+          { value: "proporcional", label: "Proporcional al monto devuelto" },
+        ],
+        hint: "Solo para matizar este nodo. Con un tope o un umbral de por medio las dos bases dan números distintos — el inspector muestra ambas y la diferencia es la decisión.",
+      },
+      {
+        key: "motivo",
+        label: "Motivo de la reversión",
+        kind: "text",
+        required: true,
+        placeholder: "Devolución de mercancía",
+        hint: "Queda en la bitácora de cada asiento que se escriba.",
+      },
+    ],
+
     ajustar_puntos: [
       {
         key: "direccion",

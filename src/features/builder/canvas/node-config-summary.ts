@@ -212,6 +212,9 @@ function hasSummarizableValue(spec: FieldSpec, value: unknown): boolean {
     case "boolean":
       return value === true
     case "multiselect":
+    // Sin esto, una entrada que escucha cuatro eventos mostraba uno solo en
+    // la tarjeta: el resumen callaba justo lo que hace especial a la regla.
+    case "additional-events":
       return Array.isArray(value) && value.length > 0
     case "time-range": {
       const range = value as { desde?: string; hasta?: string }
@@ -242,6 +245,15 @@ function formatFieldValue(spec: FieldSpec, value: unknown): string {
       return labels.length <= 2
         ? labels.join(", ")
         : `${labels.slice(0, 2).join(", ")} +${String(labels.length - 2)}`
+    }
+    case "additional-events": {
+      // El principal ya se muestra en su propia fila; aquí solo cuántos más
+      // entran por la misma entrada.
+      const ids = value as string[]
+      const labels = ids.map((id) => findEvent(id)?.label ?? id)
+      return labels.length <= 2
+        ? `y ${labels.join(", ")}`
+        : `y ${String(labels.length)} eventos más`
     }
     case "number":
       return spec.suffix

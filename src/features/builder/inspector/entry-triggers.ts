@@ -33,3 +33,38 @@ export function entryTriggerFor(
   if (tipo === "webhook_entrante") return "webhook.received"
   return null
 }
+
+/**
+ * TODOS los disparadores de una entrada — el principal más los adicionales.
+ *
+ * Una regla global de reversión tiene que atender la familia entera de
+ * eventos por los que una orden se cae (devolución, cancelación, devolución
+ * parcial, contracargo); partirla en cuatro reglas idénticas sería peor.
+ * Sigue habiendo UNA entrada, con varios disparadores — el grafo no cambia y
+ * `validateGraph` sigue exigiendo una sola entrada activa.
+ *
+ * `entryTriggerFor` se queda como está y devuelve el principal: es el que
+ * define el payload y, con él, las variables disponibles para el resto del
+ * flujo (ver `variablesForNode`). Los adicionales son del mismo dominio, así
+ * que su payload es compatible.
+ */
+export function entryTriggersFor(
+  tipo: BuilderNodeType,
+  config: Record<string, unknown>
+): string[] {
+  const principal = entryTriggerFor(tipo, config)
+  if (!principal) return []
+  if (tipo !== "evento") return [principal]
+
+  const extra = config.eventos_adicionales
+  if (!Array.isArray(extra)) return [principal]
+
+  // Mismo criterio que el principal: un id huérfano del catálogo no es un
+  // trigger. Y el principal nunca se duplica aunque venga repetido.
+  const adicionales = extra
+    .filter((id): id is string => typeof id === "string")
+    .map((id) => findEvent(id)?.id)
+    .filter((id): id is string => !!id && id !== principal)
+
+  return [principal, ...new Set(adicionales)]
+}

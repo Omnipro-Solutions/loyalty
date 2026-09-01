@@ -140,10 +140,25 @@ export function AuthShell({ children }: { children: ReactNode }) {
               aria-hidden
               className="absolute top-1/2 left-1/2 size-2/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground/10 blur-3xl"
             />
+            {/*
+              `priority` porque es el LCP de todas las pantallas de acceso: es
+              lo más grande del panel de marca y está sobre el pliegue. Next
+              avisaba en consola pidiendo `loading="eager"`; `priority` es el
+              prop correcto para esto —lo implica y además emite el
+              `<link rel="preload">` con prioridad alta, que es lo que de
+              verdad adelanta la métrica.
+
+              El panel entero es `hidden … lg:flex`, así que por debajo de
+              1024px no se ve. Aun así conviene: el navegador la descarga igual
+              por estar en el DOM (`display:none` no cancela la descarga), de
+              modo que la única diferencia real que introduce `priority` es
+              adelantarla donde sí se pinta.
+            */}
             <Image
               src="/tarjeta.png"
               alt=""
               fill
+              priority
               sizes="(min-width: 1460px) 34vw, 380px"
               className="scale-[1.4] object-contain drop-shadow-2xl"
             />

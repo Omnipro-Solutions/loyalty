@@ -66,6 +66,17 @@ export const VARIABLES_BY_TYPE: Partial<Record<BuilderNodeType, string[]>> = {
   // grounded en las tablas reales que respaldan cada bloque (ver
   // `field-specs.ts` para el detalle de cada uno).
   ajustar_puntos: ["puntos.ajustados", "puntos.saldo"],
+  // Lo que el contra-flujo deja disponible para las ramas que cuelgan de sus
+  // puertos: sin esto, el email que explica qué quedó pendiente tendría que
+  // volver a consultar el cálculo.
+  revertir_beneficios: [
+    "reversion.puntos_revertidos",
+    "reversion.puntos_absorbidos",
+    "reversion.puntos_deuda",
+    "reversion.saldo_resultante",
+    "reversion.clases_tocadas",
+    "reversion.motivo",
+  ],
   espera_hasta_evento: ["espera.inicio", "espera.fin", "espera.evento_id"],
   ventana_horaria: ["espera.inicio", "espera.fin"],
   esperar_aprobacion: ["aprobacion.decidido_por", "aprobacion.nota"],

@@ -210,6 +210,7 @@ const ACTION_TYPES: readonly BuilderNodeType[] = [
   "reto",
   "referido",
   "ajustar_puntos",
+  "revertir_beneficios",
   "email",
   "push",
   "sms_whatsapp",
