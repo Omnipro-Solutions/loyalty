@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation"
 
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { findIntegration } from "@/config/integrations-catalog"
@@ -20,6 +22,10 @@ export default async function IntegrationConfigPage({
   params,
   searchParams,
 }: PageProps<"/ajustes/integraciones/[id]">) {
+  if (!allows(await getSessionPermissions(), "integraciones", "editar")) {
+    return <NoAccess action="editar" moduleLabel="Integraciones" />
+  }
+
   const { id } = await params
   const query = await searchParams
   const direction = resolveDirection(firstValue(query.direccion))

@@ -16,7 +16,7 @@ import { membersPermissionActionClient } from "./action-client"
 export const assignPromotionToMemberAction = membersPermissionActionClient
   .inputSchema(assignPromotionSchema)
   .action(async ({ parsedInput, ctx }) => {
-    if (!hasPermission(ctx.permissionsSet, "promociones", "crear")) {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "asignar")) {
       return {
         ok: false as const,
         message: "No tienes permiso para asignar promociones.",

@@ -1,6 +1,7 @@
 import { Users } from "lucide-react"
 import { notFound } from "next/navigation"
 
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { EmptyState } from "@/components/feedback/empty-state"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
@@ -27,11 +28,12 @@ export default async function AudienceDetailPage({
 
   const dominantTier = audience.nivel_dominante as TierName | null
 
-  const [size, members, journeys, comparison] = await Promise.all([
+  const [size, members, journeys, comparison, permissions] = await Promise.all([
     getAudienceSize(id, audience.conteo_estimado ?? 0),
     listAudienceMembers(id),
     listLinkedJourneys(id),
     getProgramComparison(dominantTier),
+    getSessionPermissions(),
   ])
 
   const distribution = tierDistribution(
@@ -46,7 +48,11 @@ export default async function AudienceDetailPage({
     >
       <BackLink href="/audiencias">Volver</BackLink>
 
-      <AudienceHero audience={audience} members={members} />
+      <AudienceHero
+        audience={audience}
+        members={members}
+        canSync={allows(permissions, "clientes", "editar")}
+      />
 
       <AudienceMetricsRow
         size={size}

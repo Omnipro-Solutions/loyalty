@@ -14,10 +14,21 @@ export const storesActionClient = actionClient.use(async ({ next }) => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id")
+    .select("org_id, role:roles(role_permissions(recurso, accion))")
     .eq("id", user.id)
     .single()
   if (!profile) throw new Error("Perfil no encontrado.")
 
-  return next({ ctx: { supabase, userId: user.id, orgId: profile.org_id } })
+  // Sin gate en el middleware: crear una tienda y exportar el listado piden
+  // permisos distintos, así que cada action decide con cuál llamar
+  // `hasPermission` (mismo criterio que `promotionsActionClient`).
+  const permissionsSet = new Set(
+    (profile.role?.role_permissions ?? []).map(
+      (p) => `${p.recurso}:${p.accion}`
+    )
+  )
+
+  return next({
+    ctx: { supabase, userId: user.id, orgId: profile.org_id, permissionsSet },
+  })
 })

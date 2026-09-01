@@ -33,9 +33,11 @@ export const membersActionClient = actionClient.use(async ({ next }) => {
 /**
  * Extiende `membersActionClient` con `permissionsSet` (igual que
  * `promotionsActionClient`) — solo para las acciones nuevas de "Enviar
- * promoción"/"Aplicar regla". `createMemberAction`/`updateMemberAction`
- * no comprueban permisos y se quedan en `membersActionClient`, sin pagar
- * esta consulta extra a `role_permissions`.
+ * promoción"/"Aplicar regla", y también `createMemberAction`/
+ * `updateMemberAction`: antes esas dos no comprobaban nada y se quedaban en
+ * `membersActionClient` «sin pagar esta consulta extra», lo que dejaba a
+ * cualquier miembro autenticado —Analista incluido— crear y editar fichas de
+ * cliente. La consulta extra es el precio de que el permiso signifique algo.
  */
 export const membersPermissionActionClient = membersActionClient.use(
   async ({ ctx, next }) => {

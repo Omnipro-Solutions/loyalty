@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { ExportProductsButton } from "@/features/catalog/components/export-products-button"
 import { InventoryHealthCard } from "@/features/catalog/components/inventory-health-card"
 import { ProductsCard } from "@/features/catalog/components/products-card"
@@ -42,9 +43,10 @@ export default async function CatalogPage({
   const pageSize = parsePageSize(params.pageSize, CATALOG_PAGE_SIZE)
 
   // No dependen de los filtros — se quedan esperadas aquí.
-  const [categories, kpis] = await Promise.all([
+  const [categories, kpis, permissions] = await Promise.all([
     listCategories(),
     getCatalogKpis(),
+    getSessionPermissions(),
   ])
 
   // Sin `await`: pill y tabla comparten esta promesa — una sola consulta a
@@ -98,7 +100,9 @@ export default async function CatalogPage({
           </Suspense>
         }
         exportSlot={
-          <ExportProductsButton filters={{ search, categoryIds, status }} />
+          allows(permissions, "catalogo", "exportar") ? (
+            <ExportProductsButton filters={{ search, categoryIds, status }} />
+          ) : null
         }
       >
         <Suspense

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 
-import { membersActionClient } from "./action-client"
+import { membersPermissionActionClient } from "./action-client"
 import { updateMemberSchema, memberSchema } from "../schemas"
+import { hasPermission } from "../lib/permissions"
 
 function toRow(values: {
   name: string
@@ -49,9 +50,16 @@ function toRow(values: {
   }
 }
 
-export const createMemberAction = membersActionClient
+export const createMemberAction = membersPermissionActionClient
   .inputSchema(memberSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "clientes", "crear")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para crear clientes.",
+      }
+    }
+
     const { data, error } = await ctx.supabase
       .from("members")
       .insert({ org_id: ctx.orgId, ...toRow(parsedInput) })
@@ -70,9 +78,16 @@ export const createMemberAction = membersActionClient
     return { ok: true as const, id: data.id as string }
   })
 
-export const updateMemberAction = membersActionClient
+export const updateMemberAction = membersPermissionActionClient
   .inputSchema(updateMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "clientes", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para editar clientes.",
+      }
+    }
+
     const { id, ...values } = parsedInput
     const { error } = await ctx.supabase
       .from("members")

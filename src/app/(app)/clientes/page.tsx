@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { KpiCard } from "@/components/data/kpi-card"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { ExportMembersButton } from "@/features/members/components/export-members-button"
 import { MembersCard } from "@/features/members/components/members-card"
 import {
@@ -33,6 +34,7 @@ export default async function MembersPage({
   searchParams,
 }: PageProps<"/clientes">) {
   const params = await searchParams
+  const permissions = await getSessionPermissions()
   const search = firstValue(params.q)
   const searchScope = enumValue(params.campo, MEMBER_SEARCH_SCOPES)
   const tierId = firstValue(params.tier)
@@ -101,9 +103,11 @@ export default async function MembersPage({
           </Suspense>
         }
         exportSlot={
-          <ExportMembersButton
-            filters={{ search, searchScope, tierId, accountStatus }}
-          />
+          allows(permissions, "clientes", "exportar") ? (
+            <ExportMembersButton
+              filters={{ search, searchScope, tierId, accountStatus }}
+            />
+          ) : null
         }
       >
         <Suspense

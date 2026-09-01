@@ -4,7 +4,7 @@ import { useAction } from "next-safe-action/hooks"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { Field } from "@/components/form/field"
+import { DecisionReasonFields } from "@/components/form/decision-reason-fields"
 import { Message } from "@/components/form/message"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,12 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-
 import {
-  approveApprovalAction,
-  rejectApprovalAction,
-} from "../actions/approvals"
+  APPROVAL_REASONS,
+  REJECTION_REASONS,
+  type DecisionReason,
+} from "@/types/domain"
+
+import { decideCouponApprovalsAction } from "../actions/approvals"
 
 type ApprovalDecisionDialogProps = {
   open: boolean
@@ -40,20 +41,16 @@ export function ApprovalDecisionDialog({
 }: ApprovalDecisionDialogProps) {
   const router = useRouter()
   const [note, setNote] = useState("")
+  const [reasonCode, setReasonCode] = useState<DecisionReason>(
+    decision === "approved" ? APPROVAL_REASONS[0] : REJECTION_REASONS[0]
+  )
 
-  const action =
-    decision === "approved" ? approveApprovalAction : rejectApprovalAction
-  const decide = useAction(action, {
+  const decide = useAction(decideCouponApprovalsAction, {
     onSuccess: ({ data }) => {
       if (!data?.ok) return
       onOpenChange(false)
       setNote("")
-      // Al aprobar, la generación de un batch_audience/batch_anonymous
-      // grande sigue en el cliente — llevar al aprobador a ver la barra
-      // de progreso en vez de dejarlo en la cola.
-      if (decision === "approved" && "batchId" in data && data.batchId) {
-        router.push(`/cupones/emisiones/${data.batchId}`)
-      }
+      router.refresh()
     },
   })
   const isReject = decision === "rejected"
@@ -96,18 +93,13 @@ export function ApprovalDecisionDialog({
           />
         )}
 
-        <Field label="Nota (opcional)" htmlFor="decision-note">
-          <Textarea
-            id="decision-note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={
-              isReject
-                ? "Ej. Reduce la cantidad antes de volver a solicitar"
-                : "Ej. Aprobado para la campaña de fin de mes"
-            }
-          />
-        </Field>
+        <DecisionReasonFields
+          decision={decision}
+          reasonCode={reasonCode}
+          onReasonCodeChange={setReasonCode}
+          note={note}
+          onNoteChange={setNote}
+        />
 
         <DialogFooter>
           <Button
@@ -122,7 +114,12 @@ export function ApprovalDecisionDialog({
             variant={isReject ? "destructive" : "default"}
             disabled={decide.isPending}
             onClick={() =>
-              decide.execute({ approvalId, note: note || undefined })
+              decide.execute({
+                approvalIds: [approvalId],
+                decision,
+                reasonCode,
+                note: note.trim() || undefined,
+              })
             }
           >
             {isReject ? "Rechazar solicitud" : "Aprobar solicitud"}

@@ -7,6 +7,7 @@ import {
   type CsvPreviewResult,
 } from "@/lib/csv"
 
+import { hasPermission } from "../lib/permissions"
 import { promotionsActionClient } from "./action-client"
 import {
   PROMOTIONS_EXPORT_COLUMNS,
@@ -25,7 +26,14 @@ import {
 /** Conteo previo a exportar — lo pide `ExportDialog` al abrirse. */
 export const previewPromotionsExportAction = promotionsActionClient
   .inputSchema(promotionsExportFiltersSchema)
-  .action(async ({ parsedInput }): Promise<CsvPreviewResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvPreviewResult> => {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar promociones.",
+      }
+    }
+
     const total = await countPromotions(parsedInput)
     return { ok: true, total }
   })
@@ -33,7 +41,14 @@ export const previewPromotionsExportAction = promotionsActionClient
 /** Universo completo filtrado (06.1 "Exportar"), no la página en pantalla. */
 export const exportPromotionsAction = promotionsActionClient
   .inputSchema(exportPromotionsSchema)
-  .action(async ({ parsedInput }): Promise<CsvExportResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvExportResult> => {
+    if (!hasPermission(ctx.permissionsSet, "promociones", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar promociones.",
+      }
+    }
+
     const { columns, ...filters } = parsedInput
     const { promotions, total, truncated } = await listAllPromotions(filters)
     return {

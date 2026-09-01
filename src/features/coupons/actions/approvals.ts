@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 
+import { DECISION_REASON_LABEL } from "@/lib/approval-flow"
 import { getRequestIp } from "@/lib/request-ip"
+import type { createClient } from "@/lib/supabase/server"
 
 import { couponsActionClient } from "./action-client"
 import {
@@ -16,7 +18,7 @@ import { countOtherApprovers } from "../lib/queries"
 import { evaluateApprovalRequirement } from "../lib/thresholds"
 import {
   couponBatchSchema,
-  decideApprovalSchema,
+  decideApprovalsSchema,
   withdrawApprovalSchema,
 } from "../schemas"
 
@@ -244,15 +246,19 @@ export const requestApprovalAction = couponsActionClient
   })
 
 /**
- * Aprueba una solicitud pendiente. `decide_coupon_approval` (SQL, SECURITY
- * DEFINER) hace la parte que no puede depender de este código: la regla de
- * cuatro ojos, el aislamiento por org y la transición del batch a
- * `'generating'` en una sola operación atómica. Esta acción solo se ocupa
- * de lo que viene DESPUÉS de que el batch ya está en `'generating'`:
- * generar los códigos (o destapar los que ya existían en `'draft'`).
+ * Decide una o varias solicitudes. `decide_coupon_approvals` (SQL, SECURITY
+ * DEFINER) hace la parte que no puede depender de este código: cuatro ojos
+ * fila a fila, aislamiento por org y la transición del batch a
+ * `'generating'` (o de vuelta a `'draft'`) en una sola operación atómica.
+ * Esta acción se ocupa de lo que viene DESPUÉS por cada emisión aprobada:
+ * generar los códigos, o destapar los que ya existían en `'draft'`.
+ *
+ * Ese trabajo posterior está en `finalizeApprovedBatch` justamente porque
+ * ahora puede repetirse N veces: era el cuerpo de la antigua acción de una
+ * sola aprobación, movido tal cual.
  */
-export const approveApprovalAction = couponsActionClient
-  .inputSchema(decideApprovalSchema)
+export const decideCouponApprovalsAction = couponsActionClient
+  .inputSchema(decideApprovalsSchema)
   .action(async ({ parsedInput, ctx }) => {
     if (!hasPermission(ctx.permissionsSet, "cupones", "aprobar")) {
       return {
@@ -261,214 +267,204 @@ export const approveApprovalAction = couponsActionClient
       }
     }
 
-    const { data: batchId, error: rpcError } = await ctx.supabase.rpc(
-      "decide_coupon_approval",
-      {
-        p_approval_id: parsedInput.approvalId,
-        p_decision: "approved",
-        p_note: parsedInput.note || undefined,
-      }
-    )
-    if (rpcError || !batchId) {
+    const approved = parsedInput.decision === "approved"
+    const note = parsedInput.note?.trim()
+    const { data, error } = await ctx.supabase.rpc("decide_coupon_approvals", {
+      p_approval_ids: parsedInput.approvalIds,
+      p_decision: parsedInput.decision,
+      p_codigo_decision: parsedInput.reasonCode,
+      p_note: note || undefined,
+    })
+    if (error || !data) {
       return {
         ok: false as const,
-        message: rpcError?.message ?? "No se pudo aprobar la solicitud.",
+        message: error?.message ?? "No se pudo decidir la solicitud.",
       }
     }
 
-    const { data: batch, error: batchError } = await ctx.supabase
-      .from("coupon_batch")
-      .select("id, origin, points_charge_timing")
-      .eq("id", batchId)
-      .single()
-    if (batchError || !batch) {
-      return { ok: false as const, message: "La emisión ya no existe." }
-    }
+    const detalle = [DECISION_REASON_LABEL[parsedInput.reasonCode], note]
+      .filter(Boolean)
+      .join(" — ")
 
-    const approverLabel = ctx.actorLabel
-
-    await ctx.supabase.from("coupon_event").insert([
-      {
-        org_id: ctx.orgId,
-        batch_id: batch.id,
-        type: "approval_granted",
-        title: "Aprobación concedida",
-        detail: parsedInput.note || undefined,
-        actor_type: "user",
-        actor_id: ctx.userId,
-        actor_label: approverLabel,
-      },
-      {
-        org_id: ctx.orgId,
-        batch_id: batch.id,
-        type: "generation_started",
-        title: "Generación iniciada",
-        actor_type: "system",
-        actor_label: "Sistema de cupones",
-      },
-    ])
-
-    if (
-      batch.origin === "batch_audience" ||
-      batch.origin === "batch_anonymous"
-    ) {
-      // A diferencia de la emisión directa (acotada a ≤500 códigos por los
-      // propios umbrales de aprobación), un batch aprobado puede ser
-      // arbitrariamente grande — recorrer aquí los hasta 200 chunks de
-      // `generateBatchChunks` arriesgaría el timeout de la función
-      // serverless. Se deja en 'generating' con cero chunks corridos y
-      // `/cupones/emisiones/[id]` retoma la generación en el cliente
-      // (Fase 6), con barra de progreso y reanudable si la pestaña se
-      // cierra a medias.
-    } else {
-      const now = new Date().toISOString()
-      const { data: draftCoupons, error: draftError } = await ctx.supabase
-        .from("coupon")
-        .select("id, member_id, bearer")
-        .eq("batch_id", batch.id)
-        .eq("status", "draft")
-      if (draftError) {
-        return {
-          ok: false as const,
-          message: "No se pudieron activar los códigos de la emisión.",
-        }
-      }
-
-      const bearerIds = (draftCoupons ?? [])
-        .filter((c) => c.bearer)
-        .map((c) => c.id)
-      const memberCoupons = (draftCoupons ?? []).filter(
-        (c) => !c.bearer && c.member_id
-      )
-      const chargePointsNow =
-        batch.origin === "points_redemption" &&
-        batch.points_charge_timing === "on_create"
-
-      const source = batch.origin === "csv_import" ? "csv" : "manual"
-
-      // Las tres escrituras de abajo son independientes (bearer/member son
-      // conjuntos de ids disjuntos, y el insert de asignaciones solo lee
-      // `memberCoupons`, ya resuelto arriba) — corren en paralelo.
-      await Promise.all([
-        bearerIds.length > 0
-          ? ctx.supabase
-              .from("coupon")
-              .update({ status: "issued", issued_at: now })
-              .in("id", bearerIds)
-          : null,
-        memberCoupons.length > 0
-          ? ctx.supabase
-              .from("coupon")
-              .update({
-                status: "assigned",
-                issued_at: now,
-                assigned_at: now,
-                points_charged_at: chargePointsNow ? now : null,
-              })
-              .in(
-                "id",
-                memberCoupons.map((c) => c.id)
-              )
-          : null,
-        memberCoupons.length > 0
-          ? ctx.supabase.from("coupon_assignment").insert(
-              memberCoupons.map((c) => ({
-                org_id: ctx.orgId,
-                coupon_id: c.id,
-                member_id: c.member_id as string,
-                role: "holder" as const,
-                source,
-              }))
-            )
-          : null,
-      ])
-
-      await insertIssuedCouponEvents(
-        ctx.supabase,
-        ctx.orgId,
-        batch.id,
-        (draftCoupons ?? []).map((c) => ({
-          id: c.id,
-          member_id: c.bearer ? null : c.member_id,
-        }))
-      )
-
-      await Promise.all([
-        ctx.supabase
-          .from("coupon_batch")
-          .update({ status: "issued", generation_completed_at: now })
-          .eq("id", batch.id)
-          .eq("status", "generating"),
-        ctx.supabase.from("coupon_event").insert({
+    for (const row of data.decided) {
+      const batchId = row.batch_id as string
+      if (approved) {
+        const done = await finalizeApprovedBatch(ctx, batchId, detalle)
+        if (!done.ok) return done
+      } else {
+        await ctx.supabase.from("coupon_event").insert({
           org_id: ctx.orgId,
-          batch_id: batch.id,
-          type: "generation_completed",
-          title: "Generación completada",
-          actor_type: "system",
-          actor_label: "Sistema de cupones",
-        }),
-      ])
+          batch_id: batchId,
+          type: "approval_rejected",
+          title: "Aprobación rechazada",
+          detail: detalle,
+          actor_type: "user",
+          actor_id: ctx.userId,
+          actor_label: ctx.actorLabel,
+        })
+      }
+      revalidatePath(`/cupones/emisiones/${batchId}`)
     }
 
     revalidatePath("/cupones")
     revalidatePath("/cupones/aprobaciones")
-    revalidatePath(`/cupones/emisiones/${batch.id}`)
-    return { ok: true as const, batchId: batch.id as string }
+    revalidatePath("/aprobaciones")
+    return {
+      ok: true as const,
+      decided: data.decided.length,
+      skipped: data.skipped,
+    }
   })
 
 /**
- * Rechaza una solicitud pendiente. `decide_coupon_approval` deja el batch
- * de vuelta en `'draft'` (regla ya prevista en `guard_coupon_batch_transition()`
- * desde el esquema original) — esta acción solo limpia los cupones
- * `'draft'` pre-materializados de orígenes directos/CSV, que nunca llegaron
- * a existir de verdad.
+ * Todo lo que pasa después de que `decide_coupon_approvals` deja el batch en
+ * `'generating'`: generar los códigos o destapar los que ya existían. Es el
+ * cuerpo de la antigua `approveApprovalAction`, extraído sin cambios porque
+ * ahora corre una vez por cada emisión del lote aprobado.
  */
-export const rejectApprovalAction = couponsActionClient
-  .inputSchema(decideApprovalSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    if (!hasPermission(ctx.permissionsSet, "cupones", "aprobar")) {
-      return {
-        ok: false as const,
-        message: "No tienes permiso para aprobar cupones.",
-      }
-    }
+async function finalizeApprovedBatch(
+  ctx: {
+    supabase: Awaited<ReturnType<typeof createClient>>
+    orgId: string
+    userId: string
+    actorLabel: string
+  },
+  batchId: string,
+  detalle: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { data: batch, error: batchError } = await ctx.supabase
+    .from("coupon_batch")
+    .select("id, origin, points_charge_timing")
+    .eq("id", batchId)
+    .single()
+  if (batchError || !batch) {
+    return { ok: false as const, message: "La emisión ya no existe." }
+  }
 
-    const { data: batchId, error: rpcError } = await ctx.supabase.rpc(
-      "decide_coupon_approval",
-      {
-        p_approval_id: parsedInput.approvalId,
-        p_decision: "rejected",
-        p_note: parsedInput.note || undefined,
-      }
-    )
-    if (rpcError || !batchId) {
-      return {
-        ok: false as const,
-        message: rpcError?.message ?? "No se pudo rechazar la solicitud.",
-      }
-    }
+  const approverLabel = ctx.actorLabel
 
-    await ctx.supabase
-      .from("coupon")
-      .delete()
-      .eq("batch_id", batchId)
-      .eq("status", "draft")
-
-    await ctx.supabase.from("coupon_event").insert({
+  await ctx.supabase.from("coupon_event").insert([
+    {
       org_id: ctx.orgId,
-      batch_id: batchId,
-      type: "approval_rejected",
-      title: "Aprobación rechazada",
-      detail: parsedInput.note || undefined,
+      batch_id: batch.id,
+      type: "approval_granted",
+      title: "Aprobación concedida",
+      detail: detalle,
       actor_type: "user",
       actor_id: ctx.userId,
-      actor_label: ctx.actorLabel,
-    })
+      actor_label: approverLabel,
+    },
+    {
+      org_id: ctx.orgId,
+      batch_id: batch.id,
+      type: "generation_started",
+      title: "Generación iniciada",
+      actor_type: "system",
+      actor_label: "Sistema de cupones",
+    },
+  ])
 
-    revalidatePath("/cupones")
-    revalidatePath("/cupones/aprobaciones")
-    return { ok: true as const }
-  })
+  if (batch.origin === "batch_audience" || batch.origin === "batch_anonymous") {
+    // A diferencia de la emisión directa (acotada a ≤500 códigos por los
+    // propios umbrales de aprobación), un batch aprobado puede ser
+    // arbitrariamente grande — recorrer aquí los hasta 200 chunks de
+    // `generateBatchChunks` arriesgaría el timeout de la función
+    // serverless. Se deja en 'generating' con cero chunks corridos y
+    // `/cupones/emisiones/[id]` retoma la generación en el cliente
+    // (Fase 6), con barra de progreso y reanudable si la pestaña se
+    // cierra a medias.
+  } else {
+    const now = new Date().toISOString()
+    const { data: draftCoupons, error: draftError } = await ctx.supabase
+      .from("coupon")
+      .select("id, member_id, bearer")
+      .eq("batch_id", batch.id)
+      .eq("status", "draft")
+    if (draftError) {
+      return {
+        ok: false as const,
+        message: "No se pudieron activar los códigos de la emisión.",
+      }
+    }
+
+    const bearerIds = (draftCoupons ?? [])
+      .filter((c) => c.bearer)
+      .map((c) => c.id)
+    const memberCoupons = (draftCoupons ?? []).filter(
+      (c) => !c.bearer && c.member_id
+    )
+    const chargePointsNow =
+      batch.origin === "points_redemption" &&
+      batch.points_charge_timing === "on_create"
+
+    const source = batch.origin === "csv_import" ? "csv" : "manual"
+
+    // Las tres escrituras de abajo son independientes (bearer/member son
+    // conjuntos de ids disjuntos, y el insert de asignaciones solo lee
+    // `memberCoupons`, ya resuelto arriba) — corren en paralelo.
+    await Promise.all([
+      bearerIds.length > 0
+        ? ctx.supabase
+            .from("coupon")
+            .update({ status: "issued", issued_at: now })
+            .in("id", bearerIds)
+        : null,
+      memberCoupons.length > 0
+        ? ctx.supabase
+            .from("coupon")
+            .update({
+              status: "assigned",
+              issued_at: now,
+              assigned_at: now,
+              points_charged_at: chargePointsNow ? now : null,
+            })
+            .in(
+              "id",
+              memberCoupons.map((c) => c.id)
+            )
+        : null,
+      memberCoupons.length > 0
+        ? ctx.supabase.from("coupon_assignment").insert(
+            memberCoupons.map((c) => ({
+              org_id: ctx.orgId,
+              coupon_id: c.id,
+              member_id: c.member_id as string,
+              role: "holder" as const,
+              source,
+            }))
+          )
+        : null,
+    ])
+
+    await insertIssuedCouponEvents(
+      ctx.supabase,
+      ctx.orgId,
+      batch.id,
+      (draftCoupons ?? []).map((c) => ({
+        id: c.id,
+        member_id: c.bearer ? null : c.member_id,
+      }))
+    )
+
+    await Promise.all([
+      ctx.supabase
+        .from("coupon_batch")
+        .update({ status: "issued", generation_completed_at: now })
+        .eq("id", batch.id)
+        .eq("status", "generating"),
+      ctx.supabase.from("coupon_event").insert({
+        org_id: ctx.orgId,
+        batch_id: batch.id,
+        type: "generation_completed",
+        title: "Generación completada",
+        actor_type: "system",
+        actor_label: "Sistema de cupones",
+      }),
+    ])
+  }
+
+  return { ok: true }
+}
 
 /**
  * Retira una solicitud propia mientras siga pendiente — no pasa por

@@ -354,6 +354,7 @@ export type Database = {
         Row: {
           approver_id: string | null
           batch_id: string
+          codigo_decision: string | null
           decided_at: string | null
           id: string
           note: string | null
@@ -366,6 +367,7 @@ export type Database = {
         Insert: {
           approver_id?: string | null
           batch_id: string
+          codigo_decision?: string | null
           decided_at?: string | null
           id?: string
           note?: string | null
@@ -378,6 +380,7 @@ export type Database = {
         Update: {
           approver_id?: string | null
           batch_id?: string
+          codigo_decision?: string | null
           decided_at?: string | null
           id?: string
           note?: string | null
@@ -2161,6 +2164,7 @@ export type Database = {
         Row: {
           approver_id: string | null
           codigo_motivo: string
+          codigo_decision: string | null
           decided_at: string | null
           id: string
           nota_motivo: string | null
@@ -2174,6 +2178,7 @@ export type Database = {
         Insert: {
           approver_id?: string | null
           codigo_motivo: string
+          codigo_decision?: string | null
           decided_at?: string | null
           id?: string
           nota_motivo?: string | null
@@ -2187,6 +2192,7 @@ export type Database = {
         Update: {
           approver_id?: string | null
           codigo_motivo?: string
+          codigo_decision?: string | null
           decided_at?: string | null
           id?: string
           nota_motivo?: string | null
@@ -2670,6 +2676,7 @@ export type Database = {
         Row: {
           approver_id: string | null
           codigo_motivo: string
+          codigo_decision: string | null
           decided_at: string | null
           id: string
           nota_motivo: string | null
@@ -2682,6 +2689,7 @@ export type Database = {
         Insert: {
           approver_id?: string | null
           codigo_motivo: string
+          codigo_decision?: string | null
           decided_at?: string | null
           id?: string
           nota_motivo?: string | null
@@ -2694,6 +2702,7 @@ export type Database = {
         Update: {
           approver_id?: string | null
           codigo_motivo?: string
+          codigo_decision?: string | null
           decided_at?: string | null
           id?: string
           nota_motivo?: string | null
@@ -3265,17 +3274,32 @@ export type Database = {
       }
       current_org_id: { Args: never; Returns: string }
       current_rol_base: { Args: never; Returns: string }
-      decide_coupon_approval: {
-        Args: { p_approval_id: string; p_decision: string; p_note?: string }
-        Returns: string
+      decide_coupon_approvals: {
+        Args: {
+          p_approval_ids: string[]
+          p_decision: string
+          p_codigo_decision?: string
+          p_note?: string
+        }
+        Returns: ApprovalDecisionResult
       }
-      decide_promotion_approval: {
-        Args: { p_approval_id: string; p_decision: string; p_note?: string }
-        Returns: string
+      decide_promotion_approvals: {
+        Args: {
+          p_approval_ids: string[]
+          p_decision: string
+          p_codigo_decision?: string
+          p_note?: string
+        }
+        Returns: ApprovalDecisionResult
       }
-      decide_workflow_approval: {
-        Args: { p_approval_id: string; p_decision: string; p_note?: string }
-        Returns: string
+      decide_workflow_approvals: {
+        Args: {
+          p_approval_ids: string[]
+          p_decision: string
+          p_codigo_decision?: string
+          p_note?: string
+        }
+        Returns: ApprovalDecisionResult
       }
       generate_coupon_batch_chunk: {
         Args: { p_batch_id: string; p_chunk_size?: number }
@@ -3448,3 +3472,28 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+/**
+ * Forma del `jsonb` que devuelven `decide_*_approvals`. No la infiere
+ * `gen types` (para Postgres es `jsonb` a secas), así que se declara aquí —
+ * misma razón por la que todo este fichero está escrito a mano (CLAUDE.md
+ * §5.2). `reason` espeja los tres casos que la función salta sin fallar.
+ */
+export type ApprovalDecisionResult = {
+  /**
+   * `id` es el de la solicitud; el segundo campo es la fila que se movió, y
+   * cambia con el dominio (`promocion_id`, `workflow_id`, `batch_id`). Se
+   * declaran los tres opcionales porque las tres funciones comparten este
+   * tipo: cada una rellena el suyo.
+   */
+  decided: {
+    id: string
+    promocion_id?: string
+    workflow_id?: string
+    batch_id?: string
+  }[]
+  skipped: {
+    id: string
+    reason: "no_existe" | "ya_decidida" | "propia_solicitud"
+  }[]
+}

@@ -1,3 +1,5 @@
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { DESTINATIONS, SOURCES } from "@/config/integrations-catalog"
 import { AccountsCard } from "@/features/integrations/components/accounts-card"
@@ -15,6 +17,10 @@ import { firstValue } from "@/lib/search-params"
 export default async function IntegrationsPage({
   searchParams,
 }: PageProps<"/ajustes/integraciones">) {
+  if (!allows(await getSessionPermissions(), "integraciones", "ver")) {
+    return <NoAccess action="ver" moduleLabel="Integraciones" />
+  }
+
   const params = await searchParams
   const tab = (firstValue(params.tab) ?? "origenes") as IntegrationsTab
   // "cuentas"/"sistema" no leen conexiones reales todavía (Fase 1, mock) — no vale pagar el round-trip.

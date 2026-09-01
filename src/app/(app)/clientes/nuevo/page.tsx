@@ -1,3 +1,5 @@
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
 import { MemberForm } from "@/features/members/components/member-form"
@@ -8,6 +10,10 @@ import {
 
 /** Sin pantalla propia en el Figma (05 solo define listado y Perfil 360) — mismo patrón que `/tiendas/nueva`. */
 export default async function NewMemberPage() {
+  if (!allows(await getSessionPermissions(), "clientes", "crear")) {
+    return <NoAccess action="crear" moduleLabel="Clientes y audiencias" />
+  }
+
   const [stores, tiers] = await Promise.all([
     listStoreOptions(),
     listTiersOptions(),

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { storesActionClient } from "./action-client"
+import { hasPermission } from "../lib/permissions"
 import {
   deleteStoreGroupSchema,
   storeGroupSchema,
@@ -12,6 +13,13 @@ import {
 export const createStoreGroupAction = storesActionClient
   .inputSchema(storeGroupSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "crear")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para crear grupos de tiendas.",
+      }
+    }
+
     const { data, error } = await ctx.supabase
       .from("tienda_grupos")
       .insert({
@@ -37,6 +45,13 @@ export const createStoreGroupAction = storesActionClient
 export const updateStoreGroupAction = storesActionClient
   .inputSchema(updateStoreGroupSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para editar grupos de tiendas.",
+      }
+    }
+
     const { error } = await ctx.supabase
       .from("tienda_grupos")
       .update({
@@ -60,6 +75,13 @@ export const updateStoreGroupAction = storesActionClient
 export const deleteStoreGroupAction = storesActionClient
   .inputSchema(deleteStoreGroupSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "eliminar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para eliminar grupos de tiendas.",
+      }
+    }
+
     const { error } = await ctx.supabase
       .from("tienda_grupos")
       .delete()

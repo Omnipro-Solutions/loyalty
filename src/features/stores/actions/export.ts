@@ -7,6 +7,7 @@ import {
   type CsvPreviewResult,
 } from "@/lib/csv"
 
+import { hasPermission } from "../lib/permissions"
 import { storesActionClient } from "./action-client"
 import {
   STORES_EXPORT_FILENAME,
@@ -22,7 +23,14 @@ import { exportStoresSchema, storesExportFiltersSchema } from "../schemas"
 /** Conteo previo a exportar — lo pide `ExportDialog` al abrirse. */
 export const previewStoresExportAction = storesActionClient
   .inputSchema(storesExportFiltersSchema)
-  .action(async ({ parsedInput }): Promise<CsvPreviewResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvPreviewResult> => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar tiendas.",
+      }
+    }
+
     const total = await countStores(parsedInput)
     return { ok: true, total }
   })
@@ -34,7 +42,14 @@ export const previewStoresExportAction = storesActionClient
  */
 export const exportStoresAction = storesActionClient
   .inputSchema(exportStoresSchema)
-  .action(async ({ parsedInput }): Promise<CsvExportResult> => {
+  .action(async ({ parsedInput, ctx }): Promise<CsvExportResult> => {
+    if (!hasPermission(ctx.permissionsSet, "tiendas", "exportar")) {
+      return {
+        ok: false,
+        message: "No tienes permiso para exportar tiendas.",
+      }
+    }
+
     const { columns, ...filters } = parsedInput
     const [{ stores, total, truncated }, groups] = await Promise.all([
       listAllStores(filters),

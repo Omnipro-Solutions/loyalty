@@ -15,6 +15,8 @@ type JourneysContentProps = {
   page: number
   hasFiltersApplied: boolean
   pendingApprovals: number
+  canCreate: boolean
+  canDelete: boolean
 }
 
 /**
@@ -33,6 +35,8 @@ export async function JourneysContent({
   page,
   hasFiltersApplied,
   pendingApprovals,
+  canCreate,
+  canDelete,
 }: JourneysContentProps) {
   const { items, total } = await workflowsPromise
 
@@ -46,6 +50,7 @@ export async function JourneysContent({
           paused={kpis.paused}
           membersInJourney="—"
           pendingApprovals={pendingApprovals}
+          canCreate={canCreate}
         />
       </div>
 
@@ -56,7 +61,7 @@ export async function JourneysContent({
             title="Todavía no hay workflows"
             description="Crea el primero para empezar a automatizar el recorrido de tus socios de lealtad."
           >
-            <NewJourneyButton />
+            {canCreate && <NewJourneyButton />}
           </EmptyState>
         </div>
       ) : total === 0 ? (
@@ -69,7 +74,7 @@ export async function JourneysContent({
         </div>
       ) : (
         <>
-          <JourneysTable workflows={items} />
+          <JourneysTable workflows={items} canDelete={canDelete} />
           <JourneysPagination total={total} pageSize={pageSize} page={page} />
         </>
       )}

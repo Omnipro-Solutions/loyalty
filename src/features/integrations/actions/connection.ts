@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { integrationsActionClient } from "./action-client"
+import { hasPermission } from "../lib/permissions"
 import {
   deleteConnectionSchema,
   setConnectionStatusSchema,
@@ -25,6 +26,13 @@ function fail(message: string) {
 export const upsertIntegrationConnectionAction = integrationsActionClient
   .inputSchema(upsertIntegrationConnectionSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "integraciones", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para configurar integraciones.",
+      }
+    }
+
     const { tipoAuth, ...datosCredenciales } = parsedInput.credentials
 
     const { data: conexion, error: errorConexion } = await ctx.supabase
@@ -94,6 +102,13 @@ export const upsertIntegrationConnectionAction = integrationsActionClient
 export const setConnectionStatusAction = integrationsActionClient
   .inputSchema(setConnectionStatusSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "integraciones", "editar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para configurar integraciones.",
+      }
+    }
+
     const { error } = await ctx.supabase
       .from("integracion_conexiones")
       .update({ estado: parsedInput.status })
@@ -111,6 +126,13 @@ export const setConnectionStatusAction = integrationsActionClient
 export const deleteConnectionAction = integrationsActionClient
   .inputSchema(deleteConnectionSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "integraciones", "eliminar")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para eliminar integraciones.",
+      }
+    }
+
     const { error } = await ctx.supabase
       .from("integracion_conexiones")
       .delete()

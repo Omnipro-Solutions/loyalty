@@ -2,6 +2,7 @@ import { Suspense } from "react"
 
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { ExportStoresButton } from "@/features/stores/components/export-stores-button"
 import { StoresCard } from "@/features/stores/components/stores-card"
 import { StoresTableSection } from "@/features/stores/components/stores-table-section"
@@ -35,10 +36,11 @@ export default async function StoresPage({
   const pageSize = parsePageSize(params.pageSize, STORES_PAGE_SIZE)
 
   // No dependen de los filtros — `getStoresSummary()` es una consulta aparte.
-  const [cities, summary, storeGroups] = await Promise.all([
+  const [cities, summary, storeGroups, permissions] = await Promise.all([
     listCities(),
     getStoresSummary(),
     listStoreGroups(),
+    getSessionPermissions(),
   ])
 
   // Sin `await`: el botón de exportar y la tabla comparten esta promesa.
@@ -54,7 +56,13 @@ export default async function StoresPage({
         cities={cities}
         summary={summary}
         storeGroups={storeGroups}
-        exportSlot={<ExportStoresButton filters={{ search, city, format }} />}
+        canCreate={allows(permissions, "tiendas", "crear")}
+        canEditGroups={allows(permissions, "tiendas", "editar")}
+        exportSlot={
+          allows(permissions, "tiendas", "exportar") ? (
+            <ExportStoresButton filters={{ search, city, format }} />
+          ) : null
+        }
       >
         <Suspense
           key={dataKey}

@@ -1,4 +1,8 @@
-import type { ApprovalStatus } from "@/types/domain"
+import type {
+  ApprovalStatus,
+  DecisionReason,
+  SelectablePublicationStatus,
+} from "@/types/domain"
 
 /**
  * Reglas puras del flujo de doble aprobación de promociones y reglas del
@@ -12,15 +16,29 @@ import type { ApprovalStatus } from "@/types/domain"
  */
 
 /**
- * Quién publica directo, sin pasar por una solicitud. Espejo de
- * `current_rol_base() = 'admin'` en la migración — sirve para que la UI
- * anticipe el resultado ("Publicar" vs. "Enviar a aprobación"); la
- * autorización real vive en el trigger de Postgres
+ * Nada llega a `activa` sin una aprobación registrada — tampoco si lo
+ * publica un administrador. Antes existía `canPublishDirectly(rolBase)`, que
+ * dejaba pasar directo a `rol_base = 'admin'`; ese atajo se retiró porque
+ * convertía la doble aprobación en opcional justo para quien más alcance
+ * tiene. Con la regla de cuatro ojos intacta
+ * (`canDecideApproval`, `decide_*_approval`), publicar exige ahora siempre a
+ * dos personas distintas.
+ *
+ * Cubre CUALQUIER entrada a `activa`, no solo la primera publicación:
+ * reactivar una promoción pausada vuelve a pedir firma. Por eso la firma
+ * recibe el destino y no el rol.
+ *
+ * No hace falta excluir `pendiente_aprobacion → activa`: esa transición no
+ * la puede pedir un cliente (`ALLOWED_STATUS_TRANSITIONS.pendiente_aprobacion`
+ * está vacío), solo la ejecuta `decide_*_approval` por dentro.
+ *
+ * La autorización real vive en los triggers de Postgres
  * (`guard_promotion_publication_transition` /
- * `guard_workflow_publication_transition`), no aquí.
+ * `guard_workflow_publication_transition`); esto evita que la app intente
+ * el camino que el trigger rechazaría.
  */
-export function canPublishDirectly(rolBase: string | null): boolean {
-  return rolBase === "admin"
+export function requiresApproval(to: SelectablePublicationStatus): boolean {
+  return to === "activa"
 }
 
 /**
@@ -52,4 +70,21 @@ export const APPROVAL_STATUS_DOT: Record<ApprovalStatus, string> = {
   approved: "bg-success",
   rejected: "bg-destructive",
   withdrawn: "bg-muted-foreground",
+}
+
+/**
+ * Copy de cada motivo de decisión. Vive aquí y no en cada feature porque la
+ * bandeja de `/aprobaciones` mezcla los tres dominios en una sola lista: si
+ * cada una trajera su propia traducción, la misma decisión se leería distinta
+ * según de dónde viniera la fila.
+ */
+export const DECISION_REASON_LABEL: Record<DecisionReason, string> = {
+  cumple_politica: "Cumple la política",
+  urgencia_comercial: "Urgencia comercial",
+  revisado_con_solicitante: "Revisado con quien lo pidió",
+  error_configuracion: "Error de configuración",
+  fuera_de_politica: "Fuera de política",
+  presupuesto: "Presupuesto",
+  requiere_ajustes: "Requiere ajustes",
+  otro: "Otro",
 }

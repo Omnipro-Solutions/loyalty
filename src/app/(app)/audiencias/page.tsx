@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { KpiWidget } from "@/components/data/kpi-widget"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AudiencesCard } from "@/features/audiences/components/audiences-card"
 import {
   AudiencesCount,
@@ -38,6 +39,7 @@ export default async function AudiencesPage({
   searchParams,
 }: PageProps<"/audiencias">) {
   const params = await searchParams
+  const permissions = await getSessionPermissions()
   const busqueda = firstValue(params.q)
   const sort: AudiencesSort =
     enumValue(params.sort, AUDIENCES_SORTS) ?? "tamano"
@@ -99,7 +101,9 @@ export default async function AudiencesPage({
           </Suspense>
         }
         exportSlot={
-          <ExportAudiencesButton filters={{ search: busqueda, sort, dir }} />
+          allows(permissions, "clientes", "exportar") ? (
+            <ExportAudiencesButton filters={{ search: busqueda, sort, dir }} />
+          ) : null
         }
       >
         <Suspense

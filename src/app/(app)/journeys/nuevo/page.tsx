@@ -1,3 +1,5 @@
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppTopbar } from "@/components/layout/app-topbar"
 import {
   listAudiences,
@@ -15,6 +17,10 @@ import { JourneyEditor } from "@/features/builder/canvas/journey-editor"
  * "Guardar" la crea y redirige a `/journeys/{id}`.
  */
 export default async function NewJourneyPage() {
+  if (!allows(await getSessionPermissions(), "journeys", "crear")) {
+    return <NoAccess action="crear" moduleLabel="Loyalty Builder" />
+  }
+
   const [workflow, tiers, audiences, couponBatches, promotions] =
     await Promise.all([
       newWorkflowDraft(),

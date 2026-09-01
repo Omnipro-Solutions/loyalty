@@ -2,21 +2,23 @@
 
 import { revalidatePath } from "next/cache"
 
+import { DECISION_REASON_LABEL } from "@/lib/approval-flow"
+
 import { builderActionClient } from "./action-client"
 import { hasPermission } from "./permissions"
-import { decideApprovalSchema, withdrawApprovalSchema } from "./schemas"
+import { decideApprovalsSchema, withdrawApprovalSchema } from "./schemas"
 import { recordStatusEvent } from "./status-event"
 
 /**
- * Aprueba una solicitud pendiente. `decide_workflow_approval` (SQL,
- * SECURITY DEFINER) hace la parte que no puede depender de este código: la
- * regla de cuatro ojos, el aislamiento por org (vía
- * `workflow_owned_by_current_org`) y la transición de la regla a `activa`
- * en una sola operación atómica — calco de
- * `features/promotions/actions/approvals.ts`.
+ * Decide una o varias solicitudes. `decide_workflow_approvals` (SQL,
+ * SECURITY DEFINER) aplica la regla de cuatro ojos fila a fila, el
+ * aislamiento por org (vía `workflow_owned_by_current_org`) y la transición
+ * de cada regla en una sola operación atómica — calco de
+ * `features/promotions/actions/approvals.ts`, incluido el no fallar al
+ * primer problema: lo que no se puede decidir sale en `skipped`.
  */
-export const approveWorkflowApprovalAction = builderActionClient
-  .inputSchema(decideApprovalSchema)
+export const decideWorkflowApprovalsAction = builderActionClient
+  .inputSchema(decideApprovalsSchema)
   .action(async ({ parsedInput, ctx }) => {
     if (!hasPermission(ctx.permissionsSet, "journeys", "aprobar")) {
       return {
@@ -25,76 +27,49 @@ export const approveWorkflowApprovalAction = builderActionClient
       }
     }
 
-    const { data: workflowId, error } = await ctx.supabase.rpc(
-      "decide_workflow_approval",
+    const approved = parsedInput.decision === "approved"
+    const { data, error } = await ctx.supabase.rpc(
+      "decide_workflow_approvals",
       {
-        p_approval_id: parsedInput.approvalId,
-        p_decision: "approved",
-        p_note: parsedInput.note || undefined,
+        p_approval_ids: parsedInput.approvalIds,
+        p_decision: parsedInput.decision,
+        p_codigo_decision: parsedInput.reasonCode,
+        p_note: parsedInput.note?.trim() || undefined,
       }
     )
-    if (error || !workflowId) {
+    if (error || !data) {
       return {
         ok: false as const,
-        message: error?.message ?? "No se pudo aprobar la solicitud.",
+        message: error?.message ?? "No se pudo decidir la solicitud.",
       }
     }
 
-    await recordStatusEvent(ctx, {
-      workflowId,
-      estadoAnterior: "pendiente_aprobacion",
-      estadoNuevo: "activa",
-      motivo: "decision_comercial",
-      nota: parsedInput.note ?? "",
-    })
+    const nota = [
+      DECISION_REASON_LABEL[parsedInput.reasonCode],
+      parsedInput.note?.trim(),
+    ]
+      .filter(Boolean)
+      .join(" — ")
+
+    for (const row of data.decided) {
+      const workflowId = row.workflow_id as string
+      await recordStatusEvent(ctx, {
+        workflowId,
+        estadoAnterior: "pendiente_aprobacion",
+        estadoNuevo: approved ? "activa" : "borrador",
+        motivo: "decision_comercial",
+        nota,
+      })
+      revalidatePath(`/journeys/${workflowId}`)
+    }
 
     revalidatePath("/journeys")
     revalidatePath("/aprobaciones")
-    revalidatePath(`/journeys/${workflowId}`)
-    return { ok: true as const, workflowId: workflowId as string }
-  })
-
-/**
- * Rechaza una solicitud pendiente. `decide_workflow_approval` deja la regla
- * de vuelta en `borrador` — vuelve a ser editable.
- */
-export const rejectWorkflowApprovalAction = builderActionClient
-  .inputSchema(decideApprovalSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    if (!hasPermission(ctx.permissionsSet, "journeys", "aprobar")) {
-      return {
-        ok: false as const,
-        message: "No tienes permiso para aprobar reglas.",
-      }
+    return {
+      ok: true as const,
+      decided: data.decided.length,
+      skipped: data.skipped,
     }
-
-    const { data: workflowId, error } = await ctx.supabase.rpc(
-      "decide_workflow_approval",
-      {
-        p_approval_id: parsedInput.approvalId,
-        p_decision: "rejected",
-        p_note: parsedInput.note || undefined,
-      }
-    )
-    if (error || !workflowId) {
-      return {
-        ok: false as const,
-        message: error?.message ?? "No se pudo rechazar la solicitud.",
-      }
-    }
-
-    await recordStatusEvent(ctx, {
-      workflowId,
-      estadoAnterior: "pendiente_aprobacion",
-      estadoNuevo: "borrador",
-      motivo: "decision_comercial",
-      nota: parsedInput.note ?? "",
-    })
-
-    revalidatePath("/journeys")
-    revalidatePath("/aprobaciones")
-    revalidatePath(`/journeys/${workflowId}`)
-    return { ok: true as const, workflowId: workflowId as string }
   })
 
 /**

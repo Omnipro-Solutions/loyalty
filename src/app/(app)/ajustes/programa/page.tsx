@@ -1,3 +1,5 @@
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { RestrictedPlaceholder } from "@/components/layout/restricted-placeholder"
 
@@ -15,7 +17,11 @@ import { RestrictedPlaceholder } from "@/components/layout/restricted-placeholde
  * devolver `<ProgramParametersForm>` con los `initialValues` de
  * `getProgramParameters()` (ver `features/settings/components/program-parameters-form.tsx`).
  */
-export default function ProgramParametersPage() {
+export default async function ProgramParametersPage() {
+  if (!allows(await getSessionPermissions(), "programa", "ver")) {
+    return <NoAccess action="ver" moduleLabel="Parámetros del programa" />
+  }
+
   return (
     <AppPage
       breadcrumb="Configuración  ›  Parámetros del programa"

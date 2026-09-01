@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
-import type { ApprovalStatus, StatusChangeReason } from "@/types/domain"
+import type {
+  ApprovalStatus,
+  DecisionReason,
+  StatusChangeReason,
+} from "@/types/domain"
 
 /**
  * Lecturas de `promotion_approval` — separado de `lib/queries.ts` (ya muy
@@ -16,6 +20,8 @@ export type PromotionApprovalWithPromotion = {
   codigo_motivo: StatusChangeReason
   nota_motivo: string | null
   note: string | null
+  /** Motivo de la decisión (`DECISION_REASONS`). `null` en las retiradas y en lo decidido antes de `20260901110000`. */
+  codigo_decision: DecisionReason | null
   decided_at: string | null
   requested_by_profile: { nombre: string } | null
   approver_profile: { nombre: string } | null
@@ -24,7 +30,7 @@ export type PromotionApprovalWithPromotion = {
 
 const PROMOTION_APPROVAL_EMBED = `
   id, promocion_id, requested_by, requested_at, approver_id, status,
-  codigo_motivo, nota_motivo, note, decided_at,
+  codigo_motivo, nota_motivo, note, codigo_decision, decided_at,
   requested_by_profile:profiles!promotion_approval_requested_by_fkey(nombre),
   approver_profile:profiles!promotion_approval_approver_id_fkey(nombre),
   promotion:promociones(nombre, codigo)

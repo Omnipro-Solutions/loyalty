@@ -66,6 +66,13 @@ function stepsToRows(runId: string, steps: SimStep[]): RunStepRow[] {
 export const simulateWorkflowAction = builderActionClient
   .inputSchema(runInputSchema)
   .action(async ({ parsedInput, ctx }) => {
+    if (!hasPermission(ctx.permissionsSet, "journeys", "ver")) {
+      return {
+        ok: false as const,
+        message: "No tienes permiso para ver reglas.",
+      }
+    }
+
     const { workflowId, nodes, edges, initialCohort } = parsedInput
 
     const simNodes: SimNode[] = nodes.map((n) => ({
@@ -219,9 +226,9 @@ export const publishWorkflowAction = builderActionClient
     // El estado con el que se cierra lo elige quien publica — no siempre es
     // `activa`: publicar algo que empieza el mes que viene, o dejarlo listo
     // pero suspendido, son decisiones legítimas. Aparte del UPDATE de
-    // arriba porque `applyWorkflowPublicationTarget` decide por su cuenta
-    // si eso significa publicar de verdad o pedir aprobación (ver
-    // `publish-gate.ts`) — y solo toca la columna `estado`.
+    // arriba porque `applyWorkflowPublicationTarget` traduce ese destino a
+    // `pendiente_aprobacion` cuando es `activa` (ver `publish-gate.ts`) — y
+    // solo toca la columna `estado`.
     const current = statusFromDb(workflow?.estado ?? "borrador")
     const gate = await applyWorkflowPublicationTarget(ctx, {
       workflowId,
@@ -332,10 +339,10 @@ export const changeWorkflowStatusAction = builderActionClient
       return { ok: false as const, message: "No se pudo cambiar el estado." }
     }
 
-    // `applyWorkflowPublicationTarget` solo sustituye por
-    // `pendiente_aprobacion` cuando `from === "borrador" && to === "activa"`
-    // — el resto de transiciones que puede pedir esta acción (reactivar/
-    // inactivar/finalizar) se guardan tal cual, como siempre.
+    // `applyWorkflowPublicationTarget` sustituye por `pendiente_aprobacion`
+    // CUALQUIER destino `activa` — también la reactivación de una regla
+    // pausada, que es justo lo que esta acción suele pedir. Inactivar y
+    // finalizar se guardan tal cual: no publican nada.
     const gate = await applyWorkflowPublicationTarget(ctx, {
       workflowId,
       from: current,

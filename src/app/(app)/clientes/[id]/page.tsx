@@ -76,11 +76,11 @@ export default async function MemberDetailPage({
 
   const canAssignPromotion = Boolean(
     profilePermissions &&
-    hasPermission(profilePermissions.permissions, "promociones", "crear")
+    hasPermission(profilePermissions.permissions, "promociones", "asignar")
   )
   const canApplyPointsRule = Boolean(
     profilePermissions &&
-    hasPermission(profilePermissions.permissions, "reglas", "crear")
+    hasPermission(profilePermissions.permissions, "puntos", "ajustar")
   )
 
   // Ya se sabe qué promociones están asignadas a mano por `promotionsForAssignment` — se reutiliza en vez de volver a consultar `member_promociones`.

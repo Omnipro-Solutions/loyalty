@@ -1,3 +1,5 @@
+import { NoAccess } from "@/components/feedback/no-access"
+import { allows, getSessionPermissions } from "@/lib/session-permissions"
 import { AppPage } from "@/components/layout/app-page"
 import { CouponBatchForm } from "@/features/coupons/components/coupon-batch-form"
 import {
@@ -13,6 +15,10 @@ import {
 
 export default async function NewCouponBatchPage() {
   const profile = await getProfileWithPermissions()
+  if (!allows(await getSessionPermissions(), "cupones", "crear")) {
+    return <NoAccess action="crear" moduleLabel="Cupones" />
+  }
+
   const [
     audiences,
     products,
