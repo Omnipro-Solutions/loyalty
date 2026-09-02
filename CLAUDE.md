@@ -323,9 +323,14 @@ releer el HTML sin ese filtro:
   `diamante`. La app ya diferencia tier por ícono
   (`src/features/members/components/member-loyalty-card.tsx`), no por tono —
   buen punto de partida.
-- **Tipografía: se mantiene DM Sans + JetBrains Mono.** Decisión explícita
-  del usuario — el manual pide Instrument Sans para UI, pero la fuente
-  actual del sitio no cambia. JetBrains Mono ya coincide con el manual.
+- **Tipografía de UI: se mantiene DM Sans + JetBrains Mono.** Decisión
+  explícita del usuario — el manual pide Instrument Sans para UI, pero la
+  fuente de la interfaz no cambia. JetBrains Mono ya coincide con el
+  manual. **Excepción — el wordmark "etteer":** ese texto puntual sí usa
+  Instrument Sans 500 (`--font-brand`, cargada en `app/layout.tsx` junto a
+  DM Sans y JetBrains Mono, clase Tailwind `font-brand`), en el lockup del
+  sidebar (`app-sidebar.tsx`) y del panel de marca de Acceso
+  (`auth-shell.tsx`) — es el nombre de marca en sí, no UI de producto.
 - **Contraste texto-sobre-acento:** blanco sobre violeta (6.01:1), negro
   sobre lima (17.07:1). No es un simple swap de hue — `--primary-foreground`
   cambia de color entre temas, no solo `--primary`.

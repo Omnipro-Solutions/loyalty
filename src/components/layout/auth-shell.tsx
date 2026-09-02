@@ -3,6 +3,7 @@ import Image from "next/image"
 import type { ReactNode } from "react"
 
 import { BrandMark } from "@/components/layout/brand-mark"
+import { BrandWordmark } from "@/components/layout/brand-wordmark"
 
 const FEATURES = [
   {
@@ -83,8 +84,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <div className="flex min-w-64 flex-1 flex-col justify-between gap-6 self-stretch">
             <div className="flex items-center gap-3">
               <BrandMark variant="inverse" className="size-10 shrink-0" />
-              <div className="flex flex-col leading-[26px]">
-                <p className="text-5xl font-semibold">etteer</p>
+              <div className="flex flex-col gap-1">
+                <BrandWordmark variant="inverse" className="h-[53px] w-auto" />
                 <p className="text-md font-extrabold">Loyalty System</p>
               </div>
             </div>
