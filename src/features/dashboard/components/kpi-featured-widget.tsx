@@ -38,7 +38,7 @@ export function KpiFeaturedWidget({
       </div>
       <div className="h-[7px] w-full overflow-hidden rounded-full bg-white/25">
         <div
-          className="h-full rounded-full bg-data-gold"
+          className="h-full rounded-full bg-kpi-progress-fill"
           style={{ width: `${progressPct}%` }}
         />
       </div>

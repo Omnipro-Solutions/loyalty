@@ -260,3 +260,86 @@ ESLint + Prettier sobre lo staged (hook `pre-commit`). Formato:
 5. `get_screenshot` del mismo nodo de Figma a la misma escala.
 6. Comparar y corregir hasta que coincidan. Documentado en
    `e2e/pixel-perfect.spec.ts` con el mapa componente → nodeId.
+
+---
+
+## 8. Rebrand de marca — etteer (en curso)
+
+La app está migrando de la marca "Loyalty System · By Etter" (índigo `#4f46e5`,
+verificada contra el Figma "Loyalty-Desing") a la marca **etteer**, documentada
+en `docs/etter-marca.html`. Es un rebrand con destino final, no una
+referencia — el índigo actual es transicional. Fase 0 (mapeo) completada.
+**Fase 1 avanzada:** el acento (`--primary`/`--brand`/`--ring` y su rampa de
+soporte `--accent*`/`--primary-100..900`/`--sidebar-primary*`/
+`--sidebar-accent*`), la paleta categórica de charts (`--data-*`/
+`--chart-1..5`) y `BrandMark` (símbolo sin tile, coloreado con
+`--color-primary`) ya están recoloreados en `globals.css`. **Decisión
+explícita del usuario: no se actualiza el Figma "Loyalty-Desing"** — el
+rebrand avanza sin esperar a que el archivo de diseño lo refleje, así que la
+verificación pixel-perfect (§7) queda en pausa para las pantallas tocadas
+por este cambio hasta que exista una fuente de diseño con la que comparar.
+Gradientes, avatares, estados semánticos y la rampa neutral siguen en
+índigo/legacy a propósito — ver tabla y pendientes abajo.
+
+**El manual tiene contenido contradictorio dentro de sí mismo** (v1 no
+reescrita bajo overrides v2) — usar siempre los valores de esta sección, no
+releer el HTML sin ese filtro:
+
+- **Acento (canónico, cap. "La paleta"):** violeta `#7A2FF0` en tema claro,
+  lima `#D6F55C` en tema oscuro. Ignorar los hex de las subsecciones
+  "Violeta" (`#7E3AEE`) y "Lima" (`#D8F300`) del capítulo "Color" — son v1,
+  supersedidos por una nota tardía que el documento nunca reescribió.
+- **Familia (tono, nunca portan significado solos, nunca sustituyen al
+  acento):** lavanda `#8B8CF0`, menta `#7DF2B0`.
+- **Rampa neutral (11 pasos):** `neutral-0` `#FFFFFF` · `100` `#F3F3F8` ·
+  `200` `#E7E8ED` · `300` `#D3D4D9` · `400` `#A5A5AA` · `500` `#7B7C80` ·
+  `600` `#626367` · `700` `#46464A` · `800` `#303034` · `900` `#1F1F23` ·
+  `1000` `#000000`.
+- **Estados** (heredados de v1, el manual no los actualizó pero siguen
+  vigentes): success `#0F7B4F` / bright `#7BBF99` · warning `#9A6206` /
+  bright `#DCA768` · error `#C8262C` / bright `#FF9286` · info `#626367` /
+  bright `#D3D4D9` (**propuesto, sin ratificar** — vive en
+  `tokens-proposed.css` del manual, no en `design-tokens.json`).
+- **Tiers** (código solo por luminosidad + etiqueta de texto, nunca por
+  tono — accesibilidad no negociable): Member `#B5B6BB` → `bronce` · Silver
+  `#8A8B90` → `plata` · Gold `#67686D` → `oro` · Platinum `#414246` →
+  `diamante`. La app ya diferencia tier por ícono
+  (`src/features/members/components/member-loyalty-card.tsx`), no por tono —
+  buen punto de partida.
+- **Tipografía: se mantiene DM Sans + JetBrains Mono.** Decisión explícita
+  del usuario — el manual pide Instrument Sans para UI, pero la fuente
+  actual del sitio no cambia. JetBrains Mono ya coincide con el manual.
+- **Contraste texto-sobre-acento:** blanco sobre violeta (6.01:1), negro
+  sobre lima (17.07:1). No es un simple swap de hue — `--primary-foreground`
+  cambia de color entre temas, no solo `--primary`.
+
+### Mapa de migración de tokens (`globals.css`)
+
+| Token(s)                                                                                      | Claro actual            | Oscuro actual           | Claro nuevo                                            | Oscuro nuevo                                | Estado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------- | ----------------------- | ----------------------- | ------------------------------------------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary` `--brand` `--ring` `--sidebar-primary` `--sidebar-ring`                           | `#4f46e5`               | `#6e68e8`               | `#7A2FF0` violeta                                      | `#D6F55C` lima                              | **Hecho**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `--primary-foreground` `--sidebar-primary-foreground`                                         | `#ffffff`               | `#ffffff`               | `#ffffff` (6.01:1)                                     | `#000000` (17.07:1)                         | **Hecho** — cambia de color entre temas, no solo el fondo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `--brand-subtle` `--accent` `--sidebar-accent`                                                | `#eef0fe`               | `#2b2489`               | `#EBE0FD` tinte violeta                                | `#2C1157` sombra violeta                    | **Hecho** — rampa derivada (interpolación con las mismas proporciones que la rampa índigo anterior); el manual no publica esta rampa. **Se quedó en familia violeta en ambos temas a propósito** — el manual raciona lima a acción primaria/estado activo/símbolo, usarlo en toda superficie de hover violaría esa regla                                                                                                                                                                                                                                                                                 |
+| `--accent-foreground` `--sidebar-accent-foreground`                                           | `#322a9e`               | `#e0e1fc`               | `#4E1E9A` (8.41:1 sobre `--accent`)                    | `#EBE0FD` (12.54:1 sobre `--accent` oscuro) | **Hecho**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `--primary-100`…`--primary-900` (rampa índigo, 7 pasos)                                       | rampa índigo            | rampa invertida         | rampa violeta derivada                                 | misma rampa, orden invertido                | **Hecho** — mismo criterio que `--accent`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `--brand-accent` `--brand-violet`                                                             | `#6e68e8` / `#9b63f1`   | —                       | sin tocar — solo alimentan los gradientes pospuestos   | —                                           | Sin tocar — no se consumen desde componentes, revisar junto con gradientes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `--gradient-auth-panel` `--gradient-ai-avatar` `--gradient-ai-hero` `--gradient-loyalty-card` | basados en índigo       | —                       | recolorear a violeta/lima o retirar                    | —                                           | Pendiente decisión — el manual es plano, no define gradientes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `--success*` `--warning*` (y `--destructive*` como `error`)                                   | `#16a34a` / `#a15c07`   | `#4ade80` / `#fbbf24`   | `#0F7B4F` / `#9A6206` / `#C8262C`                      | `#7BBF99` / `#DCA768` / `#FF9286`           | Usable, pero validar con diseño (ΔE bajo con lavanda/menta bajo daltonismo) antes de fijar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `--data-indigo/coral/teal/amber/navy/violet/gold` (7 series de charts)                        | índigo/coral/teal/…     | —                       | violeta + lima/lavanda oscurecidos + matices + neutral | tintes claros del mismo set                 | **Hecho** — 7 valores elegidos por distancia CIE76 en Lab (todas conviven en `promotions-dimension-breakdown.tsx`); lima/lavanda crudos fallan contraste sobre blanco (1.25:1 y 2.95:1) así que van oscurecidos en claro (`--data-teal` = lima oscurecido `#768733`, 3.97:1 — pedido explícito del usuario pese a la restricción del manual). Nombres de token ya no describen el hex — limpieza pendiente (Fase 5). `--kpi-progress-fill` (nuevo token) separa la barra del Widget/KPI destacado, que vive sobre `bg-primary` y necesitaba su propio contraste por tema, no el `--data-gold` categórico |
+| `--shell-background` (lienzo de `AppShell`/`AppPage`, claro)                                  | `#eef0fe`               | —                       | `#ededf7` — token propio, ya no `var(--brand-subtle)`  | —                                           | **Hecho** — el lavado de página con `--brand-subtle` (#EBE0FD) se sentía "muy fuerte" a pantalla completa (pedido del usuario); valor final ajustado a mano por el usuario, más gris que violeta                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `--card-tint` (nuevo — `KpiDenseCard` tone="cliente")                                         | usaba `bg-brand-subtle` | usaba `bg-brand-subtle` | `#e7dafc`                                              | `#2A2035`                                   | **Hecho** — mismo problema que `--shell-background`: `--brand-subtle` calibrado para hover (superficie chica), demasiado fuerte como fondo de tarjeta completa (pedido del usuario, "no tan morado"). Ajustado más adelante de `#F2EAFE` a `#e7dafc` por bajo contraste contra `--shell-background`. No se tocó `--brand-subtle` en sí — sigue sirviendo hover/selección — ni la fila "Top campañas activas" (highlight sólido intencional del #1, no es un wash)                                                                                                                                        |
+| `--avatar-*-bg/-fg` (6 pares)                                                                 | —                       | —                       | derivar de la rampa neutral cuando se defina           | —                                           | Baja prioridad, no bloquea el rebrand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `--neutral-50`                                                                                | `#fafaf9`               | `#201f1c`               | `#F3F3F8` (`neutral-100` del manual)                   | por definir en rampa oscura                 | Ajuste menor                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+### Pendiente antes de cerrar Fase 1
+
+- Decidir si los gradientes de marca (auth panel, AI hero/avatar, loyalty
+  card) se conservan recoloreados o se retiran — el manual es un sistema
+  plano, sin gradientes.
+- Encargar el asset de 16px del símbolo (favicon) — pendiente en el propio
+  manual.
+- **Decisión del usuario: el Figma "Loyalty-Desing" (`KxtI6mzVfDqGisGhC9VAf5`)
+  NO se actualiza** — el rebrand de color avanza directo en código. Efecto:
+  la verificación pixel-perfect (§7) no aplica a las superficies recoloreadas
+  hasta que exista una fuente de diseño vigente con la que compararlas; no
+  intentar "verificar contra Figma" el acento/rampa/charts nuevos.

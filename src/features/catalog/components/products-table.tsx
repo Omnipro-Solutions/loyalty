@@ -210,7 +210,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
   return (
     <DataTable
       table={table}
-      headerClassName="bg-accent"
+      headerClassName="bg-neutral-50"
       onRowClick={(product) => router.push(`/catalogo/${product.id}`)}
     />
   )

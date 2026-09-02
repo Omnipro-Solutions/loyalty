@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 
 type BrandMarkProps = {
   className?: string
-  /** "default" = brand-colored tile, white mark (the app-icon lockup). "inverse" = bare white mark, for surfaces already brand- or dark-colored. */
+  /** "default" = bare mark in the accent color (--color-primary), no tile — for light/neutral surfaces (sidebar, error pages). "inverse" = bare mark in --color-primary-foreground, for surfaces already brand- or dark-colored (the auth gradient panel). */
   variant?: "default" | "inverse"
 }
 
@@ -41,16 +41,14 @@ export function BrandMark({ className, variant = "default" }: BrandMarkProps) {
 
   return (
     <svg
-      viewBox="0 0 1150 1150"
+      viewBox="0 0 809 809"
       role="img"
       aria-label="Loyalty System"
-      className={cn("size-16", className)}
+      className={cn("size-16 text-primary", className)}
     >
-      <rect width="1150" height="1150" rx="255" fill="var(--color-primary)" />
       <g
-        transform="translate(170.5 170.5)"
         fill="none"
-        stroke="var(--color-primary-foreground)"
+        stroke="currentColor"
         strokeWidth="84"
         strokeLinecap="round"
         strokeLinejoin="round"

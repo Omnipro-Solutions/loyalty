@@ -7,9 +7,22 @@ import { cn } from "@/lib/utils"
 export type KpiDenseTone = "cliente" | "promo" | "white"
 
 const TONE_BG: Record<KpiDenseTone, string> = {
-  cliente: "bg-brand-subtle",
+  cliente: "bg-card-tint",
   promo: "bg-promo-subtle",
   white: "bg-background",
+}
+
+/**
+ * El trazo por defecto del sparkline es `stroke-primary` (violeta en claro),
+ * buen contraste sobre blanco (6.01:1) pero se lava sobre `card-tint`
+ * (5.15:1 — pasa AA pero se ve apagado, el tono de fondo y el trazo son la
+ * misma familia). En oscuro `stroke-primary` es lima y ya contrasta de
+ * sobra (12.6:1+) contra los fondos tintados — no tocar ahí.
+ */
+const TONE_STROKE: Record<KpiDenseTone, string> = {
+  cliente: "stroke-accent-foreground dark:stroke-primary",
+  promo: "stroke-accent-foreground dark:stroke-primary",
+  white: "stroke-primary",
 }
 
 export type KpiDenseCardProps = {
@@ -97,7 +110,11 @@ export function KpiDenseCard({
         >
           {caption}
         </p>
-        <Sparkline values={sparkline ?? []} className="h-5 w-10 shrink-0" />
+        <Sparkline
+          values={sparkline ?? []}
+          className="h-5 w-10 shrink-0"
+          strokeClassName={TONE_STROKE[tone]}
+        />
       </div>
     </div>
   )
