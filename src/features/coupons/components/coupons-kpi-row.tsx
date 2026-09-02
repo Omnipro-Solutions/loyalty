@@ -19,7 +19,11 @@ import { formatNumber, formatPercent } from "@/lib/format"
 import { DonutChart } from "@/components/data/donut-chart"
 import { cn } from "@/lib/utils"
 
-import { COUPON_DISPLAY_STATUS_LABEL, COUPON_ORIGIN_LABEL } from "../lib/labels"
+import {
+  COUPON_DISPLAY_STATUS_DOT,
+  COUPON_DISPLAY_STATUS_LABEL,
+  COUPON_ORIGIN_LABEL,
+} from "../lib/labels"
 import type { CouponAttentionItem, CouponCommercialKpis } from "../lib/queries"
 
 function KpiCard({
@@ -184,26 +188,20 @@ export function CouponsKpiRow({ kpis }: CouponsKpiRowProps) {
   const { mix, portfolio, attention } = kpis
   const slices = buildMix(mix.slices, mix.total)
 
-  // Composición de la cartera entregada: cada estado con su etiqueta — el
-  // color acompaña, nunca identifica solo.
-  const portfolioSlices = [
-    {
-      key: "redeemed" as const,
-      count: portfolio.redeemed,
-      fill: "bg-success",
-    },
-    { key: "issued" as const, count: portfolio.issued, fill: "bg-primary" },
-    {
-      key: "assigned" as const,
-      count: portfolio.assigned,
-      fill: "bg-data-teal",
-    },
-    {
-      key: "expired" as const,
-      count: portfolio.expired,
-      fill: "bg-border-strong",
-    },
-  ].filter((slice) => slice.count > 0)
+  // Composición de la cartera entregada: mismo color por estado que la tabla
+  // de cupones y el detalle de emisión (`COUPON_DISPLAY_STATUS_DOT`) — el
+  // color acompaña, nunca identifica solo, pero debe ser el mismo en toda
+  // la UI para el mismo estado.
+  const portfolioSlices = (
+    [
+      { key: "redeemed", count: portfolio.redeemed },
+      { key: "issued", count: portfolio.issued },
+      { key: "assigned", count: portfolio.assigned },
+      { key: "expired", count: portfolio.expired },
+    ] as const
+  )
+    .map((slice) => ({ ...slice, fill: COUPON_DISPLAY_STATUS_DOT[slice.key] }))
+    .filter((slice) => slice.count > 0)
 
   return (
     <div className="flex w-full items-stretch gap-4">

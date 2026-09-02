@@ -265,6 +265,20 @@ ESLint + Prettier sobre lo staged (hook `pre-commit`). Formato:
 
 ## 8. Rebrand de marca — etteer (en curso)
 
+> **Estado actual del acento (lee esto primero):** el acento en producción
+> **ya no es** el violeta/lima que describe el resto de esta sección — es un
+> **indigo único `#4F46E5`, mismo matiz en claro y oscuro** (el oscuro solo
+> sube la luminosidad del mismo hue, nunca cambia de color). Fue un refactor
+> posterior a Fase 1, pedido explícitamente por el usuario: tener violeta en
+> claro, lima en oscuro y una paleta categórica de 7 colores competía
+> demasiado ("la paleta se ve muy variada"). Ver **"Refactor de acento
+> único"** más abajo para los valores exactos y qué queda tocado; el resto
+> de esta sección (tabla de migración violeta/lima, cap. "La paleta" del
+> manual) queda como **registro histórico de cómo se llegó hasta acá**, no
+> como el estado vigente del acento — sí sigue vigente para todo lo que esa
+> sección NO cubre (categórico de charts, avatares, estados semánticos,
+> gradientes).
+
 La app está migrando de la marca "Loyalty System · By Etter" (índigo `#4f46e5`,
 verificada contra el Figma "Loyalty-Desing") a la marca **etteer**, documentada
 en `docs/etter-marca.html`. Es un rebrand con destino final, no una
@@ -286,9 +300,12 @@ reescrita bajo overrides v2) — usar siempre los valores de esta sección, no
 releer el HTML sin ese filtro:
 
 - **Acento (canónico, cap. "La paleta"):** violeta `#7A2FF0` en tema claro,
-  lima `#D6F55C` en tema oscuro. Ignorar los hex de las subsecciones
-  "Violeta" (`#7E3AEE`) y "Lima" (`#D8F300`) del capítulo "Color" — son v1,
-  supersedidos por una nota tardía que el documento nunca reescribió.
+  lima `#D6F55C` en tema oscuro. ⚠️ **Supersedido en producción** por el
+  indigo único de "Refactor de acento único" — esta cita queda solo para
+  entender la tabla de migración de abajo. Ignorar los hex de las
+  subsecciones "Violeta" (`#7E3AEE`) y "Lima" (`#D8F300`) del capítulo
+  "Color" — son v1, supersedidos por una nota tardía que el documento nunca
+  reescribió.
 - **Familia (tono, nunca portan significado solos, nunca sustituyen al
   acento):** lavanda `#8B8CF0`, menta `#7DF2B0`.
 - **Rampa neutral (11 pasos):** `neutral-0` `#FFFFFF` · `100` `#F3F3F8` ·
@@ -330,6 +347,73 @@ releer el HTML sin ese filtro:
 | `--card-tint` (nuevo — `KpiDenseCard` tone="cliente")                                         | usaba `bg-brand-subtle` | usaba `bg-brand-subtle` | `#e7dafc`                                              | `#2A2035`                                   | **Hecho** — mismo problema que `--shell-background`: `--brand-subtle` calibrado para hover (superficie chica), demasiado fuerte como fondo de tarjeta completa (pedido del usuario, "no tan morado"). Ajustado más adelante de `#F2EAFE` a `#e7dafc` por bajo contraste contra `--shell-background`. No se tocó `--brand-subtle` en sí — sigue sirviendo hover/selección — ni la fila "Top campañas activas" (highlight sólido intencional del #1, no es un wash)                                                                                                                                        |
 | `--avatar-*-bg/-fg` (6 pares)                                                                 | —                       | —                       | derivar de la rampa neutral cuando se defina           | —                                           | Baja prioridad, no bloquea el rebrand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `--neutral-50`                                                                                | `#fafaf9`               | `#201f1c`               | `#F3F3F8` (`neutral-100` del manual)                   | por definir en rampa oscura                 | Ajuste menor                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+### Refactor de acento único (post Fase 1, vigente)
+
+Motivo: con violeta (claro) + lima (oscuro) + una paleta categórica de 7
+colores, la UI mostraba demasiados colores compitiendo a la vez en la misma
+pantalla ("Analítica" en particular) — reporte directo del usuario ("mis
+combinaciones de colores se ve muy variada"). Regla rectora pedida: _si un
+color no codifica información, es neutro_ — acento de marca + neutros +
+2 semánticos + 1 rampa de datos, nada más.
+
+- **Acento único:** `#4F46E5` (indigo) en **ambos** temas — en oscuro NO
+  cambia de matiz (H≈243° en los dos), solo sube de luminosidad
+  (`--primary` dark = `#9C97F0`, ~7.1:1 sobre el fondo oscuro; el violeta
+  anterior media 2.78:1 y por eso el manual mandaba lima ahí — con un solo
+  hue fijo ese problema no vuelve a aparecer). `--primary-foreground` dark
+  pasa de negro a `var(--background)` (mismo resultado, evita hardcodear).
+  Toda la rampa `--primary-100..900`/`--accent`/`--accent-foreground`/
+  `--brand`/`--brand-subtle`/`--ring`/`--sidebar-primary*`/
+  `--sidebar-accent*` se recalculó con indigo como base, mismas
+  proporciones de mezcla blanco/negro que la rampa violeta que reemplaza.
+  `--selected` (borde de chips "aplicado", ver más abajo en este archivo el
+  historial de por qué existía desacoplado de `--primary`) vuelve a ser un
+  alias simple de `--primary` en los dos temas — el choque lima-sobre-violeta
+  que lo motivó ya no puede pasar con un solo hue.
+- **Paleta categórica (`--data-*`), avatares, gradientes y semánticos
+  quedan FUERA de este refactor** — siguen en violeta/legacy, es la "1
+  rampa de datos" que la regla rectora permite como sistema aparte. No
+  recolorearlos a indigo sin que el usuario lo pida explícitamente.
+- **Serie de canal (POS/E-commerce/App):** dejaron de usar la paleta
+  categórica (`--data-teal`/`--data-indigo`/`--data-amber`) — son
+  subdivisiones de una misma dimensión, no series independientes. Ahora
+  usan `--channel-pos`/`--channel-ecommerce`/`--channel-app`, una rampa
+  monocromática de 3 pasos del acento, validada con
+  `dataviz` skill (`validate_palette.js --ordinal`): un solo hue, ΔL
+  monótono entre pasos, extremo claro ≥2:1 sobre superficie. Los valores de
+  claro y oscuro NO son espejo uno del otro — cada uno se validó por
+  separado contra su propia superficie. Toca `CANAL_COLOR` en
+  `features/dashboard/lib/queries.ts` y el `SEGMENTS` duplicado en
+  `stacked-bar-chart-widget.tsx` (mismo anti-patrón de mapas de color
+  duplicados que en `features/coupons/lib/labels.ts`, ver memoria de
+  proyecto — grep `_DOT`/`_COLOR` hermanos antes de tocar uno solo).
+- **KPI cards de Analítica:** los 6 tiles (`Clientes activos`… `ROI
+promocional`) pasaron todos a `tone: "white"` (superficie neutra,
+  `KpiDenseCard` en `components/data/`) — antes 4 de 6 usaban
+  `tone: "cliente"`/`"promo"` (fondos teñidos `--card-tint`/
+  `--promo-subtle`). El color queda solo en el badge de variación
+  (`--success`/`--destructive`, sin tocar) y el sparkline (`stroke-primary`).
+  El badge ahora antepone un glifo ▲/▼ cuando cae al `formatDeltaPercent`
+  genérico (no cuando el caller ya arma su propio `deltaLabel` con glifo,
+  como "Recurrencia" o el KPI mock de ROI) — refuerzo no-solo-color, sin
+  tocar `formatDeltaPercent` en sí (es compartida con `resumen`/
+  `audiencias`/`catalog`, fuera de alcance).
+- **`KpiFeaturedWidget`** ("Ingreso atribuido"): pasó de `bg-primary` a
+  sangre completa a superficie neutra (`bg-background`/`shadow-form-section`,
+  igual que el resto de cards) — el acento queda solo en la barra de
+  progreso (`bg-primary` directo; se retiró `--kpi-progress-fill`, quedaba
+  redundante). Efecto de la regla "la única superficie 100% saturada de la
+  pantalla es el item activo del sidebar".
+- **Botón "Exportar reporte"** (`dense-dashboard-filters.tsx`): pasó de
+  variant por defecto (`bg-primary`, se leía como roto/deshabilitado con
+  contraste bajo) a `variant="outline"` — es una acción secundaria (está
+  deshabilitada en el ambiente demo, ver comentario ahí).
+- Pendiente, no tocado en este refactor: bajar la saturación global de
+  `--success`/`--destructive` (el pedido original lo sugería para los
+  deltas específicamente, pero esos tokens son compartidos por decenas de
+  badges de estado en toda la app — requiere una decisión aparte, no una
+  extensión silenciosa de este cambio).
 
 ### Pendiente antes de cerrar Fase 1
 

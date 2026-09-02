@@ -4,7 +4,7 @@ import { DetailCardSkeleton } from "@/components/feedback/detail-card-skeleton"
 import { KpiRowSkeleton } from "@/components/feedback/kpi-row-skeleton"
 import { Skeleton } from "@/components/feedback/skeleton"
 
-/** Aproximación de `KpiFeaturedWidget` (`bg-primary` + barra de progreso) — un solo uso, no merece un componente de kit propio. */
+/** Aproximación de `KpiFeaturedWidget` (superficie neutra + barra de progreso) — un solo uso, no merece un componente de kit propio. */
 function KpiFeaturedSkeleton() {
   return (
     <div className="flex w-full flex-col items-start gap-2.5 rounded-[20px] bg-background p-[18px] shadow-form-section">

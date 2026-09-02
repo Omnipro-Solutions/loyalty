@@ -34,7 +34,7 @@ export function RolesList({
             className={cn(
               "flex flex-col gap-[3px] rounded-[14px] px-[13px] py-[11px]",
               active
-                ? "border border-primary bg-accent"
+                ? "border border-selected bg-accent"
                 : "bg-muted hover:bg-accent"
             )}
           >

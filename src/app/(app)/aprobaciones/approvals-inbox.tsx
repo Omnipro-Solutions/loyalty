@@ -195,7 +195,7 @@ export function ApprovalsInbox({ rows }: { rows: InboxRow[] }) {
           className={cn(
             "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors",
             selectedRows.length > 0
-              ? "border-primary bg-accent"
+              ? "border-selected bg-accent"
               : "border-border bg-background"
           )}
         >
@@ -237,7 +237,7 @@ export function ApprovalsInbox({ rows }: { rows: InboxRow[] }) {
           className={cn(
             "flex items-center gap-3 rounded-xl border px-3.5 py-3",
             selected.has(key(row))
-              ? "border-primary bg-accent/40"
+              ? "border-selected bg-accent/40"
               : "border-border"
           )}
         >

@@ -106,7 +106,7 @@ export function DiscountTiersBuilder({
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap",
                 thresholdType === value
-                  ? "border-primary bg-brand-subtle text-primary-800"
+                  ? "border-selected bg-brand-subtle text-primary-800"
                   : "border-border bg-background text-secondary-foreground"
               )}
             >
@@ -129,7 +129,7 @@ export function DiscountTiersBuilder({
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap",
                 calculationMode === value
-                  ? "border-primary bg-brand-subtle text-primary-800"
+                  ? "border-selected bg-brand-subtle text-primary-800"
                   : "border-border bg-background text-secondary-foreground"
               )}
             >

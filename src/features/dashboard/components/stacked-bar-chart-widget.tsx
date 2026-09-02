@@ -21,10 +21,11 @@ type Segment = {
   colorVar: string
 }
 
+/** Mismos tres canales y mismos tokens que `CANAL_COLOR` en `lib/queries.ts` — rampa monocromática del acento, no la paleta categórica (ver CLAUDE.md §8). */
 const SEGMENTS: Segment[] = [
-  { key: "pos", label: "POS", colorVar: "--data-teal" },
-  { key: "ecommerce", label: "E-commerce", colorVar: "--data-indigo" },
-  { key: "app", label: "App", colorVar: "--data-amber" },
+  { key: "pos", label: "POS", colorVar: "--channel-pos" },
+  { key: "ecommerce", label: "E-commerce", colorVar: "--channel-ecommerce" },
+  { key: "app", label: "App", colorVar: "--channel-app" },
 ]
 
 type StackedBarChartWidgetProps = {

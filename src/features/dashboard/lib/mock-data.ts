@@ -137,7 +137,7 @@ export const ROI_PROMOCIONAL_MOCK: KpiDenseDatum = {
   deltaLabel: "▼ -0,4",
   caption: "margen / descuento",
   sparkline: [60, 56, 58, 52, 48, 46, 40],
-  tone: "promo",
+  tone: "white",
 }
 
 export const FEATURED_KPI = {

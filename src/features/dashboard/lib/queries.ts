@@ -205,10 +205,16 @@ const CANAL_LABEL: Record<(typeof SALES_CHANNELS)[number], string> = {
   ecommerce: "E-commerce",
   app: "App",
 }
+/**
+ * POS/E-commerce/App son subdivisiones de una misma dimensión (canal de
+ * venta), no categorías independientes — usan la rampa monocromática del
+ * acento (`--channel-*`, ver CLAUDE.md §8), no la paleta categórica
+ * `--data-*` (reservada para series sí independientes entre sí).
+ */
 const CANAL_COLOR: Record<(typeof SALES_CHANNELS)[number], string> = {
-  pos: "--data-teal",
-  ecommerce: "--data-indigo",
-  app: "--data-amber",
+  pos: "--channel-pos",
+  ecommerce: "--channel-ecommerce",
+  app: "--channel-app",
 }
 
 const ACQUISITION_LABEL: Record<AcquisitionChannel, string> = {
@@ -560,7 +566,7 @@ export async function getAnaliticaDashboardData(
     {
       label: "Clientes activos",
       icon: "users",
-      tone: "cliente",
+      tone: "white",
       value: number.format(activosNow.size),
       deltaPct: deltaPct(activosNow.size, activosPrev.size) ?? undefined,
       caption: `${number.format(buyersNow.size)} compraron`,
@@ -571,7 +577,7 @@ export async function getAnaliticaDashboardData(
     {
       label: "Nuevos clientes",
       icon: "user-plus",
-      tone: "cliente",
+      tone: "white",
       value: number.format(newMembersNow.length),
       deltaPct:
         deltaPct(newMembersNow.length, newMembersPrev.length) ?? undefined,
@@ -583,7 +589,7 @@ export async function getAnaliticaDashboardData(
     {
       label: "Recurrencia",
       icon: "repeat",
-      tone: "cliente",
+      tone: "white",
       value: `${recurrenciaNow.toFixed(1).replace(".", ",")} ×`,
       deltaPct: recurrenciaDiff ?? undefined,
       deltaLabel:
@@ -607,7 +613,7 @@ export async function getAnaliticaDashboardData(
     {
       label: "Canjes de puntos",
       icon: "ticket-percent",
-      tone: "promo",
+      tone: "white",
       value: number.format(canjesNow.length),
       deltaPct: deltaPct(canjesNow.length, canjesPrev.length) ?? undefined,
       caption: `${number.format(puntosCanjeadosNow)} puntos`,

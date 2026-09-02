@@ -79,7 +79,7 @@ export function FileUpload({
           className={cn(
             "flex w-full flex-col items-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-[22px] text-center",
             dragging
-              ? "border-primary bg-accent"
+              ? "border-selected bg-accent"
               : "border-border-strong bg-neutral-50"
           )}
         >

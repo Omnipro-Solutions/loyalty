@@ -68,8 +68,12 @@ export function KpiDenseCard({
 }: KpiDenseCardProps) {
   const hasDelta = deltaPct !== undefined
   const isNegative = hasDelta && deltaPct < 0
+  // `deltaLabel` ya trae su propio glifo (ej. "▼ -0,4") cuando el caller lo
+  // arma a mano — el fallback a `formatDeltaPercent` es el único caso que
+  // necesita el glifo aquí, para no depender solo del color del badge.
   const delta = hasDelta
-    ? (deltaLabel ?? formatDeltaPercent(deltaPct / 100))
+    ? (deltaLabel ??
+      `${isNegative ? "▼" : "▲"} ${formatDeltaPercent(deltaPct / 100)}`)
     : "—"
 
   return (

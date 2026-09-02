@@ -19,7 +19,7 @@ export function RadioCard({
   return (
     <RadioPrimitive.Root
       className={cn(
-        "group/radio-card flex w-[220px] flex-col gap-2 rounded-xl border border-border bg-background px-4 py-3.5 text-left data-checked:border-2 data-checked:border-primary data-checked:bg-accent",
+        "group/radio-card flex w-[220px] flex-col gap-2 rounded-xl border border-border bg-background px-4 py-3.5 text-left data-checked:border-2 data-checked:border-selected data-checked:bg-accent",
         className
       )}
       {...props}

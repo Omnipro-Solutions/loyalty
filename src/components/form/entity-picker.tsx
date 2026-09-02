@@ -294,7 +294,7 @@ export function EntityPickerDialog<T>({
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                     selected
-                      ? "border-primary bg-brand-subtle"
+                      ? "border-selected bg-brand-subtle"
                       : "border-transparent hover:bg-muted/60"
                   )}
                 >

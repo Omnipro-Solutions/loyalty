@@ -9,7 +9,14 @@ type KpiFeaturedWidgetProps = {
   className?: string
 }
 
-/** Figma "Widget / KPI · destacado" (731:412 / 734:4644): tarjeta de marca con barra de progreso hacia una meta. */
+/**
+ * Figma "Widget / KPI · destacado" (731:412 / 734:4644): tarjeta con barra
+ * de progreso hacia una meta. Superficie neutra igual que el resto de KPIs
+ * de la pantalla — antes era `bg-primary` a sangre completa, la única
+ * superficie 100% saturada del dashboard aparte del item activo del
+ * sidebar (refactor "un solo acento", CLAUDE.md §8). El acento queda solo
+ * en la barra de progreso.
+ */
 export function KpiFeaturedWidget({
   label,
   value,
@@ -21,28 +28,30 @@ export function KpiFeaturedWidget({
   return (
     <div
       className={cn(
-        "flex w-full flex-col items-start gap-2.5 rounded-[20px] bg-primary p-[18px] shadow-kpi-featured",
+        "flex w-full flex-col items-start gap-2.5 rounded-[20px] bg-background p-[18px] shadow-form-section",
         className
       )}
     >
-      <p className="text-xs leading-[17px] font-medium text-primary-100">
+      <p className="text-xs leading-[17px] font-medium text-muted-foreground">
         {label}
       </p>
       <div className="flex w-full items-center gap-2">
-        <p className="flex-1 text-[30px] leading-[34px] font-bold tracking-[-1px] text-primary-foreground">
+        <p className="flex-1 text-[30px] leading-[34px] font-bold tracking-[-1px] text-foreground">
           {value}
         </p>
-        <span className="shrink-0 rounded-full bg-white/20 px-[9px] py-[3px] text-[11px] leading-[15px] font-medium whitespace-nowrap text-primary-foreground">
+        <span className="shrink-0 rounded-full bg-muted px-[9px] py-[3px] text-[11px] leading-[15px] font-medium whitespace-nowrap text-muted-foreground">
           {goalBadge}
         </span>
       </div>
-      <div className="h-[7px] w-full overflow-hidden rounded-full bg-white/25">
+      <div className="h-[7px] w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-kpi-progress-fill"
+          className="h-full rounded-full bg-primary"
           style={{ width: `${progressPct}%` }}
         />
       </div>
-      <p className="text-[10px] leading-[14px] text-primary-100">{caption}</p>
+      <p className="text-[10px] leading-[14px] text-muted-foreground">
+        {caption}
+      </p>
     </div>
   )
 }

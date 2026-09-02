@@ -52,6 +52,7 @@
   --color-brand: var(--brand);
   --color-brand-subtle: var(--brand-subtle);
   --color-brand-accent: var(--brand-accent);
+  --color-selected: var(--selected);
   --color-shell-background: var(--shell-background);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -66,7 +67,9 @@
   --color-data-navy: var(--data-navy);
   --color-data-violet: var(--data-violet);
   --color-data-gold: var(--data-gold);
-  --color-kpi-progress-fill: var(--kpi-progress-fill);
+  --color-channel-pos: var(--channel-pos);
+  --color-channel-ecommerce: var(--channel-ecommerce);
+  --color-channel-app: var(--channel-app);
   --color-card-tint: var(--card-tint);
   --color-promo-subtle: var(--promo-subtle);
   --color-avatar-coral-bg: var(--avatar-coral-bg);
@@ -121,12 +124,17 @@
  * not been visually verified — the MVP ships light-only.
  *
  * REBRAND EN CURSO (ver CLAUDE.md §8): el acento (--primary/--brand/--ring
- * y su rampa --primary-100..900/--accent*) ya migró de índigo al violeta
- * (claro) / lima (oscuro) del manual `docs/etter-marca.html`. Gradientes,
- * paleta categórica de charts (--data-*), avatares (--avatar-*) y estados
- * semánticos (--success/--warning/--destructive) siguen en índigo/legacy a
- * propósito — están pendientes de una decisión de diseño, ver la lista en
- * CLAUDE.md §8. Figma "Loyalty-Desing" aún no refleja este cambio.
+ * y su rampa --primary-100..900/--accent* y --channel-*) pasó por violeta
+ * (claro) / lima (oscuro) del manual `docs/etter-marca.html`, y desde el
+ * refactor "un solo acento" es indigo #4f46e5 con el MISMO matiz en los dos
+ * temas (el oscuro solo sube la luminosidad — ya no cambia de hue). Motivo:
+ * dos acentos de matiz distinto entre temas + una paleta categórica de 7
+ * colores competían entre sí ("se ve muy variada" — reporte del usuario).
+ * Gradientes, paleta categórica de charts (--data-*), avatares
+ * (--avatar-*) y estados semánticos (--success/--warning/--destructive)
+ * siguen en violeta/índigo legacy a propósito — pendientes de una decisión
+ * de diseño aparte, ver CLAUDE.md §8. Figma "Loyalty-Desing" no refleja
+ * ningún estado de este rebrand (ni violeta/lima ni el acento único).
  */
 :root {
   --background: #ffffff; /* bg/white */
@@ -135,21 +143,21 @@
   --card-foreground: #151412;
   --popover: #ffffff;
   --popover-foreground: #151412;
-  --primary: #7a2ff0; /* etteer acento — violeta, tema claro (manual §8 CLAUDE.md) */
-  --primary-foreground: #ffffff; /* 6.01:1 sobre violeta, medido en el manual */
+  --primary: #4f46e5; /* acento — indigo único, mismo matiz en claro y oscuro (ver CLAUDE.md §8, refactor "un solo acento") */
+  --primary-foreground: #ffffff; /* 6.29:1 sobre indigo */
   --secondary: #f4f4f2; /* bg/subtle — Button variant=Secondary */
   --secondary-foreground: #151412;
   --muted: #f4f4f2; /* bg/subtle */
   --muted-foreground: #57564f; /* text/secondary, text/muted */
-  --accent: #ebe0fd; /* tinte de violeta derivado — el manual no publica rampa de matices, ver CLAUDE.md §8 */
-  --accent-foreground: #4e1e9a; /* = --primary-700 derivado, 8.41:1 sobre --accent */
+  --accent: #e6e4fb; /* tinte de indigo, 85.6% mezcla con blanco — misma proporción que usaba el tinte violeta anterior */
+  --accent-foreground: #332d93; /* = --primary-700, 36% mezcla con negro sobre --primary */
   --destructive: #e03e3e;
   --destructive-foreground: #ffffff;
   --destructive-bg: #fdecec;
   --border: #e5e4e1; /* border/default */
   --border-strong: #cbcac5;
   --input: #e5e4e1;
-  --ring: #7a2ff0; /* focus/ring — etteer acento */
+  --ring: #4f46e5; /* focus/ring — acento indigo */
   --radius: 0.625rem;
   /* Nav item / rail item activo (Figma 624:495, 680:193) */
   --shadow-nav-active: 0px 6px 14px -6px rgba(48, 41, 140, 0.3);
@@ -165,14 +173,26 @@
   /* Widget / KPI · destacado (731:412) */
   --shadow-kpi-featured: 0px 10px 24px -6px rgba(79, 69, 229, 0.28);
 
-  /* Brand scale — etteer acento (violeta en claro). Rampa de matices
-     derivada por interpolación (mismas proporciones que la rampa índigo
-     anterior), el manual solo publica el hex sólido — ver CLAUDE.md §8. */
-  --brand: #7a2ff0;
-  --brand-subtle: #ebe0fd;
+  /* Brand scale — acento único indigo (mismo matiz H≈243° en claro y
+     oscuro, ver CLAUDE.md §8 "refactor de un solo acento"). Rampa derivada
+     por interpolación con blanco/negro en las mismas proporciones que la
+     rampa violeta anterior (100=85.6% blanco … 900=64% negro), así que sigue
+     siendo un solo hue, nunca un color literal hardcodeado. */
+  --brand: #4f46e5;
+  --brand-subtle: #e6e4fb;
   --brand-accent: #6e68e8;
+  /* Borde de chip "aplicado/seleccionado" (Filtro/Radio/Dropzone activos,
+     etc.). Antes desacoplado de `--primary` porque ese token cambiaba a
+     lima en oscuro y chocaba contra el relleno violeta de `--accent` — con
+     el acento único (mismo matiz indigo en ambos temas) ese choque ya no
+     existe, así que `--selected` puede volver a ser un alias simple de
+     `--primary` en los dos temas. Se mantiene como token propio (no se
+     inlinea `--primary` en cada sitio) por si el acento vuelve a
+     desacoplarse entre temas más adelante. */
+  --selected: var(--primary);
   /* Tercer stop del gradiente del panel de marca de Acceso (634:774 y
-     análogos) — no coincide con ningún token de marca existente. */
+     análogos) — no coincide con ningún token de marca existente. Fuera de
+     alcance del refactor de acento único (pendiente, ver CLAUDE.md §8). */
   --brand-violet: #9b63f1;
   /* Panel de marca de las 5 pantallas de 01 · Acceso. Primer y segundo stop
      reutilizan primary-800/brand para no introducir tokens duplicados. */
@@ -182,13 +202,21 @@
     var(--brand) 39.3%,
     var(--brand-violet) 71.4%
   );
-  --primary-100: #ebe0fd;
-  --primary-200: #dac5fb;
-  --primary-300: #b48af7;
-  --primary-500: #7a2ff0;
-  --primary-700: #4e1e9a;
-  --primary-800: #431a84;
-  --primary-900: #2c1157;
+  --primary-100: #e6e4fb;
+  --primary-200: #cfccf8;
+  --primary-300: #9c97f0;
+  --primary-500: #4f46e5;
+  --primary-700: #332d93;
+  --primary-800: #2b277e;
+  --primary-900: #1d1953;
+  /* Rampa monocromática del acento para series que son subdivisiones de una
+     misma dimensión (POS/E-commerce/App), no categorías independientes —
+     3 pasos de luminosidad validados con el criterio "ordinal" de la skill
+     de dataviz (mismo hue, ΔL visible entre pasos, extremo claro legible
+     sobre el fondo). Reservar `--data-*` para series sí independientes. */
+  --channel-pos: #9c97f0;
+  --channel-ecommerce: #4f46e5;
+  --channel-app: #332d93;
   /* Degradado fijo de la Card de lealtad (Figma 1171:6): mismos tonos que
      primary-900/700/primary en claro, pero como hex fijos — esos tokens se
      INVIERTEN en `.dark` (ahí primary-900 pasa a ser el tinte claro para
@@ -235,16 +263,12 @@
      claro pese a esa restricción — el lima ya no funciona como "acento
      puro" aquí, es un matiz oscurecido de la misma familia. */
   --data-indigo: #7a2ff0; /* violeta */
-  --data-teal: #d6f55c; /* lima oscurecido — 3.97:1 sobre blanco */
+  --data-teal: #768733; /* lima oscurecido — 3.97:1 sobre blanco (el lima crudo #d6f55c mide 1.25:1 y no se lee) */
   --data-navy: #2c1157; /* = --primary-900 */
   --data-coral: #4c4d84; /* lavanda oscurecida */
   --data-amber: #4e1e9a; /* = --primary-700 */
   --data-violet: #7b7c80; /* = neutral-500 — sin más matices de violeta libres */
   --data-gold: #46464a; /* = neutral-700 */
-  /* Barra de progreso del Widget/KPI destacado (731:419): vive sobre
-     `bg-primary` (violeta/lima), no sobre blanco — necesita su propio tono,
-     no el `--data-gold` categórico de arriba (ese ya no es dorado). */
-  --kpi-progress-fill: #f2e14c;
   /* Tinte de tarjeta (KpiDenseCard tone="cliente"): NO reutiliza
      --brand-subtle — ese token está calibrado para hover/selección
      (superficie chica) y aplicado a una tarjeta entera se sentía "muy
@@ -306,12 +330,12 @@
      this primitive — kept in sync in case a shadcn sidebar block is ever added) */
   --sidebar: #ffffff;
   --sidebar-foreground: #151412;
-  --sidebar-primary: #7a2ff0;
+  --sidebar-primary: #4f46e5;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ebe0fd;
-  --sidebar-accent-foreground: #4e1e9a;
+  --sidebar-accent: #e6e4fb;
+  --sidebar-accent-foreground: #332d93;
   --sidebar-border: #e5e4e1;
-  --sidebar-ring: #7a2ff0;
+  --sidebar-ring: #4f46e5;
 }
 
 .dark {
@@ -321,21 +345,23 @@
   --card-foreground: #fafaf9;
   --popover: #1f1e1b;
   --popover-foreground: #fafaf9;
-  --primary: #d6f55c; /* etteer acento — lima, tema oscuro. Violeta mide 2.78:1 sobre negro y falla; el manual manda lima aquí (17.07:1) */
-  --primary-foreground: #000000; /* 17.07:1 sobre lima — cambia de blanco a negro respecto al tema claro */
+  --primary: #9c97f0; /* acento indigo, mismo matiz que en claro (H≈243°) — variante más luminosa (L alto, no un hue distinto) para pasar de los 2.77:1 de #4f46e5 sobre negro a ~7.1:1 */
+  --primary-foreground: var(
+    --background
+  ); /* fondo oscuro como texto sobre el acento claro — 8.1:1+ */
   --secondary: #2a2925;
   --secondary-foreground: #fafaf9;
   --muted: #2a2925;
   --muted-foreground: #a8a7a0;
-  --accent: #2c1157; /* tinte oscuro de violeta derivado — el acento sólido (lima) queda racionado a acción primaria/símbolo, no a superficies de hover (manual §8) */
-  --accent-foreground: #ebe0fd;
+  --accent: #1d1953; /* tinte oscuro de indigo derivado, misma proporción que en claro */
+  --accent-foreground: #e6e4fb;
   --destructive: #e03e3e;
   --destructive-foreground: #ffffff;
   --destructive-bg: #3a1f1f;
   --border: #35342f;
   --border-strong: #47453e;
   --input: #35342f;
-  --ring: #d6f55c;
+  --ring: #9c97f0;
   --shadow-nav-active: 0px 6px 14px -6px rgba(0, 0, 0, 0.45);
   --shadow-topbar-control: 0px 4px 12px -6px rgba(0, 0, 0, 0.4);
   --shadow-form-section: 0px 6px 18px -6px rgba(0, 0, 0, 0.35);
@@ -344,23 +370,33 @@
   --shadow-auth-card: 0px 8px 24px -6px rgba(0, 0, 0, 0.4);
   --shadow-kpi-featured: 0px 10px 24px -6px rgba(0, 0, 0, 0.45);
 
-  --brand: #d6f55c;
-  --brand-subtle: #2c1157;
+  --brand: #9c97f0;
+  --brand-subtle: #1d1953;
   --brand-accent: #9a9bf0;
   --brand-violet: #9b63f1;
+  /* Acento único: mismo alias simple que en claro — ver comentario en
+     :root. Ya no hace falta desacoplarlo de `--primary`. */
+  --selected: var(--primary);
   --gradient-auth-panel: linear-gradient(
     113.2deg,
     var(--primary-800) 0%,
     var(--brand) 39.3%,
     var(--brand-violet) 71.4%
   );
-  --primary-100: #2c1157;
-  --primary-200: #431a84;
-  --primary-300: #4e1e9a;
-  --primary-500: #7a2ff0;
-  --primary-700: #b48af7;
-  --primary-800: #dac5fb;
-  --primary-900: #ebe0fd;
+  --primary-100: #1d1953;
+  --primary-200: #2b277e;
+  --primary-300: #332d93;
+  --primary-500: #4f46e5;
+  --primary-700: #9c97f0;
+  --primary-800: #cfccf8;
+  --primary-900: #e6e4fb;
+  /* Mismos tres pasos que en claro invertidos en severidad (ver comentario
+     en :root): en oscuro el paso más oscuro (#4f46e5) es el que necesita
+     pasar el piso de contraste "extremo claro" del ramp ordinal — 2.77:1
+     sobre el fondo oscuro, validado con la skill de dataviz. */
+  --channel-pos: #9c97f0;
+  --channel-ecommerce: #807aec;
+  --channel-app: #4f46e5;
   /* Lienzo neutro, no el acento índigo de brand-subtle — ver comentario en
      :root. NO puede ser var(--background): casi todo componente "card" del
      código (KpiWidget, ProductsCard, MemberHero...) se pinta con
@@ -387,11 +423,6 @@
   --data-amber: #dac5fb; /* = --primary-200 (dark) */
   --data-violet: #ebe0fd; /* = --primary-100 (dark) */
   --data-gold: #d3d4d9; /* neutral-300 */
-  /* En claro la tarjeta del KPI destacado es violeta y el dorado original
-     (#f2e14c) contrasta bien. En oscuro esa tarjeta pasa a ser lima — el
-     mismo dorado casi desaparece sobre lima (mismo family amarillo-verde),
-     así que aquí usa violeta oscuro en su lugar. */
-  --kpi-progress-fill: #4e1e9a;
   /* Mismo criterio que en claro: tinte de tarjeta, no --brand-subtle
      (demasiado saturado como fondo de tarjeta completa en oscuro). */
   --card-tint: #2a2035;
@@ -418,12 +449,12 @@
 
   --sidebar: #1f1e1b;
   --sidebar-foreground: #fafaf9;
-  --sidebar-primary: #d6f55c;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #2c1157;
-  --sidebar-accent-foreground: #ebe0fd;
+  --sidebar-primary: #9c97f0;
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: #1d1953;
+  --sidebar-accent-foreground: #e6e4fb;
   --sidebar-border: #35342f;
-  --sidebar-ring: #d6f55c;
+  --sidebar-ring: #9c97f0;
 }
 
 @layer base {

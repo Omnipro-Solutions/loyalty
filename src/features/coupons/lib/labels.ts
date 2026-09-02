@@ -90,12 +90,21 @@ export const COUPON_BATCH_STATUS_CHIP_LABEL: Record<CouponBatchStatus, string> =
     cancelled: "Anuladas",
   }
 
-/** Punto de color de la tabla de cupones. */
+/**
+ * Punto de color de la tabla de cupones. Mismo criterio que
+ * `COUPON_EVENT_TYPE_DOT`/`COUPON_REDEMPTION_RESULT_DOT` en este archivo:
+ * verde = lo positivo (un cupón usado, el desenlace que se busca), nunca
+ * "asignado" — todavía no se sabe si ese cupón termina usado o expirado.
+ * "assigned" usa `--data-coral` (familia lavanda) y no `--data-teal`: en
+ * oscuro `--success`/`--primary`/`--data-teal` son los tres verdes/lima casi
+ * indistinguibles entre sí — con 4 estados en la misma fila necesitamos 4
+ * familias de color, no 3 verdes y un gris.
+ */
 export const COUPON_DISPLAY_STATUS_DOT: Record<CouponDisplayStatus, string> = {
   draft: "bg-muted-foreground",
   issued: "bg-primary",
-  assigned: "bg-success",
-  redeemed: "bg-data-teal",
+  assigned: "bg-data-coral",
+  redeemed: "bg-success",
   expired: "bg-border-strong",
   cancelled: "bg-destructive",
 }

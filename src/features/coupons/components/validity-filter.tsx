@@ -45,7 +45,9 @@ export function ValidityFilter({ from, to, onChange }: ValidityFilterProps) {
       <PopoverTrigger
         className={cn(
           "flex items-center gap-[7px] rounded-[10px] border py-[9px] pr-3 pl-3.5 text-xs leading-4",
-          isApplied ? "border-primary bg-accent" : "border-border bg-background"
+          isApplied
+            ? "border-selected bg-accent"
+            : "border-border bg-background"
         )}
       >
         <span

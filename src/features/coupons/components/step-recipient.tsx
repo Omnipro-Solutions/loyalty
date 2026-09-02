@@ -59,7 +59,7 @@ export function StepRecipient({
       </Field>
 
       {selected && (
-        <div className="flex items-center gap-2.5 rounded-xl border-2 border-primary bg-accent px-3 py-2.5">
+        <div className="flex items-center gap-2.5 rounded-xl border-2 border-selected bg-accent px-3 py-2.5">
           <AvatarInitials name={selected.name} size={28} />
           <div className="min-w-0">
             <p className="truncate text-[13px] font-medium text-foreground">

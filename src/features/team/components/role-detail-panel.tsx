@@ -367,7 +367,7 @@ export function RoleDetailPanel({
               className={cn(
                 "w-auto shrink-0 gap-1.5 rounded-[10px] py-2 pr-2.5 pl-3 text-[11px] font-medium",
                 storeScope === "propia"
-                  ? "border-primary bg-accent text-primary-800"
+                  ? "border-selected bg-accent text-primary-800"
                   : "text-secondary-foreground"
               )}
             >

@@ -37,12 +37,20 @@ export function AppSidebar({
       )}
     >
       <div className="flex shrink-0 items-center gap-2.5 p-2">
-        <BrandMark className="size-8 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] leading-5 font-semibold text-foreground">
-            etteer
-          </p>
-          <p className="truncate text-[11px] leading-[14px] text-muted-foreground">
+          {/* Lockup horizontal del manual (docs/etter-marca.html, generador
+              de assets): el símbolo mide 50.73 de 67.6 unidades del
+              wordmark, ≈75% de su altura, alineado al nombre — no al
+              bloque de dos líneas completo, por eso "etteer" tiene su
+              propia fila con el símbolo y "Loyalty System" va debajo,
+              suelto. */}
+          <div className="flex items-center gap-2">
+            <BrandMark className="size-6 shrink-0" />
+            <p className="truncate text-3xl leading-8 font-semibold text-foreground">
+              etteer
+            </p>
+          </div>
+          <p className="truncate pl-8 text-[11px] leading-[14px] text-muted-foreground">
             Loyalty System
           </p>
         </div>

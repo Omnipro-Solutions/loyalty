@@ -346,7 +346,7 @@ export function ContinuityForm({
       </div>
 
       {ruleDescription && (
-        <div className="rounded-[10px] border border-primary/30 bg-brand-subtle px-3 py-2.5">
+        <div className="rounded-[10px] border border-selected/30 bg-brand-subtle px-3 py-2.5">
           <p className="text-[11px] font-medium tracking-[0.2px] text-primary-800 uppercase">
             Así queda la regla
           </p>
