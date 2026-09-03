@@ -76,12 +76,34 @@ export function ChannelAttributionWidget({
               <YAxis type="category" dataKey="category" hide />
               <Tooltip
                 cursor={false}
-                formatter={(value) => `${value}%`}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid var(--border)",
-                  fontSize: 12,
-                  boxShadow: "var(--shadow-form-section)",
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  return (
+                    <div
+                      className="rounded-xl border border-border bg-background px-3 py-2 shadow-form-section"
+                      style={{ fontSize: 12 }}
+                    >
+                      <div className="flex flex-col gap-1">
+                        {payload.map((entry) => (
+                          <div
+                            key={entry.name}
+                            className="flex items-center gap-1.5"
+                          >
+                            <span
+                              className="size-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="text-muted-foreground">
+                              {entry.name}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              : {entry.value}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
                 }}
               />
               {channels.map((channel, i) => (
