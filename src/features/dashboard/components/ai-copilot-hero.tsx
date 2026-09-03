@@ -3,6 +3,7 @@
 import { useState, type KeyboardEvent } from "react"
 import { Sparkles } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getAiChatScenario } from "../lib/ai-chat"
 import {
@@ -47,18 +48,24 @@ export function AiCopilotHero({ name }: AiCopilotHeroProps) {
   return (
     <>
       <div
-        className="flex w-full flex-col items-start gap-[18px] rounded-[20px] px-8 py-7"
+        className="flex w-full flex-col items-start gap-5 rounded-[20px] px-8 py-8"
         style={{ backgroundImage: "var(--gradient-ai-hero)" }}
       >
-        <p className="text-[30px] leading-[normal] font-bold text-primary-800">
-          Hola de nuevo, {name}
-        </p>
-        <p className="max-w-[560px] text-sm leading-[normal] text-secondary-foreground">
-          Tu copiloto de lealtad: descubre insights, resuelve retos y decide qué
-          hacer a continuación.
-        </p>
+        <Badge variant="info" className="h-6 gap-1.5 px-3 text-[11px]">
+          <Sparkles className="size-3" />
+          Copiloto de lealtad
+        </Badge>
 
-        <div className="flex h-[52px] w-full items-center gap-2.5 rounded-[14px] border border-border-strong bg-background py-2 pr-2 pl-[18px]">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[34px] leading-[1.15] font-bold tracking-[-0.6px] text-primary-800">
+            Hola de nuevo, {name}
+          </p>
+          <p className="max-w-[560px] text-sm leading-[normal] text-secondary-foreground">
+            Descubre insights, resuelve retos y decide qué hacer a continuación.
+          </p>
+        </div>
+
+        <div className="flex h-[52px] w-full items-center gap-2.5 rounded-[14px] border border-border-strong bg-background py-2 pr-2 pl-[18px] shadow-form-section">
           <Sparkles className="size-[18px] shrink-0 text-primary" />
           <input
             type="text"
@@ -86,7 +93,7 @@ export function AiCopilotHero({ name }: AiCopilotHeroProps) {
                   getAiChatScenario(AI_CHAT_SCENARIOS, chip.scenarioId).question
                 )
               }
-              className="rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium text-secondary-foreground"
+              className="rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium text-secondary-foreground transition-colors hover:border-primary/40 hover:bg-accent hover:text-accent-foreground"
             >
               {chip.label}
             </button>
