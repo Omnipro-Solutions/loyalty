@@ -75,6 +75,7 @@
   --color-channel-app: var(--channel-app);
   --color-card-tint: var(--card-tint);
   --color-promo-subtle: var(--promo-subtle);
+  --color-ai-hero-background: var(--ai-hero-background);
   --color-avatar-coral-bg: var(--avatar-coral-bg);
   --color-avatar-coral-fg: var(--avatar-coral-fg);
   --color-avatar-indigo-bg: var(--avatar-indigo-bg);
@@ -297,6 +298,11 @@
     var(--primary-100) 21.4%,
     var(--background) 92.9%
   );
+  /* Fondo plano del bloque "Copiloto de lealtad" (reemplaza el degradado de
+     --gradient-ai-hero arriba) — pedido explícito del usuario con un hex de
+     referencia, no derivado de la rampa violeta existente. Solo en :root a
+     propósito, igual que --gradient-loyalty-card: no cambia con el tema. */
+  --ai-hero-background: #faf2ff;
   --gradient-ai-avatar: linear-gradient(
     127deg,
     var(--primary-800) 0%,
@@ -429,6 +435,14 @@
   /* Mismo criterio que en claro: tinte de tarjeta, no --brand-subtle
      (demasiado saturado como fondo de tarjeta completa en oscuro). */
   --card-tint: #2a2035;
+  /* --ai-hero-background no tenía override aquí: sin él caía al valor de
+     :root (#FAF2FF), un panel claro renderizando texto de tema oscuro
+     encima (heading casi invisible, --primary-800 dark es lavanda clara
+     pensada para leerse sobre fondo oscuro) — bug reportado por el usuario.
+     Mismo tinte que --card-tint (una superficie violeta elevada sobre
+     --shell-background, no tan saturada como --accent) en vez de un hex
+     nuevo sin validar. */
+  --ai-hero-background: #2a2035;
   --chart-1: var(--data-indigo);
   --chart-2: var(--data-coral);
   --chart-3: var(--data-teal);

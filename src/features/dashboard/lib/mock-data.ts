@@ -296,11 +296,15 @@ export const AI_CHAT_SCENARIOS: AiChatScenario[] = [
 export const AI_CHAT_DEFAULT_SCENARIO_ID = "prioridad-semana"
 
 /** Chips del hero (Figma "AI Hero") — cada categoría dispara una pregunta representativa. */
-export const AI_SUGGESTION_CHIPS: { label: string; scenarioId: string }[] = [
-  { label: "Aprender", scenarioId: "prioridad-semana" },
-  { label: "Identificar", scenarioId: "segmento-riesgo" },
-  { label: "Crear", scenarioId: "simular-2x1-bebidas" },
-  { label: "Optimizar", scenarioId: "roi-bajo" },
+export const AI_SUGGESTION_CHIPS: {
+  label: string
+  scenarioId: string
+  icon: "learn" | "identify" | "create" | "optimize"
+}[] = [
+  { label: "Aprender", scenarioId: "prioridad-semana", icon: "learn" },
+  { label: "Identificar", scenarioId: "segmento-riesgo", icon: "identify" },
+  { label: "Crear", scenarioId: "simular-2x1-bebidas", icon: "create" },
+  { label: "Optimizar", scenarioId: "roi-bajo", icon: "optimize" },
 ]
 
 /** Sugerencias del composer del panel de chat — ya son preguntas reales de `AI_CHAT_SCENARIOS`. */

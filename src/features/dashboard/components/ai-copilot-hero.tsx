@@ -1,7 +1,13 @@
 "use client"
 
 import { useState, type KeyboardEvent } from "react"
-import { Sparkles } from "lucide-react"
+import {
+  BookOpen,
+  Search,
+  Sparkles,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,6 +18,16 @@ import {
   AI_SUGGESTION_CHIPS,
 } from "../lib/mock-data"
 import { AiChatPanel, type AiChatAskRequest } from "./ai-chat-panel"
+
+const CHIP_ICONS: Record<
+  (typeof AI_SUGGESTION_CHIPS)[number]["icon"],
+  LucideIcon
+> = {
+  learn: BookOpen,
+  identify: Search,
+  create: Sparkles,
+  optimize: TrendingUp,
+}
 
 type AiCopilotHeroProps = { name: string }
 
@@ -47,17 +63,14 @@ export function AiCopilotHero({ name }: AiCopilotHeroProps) {
 
   return (
     <>
-      <div
-        className="flex w-full flex-col items-start gap-5 rounded-[20px] px-8 py-8"
-        style={{ backgroundImage: "var(--gradient-ai-hero)" }}
-      >
+      <div className="flex w-full flex-col items-start gap-5 rounded-[20px] bg-ai-hero-background px-8 py-8 shadow-form-section">
         <Badge variant="info" className="h-6 gap-1.5 px-3 text-[11px]">
           <Sparkles className="size-3" />
           Copiloto de lealtad
         </Badge>
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[34px] leading-[1.15] font-bold tracking-[-0.6px] text-primary-800">
+          <p className="text-[34px] leading-[1.15] font-bold tracking-[-0.6px] text-primary-800 dark:text-foreground">
             Hola de nuevo, {name}
           </p>
           <p className="max-w-[560px] text-sm leading-[normal] text-secondary-foreground">
@@ -84,20 +97,25 @@ export function AiCopilotHero({ name }: AiCopilotHeroProps) {
         </div>
 
         <div className="flex flex-wrap items-start gap-2">
-          {AI_SUGGESTION_CHIPS.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() =>
-                ask(
-                  getAiChatScenario(AI_CHAT_SCENARIOS, chip.scenarioId).question
-                )
-              }
-              className="rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium text-secondary-foreground transition-colors hover:border-primary/40 hover:bg-accent hover:text-accent-foreground"
-            >
-              {chip.label}
-            </button>
-          ))}
+          {AI_SUGGESTION_CHIPS.map((chip) => {
+            const Icon = CHIP_ICONS[chip.icon]
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() =>
+                  ask(
+                    getAiChatScenario(AI_CHAT_SCENARIOS, chip.scenarioId)
+                      .question
+                  )
+                }
+                className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-xs font-medium text-secondary-foreground transition-colors hover:border-primary/40 hover:bg-accent hover:text-accent-foreground"
+              >
+                <Icon className="size-3.5 shrink-0" />
+                {chip.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
