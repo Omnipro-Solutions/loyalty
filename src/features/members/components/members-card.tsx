@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 
+import Link from "next/link"
+
 import { MembersFiltersBar } from "./members-filters-bar"
 import type { TierOption } from "../lib/queries"
 
@@ -27,8 +29,8 @@ export function MembersCard({
 }: MembersCardProps) {
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
-      <div className="flex items-center gap-2.5 px-[22px] py-4">
-        <div className="flex flex-1 flex-col gap-0.5">
+      <div className="flex flex-wrap items-center gap-2.5 px-[22px] py-4">
+        <div className="flex min-w-0 grow flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
               Clientes
@@ -37,6 +39,12 @@ export function MembersCard({
           </div>
         </div>
         <MembersFiltersBar tiers={tiers} />
+        <Link
+          href="/clientes/acumulaciones"
+          className="shrink-0 rounded-[10px] border border-border px-3 py-2 text-xs font-medium text-secondary-foreground"
+        >
+          Acumulaciones
+        </Link>
         {exportSlot}
       </div>
 

@@ -8,7 +8,7 @@ export default function NewCouponBatchLoading() {
       breadcrumb="Comercial  ›  Cupones  ›  Nueva emisión"
       title="Cupones"
     >
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-9 w-64" />
       </div>

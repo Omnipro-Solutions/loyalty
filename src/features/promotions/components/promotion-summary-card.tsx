@@ -24,7 +24,7 @@ import {
   PROMOTION_STATUS_LABEL,
   PROMOTION_TYPE_LABEL,
 } from "../lib/labels"
-import { PROMOTION_TYPE_ICON } from "../lib/type-icon"
+import { PROMOTION_TYPE_ICON } from "@/config/promotion-type"
 import {
   evaluateProgramRules,
   type ProgramRuleIssue,

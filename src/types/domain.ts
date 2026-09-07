@@ -112,6 +112,42 @@ export type SalesChannel = (typeof SALES_CHANNELS)[number]
 export const ORDER_STATUSES = ["completado", "cancelado", "devuelto"] as const
 export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
+/**
+ * Con qué se pagó (`pedido_pagos.metodo`). Espeja el `check` de
+ * `20260907180000_pedido_pagos.sql`.
+ *
+ * No existe `mixto`: un pago partido son varias filas de `pedido_pagos`, que
+ * es lo que permite decir CUÁNTO fue con cada medio. Un valor `mixto` diría
+ * que hubo más de uno y nada más — justo lo que hay que saber para reembolsar
+ * una devolución por el mismo medio.
+ */
+export const PAYMENT_METHODS = [
+  "efectivo",
+  "tarjeta_credito",
+  "tarjeta_debito",
+  "transferencia",
+  "puntos",
+] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+
+/**
+ * Por qué volvió el producto (`devoluciones.motivo`). Espeja el `check` de
+ * `20260907090000_devoluciones.sql`.
+ *
+ * `reaccion_adversa` y `producto_vencido` no son un "defectuoso" más fino
+ * por gusto: en farmacia son los dos que disparan una revisión de lote, y
+ * mezclarlos con el resto borra justo la fila que hay que ir a buscar.
+ */
+export const RETURN_REASONS = [
+  "producto_defectuoso",
+  "producto_vencido",
+  "no_era_lo_esperado",
+  "error_en_pedido",
+  "reaccion_adversa",
+  "arrepentimiento",
+] as const
+export type ReturnReason = (typeof RETURN_REASONS)[number]
+
 export const CONSENT_SOURCES = ["web", "app", "tienda", "formulario"] as const
 export type ConsentSource = (typeof CONSENT_SOURCES)[number]
 

@@ -1,10 +1,10 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
 
 import { FilterScopedSearch } from "@/components/filters/scoped-search"
 import { FilterSelect } from "@/components/filters/select"
+import { useSearchParam } from "@/hooks/use-search-param"
 import { MEMBER_SEARCH_SCOPES, MEMBER_STATUSES } from "@/types/domain"
 
 import {
@@ -31,20 +31,7 @@ export function MembersFiltersBar({ tiers }: MembersFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [search, setSearch] = useState(searchParams.get("q") ?? "")
-
-  useEffect(() => {
-    const current = new URLSearchParams(window.location.search)
-    if ((current.get("q") ?? "") === search) return
-    const timeout = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search)
-      if (search) params.set("q", search)
-      else params.delete("q")
-      params.delete("page")
-      router.push(`${pathname}?${params.toString()}`)
-    }, 300)
-    return () => clearTimeout(timeout)
-  }, [search, pathname, router])
+  const search = useSearchParam()
 
   function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
@@ -58,7 +45,7 @@ export function MembersFiltersBar({ tiers }: MembersFiltersBarProps) {
   const searchScope = searchParams.get("campo") ?? "todos"
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2.5">
       <FilterScopedSearch
         scope={searchScope}
         scopeOptions={SEARCH_SCOPE_OPTIONS}
@@ -68,8 +55,9 @@ export function MembersFiltersBar({ tiers }: MembersFiltersBarProps) {
             else params.set("campo", value)
           })
         }
-        value={search}
-        onChange={setSearch}
+        value={search.value}
+        onChange={search.setValue}
+        loading={search.loading}
         placeholder="Buscar…"
       />
       <FilterSelect

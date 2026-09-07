@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 
 import { KpiCard } from "@/components/data/kpi-card"
+import { KpiRow } from "@/components/data/kpi-row"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { allows, getSessionPermissions } from "@/lib/session-permissions"
@@ -65,7 +66,7 @@ export default async function MembersPage({
 
   return (
     <AppPage breadcrumb="Comercial  ›  Clientes" title="Clientes">
-      <div className="flex items-start gap-4">
+      <KpiRow>
         <KpiCard
           label="Clientes activos"
           value={formatNumber(kpis.activeMembers)}
@@ -94,7 +95,7 @@ export default async function MembersPage({
           }
           detail="80% o más de los campos"
         />
-      </div>
+      </KpiRow>
       <MembersCard
         tiers={tiers}
         count={

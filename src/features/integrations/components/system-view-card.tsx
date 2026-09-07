@@ -50,14 +50,14 @@ export function SystemViewCard() {
         />
       </div>
 
-      <div className="flex w-full items-stretch gap-3 rounded-2xl bg-background p-5 shadow-form-section">
+      <div className="flex w-full flex-col items-stretch gap-3 rounded-2xl bg-background p-5 shadow-form-section lg:flex-row">
         <FlowColumn title="Orígenes" connections={sources} />
 
         <div className="flex flex-col items-center justify-center px-1">
-          <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+          <ArrowRight className="size-4 shrink-0 rotate-90 text-muted-foreground lg:rotate-0" />
         </div>
 
-        <div className="flex w-[180px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-6 text-center">
+        <div className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-6 text-center lg:w-[180px] lg:shrink-0">
           <div className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Workflow className="size-5" />
           </div>
@@ -68,7 +68,7 @@ export function SystemViewCard() {
         </div>
 
         <div className="flex flex-col items-center justify-center px-1">
-          <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+          <ArrowRight className="size-4 shrink-0 rotate-90 text-muted-foreground lg:rotate-0" />
         </div>
 
         <FlowColumn title="Destinos" connections={destinations} />

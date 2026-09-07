@@ -7,7 +7,7 @@ const BATCHES_TABLE_COLUMNS = [260, 190, 150, 140, 110, 56]
 export default function CouponsLoading() {
   return (
     <AppPage breadcrumb="Comercial  ›  Cupones" title="Cupones">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-2.5 w-72" />

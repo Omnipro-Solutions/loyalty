@@ -52,6 +52,27 @@ const shortTime = new Intl.DateTimeFormat("es-CO", {
   hour12: false,
 })
 
+/**
+ * Una columna `date` de Postgres llega como "2026-09-07", y `new Date(...)`
+ * la lee como medianoche **UTC** — que en América/Bogotá (UTC-5) es el 6 a
+ * las 19:00. Formatearla mostraba siempre el día ANTERIOR: una promoción
+ * vigente hasta el 7 decía «hasta 06 sep 2026», y su último día se leía como
+ * si ya hubiera pasado.
+ *
+ * Una fecha sin hora no es un instante: es un día del calendario. Se
+ * construye en la zona local para que el día que se guardó sea el día que se
+ * muestra. Los timestamptz (que sí traen hora) siguen su curso normal —
+ * ahí la conversión a local es justo lo que se quiere.
+ */
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+
+function toCalendarDate(value: string | Date): Date {
+  if (typeof value !== "string") return value
+  const match = DATE_ONLY.exec(value)
+  if (!match) return new Date(value)
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
 export function formatUSD(value: number): string {
   return currency.format(value)
 }
@@ -92,17 +113,17 @@ export function formatDeltaPercent(value: number): string {
 }
 
 export function formatDate(value: string | Date): string {
-  return date.format(typeof value === "string" ? new Date(value) : value)
+  return date.format(toCalendarDate(value))
 }
 
 /** "14 de marzo de 1991" (05.3g "Nacimiento") — long month format. */
 export function formatLongDate(value: string | Date): string {
-  return longDate.format(typeof value === "string" ? new Date(value) : value)
+  return longDate.format(toCalendarDate(value))
 }
 
 /** "mar 2023" (05.3g "Tienda" — store + enrollment month/year). */
 export function formatMonthYear(value: string | Date): string {
-  return monthYear.format(typeof value === "string" ? new Date(value) : value)
+  return monthYear.format(toCalendarDate(value))
 }
 
 export function formatDateTime(value: string | Date): string {
@@ -143,7 +164,7 @@ const SHORT_MONTHS = [
  * 2026"), which doesn't fit the timeline's single-line date column.
  */
 export function formatEventDate(value: string | Date): string {
-  const target = typeof value === "string" ? new Date(value) : value
+  const target = toCalendarDate(value)
   const now = new Date()
   const startOfToday = new Date(
     now.getFullYear(),
@@ -168,7 +189,7 @@ export function formatEventDate(value: string | Date): string {
 
 /** "22 ago 2026" (05.3g "Audiencias activas"/"Promociones activas") — corto, sin los "de" que `formatDate` inserta en este runtime con mes abreviado. */
 export function formatShortDate(value: string | Date): string {
-  const target = typeof value === "string" ? new Date(value) : value
+  const target = toCalendarDate(value)
   const day = String(target.getDate()).padStart(2, "0")
   const month = SHORT_MONTHS[target.getMonth()]
   return `${day} ${month} ${target.getFullYear()}`

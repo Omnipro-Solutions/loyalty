@@ -26,14 +26,14 @@ function PlanningKpiCardSkeleton() {
 export default function PromotionsLoading() {
   return (
     <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-2.5 w-72" />
         </div>
         <Skeleton className="h-9 w-36 rounded-[10px]" />
       </div>
-      <div className="flex w-full items-stretch gap-4">
+      <div className="gap-4">
         <PlanningKpiCardSkeleton />
         <PlanningKpiCardSkeleton />
         <PlanningKpiCardSkeleton />

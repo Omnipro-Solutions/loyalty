@@ -20,16 +20,37 @@ import {
   pickColumns,
   type CsvColumn,
 } from "@/lib/csv"
-import { formatDateTime, formatEventDate } from "@/lib/format"
+import { formatDateTime, formatEventDate, formatShortDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import { ExportCsvButton } from "./export-csv-button"
+import {
+  PROMOTION_TYPE_COLOR,
+  PROMOTION_TYPE_ICON,
+  PROMOTION_TYPE_LABEL,
+} from "@/config/promotion-type"
+
 import { ExportDialog } from "./export-dialog"
+import { OrderLogDetail } from "./order-log-detail"
+import { PromotionLogDetail } from "./promotion-log-detail"
 
 const PAGE_SIZE = 20
 
+// 5 de las 7 columnas tienen ancho fijo (570px) y las otras dos son
+// `minmax(0,…)`: sin un mínimo total la rejilla las lleva a 0 en vez de
+// desbordar, y las dos columnas de texto desaparecen al estrecharse el
+// viewport. Con `min-w` la bitácora scrollea en horizontal como una sola
+// unidad (cabecera + filas comparten el contenedor de scroll de abajo).
+//
+// Evento son 176px y no 150: es lo que mide la etiqueta más larga que la
+// base puede producir ("Pendiente de aprobación", "Generación completada").
+// A 150px esas dos se cortaban siempre, y cortar el caso normal para dejar
+// sitio al raro es el reparto al revés.
+//
+// La última columna es de 28px porque solo lleva el chevron: el detalle de
+// una compra se abre desde el panel desplegado, no desde la fila.
 const GRID =
-  "grid-cols-[132px_104px_150px_minmax(0,1.1fr)_minmax(0,1fr)_130px_28px]"
+  "grid-cols-[132px_104px_176px_minmax(0,1.1fr)_minmax(0,1fr)_130px_28px] min-w-[986px]"
 
 /** El tono del badge sale de la severidad, no del módulo: lo que hay que ver de un vistazo es si algo falló, no de qué tabla salió. */
 const SEVERITY_VARIANT: Record<
@@ -84,6 +105,31 @@ const SYSTEM_LOG_EXPORT_COLUMNS: CsvColumn<SystemLogEntry>[] = [
     value: (e) => SEVERITY_LABEL[e.severidad],
   },
   { key: "entidad", header: "Entidad", value: (e) => e.entidad },
+  // Las tres siguientes salen vacías en cupones y journeys: son de la
+  // promoción, y llevarlas al CSV es lo que permite cruzar el log con el
+  // maestro de promociones sin abrir la app fila por fila.
+  {
+    key: "codigo",
+    header: "Código",
+    value: (e) => e.promocion?.codigo ?? "",
+  },
+  {
+    key: "mecanica",
+    header: "Mecánica",
+    value: (e) => (e.promocion ? PROMOTION_TYPE_LABEL[e.promocion.tipo] : ""),
+  },
+  {
+    key: "vigencia",
+    header: "Vigencia",
+    value: (e) =>
+      e.promocion
+        ? `${formatShortDate(e.promocion.vigenteDesde)} — ${
+            e.promocion.vigenteHasta
+              ? formatShortDate(e.promocion.vigenteHasta)
+              : "permanente"
+          }`
+        : "",
+  },
   { key: "descripcion", header: "Descripción", value: (e) => e.titulo },
   {
     key: "socio_actor",
@@ -116,11 +162,19 @@ function EntryRow({
   open: boolean
   onToggle: () => void
 }) {
+  const TypeIcon = entry.promocion
+    ? PROMOTION_TYPE_ICON[entry.promocion.tipo]
+    : null
   const metadata = Object.entries(entry.metadatos)
-  const expandable = metadata.length > 0 || !!entry.motivo || !!entry.detalle
+  const expandable =
+    metadata.length > 0 ||
+    !!entry.motivo ||
+    !!entry.detalle ||
+    !!entry.promocion ||
+    !!entry.compra
 
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div className="w-fit min-w-full border-b border-border last:border-b-0">
       <div
         role={expandable ? "button" : undefined}
         onClick={expandable ? onToggle : undefined}
@@ -131,30 +185,49 @@ function EntryRow({
           open && "bg-muted/40"
         )}
       >
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="truncate font-mono text-[11px] text-muted-foreground">
           {formatEventDate(entry.ocurridoEn)}
         </span>
         <span className="truncate text-[11px] text-muted-foreground">
           {SYSTEM_LOG_MODULE_LABEL[entry.modulo]}
         </span>
+        {/* `max-w-full` es lo que lo mantiene dentro de su columna: el badge
+            nace `w-fit`, y un tipo largo ("borrador → pendiente_aprobacion")
+            se salía por encima de la celda de al lado en vez de cortarse.
+            El `truncate` va en un span interior porque el badge es
+            `inline-flex` y ahí la elipsis no se aplica al texto suelto. */}
         <Badge
           variant={SEVERITY_VARIANT[entry.severidad]}
-          className="w-fit shrink-0"
+          className="w-fit max-w-full"
+          title={entry.tipoLabel}
         >
-          {entry.tipoLabel}
+          <span className="truncate">{entry.tipoLabel}</span>
         </Badge>
-        <span className="min-w-0 truncate font-medium text-foreground">
-          {entry.entidadHref ? (
-            <Link
-              href={entry.entidadHref}
-              onClick={(e) => e.stopPropagation()}
-              className="hover:underline"
-            >
-              {entry.entidad}
-            </Link>
-          ) : (
-            entry.entidad
+        <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground">
+          {/* El ícono de la mecánica hace el log escaneable sin abrir nada:
+              «tres canjes de cupón seguidos» se ve, leyendo nombres no. */}
+          {entry.promocion && TypeIcon && (
+            <TypeIcon
+              className={cn(
+                "size-3 shrink-0",
+                PROMOTION_TYPE_COLOR[entry.promocion.tipo].fg
+              )}
+              aria-label={PROMOTION_TYPE_LABEL[entry.promocion.tipo]}
+            />
           )}
+          <span className="min-w-0 truncate">
+            {entry.entidadHref ? (
+              <Link
+                href={entry.entidadHref}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:underline"
+              >
+                {entry.entidad}
+              </Link>
+            ) : (
+              entry.entidad
+            )}
+          </span>
         </span>
         <span className="min-w-0 truncate text-secondary-foreground">
           {entry.titulo}
@@ -162,10 +235,22 @@ function EntryRow({
         <span className="min-w-0 truncate text-[11px] text-muted-foreground">
           {/* El socio manda sobre el actor cuando lo hay: en un evento
               transaccional, "a quién le pasó" es más útil que "quién lo
-              ejecutó", que casi siempre es el motor. */}
-          {entry.socio ?? entry.actor}
+              ejecutó", que casi siempre es el motor. Y si se sabe quién es,
+              lleva a su ficha: el camino de vuelta del que trajo aquí el
+              "Ver histórico" del cliente. */}
+          {entry.socio && entry.socioId ? (
+            <Link
+              href={`/clientes/${entry.socioId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:text-foreground hover:underline"
+            >
+              {entry.socio}
+            </Link>
+          ) : (
+            (entry.socio ?? entry.actor)
+          )}
         </span>
-        <span className="flex justify-end">
+        <span className="flex items-center justify-end">
           {expandable && (
             <ChevronDown
               className={cn(
@@ -178,7 +263,21 @@ function EntryRow({
       </div>
 
       {open && expandable && (
-        <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-5 py-3">
+        <div className="flex flex-col gap-2.5 border-t border-border bg-muted/30 px-5 py-3">
+          {/* La promoción va primero: es la respuesta a «¿de qué va esto?»,
+              y los metadatos crudos solo tienen sentido después de saberlo. */}
+          {entry.promocion && (
+            <PromotionLogDetail
+              promotion={entry.promocion}
+              name={entry.entidad}
+              href={entry.entidadHref}
+              metadata={entry.metadatos}
+            />
+          )}
+          {/* Mismo criterio que la promoción: el desglose primero. En una
+              compra es LA respuesta —qué se llevó—, y el resto de la fila
+              (fecha, canal, socio) ya está arriba. */}
+          {entry.compra && <OrderLogDetail order={entry.compra} />}
           {entry.detalle && (
             <p className="text-[11px] text-secondary-foreground">
               {entry.detalle}
@@ -215,14 +314,14 @@ function EntryRow({
 }
 
 /**
- * La bitácora de los tres módulos en un solo hilo. El filtro por módulo y
+ * La bitácora de los seis módulos en un solo hilo. El filtro por módulo y
  * la búsqueda son de cliente porque el conjunto ya viene acotado a las
  * últimas N filas: pedir al servidor por cada tecla sería más red para el
  * mismo resultado.
  *
- * Se filtra por módulo y NO por tipo de evento: los tipos son 9 + 19 + 5
- * entre los tres módulos, y una lista de 33 opciones no es un filtro, es
- * otro problema. La búsqueda cubre el caso puntual.
+ * Se filtra por módulo y NO por tipo de evento: entre los seis módulos hay
+ * más de cuarenta tipos, y una lista así no es un filtro, es otro problema.
+ * La búsqueda cubre el caso puntual.
  */
 export function SystemLog({ entries }: { entries: SystemLogEntry[] }) {
   const [modulo, setModulo] = useState("todos")
@@ -335,7 +434,7 @@ export function SystemLog({ entries }: { entries: SystemLogEntry[] }) {
           />
         </div>
       ) : (
-        <>
+        <div className="overflow-x-auto">
           <div
             className={cn(
               "grid gap-2.5 border-y border-border bg-muted/40 px-5 py-2.5 text-[10px] font-semibold tracking-[0.04em] text-muted-foreground uppercase",
@@ -366,7 +465,7 @@ export function SystemLog({ entries }: { entries: SystemLogEntry[] }) {
               onPageChange={setPage}
             />
           </div>
-        </>
+        </div>
       )}
     </div>
   )

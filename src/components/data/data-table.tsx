@@ -20,6 +20,8 @@ type DataTableProps<TFeatures extends TableFeatures, TData extends RowData> = {
   headerClassName?: string
   /** Extra full-width row rendered right below a row when it's expanded (needs `rowExpandingFeature`) — e.g. the "Datos de la emisión" panel in 13.1. */
   renderSubRow?: (row: TData) => ReactNode
+  /** Overrides the width below which the table scrolls horizontally instead of squeezing its columns. */
+  minWidth?: number
 }
 
 /**
@@ -36,6 +38,7 @@ export function DataTable<
   onRowClick,
   headerClassName,
   renderSubRow,
+  minWidth,
 }: DataTableProps<TFeatures, TData>) {
   const headerGroups = table.getHeaderGroups()
   // `getSize()` only exists if the table registered `columnSizingFeature` —
@@ -48,13 +51,30 @@ export function DataTable<
   const isRowExpanded = (row: unknown) =>
     (row as { getIsExpanded?: () => boolean }).getIsExpanded?.() ?? false
 
+  // `Table` ya scrollea en horizontal, pero el `<table class="w-full">`
+  // de dentro nunca desborda por sí solo: sin un ancho mínimo, el navegador
+  // reparte el espacio que haya y las celdas se apiñan (el síntoma que se
+  // ve al subir el zoom del navegador). Con un `min-width` el scroll sí se
+  // activa y las columnas conservan su ancho de diseño.
+  // Se calcula desde los `size` de las columnas (`columnSizingFeature`);
+  // las tablas sin esa feature caen a un mínimo conservador — 640px, por
+  // debajo del cual cualquier tabla de este proyecto queda ilegible.
+  const declaredWidths = (headerGroups[0]?.headers ?? []).map((header) =>
+    columnWidth(header.column)
+  )
+  const totalDeclared = declaredWidths.reduce<number>(
+    (total, width) => total + (width ?? 0),
+    0
+  )
+  const tableMinWidth = minWidth ?? (totalDeclared > 0 ? totalDeclared : 640)
+
   return (
     // No box of its own (rounded/border/shadow): in the Figma the table is
     // flat content inside the card that wraps it (705:2524), not a second
     // nested card — that's what looked "stuck"/competing. The containing
     // card (see `ProductsCard`) is the one that sets `overflow-hidden`
     // and the background.
-    <Table>
+    <Table style={{ minWidth: tableMinWidth }}>
       {/* Per-column width from `columnSizingFeature` (see ColumnDef `size`) —
           single source of truth for the width, instead of a `div` per cell. */}
       <colgroup>

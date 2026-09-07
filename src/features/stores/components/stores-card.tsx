@@ -39,8 +39,8 @@ export function StoresCard({
 }: StoresCardProps) {
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
-      <div className="flex items-center gap-2.5 px-4 py-3.5">
-        <div className="flex flex-1 flex-col gap-0.5">
+      <div className="flex flex-wrap items-center gap-2.5 px-4 py-3.5">
+        <div className="flex min-w-0 grow flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
               Tiendas

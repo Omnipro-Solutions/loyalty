@@ -15,8 +15,18 @@ import { cn } from "@/lib/utils"
  * `children` has no Figma equivalent: it's a generic mechanism for grouping
  * sub-routes under a collapsible item — unused by any item in
  * `config/navigation.ts` today.
+ *
+ * `onNavigate` lets the off-canvas shell (below `lg`) close itself when a
+ * link is followed — otherwise the drawer would stay over the page it just
+ * navigated to.
  */
-export function NavItem({ label, href, icon: Icon, children }: NavItemData) {
+export function NavItem({
+  label,
+  href,
+  icon: Icon,
+  children,
+  onNavigate,
+}: NavItemData & { onNavigate?: () => void }) {
   const pathname = usePathname()
   const sectionActive =
     children?.some((child) => isNavActive(pathname, child.href)) ?? false
@@ -28,6 +38,7 @@ export function NavItem({ label, href, icon: Icon, children }: NavItemData) {
     return (
       <Link
         href={href}
+        onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex h-9 w-full items-center gap-2.5 rounded-xl p-2.5 text-[13px] leading-[18px] font-medium",
@@ -74,6 +85,7 @@ export function NavItem({ label, href, icon: Icon, children }: NavItemData) {
               <Link
                 key={child.href}
                 href={child.href}
+                onClick={onNavigate}
                 aria-current={childActive ? "page" : undefined}
                 className={cn(
                   "flex h-8 items-center rounded-lg px-2.5 text-[12.5px] leading-4",

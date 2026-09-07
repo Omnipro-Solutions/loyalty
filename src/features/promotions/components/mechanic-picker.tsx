@@ -134,7 +134,7 @@ export function MechanicPicker({
       <RadioGroup
         value={value}
         onValueChange={(v) => handleChange(v as BenefitType)}
-        className="grid grid-cols-3 gap-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
       >
         {visibleTypes.map((type) => (
           <RadioCard

@@ -5,7 +5,9 @@ import {
   RESOURCES,
   actionApplies,
   applicablePermissions,
+  can,
   isFullAccessRole,
+  isOptInAction,
   missingForFullAccess,
 } from "./permissions"
 
@@ -34,8 +36,10 @@ describe("applicablePermissions", () => {
     const cells = applicablePermissions()
     expect(cells.every((c) => actionApplies(c.resource, c.action))).toBe(true)
 
+    // Las opt-in no cuentan: la celda existe y es editable, pero "acceso
+    // total" no la afirma (ver `OPT_IN_ACTIONS`).
     const expected = RESOURCES.flatMap((r) =>
-      ACTIONS.filter((a) => actionApplies(r, a))
+      ACTIONS.filter((a) => actionApplies(r, a) && !isOptInAction(a))
     ).length
     expect(cells).toHaveLength(expected)
   })
@@ -90,5 +94,47 @@ describe("missingForFullAccess", () => {
     expect(missingForFullAccess([])).toHaveLength(
       applicablePermissions().length
     )
+  })
+})
+
+describe("autoaprobar", () => {
+  it("la celda existe solo donde hay cola de aprobación", () => {
+    // Tiene sentido donde hay una fila que firmar. `catalogo`, `tiendas`,
+    // `clientes` y `reglas` tienen `aprobar` pero ninguna cola.
+    expect(actionApplies("promociones", "autoaprobar")).toBe(true)
+    expect(actionApplies("journeys", "autoaprobar")).toBe(true)
+    expect(actionApplies("cupones", "autoaprobar")).toBe(true)
+    expect(actionApplies("reglas", "autoaprobar")).toBe(false)
+    expect(actionApplies("clientes", "autoaprobar")).toBe(false)
+    expect(actionApplies("facturacion", "autoaprobar")).toBe(false)
+  })
+
+  it("no viene con el acceso total: hay que concederla a mano", () => {
+    // El punto entero de la decisión: si "acceso total" la incluyera, todo
+    // admin de toda organización quedaría autoaprobando por defecto y sin
+    // forma de quitárselo (su matriz se afirma entera).
+    const keys = new Set(
+      applicablePermissions().map((c) => `${c.resource}:${c.action}`)
+    )
+    expect(keys.has("promociones:aprobar")).toBe(true)
+    expect(keys.has("promociones:autoaprobar")).toBe(false)
+    expect(keys.has("cupones:autoaprobar")).toBe(false)
+    expect(keys.has("journeys:autoaprobar")).toBe(false)
+  })
+
+  it("un rol de acceso total no la echa en falta", () => {
+    // Si `missingForFullAccess` la contara, el Administrador no se podría
+    // guardar nunca: pediría una celda que nadie le va a marcar.
+    expect(missingForFullAccess(applicablePermissions())).toEqual([])
+  })
+
+  it("ningún archetype la trae, tampoco admin", () => {
+    for (const rol of ["admin", "gestor", "aprobador", "lector"] as const) {
+      expect(can(rol, "autoaprobar", "promociones")).toBe(false)
+      expect(can(rol, "autoaprobar", "cupones")).toBe(false)
+    }
+    // Y el archetype sigue trayendo lo que sí le toca.
+    expect(can("aprobador", "aprobar", "promociones")).toBe(true)
+    expect(can("admin", "aprobar", "promociones")).toBe(true)
   })
 })

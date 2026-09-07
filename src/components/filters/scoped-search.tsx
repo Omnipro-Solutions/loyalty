@@ -1,6 +1,6 @@
 "use client"
 
-import { Search as SearchIcon } from "lucide-react"
+import { Loader2, Search as SearchIcon } from "lucide-react"
 
 import {
   Select,
@@ -19,6 +19,9 @@ type FilterScopedSearchProps = {
   onChange: (value: string) => void
   placeholder: string
   className?: string
+  /** Mientras la consulta corre. Mismo criterio que `FilterSearch`: la lupa se
+   *  cambia por un spinner en su propio hueco, sin mover nada. */
+  loading?: boolean
 }
 
 /**
@@ -35,11 +38,12 @@ export function FilterScopedSearch({
   onChange,
   placeholder,
   className,
+  loading = false,
 }: FilterScopedSearchProps) {
   return (
     <div
       className={cn(
-        "flex w-[340px] items-center gap-2 rounded-full border border-border bg-background pr-3.5 pl-1.5 focus-within:border-2 focus-within:border-ring",
+        "flex w-[340px] max-w-full items-center gap-2 rounded-full border border-border bg-background pr-3.5 pl-1.5 focus-within:border-2 focus-within:border-ring",
         className
       )}
     >
@@ -58,7 +62,14 @@ export function FilterScopedSearch({
         </SelectContent>
       </Select>
       <span className="h-4 w-px shrink-0 bg-border" />
-      <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+      {loading ? (
+        <Loader2
+          className="size-3.5 shrink-0 animate-spin text-primary"
+          aria-hidden="true"
+        />
+      ) : (
+        <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+      )}
       <input
         type="search"
         value={value}
@@ -66,6 +77,9 @@ export function FilterScopedSearch({
         placeholder={placeholder}
         className="min-w-0 flex-1 bg-transparent py-[9px] text-xs leading-4 text-foreground outline-none placeholder:text-muted-foreground"
       />
+      <span aria-live="polite" className="sr-only">
+        {loading ? "Buscando…" : ""}
+      </span>
     </div>
   )
 }

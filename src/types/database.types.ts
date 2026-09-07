@@ -912,6 +912,145 @@ export type Database = {
           },
         ]
       }
+      devolucion_items: {
+        Row: {
+          cantidad: number
+          costo_unitario: number
+          devolucion_id: string
+          id: string
+          pedido_item_id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal: number
+        }
+        Insert: {
+          cantidad: number
+          costo_unitario?: number
+          devolucion_id: string
+          id?: string
+          pedido_item_id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal?: number
+        }
+        Update: {
+          cantidad?: number
+          costo_unitario?: number
+          devolucion_id?: string
+          id?: string
+          pedido_item_id?: string
+          precio_unitario?: number
+          producto_id?: string
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devolucion_items_devolucion_id_fkey"
+            columns: ["devolucion_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucion_items_pedido_item_id_fkey"
+            columns: ["pedido_item_id"]
+            isOneToOne: false
+            referencedRelation: "pedido_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devoluciones: {
+        Row: {
+          canal: string
+          costo_devuelto: number
+          creado_en: string
+          id: string
+          member_id: string
+          motivo: string
+          nota: string | null
+          numero_devolucion: string
+          org_id: string
+          pedido_id: string
+          registrado_por: string | null
+          tienda_id: string | null
+          total_devuelto: number
+        }
+        Insert: {
+          canal: string
+          costo_devuelto?: number
+          creado_en?: string
+          id?: string
+          member_id: string
+          motivo: string
+          nota?: string | null
+          numero_devolucion: string
+          org_id: string
+          pedido_id: string
+          registrado_por?: string | null
+          tienda_id?: string | null
+          total_devuelto?: number
+        }
+        Update: {
+          canal?: string
+          costo_devuelto?: number
+          creado_en?: string
+          id?: string
+          member_id?: string
+          motivo?: string
+          nota?: string | null
+          numero_devolucion?: string
+          org_id?: string
+          pedido_id?: string
+          registrado_por?: string | null
+          tienda_id?: string | null
+          total_devuelto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devoluciones_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_tienda_id_fkey"
+            columns: ["tienda_id"]
+            isOneToOne: false
+            referencedRelation: "tiendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitaciones: {
         Row: {
           aceptada_en: string | null
@@ -1225,6 +1364,63 @@ export type Database = {
           },
         ]
       }
+      notificaciones: {
+        Row: {
+          codigo_motivo: string | null
+          creado_en: string
+          descripcion: string
+          destinatario_id: string
+          href: string | null
+          id: string
+          leida_en: string | null
+          nota: string | null
+          org_id: string
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          codigo_motivo?: string | null
+          creado_en?: string
+          descripcion: string
+          destinatario_id: string
+          href?: string | null
+          id?: string
+          leida_en?: string | null
+          nota?: string | null
+          org_id: string
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          codigo_motivo?: string | null
+          creado_en?: string
+          descripcion?: string
+          destinatario_id?: string
+          href?: string | null
+          id?: string
+          leida_en?: string | null
+          nota?: string | null
+          org_id?: string
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificaciones_destinatario_id_fkey"
+            columns: ["destinatario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificaciones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           actualizado_en: string
@@ -1259,28 +1455,40 @@ export type Database = {
         Row: {
           cantidad: number
           costo_unitario: number
+          descuento: number
           id: string
+          impuesto: number
+          impuesto_tasa: number
           pedido_id: string
           precio_unitario: number
           producto_id: string
+          promocion_id: string | null
           subtotal: number
         }
         Insert: {
           cantidad: number
           costo_unitario?: number
+          descuento?: number
           id?: string
+          impuesto?: never
+          impuesto_tasa?: number
           pedido_id: string
           precio_unitario: number
           producto_id: string
+          promocion_id?: string | null
           subtotal?: number
         }
         Update: {
           cantidad?: number
           costo_unitario?: number
+          descuento?: number
           id?: string
+          impuesto?: never
+          impuesto_tasa?: number
           pedido_id?: string
           precio_unitario?: number
           producto_id?: string
+          promocion_id?: string | null
           subtotal?: number
         }
         Relationships: [
@@ -1292,10 +1500,65 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pedido_items_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pedido_items_producto_id_fkey"
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedido_pagos: {
+        Row: {
+          creado_en: string
+          id: string
+          importe: number
+          metodo: string
+          org_id: string
+          pedido_id: string
+          puntos: number | null
+          referencia: string | null
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          importe: number
+          metodo: string
+          org_id: string
+          pedido_id: string
+          puntos?: number | null
+          referencia?: string | null
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          importe?: number
+          metodo?: string
+          org_id?: string
+          pedido_id?: string
+          puntos?: number | null
+          referencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_pagos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_pagos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
         ]
@@ -1305,8 +1568,10 @@ export type Database = {
           canal: string
           costo_total: number
           creado_en: string
+          descuento_total: number
           estado: string
           id: string
+          impuesto_total: number
           member_id: string
           numero_pedido: string
           org_id: string
@@ -1317,8 +1582,10 @@ export type Database = {
           canal: string
           costo_total?: number
           creado_en?: string
+          descuento_total?: number
           estado?: string
           id?: string
+          impuesto_total?: number
           member_id: string
           numero_pedido: string
           org_id: string
@@ -1329,8 +1596,10 @@ export type Database = {
           canal?: string
           costo_total?: number
           creado_en?: string
+          descuento_total?: number
           estado?: string
           id?: string
+          impuesto_total?: number
           member_id?: string
           numero_pedido?: string
           org_id?: string

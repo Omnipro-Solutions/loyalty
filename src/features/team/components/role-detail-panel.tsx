@@ -23,6 +23,7 @@ import {
   actionApplies,
   applicablePermissions,
   isFullAccessRole,
+  isOptInAction,
   type Action,
   type Resource,
 } from "@/lib/permissions"
@@ -61,9 +62,13 @@ function initialPermissionsFrom(
       // Un rol de acceso total se pinta por lo que garantiza, no por lo que
       // haya quedado en `role_permissions`: si alguien lo recortó antes de
       // que existiera el blindaje, la pantalla lo muestra completo y el
-      // primer "Guardar cambios" lo restituye.
+      // primer "Guardar cambios" lo restituye. Las acciones opt-in quedan
+      // fuera de esa garantía (`applicablePermissions` tampoco las incluye),
+      // así que se leen de la fila real como en cualquier otro rol: pintarlas
+      // marcadas sería afirmar un permiso que ese rol no tiene.
       map[`${resource}:${action}`] =
-        fullAccess || (permissions[resource]?.includes(action) ?? false)
+        (fullAccess && !isOptInAction(action)) ||
+        (permissions[resource]?.includes(action) ?? false)
     }
   }
   return map
@@ -104,11 +109,42 @@ export function RoleDetailPanel({
   // aprobaciones pendientes. El servidor lo rechaza igual
   // (`guardPermissionMatrix`); esto evita ofrecer el gesto, sobre todo el
   // "Nada", que borra la matriz de un clic.
+  //
+  // Gobierna los gestos MASIVOS y el texto de ayuda, no las casillas: cada
+  // celda se pregunta por su cuenta con `cellLocked`, porque en un rol de
+  // acceso total las opt-in sí se editan (ver más abajo).
   const matrixLocked = readOnly || fullAccess
 
+  /**
+   * El candado va por celda y no por matriz: lo que "acceso total" garantiza
+   * es inamovible, pero las acciones opt-in (`OPT_IN_ACTIONS`) ese rol nunca
+   * las prometió —`applicablePermissions()` las excluye— así que sí se
+   * marcan y se desmarcan aquí. Sin esto la autoaprobación era
+   * inconcedible justo en el rol que más la necesita: el único que existe
+   * en una organización de una sola persona.
+   *
+   * El trigger de Postgres acompaña la misma excepción desde
+   * `20260907170000_blindaje_admite_opt_in.sql` — si no, se podría conceder
+   * y no revocar.
+   */
+  function cellLocked(action: Action): boolean {
+    if (readOnly) return true
+    return fullAccess && !isOptInAction(action)
+  }
+
   function set(resource: Resource, action: Action, value: boolean) {
-    if (matrixLocked || !actionApplies(resource, action)) return
-    setPermissions((prev) => ({ ...prev, [`${resource}:${action}`]: value }))
+    if (cellLocked(action) || !actionApplies(resource, action)) return
+    setPermissions((prev) => ({
+      ...prev,
+      [`${resource}:${action}`]: value,
+      // `autoaprobar` amplía `aprobar`, no vale por su cuenta
+      // (`can_self_approve()` exige los dos). Al quitar `aprobar` se cae
+      // solo, en vez de quedar una casilla marcada que no concede nada y que
+      // el servidor rechazaría al guardar.
+      ...(action === "aprobar" && !value
+        ? { [`${resource}:autoaprobar`]: false }
+        : {}),
+    }))
   }
 
   function applyBulk(criteria: (action: Action) => boolean) {
@@ -117,7 +153,12 @@ export function RoleDetailPanel({
     for (const resource of RESOURCES) {
       for (const action of ACTIONS) {
         if (!actionApplies(resource, action)) continue
-        next[`${resource}:${action}`] = criteria(action)
+        // "Todo" no concede las opt-in: son excepciones a una regla de
+        // seguridad (hoy, saltarse la doble aprobación), y eso no puede
+        // entrar de refilón en un clic que el usuario lee como "marca lo
+        // normal". Se marcan una por una, a propósito.
+        next[`${resource}:${action}`] =
+          criteria(action) && !isOptInAction(action)
       }
     }
     setPermissions(next)
@@ -152,18 +193,29 @@ export function RoleDetailPanel({
       storeScope,
       channelScope,
       maxDiscountPct: maxDiscountPct ? Number(maxDiscountPct) : undefined,
-      // `applicablePermissions()` en vez del estado: para este rol la matriz
-      // completa es el único valor válido (lo exige `guardPermissionMatrix`),
-      // así que guardar cualquier otro campo la deja sana de paso.
-      permissions: fullAccess ? applicablePermissions() : grantedPermissions,
+      // Para un rol de acceso total la matriz garantizada es el único valor
+      // válido (lo exige `guardPermissionMatrix`), así que se manda entera
+      // —guardar cualquier otro campo la deja sana de paso— MÁS las opt-in
+      // que estén marcadas, que son las únicas celdas editables de ese rol.
+      permissions: fullAccess
+        ? [
+            ...applicablePermissions(),
+            ...grantedPermissions.filter((p) => isOptInAction(p.action)),
+          ]
+        : grantedPermissions,
     })
   }
 
   const visibleMembers = roleDetail.membersPreview.slice(0, 3)
   const remaining = roleDetail.membersTotal - visibleMembers.length
 
+  // `min-w-0` en la raíz: este panel es un `flex-1` dentro del `lg:flex-row`
+  // de la página (ajustes/equipo/page.tsx) y, sin él, su ancho mínimo es el
+  // de su contenido —la matriz de 13 columnas—. El panel no se encogía, así
+  // que quien scrolleaba en horizontal era la página entera: la tabla se veía
+  // completa y el que se salía de la vista era el sidebar.
   return (
-    <div className="flex h-full flex-1 flex-col gap-3.5">
+    <div className="flex h-full min-w-0 flex-1 flex-col gap-3.5">
       <div className="flex items-center gap-3 rounded-[20px] bg-background px-5 py-4 shadow-form-section">
         <div className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-avatar-indigo-bg">
           <ShieldCheck className="size-5 text-avatar-indigo-fg" />
@@ -251,8 +303,8 @@ export function RoleDetailPanel({
             </p>
             <p className="text-[11px] text-muted-foreground">
               {matrixLocked && !readOnly
-                ? "Acceso total a todos los módulos: esta matriz no se edita. Duplica el rol si necesitas una versión con menos permisos."
-                : "Ver incluye acceso de solo lectura. Aprobar habilita publicar cambios que afectan a clientes."}
+                ? "Acceso total a todos los módulos: esta matriz no se recorta, solo se le puede activar Autoaprobar. Duplica el rol si necesitas una versión con menos permisos."
+                : "Ver incluye acceso de solo lectura. Aprobar habilita publicar cambios que afectan a clientes. Autoaprobar deja además firmar las solicitudes propias: rompe la doble aprobación a propósito, dalo solo si esta persona es la única que puede firmar."}
             </p>
           </div>
           {canManage && !matrixLocked && (
@@ -284,19 +336,26 @@ export function RoleDetailPanel({
 
         {/*
           9 acciones (antes 5, ver src/lib/permissions.ts) ya no caben en el
-          ancho fijo del panel a w-24 por columna — se baja a w-16 y se envuelve
-          todo el bloque (cabecera + filas) en un mismo overflow-x-auto para que
-          scrollee como una sola unidad; el nombre del módulo queda con ancho
-          mínimo propio en vez de flex-1 para que no se aplaste al scrollear.
+          ancho fijo del panel a w-24 por columna — se baja a w-16 y cabecera y
+          filas van en UN SOLO contenedor que scrollea en los dos ejes, con la
+          cabecera `sticky top-0`. Anidar un `overflow-y-auto` dentro de un
+          `overflow-x-auto` no sirve: al fijar un eje, CSS resuelve el otro
+          como `auto`, así que las filas se llevaban su propia barra horizontal
+          y se desalineaban de la cabecera en cuanto se scrolleaba. El nombre
+          del módulo queda con ancho mínimo propio en vez de flex-1 para que no
+          se aplaste al scrollear.
         */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
-          <div className="flex w-fit min-w-full items-center gap-2.5 bg-muted px-5 py-2.5">
+        <div className="min-h-0 flex-1 scrollbar-thin overflow-auto">
+          <div className="sticky top-0 z-10 flex w-fit min-w-full items-center gap-2.5 bg-muted px-5 py-2.5">
             <span className="w-[200px] shrink-0 text-[10px] font-semibold tracking-[0.4px] text-muted-foreground">
               MÓDULO
             </span>
             {ACTIONS.map((action) => (
               <span
                 key={action}
+                // El nombre completo en el `title` porque "AUTOAPR." está
+                // abreviado para caber en `w-16` (ver `ACTION_LABELS`).
+                title={action}
                 className="w-16 shrink-0 text-center text-[10px] font-semibold tracking-[0.4px] text-muted-foreground"
               >
                 {ACTION_LABELS[action]}
@@ -304,48 +363,51 @@ export function RoleDetailPanel({
             ))}
           </div>
 
-          <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
-            {RESOURCES.map((resource) => (
-              <div
-                key={resource}
-                className="flex w-fit min-w-full items-center gap-2.5 border-t border-muted px-5 py-2.5"
-              >
-                <div className="w-[200px] min-w-0 shrink-0">
-                  <p className="truncate text-[13px] font-medium text-foreground">
-                    {RESOURCE_INFO[resource].label}
-                  </p>
-                  <p className="truncate text-[10px] text-muted-foreground">
-                    {RESOURCE_INFO[resource].description}
-                  </p>
-                </div>
-                {ACTIONS.map((action) => {
-                  const applies = actionApplies(resource, action)
-                  return (
-                    <div
-                      key={action}
-                      className="flex w-16 shrink-0 justify-center"
-                    >
-                      {applies ? (
-                        <Checkbox
-                          checked={
-                            permissions[`${resource}:${action}`] ?? false
-                          }
-                          disabled={matrixLocked}
-                          onCheckedChange={(checked) =>
-                            set(resource, action, checked === true)
-                          }
-                        />
-                      ) : (
-                        <div className="flex size-[19px] items-center justify-center rounded-md bg-muted">
-                          <Lock className="size-2.5 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+          {RESOURCES.map((resource) => (
+            <div
+              key={resource}
+              className="flex w-fit min-w-full items-center gap-2.5 border-t border-muted px-5 py-2.5"
+            >
+              <div className="w-[200px] min-w-0 shrink-0">
+                <p className="truncate text-[13px] font-medium text-foreground">
+                  {RESOURCE_INFO[resource].label}
+                </p>
+                <p className="truncate text-[10px] text-muted-foreground">
+                  {RESOURCE_INFO[resource].description}
+                </p>
               </div>
-            ))}
-          </div>
+              {ACTIONS.map((action) => {
+                const applies = actionApplies(resource, action)
+                // Sin `aprobar` sobre el mismo recurso, `autoaprobar` no
+                // concede nada (ver `can_self_approve()`): la casilla se
+                // deshabilita en vez de dejar guardar una combinación que
+                // la Server Action rechaza.
+                const needsApprove =
+                  action === "autoaprobar" &&
+                  !permissions[`${resource}:aprobar`]
+                return (
+                  <div
+                    key={action}
+                    className="flex w-16 shrink-0 justify-center"
+                  >
+                    {applies ? (
+                      <Checkbox
+                        checked={permissions[`${resource}:${action}`] ?? false}
+                        disabled={cellLocked(action) || needsApprove}
+                        onCheckedChange={(checked) =>
+                          set(resource, action, checked === true)
+                        }
+                      />
+                    ) : (
+                      <div className="flex size-[19px] items-center justify-center rounded-md bg-muted">
+                        <Lock className="size-2.5 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
         </div>
 
         <div className="flex items-center gap-3.5 bg-muted px-5 py-3.5">

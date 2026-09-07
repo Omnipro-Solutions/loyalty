@@ -1,11 +1,11 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
 
 import { FilterScopedSearch } from "@/components/filters/scoped-search"
 import { FilterSelect } from "@/components/filters/select"
 import { Segmented } from "@/components/filters/segmented"
+import { useSearchParam } from "@/hooks/use-search-param"
 import { COUPON_ORIGINS, COUPON_SEARCH_SCOPES } from "@/types/domain"
 
 import { ValidityFilter } from "./validity-filter"
@@ -31,22 +31,9 @@ export function CouponsFiltersBar() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [search, setSearch] = useState(searchParams.get("q") ?? "")
+  const search = useSearchParam()
   const vista = searchParams.get("vista") ?? "batches"
   const scope = searchParams.get("ambito") ?? "all"
-
-  useEffect(() => {
-    const current = new URLSearchParams(window.location.search)
-    if ((current.get("q") ?? "") === search) return
-    const timeout = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search)
-      if (search) params.set("q", search)
-      else params.delete("q")
-      params.delete("page")
-      router.push(`${pathname}?${params.toString()}`)
-    }, 300)
-    return () => clearTimeout(timeout)
-  }, [search, pathname, router])
 
   function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
@@ -70,11 +57,12 @@ export function CouponsFiltersBar() {
         scope={scope}
         scopeOptions={SCOPE_OPTIONS}
         onScopeChange={(v) => update((params) => params.set("ambito", v))}
-        value={search}
-        onChange={setSearch}
+        value={search.value}
+        onChange={search.setValue}
+        loading={search.loading}
         placeholder="Buscar por persona, ID de cupón o emisión…"
       />
-      <div className="ml-auto flex items-center gap-2.5">
+      <div className="ml-auto flex flex-wrap items-center gap-2.5">
         {vista === "batches" && (
           <FilterSelect
             label="Origen"

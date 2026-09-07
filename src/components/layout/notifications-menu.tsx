@@ -1,15 +1,15 @@
 "use client"
 
-import { useState } from "react"
 import {
   Bell,
-  Megaphone,
-  PlugZap,
-  Trophy,
-  Users,
-  Workflow,
+  CheckCircle2,
+  Undo2,
+  XCircle,
   type LucideIcon,
 } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useTransition } from "react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -18,20 +18,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
+import { useNotifications } from "@/components/layout/notifications-context"
+import { DECISION_REASON_LABEL } from "@/lib/approval-flow"
 import { formatEventDate } from "@/lib/format"
+import { markMyNotificationsRead } from "@/lib/notifications-actions"
 import { cn } from "@/lib/utils"
+import type { DecisionReason } from "@/types/domain"
 
 type NotificationTone = "info" | "success" | "warning" | "error"
-
-type Notification = {
-  id: string
-  tone: NotificationTone
-  icon: LucideIcon
-  title: string
-  description: string
-  date: Date
-  read: boolean
-}
 
 const TONE_STYLES: Record<NotificationTone, string> = {
   info: "bg-accent text-accent-foreground",
@@ -40,68 +34,44 @@ const TONE_STYLES: Record<NotificationTone, string> = {
   error: "bg-destructive-bg text-destructive",
 }
 
-const INITIAL_NOTIFICATIONS: Notification[] = [
+/**
+ * Tono e ícono por tipo. Los tres tipos de hoy vienen de una decisión de
+ * doble aprobación (`notificar_decision_aprobacion`), así que el tono es el
+ * de la decisión: aprobada en verde, rechazada en rojo. Aquí sí codifica
+ * información —el desenlace— y por eso no va en la gama del acento.
+ */
+const TYPE_STYLE: Record<string, { tone: NotificationTone; icon: LucideIcon }> =
   {
-    id: "1",
-    tone: "info",
-    icon: Megaphone,
-    title: "Nueva promoción publicada",
-    description:
-      "El descuento 2x1 en Bebidas ya está activo en todas las tiendas.",
-    date: new Date("2026-08-23T09:14:00"),
-    read: false,
-  },
-  {
-    id: "2",
-    tone: "error",
-    icon: PlugZap,
-    title: "Integración desconectada",
-    description:
-      "La conexión con Shopify perdió autenticación. Revisa las credenciales.",
-    date: new Date("2026-08-23T08:32:00"),
-    read: false,
-  },
-  {
-    id: "3",
-    tone: "success",
-    icon: Trophy,
-    title: "Meta de canjes alcanzada",
-    description: "La tienda Etter Chapinero superó los 500 canjes este mes.",
-    date: new Date("2026-08-22T17:41:00"),
-    read: true,
-  },
-  {
-    id: "4",
-    tone: "warning",
-    icon: Workflow,
-    title: "Journey pausado",
-    description:
-      '"Bienvenida VIP" se pausó por un error en el paso de envío de correo.',
-    date: new Date("2026-08-21T11:05:00"),
-    read: true,
-  },
-  {
-    id: "5",
-    tone: "info",
-    icon: Users,
-    title: "Audiencia recalculada",
-    description: '"Clientes inactivos 90 días" ahora tiene 1,204 miembros.',
-    date: new Date("2026-08-19T09:40:00"),
-    read: true,
-  },
-]
+    aprobacion_concedida: { tone: "success", icon: CheckCircle2 },
+    aprobacion_rechazada: { tone: "error", icon: XCircle },
+    aprobacion_retirada: { tone: "warning", icon: Undo2 },
+  }
 
 /**
- * Ejemplo visual de cómo se verían las notificaciones en la campana del
- * topbar. Sin nodo propio en el Figma — datos de ejemplo en memoria, sigue
- * los tokens y el patrón de `user-menu.tsx`.
+ * La campana del Topbar, con las notificaciones reales de quien está dentro.
+ *
+ * Antes eran cinco ejemplos escritos a mano en memoria: la campana enseñaba
+ * cómo se vería si el sistema notificara algo, y el sistema no notificaba
+ * nada. Ahora las escribe un trigger cuando alguien decide una doble
+ * aprobación (20260907140000), así que quien pidió la firma se entera —que
+ * es la mitad que faltaba de un flujo de dos personas.
+ *
+ * Los datos llegan por props desde `AppPage`, que es Server Component: la
+ * campana no consulta por su cuenta porque se renderiza en cada pantalla y
+ * cada consulta suya se pagaría en todas.
  */
 export function NotificationsMenu({ className }: { className?: string }) {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const snapshot = useNotifications()
+  const items = snapshot?.items ?? []
+  const unread = snapshot?.unread ?? 0
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
 
   function markAllAsRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    startTransition(async () => {
+      await markMyNotificationsRead()
+      router.refresh()
+    })
   }
 
   return (
@@ -116,9 +86,9 @@ export function NotificationsMenu({ className }: { className?: string }) {
       >
         <span className="relative inline-flex">
           <Bell className="size-4" />
-          {unreadCount > 0 && (
+          {unread > 0 && (
             <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] leading-none font-medium text-destructive-foreground ring-2 ring-background">
-              {unreadCount}
+              {unread}
             </span>
           )}
         </span>
@@ -132,58 +102,111 @@ export function NotificationsMenu({ className }: { className?: string }) {
           <button
             type="button"
             onClick={markAllAsRead}
-            disabled={unreadCount === 0}
+            disabled={unread === 0 || pending}
             className="text-xs font-medium text-primary hover:underline disabled:pointer-events-none disabled:opacity-40"
           >
-            Marcar todas como leídas
+            {pending ? "Marcando…" : "Marcar todas como leídas"}
           </button>
         </div>
         <Separator />
 
-        <div className="flex max-h-[360px] scrollbar-thin flex-col overflow-y-auto">
-          {notifications.map((notification) => {
-            const Icon = notification.icon
-            return (
-              <div
-                key={notification.id}
-                className={cn(
-                  "flex items-start gap-3 px-4 py-3",
-                  !notification.read && "bg-accent/50"
-                )}
-              >
-                <span
+        {items.length === 0 ? (
+          <p className="px-4 py-8 text-center text-xs text-muted-foreground">
+            No tienes notificaciones. Aquí llegan las decisiones sobre lo que
+            mandaste a aprobar.
+          </p>
+        ) : (
+          <div className="flex max-h-[360px] scrollbar-thin flex-col overflow-y-auto">
+            {items.map((notification) => {
+              const style = TYPE_STYLE[notification.tipo] ?? {
+                tone: "info" as NotificationTone,
+                icon: Bell,
+              }
+              const Icon = style.icon
+              const motivo = notification.codigoMotivo
+                ? (DECISION_REASON_LABEL[
+                    notification.codigoMotivo as DecisionReason
+                  ] ?? notification.codigoMotivo)
+                : null
+
+              const cuerpo = (
+                <>
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full",
+                      TONE_STYLES[style.tone]
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[13px] leading-[18px] font-medium text-foreground">
+                        {notification.titulo}
+                      </p>
+                      {!notification.leida && (
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-4 text-muted-foreground">
+                      {notification.descripcion}
+                    </p>
+                    {/* El motivo y la nota son el «por qué» de la decisión.
+                        Una notificación que solo dice «rechazada» obliga a
+                        ir a buscar qué corregir. */}
+                    {motivo && (
+                      <p className="mt-1 text-[11px] leading-[14px] text-secondary-foreground">
+                        Motivo: {motivo}
+                        {notification.nota ? ` — «${notification.nota}»` : ""}
+                      </p>
+                    )}
+                    <p className="mt-1 text-[11px] leading-[14px] text-muted-foreground">
+                      {formatEventDate(notification.creadoEn)}
+                    </p>
+                  </div>
+                </>
+              )
+
+              return notification.href ? (
+                <Link
+                  key={notification.id}
+                  href={notification.href}
                   className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-full",
-                    TONE_STYLES[notification.tone]
+                    "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/60",
+                    !notification.leida && "bg-accent/50"
                   )}
                 >
-                  <Icon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] leading-[18px] font-medium text-foreground">
-                      {notification.title}
-                    </p>
-                    {!notification.read && (
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <p className="mt-0.5 line-clamp-2 text-xs leading-4 text-muted-foreground">
-                    {notification.description}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-[14px] text-muted-foreground">
-                    {formatEventDate(notification.date)}
-                  </p>
+                  {cuerpo}
+                </Link>
+              ) : (
+                <div
+                  key={notification.id}
+                  className={cn(
+                    "flex items-start gap-3 px-4 py-3",
+                    !notification.leida && "bg-accent/50"
+                  )}
+                >
+                  {cuerpo}
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
 
         <Separator />
         <div className="p-1.5">
-          <Button variant="ghost" size="sm" className="w-full text-xs">
-            Ver todas las notificaciones
+          {/* `nativeButton={false}` es obligatorio al renderizar el
+              Button como enlace: Base UI avisa (con razón) de que un
+              elemento no-<button> pierde la semántica nativa si no se lo
+              dices. Mismo patrón que `editor-bar.tsx`. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs"
+            nativeButton={false}
+            render={<Link href="/aprobaciones" />}
+          >
+            Ir a Aprobaciones
           </Button>
         </div>
       </PopoverContent>

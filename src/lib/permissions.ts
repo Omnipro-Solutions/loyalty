@@ -52,6 +52,11 @@ export const ACTIONS = [
   // tomaba prestada la casilla más cercana.
   "ajustar",
   "asignar",
+  // Decidir tus PROPIAS solicitudes: la excepción opt-in a la regla de
+  // cuatro ojos (ver `OPT_IN_ACTIONS` más abajo y
+  // `20260907160000_autoaprobacion_opt_in.sql`). Amplía `aprobar`, no lo
+  // sustituye — sin `aprobar` sobre el mismo recurso no concede nada.
+  "autoaprobar",
 ] as const
 export type Action = (typeof ACTIONS)[number]
 
@@ -68,6 +73,10 @@ export const ACTION_LABELS: Record<Action, string> = {
   exportar: "EXPORTAR",
   ajustar: "AJUSTAR",
   asignar: "ASIGNAR",
+  // Abreviado: la cabecera de columna es `w-16` y "AUTOAPROBAR" no cabe ni
+  // rompe (no tiene espacios donde envolver). El nombre completo va en el
+  // `title` de la cabecera y en el texto de ayuda de la matriz.
+  autoaprobar: "AUTOAPR.",
 }
 
 /**
@@ -85,6 +94,50 @@ export const APPROVABLE_RESOURCES: readonly Resource[] = [
   "journeys",
   "cupones",
 ]
+
+/**
+ * Los recursos con un flujo real de solicitud→decisión, que son los únicos
+ * donde `autoaprobar` significa algo: hay una fila en `promotion_approval` /
+ * `workflow_approval` / `coupon_approval` que alguien tiene que firmar.
+ *
+ * Es un subconjunto de `APPROVABLE_RESOURCES`: `catalogo`, `tiendas`,
+ * `clientes` y `reglas` tienen la celda `aprobar` (09.2 la define para todo
+ * módulo de cara al cliente) pero ninguna cola de aprobación, así que
+ * autoaprobarse ahí no habilitaría nada — la celda queda con candado.
+ *
+ * `journeys` y no `reglas` porque ese es el recurso que gatea de verdad las
+ * reglas del builder (`decideWorkflowApprovalsAction`, la bandeja de
+ * `/aprobaciones`).
+ */
+const APPROVAL_FLOW_RESOURCES: readonly Resource[] = [
+  "promociones",
+  "journeys",
+  "cupones",
+]
+
+/**
+ * Acciones que "acceso total" NO afirma. Son excepciones a una regla de
+ * seguridad, no capacidades más: concederlas tiene que ser un gesto
+ * deliberado sobre un rol concreto, nunca el efecto secundario de otro.
+ *
+ * Por eso quedan fuera de `applicablePermissions()` (y con ella de
+ * `ensureFullPermissionMatrix` y `missingForFullAccess`): el rol de sistema
+ * "Administrador" no las recibe con su matriz completa. Decisión explícita
+ * del usuario — si "acceso total" incluyera `autoaprobar`, todo admin de
+ * toda organización quedaría autoaprobando por defecto Y sin forma de
+ * quitárselo, porque su matriz se afirma entera y el trigger
+ * `role_permissions_full_access_guard` prohíbe recortarla. La
+ * autoaprobación vive solo en roles personalizados, donde se da y se quita.
+ *
+ * `actionApplies` sigue devolviendo `true` para ellas: la celda existe, es
+ * editable y `updateRoleAction` las acepta. Lo que no hacen es venir de
+ * regalo.
+ */
+export const OPT_IN_ACTIONS: readonly Action[] = ["autoaprobar"]
+
+export function isOptInAction(action: Action): boolean {
+  return OPT_IN_ACTIONS.includes(action)
+}
 
 const OPERATIONAL_RESOURCES: readonly Resource[] = [
   "resumen",
@@ -126,6 +179,7 @@ const EXPORTABLE_RESOURCES: readonly Resource[] = [
  */
 const ACTION_SCOPE: Partial<Record<Action, readonly Resource[]>> = {
   aprobar: APPROVABLE_RESOURCES,
+  autoaprobar: APPROVAL_FLOW_RESOURCES,
   emitir: COUPON_ONLY_RESOURCES,
   anular: COUPON_ONLY_RESOURCES,
   imprimir: COUPON_ONLY_RESOURCES,
@@ -160,9 +214,15 @@ type Matrix = Record<Role, Partial<Record<Resource, readonly Action[]>>>
 
 const MATRIX: Matrix = {
   // Filtrado por `actionApplies`: sin esto, "admin" afirmaría combinaciones
-  // que no existen en la matriz real (ej. `facturacion:emitir`).
+  // que no existen en la matriz real (ej. `facturacion:emitir`). Y por
+  // `isOptInAction`, para no afirmar la autoaprobación: ni siquiera como
+  // plantilla — un rol nuevo creado desde el archetype "admin" tampoco
+  // debería nacer con la excepción a cuatro ojos marcada.
   admin: Object.fromEntries(
-    RESOURCES.map((r) => [r, ACTIONS.filter((a) => actionApplies(r, a))])
+    RESOURCES.map((r) => [
+      r,
+      ACTIONS.filter((a) => actionApplies(r, a) && !isOptInAction(a)),
+    ])
   ) as Matrix["admin"],
   gestor: {
     resumen: ["ver"],
@@ -241,12 +301,16 @@ export function isFullAccessRole(role: {
   return role.tipo === "sistema" && role.rol_base === "admin"
 }
 
-/** Las combinaciones recurso×acción que existen de verdad — el resto es candado. */
+/**
+ * Lo que "acceso total" significa: las combinaciones recurso×acción que
+ * existen de verdad, menos las opt-in (ver `OPT_IN_ACTIONS`). No es lo mismo
+ * que "toda celda editable de la matriz" — para eso está `actionApplies`.
+ */
 export function applicablePermissions(): PermissionCell[] {
   return RESOURCES.flatMap((resource) =>
-    ACTIONS.filter((action) => actionApplies(resource, action)).map(
-      (action) => ({ resource, action })
-    )
+    ACTIONS.filter(
+      (action) => actionApplies(resource, action) && !isOptInAction(action)
+    ).map((action) => ({ resource, action }))
   )
 }
 

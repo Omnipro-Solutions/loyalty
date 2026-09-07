@@ -13,11 +13,11 @@ export default function MemberDetailLoading() {
     >
       <Skeleton className="h-4 w-32" />
 
-      <div className="flex items-stretch gap-3.5">
+      <div className="flex flex-col gap-3.5 xl:flex-row xl:items-stretch">
         <div className="min-w-0 flex-1">
           <MemberHeroSkeleton />
         </div>
-        <div className="flex w-[340px] shrink-0 flex-col items-center gap-3.5 rounded-[20px] bg-background p-[18px] shadow-form-section">
+        <div className="flex w-full flex-col items-center gap-3.5 rounded-[20px] bg-background p-[18px] shadow-form-section xl:w-[340px] xl:shrink-0">
           <Skeleton className="h-32 w-full rounded-[16px]" />
           <Skeleton className="h-3 w-24" />
         </div>
@@ -25,25 +25,17 @@ export default function MemberDetailLoading() {
 
       <div className="flex w-full flex-col gap-3.5">
         <Skeleton className="h-2.5 w-40" />
-        <KpiRowSkeleton
-          variant="member"
-          count={4}
-          className="flex w-full items-start gap-3"
-        />
+        <KpiRowSkeleton variant="member" count={4} className="gap-3" />
         <Skeleton className="h-2.5 w-40" />
-        <KpiRowSkeleton
-          variant="member"
-          count={4}
-          className="flex w-full items-start gap-3"
-        />
+        <KpiRowSkeleton variant="member" count={4} className="gap-3" />
       </div>
 
-      <div className="flex items-start gap-3.5">
+      <div className="flex flex-col gap-3.5 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
           <DetailCardSkeleton rows={4} leadingIcon={false} />
           <DetailCardSkeleton rows={3} leadingIcon={false} />
         </div>
-        <div className="flex w-[380px] shrink-0 flex-col gap-3.5">
+        <div className="flex w-full flex-col gap-3.5 xl:w-[380px] xl:shrink-0">
           <DetailCardSkeleton rows={3} />
           <DetailCardSkeleton rows={4} />
         </div>

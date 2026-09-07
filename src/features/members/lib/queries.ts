@@ -1,5 +1,8 @@
 import { fetchAllPaged } from "@/lib/supabase/paginate"
 import { createClient } from "@/lib/supabase/server"
+
+import { cyclePayments } from "./accumulation-cycle"
+import { accumulationStatus } from "./accumulation-status"
 import type { Database } from "@/types/database.types"
 import type { MemberSearchScope, PromotionType } from "@/types/domain"
 
@@ -666,12 +669,62 @@ export async function getCommercialValue(
   memberOrders: MemberOrder[]
 ): Promise<CommercialValue> {
   const completed = memberOrders.filter((p) => p.estado === "completado")
-  const returns = memberOrders
-    .filter((p) => p.estado === "devuelto")
-    .reduce((acc, p) => acc + p.total, 0)
 
-  const ltv = completed.reduce((acc, p) => acc + p.total, 0)
-  const totalCost = completed.reduce((acc, p) => acc + p.costo_total, 0)
+  /**
+   * Lo que volvió al mostrador. Antes esto se leía solo de `pedidos.estado`,
+   * así que una devolución PARCIAL no existía para este KPI: el socio traía
+   * de vuelta una de tres cajas y la ficha seguía diciendo "devoluciones
+   * $0", con el pedido entero contando como venta. `devoluciones` sí las
+   * tiene línea por línea, y `costo_devuelto` es lo que permite que el
+   * margen no siga cargando el costo de un producto que está de vuelta en
+   * el estante.
+   *
+   * Si la tabla todavía no existe (migración sin aplicar) el KPI se queda en
+   * cero, que es exactamente lo que mostraba antes.
+   */
+  const returnsByOrder = new Map<string, { valor: number; costo: number }>()
+  if (memberOrders.length > 0) {
+    const supabase = await createClient()
+    const { data: devueltos, error: errorDevueltos } = await supabase
+      .from("devoluciones")
+      .select("pedido_id, total_devuelto, costo_devuelto")
+      .in(
+        "pedido_id",
+        memberOrders.map((p) => p.id)
+      )
+    if (!errorDevueltos) {
+      for (const row of devueltos ?? []) {
+        const acumulado = returnsByOrder.get(row.pedido_id) ?? {
+          valor: 0,
+          costo: 0,
+        }
+        returnsByOrder.set(row.pedido_id, {
+          valor: acumulado.valor + row.total_devuelto,
+          costo: acumulado.costo + row.costo_devuelto,
+        })
+      }
+    }
+  }
+
+  const returns = [...returnsByOrder.values()].reduce(
+    (acc, row) => acc + row.valor,
+    0
+  )
+  // De un pedido `devuelto` no se cuenta nada: ya quedó fuera de `completed`.
+  // De uno `completado` con devolución parcial se descuenta lo que volvió —
+  // si no, se contaría dos veces: como venta y como devolución.
+  const parcial = completed.reduce(
+    (acc, p) => {
+      const row = returnsByOrder.get(p.id)
+      if (!row) return acc
+      return { valor: acc.valor + row.valor, costo: acc.costo + row.costo }
+    },
+    { valor: 0, costo: 0 }
+  )
+
+  const ltv = completed.reduce((acc, p) => acc + p.total, 0) - parcial.valor
+  const totalCost =
+    completed.reduce((acc, p) => acc + p.costo_total, 0) - parcial.costo
   const margin = ltv - totalCost
   const marginPct = ltv > 0 ? margin / ltv : null
 
@@ -884,6 +937,7 @@ async function getPurchasedRootCategoryIds(
 }
 
 type PromotionCondition =
+  | { campo: "producto"; valor: string[] }
   | { campo: "categoria"; valor: string[] }
   | { campo: "tienda"; valor: string }
   | { campo: "segmento"; valor: string }
@@ -1139,4 +1193,535 @@ export async function listPromotionsForManualAssignment(
     tipo: p.tipo as PromotionType,
     yaAsignada: assignedIds.has(p.id),
   }))
+}
+
+export type { AccumulationStatus } from "./accumulation-statuses"
+import {
+  ACCUMULATION_STATUSES,
+  type AccumulationStatus,
+} from "./accumulation-statuses"
+
+/** Una mecánica `por_piezas` (3x2, 2x1…) y lo que el socio lleva acumulado en ella. */
+/**
+ * De dónde salió cada pieza: la compra que la trajo o la devolución que la
+ * quitó. Es lo que hace auditable el número grande de la tarjeta — «lleva
+ * 3» sin poder ver las tres compras es un número que hay que creer.
+ *
+ * `piezas` es lo que ese movimiento aportó (o restó) al ciclo, no la
+ * cantidad de la línea: de un pedido con 4 unidades donde se devolvió 1, la
+ * compra aporta 4 y la devolución resta 1.
+ */
+export type AccumulationMovement = {
+  tipo: "compra" | "devolucion"
+  /** `PED-77850` o `DEV-2026-006`, que es lo que se busca en el log. */
+  referencia: string
+  fecha: string
+  piezas: number
+  importe: number
+  /** Solo en compras. */
+  canal: string | null
+  /** Solo en devoluciones — el `motivo` crudo, la etiqueta la pone la UI. */
+  motivo: string | null
+}
+
+export type MemberAccumulationRow = {
+  /** Quién acumula. Redundante en la ficha; imprescindible en la vista transversal. */
+  memberId: string
+  socioNombre: string
+  socioCodigo: string | null
+  promocionId: string
+  promocionNombre: string
+  promocionCodigo: string
+  vigenteHasta: string | null
+  /** `null` cuando el ciclo se cumple mezclando la categoría entera (`misma_categoria`). */
+  productoId: string | null
+  sku: string | null
+  nombre: string
+  presentacion: string | null
+  imagenUrl: string | null
+  precio: number
+  /** `compra_cantidad`: piezas del ciclo. Y las que se pagan de ellas. */
+  compraCantidad: number
+  pagaCantidad: number
+  /** Las que salen gratis por ciclo: `compraCantidad - pagaCantidad`. */
+  piezasGratisPorCiclo: number
+  /**
+   * Piezas que cuentan: lo comprado dentro de la vigencia MENOS lo devuelto.
+   * Es el número que responde «¿cuántas llevo?», y el que hay que enseñar
+   * antes que cualquier otro — el resto de la tarjeta se deriva de él.
+   */
+  unidadesCompradas: number
+  /** Piezas que volvieron al mostrador. Ya restadas de `unidadesCompradas`. */
+  unidadesDevueltas: number
+  /**
+   * Las compras y devoluciones que produjeron este avance, de la más
+   * reciente a la más antigua. Solo las de ESTE grupo: el mismo socio puede
+   * tener otra acumulación del mismo pedido con otro producto.
+   */
+  movimientos: AccumulationMovement[]
+  gastoAcumulado: number
+  unidadesEnCiclo: number
+  /** Lo que falta para el siguiente regalo. `0` cuando el ciclo se acaba de completar. */
+  faltan: number
+  /**
+   * Lo pagado por cada pieza del ciclo en curso, en orden de compra, con un
+   * `0` por cada pieza que falta — longitud siempre `compraCantidad`. Es lo
+   * que el "Proceso" pinta bajo cada nodo: el importe por pieza, no el
+   * acumulado.
+   */
+  pagosEnCiclo: number[]
+  piezasGratis: number
+  ahorro: number
+  estado: AccumulationStatus
+  /** Ciclos completados cuyo beneficio no se ha canjeado todavía. */
+  piezasPorReclamar: number
+  /** Días hasta el fin de la vigencia. `null` si es permanente o ya terminó. */
+  diasRestantes: number | null
+}
+
+/**
+ * "Acumulaciones" (05.3): en qué mecánicas de pieza gratis va avanzando el
+ * socio y cuánto le falta. Es la vista que el cliente final ve en su cuenta
+ * ("3x2 en Catálogo de Benzocaína: faltan 2") y la que el operador necesita
+ * para responder «¿cuánto me falta?» sin hacer la cuenta a mano.
+ *
+ * Se DERIVA de compras reales (`pedido_items` dentro de la vigencia); no hay
+ * tabla de progreso ni hace falta: inventar una obligaría a mantenerla
+ * sincronizada con cada pedido, y el dato ya está.
+ *
+ * Se filtra por `tipo_beneficio = 'por_piezas'` y no por `tipo`: `tipo` es la
+ * taxonomía comercial (una 3x2 se cataloga como `cantidad`), pero lo que
+ * hace que exista un ciclo acumulable es la mecánica. Y las piezas gratis
+ * salen de `compra_cantidad - paga_cantidad`, no de `cantidad_regalo`, que
+ * es de otra mecánica y en estas promociones va en `null`.
+ *
+ * `alcance_piezas` decide la unidad de acumulación, que es lo que cambia lo
+ * que se muestra:
+ *   · `mismo_producto` / `producto_especifico` → el ciclo se cumple dentro de
+ *     cada SKU, así que hay una tarjeta por SKU.
+ *   · `misma_categoria` → las piezas se mezclan en todo el universo, así que
+ *     hay UNA tarjeta por promoción. Partirla por SKU diría que faltan 2 de
+ *     cada uno cuando en realidad faltan 2 en total.
+ */
+/** Aplica el `.eq()` del socio solo si hay socio: la vista transversal no lo lleva. */
+function applyMemberFilter<
+  T extends { eq: (column: string, value: string) => T },
+>(query: T, column: string, memberId?: string): T {
+  return memberId ? query.eq(column, memberId) : query
+}
+
+export type AccumulationFilters = {
+  /** Un socio concreto, o todos cuando se omite (la vista transversal). */
+  memberId?: string
+  estados?: AccumulationStatus[]
+  promocionId?: string
+}
+
+export async function listMemberAccumulations(
+  memberId: string
+): Promise<MemberAccumulationRow[]> {
+  return listAccumulations({ memberId })
+}
+
+/**
+ * Las acumulaciones de la organización, o las de un socio. Es la misma
+ * derivación de siempre —compras reales contra la mecánica— con el filtro
+ * abierto: la ficha pide `memberId`, y la pestaña «Acumulaciones» de
+ * Clientes no, porque su pregunta es «¿quién está cerca?».
+ *
+ * Sin `memberId` cada fila necesita saber DE QUIÉN es, así que se resuelve
+ * el socio de cada pedido — en la ficha eso era redundante y por eso no
+ * estaba.
+ */
+export async function listAccumulations(
+  filters: AccumulationFilters = {}
+): Promise<MemberAccumulationRow[]> {
+  const memberId = filters.memberId
+  const supabase = await createClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  const promoQuery = supabase
+    .from("promociones")
+    .select(
+      `id, nombre, codigo, condiciones, compra_cantidad, paga_cantidad,
+       alcance_piezas, producto_comprado_id, vigente_desde, vigente_hasta,
+       estado_publicacion, presupuesto_asignado, presupuesto_consumido`
+    )
+    .eq("tipo_beneficio", "por_piezas")
+    .lte("vigente_desde", today)
+
+  const { data: promos } = await (filters.promocionId
+    ? promoQuery.eq("id", filters.promocionId)
+    : promoQuery)
+
+  // No se filtra por estado ni por vigencia: una promoción vencida o retirada
+  // con piezas a medias ES uno de los casos que hay que mostrar. Lo único que
+  // se descarta es lo que nunca pudo acumular (un borrador, o una mecánica
+  // mal configurada donde no se regala nada).
+  const candidatas = (promos ?? []).filter(
+    (p) =>
+      p.estado_publicacion !== "borrador" &&
+      p.estado_publicacion !== "pendiente_aprobacion" &&
+      (p.compra_cantidad ?? 0) > (p.paga_cantidad ?? 0)
+  )
+  if (candidatas.length === 0) return []
+
+  // El universo de cada promoción: los SKU cuyas piezas cuentan para su ciclo.
+  const universes = new Map<string, string[]>()
+  const categoryIds = new Set<string>()
+  for (const promo of candidatas) {
+    if (promo.alcance_piezas === "producto_especifico") {
+      universes.set(
+        promo.id,
+        promo.producto_comprado_id ? [promo.producto_comprado_id] : []
+      )
+      continue
+    }
+    const leaves = promo.condiciones
+      ? flattenPromotionConditions(promo.condiciones as PromotionConditionNode)
+      : []
+    const ids: string[] = []
+    for (const leaf of leaves) {
+      if (leaf.campo === "producto") ids.push(...leaf.valor)
+      if (leaf.campo === "categoria") {
+        for (const c of leaf.valor) categoryIds.add(c)
+      }
+    }
+    universes.set(promo.id, ids)
+  }
+
+  // "Catálogo de Benzocaína" es una categoría: sus productos son el universo.
+  if (categoryIds.size > 0) {
+    const { data: enlaces } = await supabase
+      .from("producto_categorias")
+      .select("producto_id, categoria_id")
+      .in("categoria_id", [...categoryIds])
+
+    for (const promo of candidatas) {
+      if (promo.alcance_piezas === "producto_especifico") continue
+      const leaves = promo.condiciones
+        ? flattenPromotionConditions(
+            promo.condiciones as PromotionConditionNode
+          )
+        : []
+      const cats = new Set(
+        leaves.flatMap((l) => (l.campo === "categoria" ? l.valor : []))
+      )
+      if (cats.size === 0) continue
+      const extra = (enlaces ?? [])
+        .filter((e) => cats.has(e.categoria_id))
+        .map((e) => e.producto_id)
+      universes.set(promo.id, [
+        ...new Set([...(universes.get(promo.id) ?? []), ...extra]),
+      ])
+    }
+  }
+
+  const productoIds = [...new Set([...universes.values()].flat())]
+  if (productoIds.length === 0) return []
+
+  const [{ data: items }, { data: productos }, { data: canjes }] =
+    await Promise.all([
+      applyMemberFilter(
+        supabase
+          .from("pedido_items")
+          .select(
+            `id, producto_id, cantidad, subtotal,
+             pedido:pedidos!inner(
+               numero_pedido, member_id, creado_en, estado, canal,
+               socio:members!member_id(nombre, apellido, codigo_socio)
+             )`
+          )
+          .in("producto_id", productoIds),
+        "pedido.member_id",
+        memberId
+      ),
+      supabase
+        .from("productos")
+        .select("id, sku, nombre, presentacion, imagen_url, precio")
+        .in("id", productoIds),
+      // Un ciclo completo no significa que el socio ya se llevó la pieza: eso
+      // lo dice un evento de canje suyo sobre esa promoción. Sin este cruce,
+      // "por reclamar" y "ya reclamado" se verían igual — y son justo los dos
+      // que hay que distinguir para saber a quién llamar.
+      applyMemberFilter(
+        supabase
+          .from("promocion_eventos")
+          .select("promocion_id, member_id")
+          .eq("tipo", "canje")
+          .in(
+            "promocion_id",
+            candidatas.map((p) => p.id)
+          ),
+        "member_id",
+        memberId
+      ),
+    ])
+
+  /**
+   * Lo que volvió al mostrador, por línea de pedido. Una pieza devuelta no
+   * acumula: si de tres cajas el socio trajo una de vuelta, el ciclo de la
+   * 3x2 NO está cumplido y la promoción no debe regalar nada. Sin este cruce
+   * la vista contaba las tres y prometía un beneficio que ya no se ganó.
+   *
+   * Se pide después y no dentro del `Promise.all` porque depende de los ids
+   * de línea que devuelve la consulta anterior. Y si la tabla todavía no
+   * existe (migración sin aplicar) se sigue sin devoluciones en vez de
+   * reventar la pantalla, igual que hace el log con `workflow_status_events`.
+   */
+  const itemIds = (items ?? []).map((item) => item.id)
+  const devueltoPorLinea = new Map<string, number>()
+  /**
+   * La devolución completa y no solo su cantidad: la tarjeta despliega de
+   * dónde salió cada pieza, y «−1 pieza» sin número ni motivo no explica
+   * nada. Una misma línea puede tener dos devoluciones (dos visitas al
+   * mostrador), así que se guarda una lista por línea.
+   */
+  const devolucionesPorLinea = new Map<
+    string,
+    { referencia: string; fecha: string; motivo: string; piezas: number }[]
+  >()
+  if (itemIds.length > 0) {
+    const { data: devueltos, error: errorDevueltos } = await supabase
+      .from("devolucion_items")
+      .select(
+        `pedido_item_id, cantidad,
+         devolucion:devoluciones!devolucion_id(
+           numero_devolucion, motivo, creado_en
+         )`
+      )
+      .in("pedido_item_id", itemIds)
+    if (!errorDevueltos) {
+      for (const row of devueltos ?? []) {
+        devueltoPorLinea.set(
+          row.pedido_item_id,
+          (devueltoPorLinea.get(row.pedido_item_id) ?? 0) + row.cantidad
+        )
+        if (!row.devolucion) continue
+        devolucionesPorLinea.set(row.pedido_item_id, [
+          ...(devolucionesPorLinea.get(row.pedido_item_id) ?? []),
+          {
+            referencia: row.devolucion.numero_devolucion,
+            fecha: row.devolucion.creado_en,
+            motivo: row.devolucion.motivo,
+            piezas: row.cantidad,
+          },
+        ])
+      }
+    }
+  }
+
+  // Por (socio, promoción): con la vista transversal, contarlos solo por
+  // promoción mezclaría los canjes de unas personas con los ciclos de otras.
+  const canjesPorSocioPromo = new Map<string, number>()
+  for (const row of canjes ?? []) {
+    if (!row.member_id) continue
+    const key = `${row.member_id}:${row.promocion_id}`
+    canjesPorSocioPromo.set(key, (canjesPorSocioPromo.get(key) ?? 0) + 1)
+  }
+
+  const productoById = new Map((productos ?? []).map((p) => [p.id, p]))
+  const rows: MemberAccumulationRow[] = []
+
+  for (const promo of candidatas) {
+    const universo = universes.get(promo.id) ?? []
+    if (universo.length === 0) continue
+
+    const compraCantidad = promo.compra_cantidad ?? 0
+    const pagaCantidad = promo.paga_cantidad ?? 0
+    const gratisPorCiclo = compraCantidad - pagaCantidad
+
+    // Compras dentro de la vigencia. Piezas anteriores al arranque no
+    // cuentan, y un pedido cancelado nunca se entregó: no hay pieza que
+    // acumular (el devuelto sí entra, y se descuenta línea por línea abajo).
+    const enVentana = (items ?? [])
+      .filter(
+        (item) =>
+          universo.includes(item.producto_id) &&
+          !!item.pedido?.member_id &&
+          item.pedido.estado !== "cancelado" &&
+          item.pedido.creado_en >= promo.vigente_desde &&
+          (!promo.vigente_hasta || item.pedido.creado_en <= promo.vigente_hasta)
+      )
+      .sort((a, b) =>
+        (a.pedido?.creado_en ?? "") < (b.pedido?.creado_en ?? "") ? -1 : 1
+      )
+    if (enVentana.length === 0) continue
+
+    // Cada socio acumula por su cuenta: sin este corte, la vista transversal
+    // sumaría las piezas de toda la organización en un solo ciclo.
+    const porSocio = new Map<string, typeof enVentana>()
+    for (const item of enVentana) {
+      const id = item.pedido?.member_id
+      if (!id) continue
+      porSocio.set(id, [...(porSocio.get(id) ?? []), item])
+    }
+
+    for (const [socioId, comprado] of porSocio) {
+      const socio = comprado[0]?.pedido?.socio
+      const mezcla = promo.alcance_piezas === "misma_categoria"
+      const grupos = mezcla
+        ? [{ productoId: null, lineas: comprado }]
+        : [...new Set(comprado.map((i) => i.producto_id))].map(
+            (productoId) => ({
+              productoId,
+              lineas: comprado.filter((i) => i.producto_id === productoId),
+            })
+          )
+
+      for (const grupo of grupos) {
+        // Una pieza por unidad: una línea con `cantidad: 3` son tres nodos del
+        // "Proceso", no uno. Y lo devuelto se descuenta de su propia línea:
+        // el precio por pieza sigue siendo el de esa venta
+        // (`subtotal / cantidad` es el `precio_unitario` de entonces), pero
+        // las piezas que volvieron no acumulan.
+        let devueltas = 0
+        const movimientos: AccumulationMovement[] = []
+        const piezas = grupo.lineas.flatMap((item) => {
+          const devuelto = Math.min(
+            devueltoPorLinea.get(item.id) ?? 0,
+            item.cantidad
+          )
+          devueltas += devuelto
+
+          if (item.pedido) {
+            movimientos.push({
+              tipo: "compra",
+              referencia: item.pedido.numero_pedido,
+              fecha: item.pedido.creado_en,
+              piezas: item.cantidad,
+              importe: item.subtotal,
+              canal: item.pedido.canal,
+              motivo: null,
+            })
+          }
+          for (const dev of devolucionesPorLinea.get(item.id) ?? []) {
+            movimientos.push({
+              tipo: "devolucion",
+              referencia: dev.referencia,
+              fecha: dev.fecha,
+              piezas: dev.piezas,
+              // El precio de la pieza es el de esa venta, no el de hoy.
+              importe: (item.subtotal / item.cantidad) * dev.piezas,
+              canal: null,
+              motivo: dev.motivo,
+            })
+          }
+
+          return Array.from(
+            { length: item.cantidad - devuelto },
+            () => item.subtotal / item.cantidad
+          )
+        })
+        const unidades = piezas.length
+        // Todo lo de este grupo volvió al mostrador: no hay acumulación que
+        // contar, y una tarjeta en 0/3 solo sería ruido.
+        if (unidades === 0) continue
+        const enCiclo = unidades % compraCantidad
+        const ciclos = Math.floor(unidades / compraCantidad)
+
+        // Los canjes son por promoción, no por SKU: cuando hay varias tarjetas
+        // de la misma promoción se reparten en orden, sin inventar de dónde
+        // salió cada uno.
+        const canjeKey = `${socioId}:${promo.id}`
+        const yaCanjeados = canjesPorSocioPromo.get(canjeKey) ?? 0
+        const ganados = ciclos * gratisPorCiclo
+        const porReclamar = Math.max(0, ganados - yaCanjeados)
+        canjesPorSocioPromo.set(canjeKey, Math.max(0, yaCanjeados - ganados))
+
+        const diasRestantes = promo.vigente_hasta
+          ? Math.ceil(
+              (new Date(promo.vigente_hasta).getTime() - Date.now()) /
+                86_400_000
+            )
+          : null
+
+        const producto = grupo.productoId
+          ? productoById.get(grupo.productoId)
+          : null
+        const precioRef =
+          producto?.precio ??
+          (unidades > 0 ? piezas.reduce((a, b) => a + b, 0) / unidades : 0)
+
+        rows.push({
+          memberId: socioId,
+          socioNombre: socio
+            ? `${socio.nombre} ${socio.apellido ?? ""}`.trim()
+            : "—",
+          socioCodigo: socio?.codigo_socio ?? null,
+          promocionId: promo.id,
+          promocionNombre: promo.nombre,
+          promocionCodigo: promo.codigo,
+          vigenteHasta: promo.vigente_hasta,
+          productoId: grupo.productoId,
+          sku: producto?.sku ?? null,
+          nombre: producto?.nombre ?? promo.nombre,
+          presentacion: producto?.presentacion ?? null,
+          imagenUrl: producto?.imagen_url ?? null,
+          precio: precioRef,
+          compraCantidad,
+          pagaCantidad,
+          piezasGratisPorCiclo: gratisPorCiclo,
+          unidadesCompradas: unidades,
+          unidadesDevueltas: devueltas,
+          // Cronológico, como el "Proceso" que va justo encima: la lista
+          // cuenta cómo se llegó hasta aquí («compró 2, luego 1 más, luego
+          // devolvió 1»), y leerla al revés de los nodos del proceso obliga
+          // a rehacer el orden en la cabeza.
+          movimientos: movimientos.sort((a, b) =>
+            a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0
+          ),
+          gastoAcumulado: piezas.reduce((a, b) => a + b, 0),
+          unidadesEnCiclo: enCiclo,
+          // Con una pieza ganada sin reclamar, el ciclo está cumplido: no falta
+          // nada. Sin ella, `enCiclo === 0` significa que el anterior ya se
+          // cobró y este empieza de cero — faltan las `compraCantidad` enteras,
+          // no cero. Devolver 0 ahí pintaba "Faltan 0" en un ciclo sin empezar.
+          faltan: porReclamar > 0 ? 0 : compraCantidad - enCiclo,
+          // Con un ciclo cumplido sin reclamar, el "Proceso" muestra ESE
+          // ciclo —el que se ganó, con sus importes— y no el siguiente, que
+          // todavía no empieza. Ver `accumulation-cycle.ts`: vive aparte y
+          // con pruebas porque el off-by-one de aquí dejaba la tarjeta
+          // diciendo "$0,00" al lado de un anillo que decía "LISTA".
+          pagosEnCiclo: cyclePayments(piezas, {
+            ciclos,
+            enCiclo,
+            compraCantidad,
+            porReclamar,
+          }),
+          piezasGratis: ciclos * gratisPorCiclo,
+          ahorro: ciclos * gratisPorCiclo * precioRef,
+          estado: accumulationStatus({
+            estadoPublicacion: promo.estado_publicacion,
+            presupuestoAgotado:
+              promo.presupuesto_asignado > 0 &&
+              promo.presupuesto_consumido >= promo.presupuesto_asignado,
+            piezasGratis: ciclos * gratisPorCiclo,
+            porReclamar,
+            diasRestantes,
+          }),
+          piezasPorReclamar: porReclamar,
+          diasRestantes,
+        })
+      }
+    }
+  }
+
+  // Primero lo accionable, y dentro de eso lo más cerca de premiar. Las tres
+  // situaciones perdidas van al final: se muestran para poder explicarlas,
+  // no para trabajar sobre ellas.
+  const orden = ACCUMULATION_STATUSES.reduce<Record<string, number>>(
+    (acc, estado, index) => ({ ...acc, [estado]: index }),
+    {}
+  )
+  // El estado se filtra aquí y no en SQL porque se deriva de las compras,
+  // no de una columna: no existe hasta que se calcula.
+  const visibles = filters.estados?.length
+    ? rows.filter((r) => filters.estados?.includes(r.estado))
+    : rows
+
+  return visibles.sort(
+    (a, b) =>
+      (orden[a.estado] ?? 99) - (orden[b.estado] ?? 99) || a.faltan - b.faltan
+  )
 }

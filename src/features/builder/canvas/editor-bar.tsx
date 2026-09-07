@@ -95,7 +95,7 @@ export function EditorBar({
   const locked = isPublicationLocked({ estado: status })
 
   return (
-    <div className="flex items-center gap-4 border-b border-border bg-background px-6 py-3">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background px-4 py-3 sm:px-6">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Dentro de la misma fila que el nombre, no como hermano del

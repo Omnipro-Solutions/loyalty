@@ -120,6 +120,27 @@ export const updateRoleAction = teamActionClient
       actionApplies(p.resource, p.action)
     )
 
+    // `autoaprobar` amplía `aprobar`, no lo sustituye: `can_self_approve()`
+    // exige los dos, así que guardar solo el primero dejaría una casilla
+    // marcada que no concede nada. La pantalla ya deshabilita la celda; esto
+    // cubre la llamada directa a la action, que es la que se salta la UI.
+    const grantedKeys = new Set(
+      validPermissions.map((p) => `${p.resource}:${p.action}`)
+    )
+    const selfApproveWithoutApprove = validPermissions.filter(
+      (p) =>
+        p.action === "autoaprobar" && !grantedKeys.has(`${p.resource}:aprobar`)
+    )
+    if (selfApproveWithoutApprove.length) {
+      const labels = selfApproveWithoutApprove
+        .map((p) => `«${RESOURCE_INFO[p.resource].label}»`)
+        .join(", ")
+      return {
+        ok: false as const,
+        message: `Autoaprobar amplía Aprobar: dale también «Aprobar» en ${labels} o quita la autoaprobación.`,
+      }
+    }
+
     const guard = await guardPermissionMatrix(ctx, {
       roleId: parsedInput.roleId,
       granted: validPermissions,

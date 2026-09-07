@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 
+import { KpiRow } from "@/components/data/kpi-row"
 import { KpiWidget } from "@/components/data/kpi-widget"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
@@ -66,7 +67,7 @@ export default async function AudiencesPage({
 
   return (
     <AppPage breadcrumb="Comercial  ›  Audiencias" title="Audiencias">
-      <div className="flex items-start gap-5">
+      <KpiRow>
         <KpiWidget
           label="Total audiencias"
           value={kpis.totalAudiences}
@@ -93,7 +94,7 @@ export default async function AudiencesPage({
           value={kpis.activeJourneys}
           caption="publicadas actualmente"
         />
-      </div>
+      </KpiRow>
       <AudiencesCard
         count={
           <Suspense key={dataKey} fallback={<CountPillSkeleton />}>

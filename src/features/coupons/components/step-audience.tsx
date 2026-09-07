@@ -80,7 +80,7 @@ export function StepAudience({
         <RadioGroup
           value={mode ?? "dynamic"}
           onValueChange={(v) => onModeChange(v as CouponAudienceMode)}
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         >
           {COUPON_AUDIENCE_MODES.map((m) => (
             <RadioCard

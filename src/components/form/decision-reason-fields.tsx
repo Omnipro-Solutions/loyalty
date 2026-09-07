@@ -19,7 +19,14 @@ import {
 
 type DecisionReasonFieldsProps = {
   decision: "approved" | "rejected"
-  reasonCode: DecisionReason
+  /**
+   * `null` hasta que la persona elige. No viene preseleccionado a propósito:
+   * con un motivo por defecto, la mitad de la bitácora acaba diciendo
+   * «Cumple la política» por inercia y el campo deja de valer para lo único
+   * que sirve —entender una decisión seis meses después—. Es un clic más a
+   * cambio de que el dato sea cierto.
+   */
+  reasonCode: DecisionReason | null
   onReasonCodeChange: (value: DecisionReason) => void
   note: string
   onNoteChange: (value: string) => void
@@ -45,17 +52,24 @@ export function DecisionReasonFields({
   // Aprobar «por error de configuración» no significa nada, y rechazar
   // «porque cumple la política», tampoco: cada decisión ofrece su subconjunto.
   const options = decision === "approved" ? APPROVAL_REASONS : REJECTION_REASONS
-  const noteRequired = DECISION_REASONS_REQUIRING_NOTE.includes(reasonCode)
+  const noteRequired =
+    reasonCode !== null && DECISION_REASONS_REQUIRING_NOTE.includes(reasonCode)
 
   return (
     <div className="flex flex-col gap-3.5">
       <Field label="Motivo de la decisión" htmlFor="decisionReason" required>
         <Select
-          value={reasonCode}
-          onValueChange={(v) => onReasonCodeChange(v as DecisionReason)}
+          value={reasonCode ?? ""}
+          onValueChange={(v) => v && onReasonCodeChange(v as DecisionReason)}
         >
           <SelectTrigger id="decisionReason">
-            <SelectValue />
+            <SelectValue placeholder="Elige un motivo…">
+              {(value: string) =>
+                value
+                  ? DECISION_REASON_LABEL[value as DecisionReason]
+                  : "Elige un motivo…"
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {options.map((reason) => (

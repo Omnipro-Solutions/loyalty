@@ -34,11 +34,7 @@ export default function AudienceDetailLoading() {
     >
       <Skeleton className="h-4 w-16" />
       <AudienceHeroSkeleton />
-      <KpiRowSkeleton
-        variant="widget"
-        count={4}
-        className="flex w-full items-stretch gap-5"
-      />
+      <KpiRowSkeleton variant="widget" count={4} className="gap-5" />
       <div className="w-full overflow-hidden rounded-2xl bg-background shadow-form-section">
         <TableSkeleton
           columns={[44, null, 130, 96, 150, 110, 110, 80]}

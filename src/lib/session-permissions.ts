@@ -21,11 +21,27 @@ export async function getSessionPermissions(): Promise<Set<string>> {
   const user = await getAuthenticatedUser()
   if (!user) return new Set()
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("role:roles(role_permissions(recurso, accion))")
     .eq("id", user.id)
     .maybeSingle()
+
+  // Descartar este error hacía que un fallo de lectura (RLS, embed, caché de
+  // esquema) fuera indistinguible de "este rol no puede nada": el Set salía
+  // vacío y las pantallas simplemente dejaban de pintar acciones, sin un
+  // solo rastro. Se registra en servidor y no se lanza, porque una pantalla
+  // sin botones sigue siendo mejor que una pantalla que no carga.
+  if (error) {
+    console.error(
+      `[session-permissions] no se pudieron leer los permisos de ${user.id}:`,
+      error
+    )
+  } else if (!profile?.role) {
+    console.error(
+      `[session-permissions] ${user.id} no resolvió rol (profiles.role_id nulo, o RLS de 'roles' lo oculta) — todas las acciones quedarán deshabilitadas`
+    )
+  }
 
   return new Set(
     (profile?.role?.role_permissions ?? []).map(
