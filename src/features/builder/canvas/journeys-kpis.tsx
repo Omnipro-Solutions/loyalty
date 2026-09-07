@@ -1,3 +1,4 @@
+import { KpiRow } from "@/components/data/kpi-row"
 import { KpiWidget } from "@/components/data/kpi-widget"
 import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 
@@ -8,7 +9,7 @@ export async function JourneysKpiRow() {
   const kpis = await getJourneysKpis()
 
   return (
-    <div className="flex w-full items-start gap-4">
+    <KpiRow>
       <KpiWidget
         label="Reglas activas"
         value={formatNumber(kpis.active)}
@@ -62,6 +63,6 @@ export async function JourneysKpiRow() {
             : "Atribución de ingreso: próximamente"
         }
       />
-    </div>
+    </KpiRow>
   )
 }

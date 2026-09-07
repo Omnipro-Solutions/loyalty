@@ -89,7 +89,7 @@ export function InspectorPanel({
 
   if (!node) {
     return (
-      <div className="flex h-full w-[320px] shrink-0 flex-col items-center justify-center gap-2 border-l border-border bg-background p-6 text-center">
+      <div className="flex h-full w-[280px] shrink-0 flex-col items-center justify-center gap-2 border-l border-border bg-background p-6 text-center xl:w-[320px]">
         <p className="text-[13px] font-medium text-foreground">
           Selecciona un nodo
         </p>
@@ -111,7 +111,7 @@ export function InspectorPanel({
   }
 
   return (
-    <div className="flex h-full w-[320px] shrink-0 flex-col border-l border-border bg-background">
+    <div className="flex h-full w-[280px] shrink-0 flex-col border-l border-border bg-background xl:w-[320px]">
       <div className="flex items-center gap-2.5 border-b border-border p-4">
         <span
           className={cn(

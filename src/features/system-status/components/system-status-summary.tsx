@@ -1,3 +1,4 @@
+import { KpiRow } from "@/components/data/kpi-row"
 import { KpiCard } from "@/components/data/kpi-card"
 import { formatNumber, formatPercent } from "@/lib/format"
 
@@ -16,7 +17,7 @@ export function SystemStatusSummary({
   eventsToday,
 }: SystemStatusSummaryProps) {
   return (
-    <div className="flex items-start gap-4">
+    <KpiRow>
       <KpiCard
         label="Uptime (90 días)"
         value={formatPercent(averageUptime90d / 100)}
@@ -34,6 +35,6 @@ export function SystemStatusSummary({
         label="Eventos procesados hoy"
         value={formatNumber(eventsToday)}
       />
-    </div>
+    </KpiRow>
   )
 }

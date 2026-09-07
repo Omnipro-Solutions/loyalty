@@ -14,6 +14,8 @@ type ApprovalQueueListProps = {
   approvals: CouponApprovalWithBatch[]
   currentProfileId: string
   canDecide: boolean
+  /** `cupones:autoaprobar` — la excepción opt-in a cuatro ojos (ver `approvalBlock` en `lib/approval-flow.ts`). */
+  canSelfApprove: boolean
 }
 
 /** Cola de doble aprobación (Fase 5) — sin nodo de Figma, se compone con el design system existente. */
@@ -21,6 +23,7 @@ export function ApprovalQueueList({
   approvals,
   currentProfileId,
   canDecide,
+  canSelfApprove,
 }: ApprovalQueueListProps) {
   if (approvals.length === 0) {
     return (
@@ -41,7 +44,7 @@ export function ApprovalQueueList({
         return (
           <div
             key={approval.id}
-            className="flex items-center justify-between gap-4 rounded-xl border border-border px-3.5 py-3"
+            className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border px-3.5 py-3"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -94,6 +97,7 @@ export function ApprovalQueueList({
                 batchReference={batch?.reference ?? approval.batch_id}
                 isOwnRequest={approval.requested_by === currentProfileId}
                 canDecide={canDecide}
+                canSelfApprove={canSelfApprove}
               />
             </div>
           </div>

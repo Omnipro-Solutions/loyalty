@@ -41,7 +41,7 @@ export function FormSkeleton({
         >
           <Skeleton className="h-[15px] w-40" />
           <div className="h-px w-full bg-border" />
-          <div className="grid w-full grid-cols-2 gap-3.5">
+          <div className="grid w-full grid-cols-1 gap-3.5 sm:grid-cols-2">
             {Array.from({ length: fieldsPerSection }).map((_, f) => (
               <div key={f} className="flex w-full flex-col gap-1.5">
                 <Skeleton className="h-2.5 w-20" />

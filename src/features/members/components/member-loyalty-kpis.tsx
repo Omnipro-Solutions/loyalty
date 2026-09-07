@@ -5,6 +5,7 @@ import {
   formatPercent,
 } from "@/lib/format"
 
+import { KpiRow } from "@/components/data/kpi-row"
 import { KpiCard } from "./kpi-card"
 import { type Member, type LoyaltySummary } from "../lib/queries"
 
@@ -31,7 +32,7 @@ export function MemberLoyaltyKpis({
       <p className="w-full text-[9px] font-semibold tracking-[0.72px] text-muted-foreground uppercase">
         Programa de lealtad
       </p>
-      <div className="flex w-full items-start gap-3">
+      <KpiRow className="gap-3">
         <KpiCard
           label="Saldo de puntos"
           value={formatNumber(member.saldo_puntos)}
@@ -78,7 +79,7 @@ export function MemberLoyaltyKpis({
           series={summary.balanceSeries}
           detail="neto de puntos por vencer"
         />
-      </div>
+      </KpiRow>
     </div>
   )
 }

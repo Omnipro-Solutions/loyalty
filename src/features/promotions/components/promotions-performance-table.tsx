@@ -1,8 +1,9 @@
 "use client"
 
+import { ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 
 import { FilterSelect } from "@/components/filters/select"
 import { formatNumber, formatPercent, formatUSD } from "@/lib/format"
@@ -59,6 +60,21 @@ function MiniBar({
  * primera fila destacada, que es la pregunta que trae comercial ("¿cuál está
  * funcionando mejor?").
  */
+/**
+ * Cuántas filas se ven sin desplegar.
+ *
+ * La tarjeta comparte fila con "Presupuesto promocional", que son cuatro
+ * cifras y una barra: con las 38 promociones del período esta estiraba la
+ * fila y dejaba media pantalla vacía al lado. Ocho no iguala esa altura
+ * —para eso habría que cortar en tres, y un ranking de tres no clasifica
+ * nada— pero baja el desajuste de 3,4× a algo que se lee como una pareja.
+ *
+ * Cortar por arriba es seguro porque la tabla SIEMPRE está ordenada por el
+ * criterio elegido: las ocho visibles son las ocho primeras de ese orden,
+ * que es lo que un ranking existe para responder.
+ */
+const VISIBLE_ROWS = 8
+
 export function PromotionsPerformanceTable({
   table,
 }: {
@@ -69,6 +85,7 @@ export function PromotionsPerformanceTable({
   const searchParams = useSearchParams()
 
   const [isPending, startTransition] = useTransition()
+  const [expanded, setExpanded] = useState(false)
 
   /** Mismo criterio que la gráfica: `replace`, sin saltar al inicio, y sin escribir el valor por defecto. */
   function setSort(value: string) {
@@ -149,79 +166,103 @@ export function PromotionsPerformanceTable({
               </tr>
             </thead>
             <tbody>
-              {table.rows.map((row, index) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-border last:border-b-0"
-                >
-                  <td className="max-w-[260px] py-2.5 pr-3">
-                    <div className="flex items-center gap-2">
-                      {/* El puesto, explícito. Con la tabla ordenable por
+              {(expanded ? table.rows : table.rows.slice(0, VISIBLE_ROWS)).map(
+                (row, index) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    <td className="max-w-[260px] py-2.5 pr-3">
+                      <div className="flex items-center gap-2">
+                        {/* El puesto, explícito. Con la tabla ordenable por
                           cinco criterios distintos, "la primera fila" deja
                           de ser evidente en cuanto se cambia el orden. */}
-                      <span
-                        className={cn(
-                          "flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                          index === 0
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {index + 1}
-                      </span>
-                      <Link
-                        href={`/promociones/${row.id}`}
-                        className={cn(
-                          "min-w-0 truncate text-xs text-foreground hover:underline",
-                          index === 0 && "font-semibold"
-                        )}
-                      >
-                        {row.nombre}
-                      </Link>
-                    </div>
-                    {/* Clientes vive aquí y no en su propia columna: en
+                        <span
+                          className={cn(
+                            "flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
+                            index === 0
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {index + 1}
+                        </span>
+                        <Link
+                          href={`/promociones/${row.id}`}
+                          className={cn(
+                            "min-w-0 truncate text-xs text-foreground hover:underline",
+                            index === 0 && "font-semibold"
+                          )}
+                        >
+                          {row.nombre}
+                        </Link>
+                      </div>
+                      {/* Clientes vive aquí y no en su propia columna: en
                         media pantalla, cinco columnas numéricas dejaban la
                         tabla en scroll horizontal permanente. */}
-                    <p className="truncate pl-[26px] text-[10px] text-muted-foreground">
-                      {BENEFIT_TYPE_LABEL[row.mecanica]} ·{" "}
-                      {formatNumber(row.clientes)} clientes
-                    </p>
-                  </td>
-                  <td className="px-3 py-2.5 text-right text-xs text-foreground tabular-nums">
-                    {formatNumber(row.usos)}
-                  </td>
-                  <td className="px-3 py-2.5 text-right text-xs text-foreground tabular-nums">
-                    {row.utilizacion !== null ? (
-                      <MiniBar
-                        text={formatPercent(row.utilizacion)}
-                        ratio={row.utilizacion}
-                        tone="bg-data-indigo"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="py-2.5 pl-3 text-right text-xs font-semibold text-foreground tabular-nums">
-                    {row.resultado !== null ? (
-                      <MiniBar
-                        text={`${formatNumber(row.resultado)} ×`}
-                        ratio={maxRoi > 0 ? row.resultado / maxRoi : 0}
-                        tone="bg-success"
-                      />
-                    ) : (
-                      <span className="font-normal text-muted-foreground">
-                        —
-                      </span>
-                    )}
-                    <p className="text-[10px] font-normal text-muted-foreground">
-                      {formatUSD(row.costo)}
-                    </p>
-                  </td>
-                </tr>
-              ))}
+                      <p className="truncate pl-[26px] text-[10px] text-muted-foreground">
+                        {BENEFIT_TYPE_LABEL[row.mecanica]} ·{" "}
+                        {formatNumber(row.clientes)} clientes
+                      </p>
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-xs text-foreground tabular-nums">
+                      {formatNumber(row.usos)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-xs text-foreground tabular-nums">
+                      {row.utilizacion !== null ? (
+                        <MiniBar
+                          text={formatPercent(row.utilizacion)}
+                          ratio={row.utilizacion}
+                          tone="bg-data-indigo"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 pl-3 text-right text-xs font-semibold text-foreground tabular-nums">
+                      {row.resultado !== null ? (
+                        <MiniBar
+                          text={`${formatNumber(row.resultado)} ×`}
+                          ratio={maxRoi > 0 ? row.resultado / maxRoi : 0}
+                          tone="bg-success"
+                        />
+                      ) : (
+                        <span className="font-normal text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                      <p className="text-[10px] font-normal text-muted-foreground">
+                        {formatUSD(row.costo)}
+                      </p>
+                    </td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* El resto del ranking, a un clic. No es un `<details>` como en las
+          otras tarjetas porque aquí las filas son `<tr>` y no pueden vivir
+          dentro de uno sin romper la tabla — y este componente ya es de
+          cliente por el selector de orden, así que el estado sale gratis. */}
+      {table.rows.length > VISIBLE_ROWS && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-fit items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+        >
+          <ChevronDown
+            className={cn(
+              "size-3 transition-transform",
+              expanded && "rotate-180"
+            )}
+          />
+          {expanded
+            ? "Ver menos"
+            : `Ver las ${formatNumber(table.rows.length - VISIBLE_ROWS)} restantes`}
+        </button>
       )}
 
       {max > 0 && (

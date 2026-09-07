@@ -13,14 +13,18 @@ type RolesListProps = {
   canManage: boolean
 }
 
-/** Figma "Roles" (718:2893): columna izquierda de 09.2, 276px. */
+/**
+ * Figma "Roles" (718:2893): columna izquierda de 09.2, 276px. Debajo de `lg`
+ * la pantalla apila las dos columnas (ver `ajustes/equipo/page.tsx`) y esta
+ * pasa a ancho completo.
+ */
 export function RolesList({
   roles,
   selectedRoleId,
   canManage,
 }: RolesListProps) {
   return (
-    <div className="flex h-full w-[276px] shrink-0 flex-col gap-2.5 rounded-[20px] bg-background p-4 shadow-form-section">
+    <div className="flex w-full flex-col gap-2.5 rounded-[20px] bg-background p-4 shadow-form-section lg:h-full lg:w-[276px] lg:shrink-0">
       <div className="flex items-center gap-2">
         <p className="flex-1 text-sm font-semibold text-foreground">Roles</p>
         {canManage && <NewRoleDialog />}

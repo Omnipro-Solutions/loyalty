@@ -15,11 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  APPROVAL_REASONS,
-  REJECTION_REASONS,
-  type DecisionReason,
-} from "@/types/domain"
+import { type DecisionReason } from "@/types/domain"
 
 import { decideCouponApprovalsAction } from "../actions/approvals"
 
@@ -41,9 +37,8 @@ export function ApprovalDecisionDialog({
 }: ApprovalDecisionDialogProps) {
   const router = useRouter()
   const [note, setNote] = useState("")
-  const [reasonCode, setReasonCode] = useState<DecisionReason>(
-    decision === "approved" ? APPROVAL_REASONS[0] : REJECTION_REASONS[0]
-  )
+  // Sin motivo preseleccionado: ver `DecisionReasonFields`.
+  const [reasonCode, setReasonCode] = useState<DecisionReason | null>(null)
 
   const decide = useAction(decideCouponApprovalsAction, {
     onSuccess: ({ data }) => {
@@ -112,15 +107,18 @@ export function ApprovalDecisionDialog({
           <Button
             type="button"
             variant={isReject ? "destructive" : "default"}
-            disabled={decide.isPending}
-            onClick={() =>
+            // Sin motivo no hay decisión: es lo que hace que la bitácora
+            // sirva para algo dentro de seis meses.
+            disabled={decide.isPending || !reasonCode}
+            onClick={() => {
+              if (!reasonCode) return
               decide.execute({
                 approvalIds: [approvalId],
                 decision,
                 reasonCode,
                 note: note.trim() || undefined,
               })
-            }
+            }}
           >
             {isReject ? "Rechazar solicitud" : "Aprobar solicitud"}
           </Button>

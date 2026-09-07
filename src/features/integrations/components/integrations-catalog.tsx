@@ -139,7 +139,7 @@ export function IntegrationsCatalog({
         </div>
       </div>
 
-      <div className="flex w-full items-start gap-5">
+      <div className="flex w-full flex-col gap-5 2xl:flex-row 2xl:items-start">
         <IntegrationsRail
           allLabel={allLabel}
           mode={mode}

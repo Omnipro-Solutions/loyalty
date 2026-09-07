@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 
 import { KpiCard } from "@/components/data/kpi-card"
+import { KpiRow } from "@/components/data/kpi-row"
 import { AppPage } from "@/components/layout/app-page"
 import { RestrictedPlaceholder } from "@/components/layout/restricted-placeholder"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
@@ -42,7 +43,9 @@ const USERS_TABLE_COLUMNS = [null, 150, 150, 110, 120, 90]
  * con la página como el resto de tablas, mantiene su propio scroll interno
  * acotado al alto restante del viewport.
  */
-const ROLES_PANEL_HEIGHT = "h-[calc(100vh-183px)]"
+// Alto fijo a viewport solo en escritorio: apilado (debajo de `lg`) las dos
+// columnas se suman y recortar cada una a 100vh dejaría la mitad inalcanzable.
+const ROLES_PANEL_HEIGHT = "lg:h-[calc(100vh-183px)]"
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -119,7 +122,7 @@ async function UsersTabContent({
 
   return (
     <>
-      <div className="flex items-start gap-4">
+      <KpiRow>
         <KpiCard
           label="Usuarios activos"
           value={formatNumber(kpis.activeUsers)}
@@ -148,7 +151,7 @@ async function UsersTabContent({
           value={formatNumber(kpis.noAccess60Days)}
           detail="revisar y desactivar"
         />
-      </div>
+      </KpiRow>
       <UsersCard
         activeUsers={kpis.activeUsers}
         pendingInvitations={kpis.pendingInvitations}
@@ -219,7 +222,12 @@ async function RolesTabContent({
   }
 
   return (
-    <div className={cn("flex items-start gap-3.5", ROLES_PANEL_HEIGHT)}>
+    <div
+      className={cn(
+        "flex flex-col gap-3.5 lg:flex-row lg:items-start",
+        ROLES_PANEL_HEIGHT
+      )}
+    >
       <RolesList
         roles={roles}
         selectedRoleId={selectedRoleId}
@@ -239,7 +247,7 @@ async function InvitationsTabContent({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
-      <div className="flex items-center gap-2.5 px-[22px] py-4">
+      <div className="flex flex-wrap items-center gap-2.5 px-[22px] py-4">
         <div className="flex-1">
           <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
             Invitaciones

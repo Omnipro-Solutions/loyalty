@@ -30,7 +30,7 @@ export function StepOrigin({ value, onChange }: StepOriginProps) {
       <RadioGroup
         value={value}
         onValueChange={(v) => onChange(v as CouponOrigin)}
-        className="grid grid-cols-2 gap-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
         {COUPON_ORIGINS.map((origin) => (
           <RadioCard

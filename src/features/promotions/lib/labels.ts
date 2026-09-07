@@ -1,3 +1,4 @@
+import { REQUEST_REASON_LABEL } from "@/lib/approval-flow"
 import { formatUSD } from "@/lib/format"
 
 import {
@@ -39,7 +40,6 @@ import type {
   PromotionEventType,
   PromotionPublicationStatus,
   PromotionStatusChangeReason,
-  PromotionType,
   ReturnEffect,
   RxApplicability,
   SettlementPeriod,
@@ -102,15 +102,13 @@ export const PROMOTION_STATUS_DOT: Record<PromotionStatus, string> = {
   borrador: "bg-muted-foreground",
 }
 
-/** Prefijo del subtítulo en 06.1 ("Cantidad · todas las tiendas", "Cupón · nuevos clientes"…). */
-export const PROMOTION_TYPE_LABEL: Record<PromotionType, string> = {
-  cantidad: "Cantidad",
-  categoria: "Categoría",
-  segmento: "Segmento",
-  carrito: "Carrito",
-  cupon: "Cupón",
-  bundle: "Bundle",
-}
+/**
+ * Prefijo del subtítulo en 06.1 ("Cantidad · todas las tiendas", "Cupón ·
+ * nuevos clientes"…). Se reexporta desde `config/promotion-type.ts`, que es
+ * donde vive junto al ícono y el color del mismo tipo: eran tres copias
+ * idénticas repartidas por dos features y este log.
+ */
+export { PROMOTION_TYPE_LABEL } from "@/config/promotion-type"
 
 export const CONDITION_FIELD_LABEL: Record<ConditionField, string> = {
   categoria: "Categoría del producto",
@@ -696,15 +694,18 @@ export const PROMOTION_EVENT_TYPE_LABEL: Record<PromotionEventType, string> = {
   aprobacion_retirada: "Solicitud retirada",
 }
 
-/** Motivo del cambio de estado (`promocion_eventos.codigo_motivo`). */
+/**
+ * Motivo del cambio de estado (`promocion_eventos.codigo_motivo`). Es el
+ * mismo mapa que `REQUEST_REASON_LABEL` de `lib/approval-flow.ts`, que es
+ * donde vive la versión que comparten los tres dominios de la bandeja de
+ * aprobaciones — era la cuarta copia del mismo texto.
+ *
+ * Se asigna en vez de reexportarse (`export { X as Y } from …`): un
+ * reexport aquí llegaba `undefined` a los Client Components que lo consumen
+ * y reventaba el diálogo de activación. Con una constante local, el binding
+ * existe siempre y la fuente de verdad sigue siendo una.
+ */
 export const PROMOTION_STATUS_CHANGE_REASON_LABEL: Record<
   PromotionStatusChangeReason,
   string
-> = {
-  decision_comercial: "Decisión comercial",
-  presupuesto: "Presupuesto",
-  error_configuracion: "Error de configuración",
-  bajo_rendimiento: "Bajo rendimiento",
-  fin_de_campana: "Fin de campaña",
-  otro: "Otro (especificar)",
-}
+> = REQUEST_REASON_LABEL

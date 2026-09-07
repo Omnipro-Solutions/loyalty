@@ -40,7 +40,10 @@ import {
   PROMOTION_TYPE_LABEL,
 } from "../lib/labels"
 import type { Promotion } from "../lib/queries"
-import { PROMOTION_TYPE_COLOR, PROMOTION_TYPE_ICON } from "../lib/type-icon"
+import {
+  PROMOTION_TYPE_COLOR,
+  PROMOTION_TYPE_ICON,
+} from "@/config/promotion-type"
 
 const features = tableFeatures({ columnSizingFeature })
 const helper = createColumnHelper<typeof features, Promotion>()

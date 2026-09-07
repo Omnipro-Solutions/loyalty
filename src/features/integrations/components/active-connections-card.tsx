@@ -1,3 +1,4 @@
+import { KpiRow } from "@/components/data/kpi-row"
 import { KpiCard } from "@/components/data/kpi-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,7 +36,7 @@ export function ActiveConnectionsCard({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex items-start gap-4">
+      <KpiRow>
         <KpiCard
           label="Conexiones activas"
           value={formatNumber(active.length)}
@@ -54,7 +55,7 @@ export function ActiveConnectionsCard({
           label="Destinos conectados"
           value={formatNumber(destinations.length)}
         />
-      </div>
+      </KpiRow>
 
       <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-background shadow-form-section">
         <Table>

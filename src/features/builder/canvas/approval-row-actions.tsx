@@ -15,11 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  APPROVAL_REASONS,
-  REJECTION_REASONS,
-  type DecisionReason,
-} from "@/types/domain"
+import { type DecisionReason } from "@/types/domain"
 
 import {
   decideWorkflowApprovalsAction,
@@ -29,9 +25,11 @@ import {
 type WorkflowApprovalRowActionsProps = {
   approvalId: string
   workflowName: string
-  /** Cuatro ojos también en la UI: quien solicitó solo ve "Retirar", nunca "Aprobar"/"Rechazar" sobre su propia solicitud. */
+  /** Cuatro ojos también en la UI: quien solicitó solo ve "Retirar", nunca "Aprobar"/"Rechazar" sobre su propia solicitud — salvo `canSelfApprove`. */
   isOwnRequest: boolean
   canDecide: boolean
+  /** `journeys:autoaprobar`: la excepción opt-in que deja firmar lo propio (ver `approvalBlock` en `lib/approval-flow.ts`). */
+  canSelfApprove: boolean
 }
 
 /**
@@ -44,14 +42,14 @@ export function WorkflowApprovalRowActions({
   workflowName,
   isOwnRequest,
   canDecide,
+  canSelfApprove,
 }: WorkflowApprovalRowActionsProps) {
   const router = useRouter()
   const [openDialog, setOpenDialog] = useState<
     "approved" | "rejected" | "withdraw" | null
   >(null)
-  const [reasonCode, setReasonCode] = useState<DecisionReason>(
-    APPROVAL_REASONS[0]
-  )
+  // Sin motivo preseleccionado: ver `DecisionReasonFields`.
+  const [reasonCode, setReasonCode] = useState<DecisionReason | null>(null)
   const [note, setNote] = useState("")
   const [error, setError] = useState<string>()
 
@@ -62,9 +60,7 @@ export function WorkflowApprovalRowActions({
   }
 
   function openDecision(decision: "approved" | "rejected") {
-    setReasonCode(
-      decision === "approved" ? APPROVAL_REASONS[0] : REJECTION_REASONS[0]
-    )
+    setReasonCode(null)
     setNote("")
     setError(undefined)
     setOpenDialog(decision)
@@ -97,6 +93,12 @@ export function WorkflowApprovalRowActions({
       return
     }
     if (!openDialog) return
+    // El motivo no viene preseleccionado, así que puede faltar: el botón ya
+    // está deshabilitado, esto es la red por si se envía con el teclado.
+    if (!reasonCode) {
+      setError("Elige un motivo para dejar constancia de la decisión.")
+      return
+    }
     if (reasonCode === "otro" && !note.trim()) {
       setError("Explica el motivo para poder guardarlo.")
       return
@@ -109,9 +111,18 @@ export function WorkflowApprovalRowActions({
     })
   }
 
-  if (isOwnRequest) {
-    return (
-      <>
+  // Calco de `features/promotions/components/approval-row-actions.tsx`: lo
+  // único que deja decidir una solicitud propia es `autoaprobar` (mismo
+  // criterio que `approvalBlock` y que `can_self_approve()` en SQL).
+  const canDecideThis = canDecide && (!isOwnRequest || canSelfApprove)
+
+  if (!canDecideThis && !isOwnRequest) {
+    return <span className="text-xs text-muted-foreground">—</span>
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-3">
+      {isOwnRequest && (
         <button
           type="button"
           className="text-xs font-medium text-destructive"
@@ -119,6 +130,8 @@ export function WorkflowApprovalRowActions({
         >
           Retirar
         </button>
+      )}
+      {isOwnRequest && (
         <Dialog
           open={openDialog === "withdraw"}
           onOpenChange={(open) => !open && close()}
@@ -147,30 +160,26 @@ export function WorkflowApprovalRowActions({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </>
-    )
-  }
+      )}
 
-  if (!canDecide) {
-    return <span className="text-xs text-muted-foreground">—</span>
-  }
-
-  return (
-    <div className="flex items-center justify-end gap-3">
-      <button
-        type="button"
-        className="text-xs font-medium text-destructive"
-        onClick={() => openDecision("rejected")}
-      >
-        Rechazar
-      </button>
-      <button
-        type="button"
-        className="text-xs font-medium text-primary"
-        onClick={() => openDecision("approved")}
-      >
-        Aprobar
-      </button>
+      {canDecideThis && (
+        <button
+          type="button"
+          className="text-xs font-medium text-destructive"
+          onClick={() => openDecision("rejected")}
+        >
+          Rechazar
+        </button>
+      )}
+      {canDecideThis && (
+        <button
+          type="button"
+          className="text-xs font-medium text-primary"
+          onClick={() => openDecision("approved")}
+        >
+          Aprobar
+        </button>
+      )}
 
       <Dialog
         open={openDialog === "approved" || openDialog === "rejected"}
@@ -186,6 +195,8 @@ export function WorkflowApprovalRowActions({
               {openDialog === "approved"
                 ? "pasará a Activa."
                 : "volverá a Borrador y se podrá editar de nuevo."}
+              {isOwnRequest &&
+                " Es tu propia solicitud: quedará registrada como autoaprobación."}
             </DialogDescription>
           </DialogHeader>
           {openDialog && openDialog !== "withdraw" && (
@@ -208,7 +219,11 @@ export function WorkflowApprovalRowActions({
             <Button type="button" variant="outline" onClick={close}>
               Cancelar
             </Button>
-            <Button type="button" onClick={confirm} disabled={pending}>
+            <Button
+              type="button"
+              onClick={confirm}
+              disabled={pending || !reasonCode}
+            >
               {pending
                 ? "Guardando…"
                 : openDialog === "approved"

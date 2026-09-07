@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { getProgramParameters } from "@/lib/program-parameters"
 import { AppPage } from "@/components/layout/app-page"
 import { BackLink } from "@/components/layout/back-link"
+import { MemberAccumulationsCard } from "@/features/members/components/member-accumulations-card"
 import { MemberAudiencesCard } from "@/features/members/components/member-audiences-card"
 import { MemberConsentsCard } from "@/features/members/components/member-consents-card"
 import { MemberHero } from "@/features/members/components/member-hero"
@@ -24,6 +25,7 @@ import {
   getCommercialValue,
   getRfmProfile,
   listActivePromotionsForMember,
+  listMemberAccumulations,
   listMemberAudiences,
   listMemberConsents,
   listMemberRedemptions,
@@ -60,6 +62,7 @@ export default async function MemberDetailPage({
     memberOrders,
     rfm,
     audiences,
+    accumulations,
     promotionsForAssignment,
     profilePermissions,
   ] = await Promise.all([
@@ -70,6 +73,7 @@ export default async function MemberDetailPage({
     getMemberOrders(id),
     getRfmProfile(id),
     listMemberAudiences(id),
+    listMemberAccumulations(id),
     listPromotionsForManualAssignment(id),
     getMemberProfilePermissions(),
   ])
@@ -104,7 +108,7 @@ export default async function MemberDetailPage({
     >
       <BackLink href="/clientes">Volver a Clientes</BackLink>
 
-      <div className="flex items-stretch gap-3.5">
+      <div className="flex flex-col gap-3.5 xl:flex-row xl:items-stretch">
         <div className="min-w-0 flex-1">
           <MemberHero
             member={member}
@@ -115,7 +119,7 @@ export default async function MemberDetailPage({
             canApplyPointsRule={canApplyPointsRule}
           />
         </div>
-        <div className="w-[340px] shrink-0">
+        <div className="w-full xl:w-[340px] xl:shrink-0">
           <MemberLoyaltyCard member={member} />
         </div>
       </div>
@@ -130,13 +134,21 @@ export default async function MemberDetailPage({
         />
       </div>
 
-      <div className="flex items-start gap-3.5">
+      <div className="flex flex-col gap-3.5 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
-          <MemberRedemptionsCard entries={redemptions} />
+          <MemberRedemptionsCard entries={redemptions} memberId={id} />
+          <MemberAccumulationsCard
+            accumulations={accumulations}
+            memberId={id}
+          />
           <MemberAudiencesCard audiences={audiences} />
         </div>
-        <div className="flex w-[380px] shrink-0 flex-col gap-3.5">
-          <MemberPromotionsCard promotions={promotions} behavior={behavior} />
+        <div className="flex w-full flex-col gap-3.5 xl:w-[380px] xl:shrink-0">
+          <MemberPromotionsCard
+            promotions={promotions}
+            behavior={behavior}
+            memberId={id}
+          />
           <MemberConsentsCard consents={consents} />
         </div>
       </div>

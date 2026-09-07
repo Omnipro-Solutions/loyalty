@@ -15,6 +15,9 @@
  * real que calcular.
  */
 
+import type { TierName } from "@/types/domain"
+import { MONTHS } from "./filters"
+
 export type KpiSparklineDatum = {
   label: string
   value: string
@@ -28,7 +31,8 @@ export type KpiSparklineDatum = {
 export type RiskSegment = {
   name: string
   description: string
-  members: string
+  /** Conteo crudo, no el string ya formateado: la tarjeta lo necesita como número para calcular la participación sobre la base. */
+  membersCount: number
   risk: "bajo" | "medio" | "alto"
 }
 
@@ -36,34 +40,105 @@ export const RISK_SEGMENTS: RiskSegment[] = [
   {
     name: "VIP / Champions",
     description: "Clientes de mayor valor",
-    members: "1.204",
+    membersCount: 1204,
     risk: "bajo",
   },
   {
     name: "Rising Stars",
     description: "Creciendo rápido",
-    members: "2.310",
+    membersCount: 2310,
     risk: "bajo",
   },
   {
     name: "Casual Shoppers",
     description: "Compra ocasional",
-    members: "3.860",
+    membersCount: 3860,
     risk: "medio",
   },
   {
     name: "En riesgo",
     description: "Sin compra 60+ días",
-    members: "1.045",
+    membersCount: 1045,
     risk: "alto",
   },
   {
     name: "Inactivos",
     description: "Sin compra 120+ días",
-    members: "612",
+    membersCount: 612,
     risk: "alto",
   },
 ]
+
+function sumMembers(risk?: RiskSegment["risk"]): number {
+  return RISK_SEGMENTS.filter(
+    (s) => risk === undefined || s.risk === risk
+  ).reduce((acc, s) => acc + s.membersCount, 0)
+}
+
+/**
+ * El mismo universo de `RISK_SEGMENTS` agregado por nivel de riesgo. Se
+ * deriva en vez de escribirse a mano para que mover un segmento no deje la
+ * cifra protagonista de la tarjeta contradiciendo a su propia tabla.
+ */
+export const CHURN_RISK_OVERVIEW = {
+  totalMembers: sumMembers(),
+  lowRiskMembers: sumMembers("bajo"),
+  mediumRiskMembers: sumMembers("medio"),
+  highRiskMembers: sumMembers("alto"),
+  /** Variación de `highRiskMembers` contra el mes anterior (1.549 → 1.657). */
+  deltaPct: 7,
+}
+
+export type ChurnRiskTier = {
+  tier: TierName
+  label: string
+  members: number
+  highRiskMembers: number
+}
+
+/**
+ * Riesgo alto repartido por nivel del programa. Los cuatro `members` suman
+ * `CHURN_RISK_OVERVIEW.totalMembers` y los cuatro `highRiskMembers` suman
+ * `highRiskMembers` — si alguien toca un número, tiene que tocar el otro, o
+ * la tarjeta de la izquierda y la de la derecha dejan de contar la misma
+ * historia.
+ *
+ * En orden de `TIER_NAMES` (diamante → bronce), no ordenado por riesgo: el
+ * gradiente "a menor nivel, más fuga" es justamente lo que se quiere ver, y
+ * ordenar por valor lo escondería detrás de una coincidencia.
+ */
+export const CHURN_RISK_BY_TIER: ChurnRiskTier[] = [
+  { tier: "diamante", label: "Diamante", members: 620, highRiskMembers: 31 },
+  { tier: "oro", label: "Oro", members: 1845, highRiskMembers: 221 },
+  { tier: "plata", label: "Plata", members: 2910, highRiskMembers: 491 },
+  { tier: "bronce", label: "Bronce", members: 3656, highRiskMembers: 914 },
+]
+
+/** Miembros en riesgo alto al cierre de cada uno de los últimos 6 meses. */
+const CHURN_RISK_MONTHLY = [1198, 1284, 1362, 1421, 1549, 1657]
+
+/**
+ * La serie por periodos. Es una función y no una constante porque las
+ * etiquetas son los últimos 6 meses *contados desde hoy*: congeladas en un
+ * `const` a nivel de módulo, la demo terminaría mostrando "Sep" en enero.
+ * Los valores sí son fijos (`CHURN_RISK_MONTHLY`) — lo que se mueve es la
+ * ventana, no el dato.
+ */
+export function getChurnRiskByPeriod(): {
+  labels: string[]
+  values: number[]
+} {
+  const now = new Date()
+  const labels = CHURN_RISK_MONTHLY.map((_, i) => {
+    const d = new Date(
+      now.getFullYear(),
+      now.getMonth() - (CHURN_RISK_MONTHLY.length - 1 - i),
+      1
+    )
+    return MONTHS[d.getMonth()]
+  })
+  return { labels, values: CHURN_RISK_MONTHLY }
+}
 
 export const RESUMEN_INSIGHT = {
   title: "Insight del motor",

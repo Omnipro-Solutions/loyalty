@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { ACCUMULATION_STATUSES } from "./lib/accumulation-statuses"
+
 import {
   ACQUISITION_CHANNELS,
   DOCUMENT_TYPES,
@@ -74,5 +76,16 @@ export type MemberExportFiltersInput = z.infer<typeof memberExportFiltersSchema>
 /** `columns`: keys de `MEMBERS_EXPORT_COLUMN_OPTIONS` marcadas en el diálogo
  *  — vacío o ausente exporta todas (`pickColumns`, `@/lib/csv`). */
 export const exportMembersSchema = memberExportFiltersSchema.extend({
+  columns: z.array(z.string()).optional(),
+})
+
+/** Filtros de la pestaña «Acumulaciones». El estado se filtra en memoria: se deriva de las compras, no es una columna. */
+export const accumulationFiltersSchema = z.object({
+  estados: z.array(z.enum(ACCUMULATION_STATUSES)).optional(),
+  promocionId: z.string().uuid().optional(),
+})
+export type AccumulationFiltersInput = z.infer<typeof accumulationFiltersSchema>
+
+export const exportAccumulationsSchema = accumulationFiltersSchema.extend({
   columns: z.array(z.string()).optional(),
 })

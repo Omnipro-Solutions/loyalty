@@ -88,7 +88,7 @@ export default async function PromotionsPage({
 
   return (
     <AppPage breadcrumb="Comercial  ›  Promociones" title="Promociones">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <p className="text-base font-semibold text-foreground">
             Campañas en curso
@@ -98,7 +98,7 @@ export default async function PromotionsPage({
             presupuesto asignado {formatUSD(summary.assignedBudget)}
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href="/panel-promociones"
             className="flex items-center gap-[7px] rounded-[10px] border border-border bg-background py-2.5 pr-4 pl-3.5 text-sm font-medium text-secondary-foreground"

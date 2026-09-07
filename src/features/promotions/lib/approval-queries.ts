@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import type {
   ApprovalStatus,
+  BenefitType,
+  ChannelScope,
   DecisionReason,
   StatusChangeReason,
 } from "@/types/domain"
@@ -25,7 +27,22 @@ export type PromotionApprovalWithPromotion = {
   decided_at: string | null
   requested_by_profile: { nombre: string } | null
   approver_profile: { nombre: string } | null
-  promotion: { nombre: string; codigo: string } | null
+  /**
+   * Lo que hace falta para decidir sin abrir la promoción en otra pestaña:
+   * la mecánica, dónde aplica, hasta cuándo y con cuánto presupuesto. La
+   * bandeja lo resume en una línea (ver `facts` en `ApprovalsInbox`).
+   */
+  promotion: {
+    nombre: string
+    codigo: string
+    tipo_beneficio: BenefitType
+    compra_cantidad: number | null
+    paga_cantidad: number | null
+    canal_aplicacion: ChannelScope
+    vigente_desde: string
+    vigente_hasta: string | null
+    presupuesto_asignado: number
+  } | null
 }
 
 const PROMOTION_APPROVAL_EMBED = `
@@ -33,7 +50,10 @@ const PROMOTION_APPROVAL_EMBED = `
   codigo_motivo, nota_motivo, note, codigo_decision, decided_at,
   requested_by_profile:profiles!promotion_approval_requested_by_fkey(nombre),
   approver_profile:profiles!promotion_approval_approver_id_fkey(nombre),
-  promotion:promociones(nombre, codigo)
+  promotion:promociones(
+    nombre, codigo, tipo_beneficio, compra_cantidad, paga_cantidad,
+    canal_aplicacion, vigente_desde, vigente_hasta, presupuesto_asignado
+  )
 `
 
 export async function listPendingPromotionApprovals(): Promise<

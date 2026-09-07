@@ -1,4 +1,5 @@
 import { Gift } from "lucide-react"
+import Link from "next/link"
 
 import { formatUSD, formatShortDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -7,7 +8,7 @@ import {
   PROMOTION_TYPE_COLOR,
   PROMOTION_TYPE_ICON,
   PROMOTION_TYPE_LABEL,
-} from "../lib/promotion-type"
+} from "@/config/promotion-type"
 import type { MemberPromotionRow, PurchaseBehavior } from "../lib/queries"
 
 const DAY_MS = 86_400_000
@@ -79,6 +80,8 @@ const PILL_CLASS: Record<StatusPill["variant"], string> = {
 type MemberPromotionsCardProps = {
   promotions: MemberPromotionRow[]
   behavior: PurchaseBehavior
+  /** Para enlazar al log acotado a este socio — «Ver histórico» llevaba a un ancla que no existía. */
+  memberId: string
 }
 
 /**
@@ -94,6 +97,7 @@ type MemberPromotionsCardProps = {
 export function MemberPromotionsCard({
   promotions,
   behavior,
+  memberId,
 }: MemberPromotionsCardProps) {
   const disponibles = promotions.filter((p) => p.status === "activa").length
   const programadas = promotions.filter((p) => p.status === "programada").length
@@ -211,14 +215,14 @@ export function MemberPromotionsCard({
               {programadas > 0
                 ? ` y ${programadas} programada${programadas === 1 ? "" : "s"}`
                 : ""}
-              . El histórico de canjes vive en el log de redenciones.
+              . Lo que ha usado de ellas vive en el log del sistema.
             </p>
-            <a
-              href="#log-de-redenciones"
+            <Link
+              href={`/ajustes/logs-sistema?socio=${memberId}&modulo=promociones`}
               className="shrink-0 text-[10px] font-medium whitespace-nowrap text-primary hover:underline"
             >
-              Ver histórico
-            </a>
+              Ver su actividad
+            </Link>
           </div>
         </>
       )}

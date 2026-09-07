@@ -14,6 +14,10 @@ type AppPageProps = {
  * page wraps in this instead of repeating the padding by hand. El Topbar
  * queda `sticky` y el contenido crece con la página (scroll natural del
  * documento) en vez de recortarse dentro de un panel interno.
+ *
+ * El padding horizontal baja de 32px a 16px al estrecharse el viewport
+ * (zoom de navegador incluido): a 32px por lado el contenido de las tablas
+ * empieza a apretarse antes de que haga falta.
  */
 export function AppPage({ breadcrumb, title, children }: AppPageProps) {
   return (
@@ -23,7 +27,9 @@ export function AppPage({ breadcrumb, title, children }: AppPageProps) {
         title={title}
         className="sticky top-0 z-10 shrink-0 bg-shell-background"
       />
-      <div className="flex flex-col gap-5 px-8 py-6">{children}</div>
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:px-8">
+        {children}
+      </div>
     </>
   )
 }

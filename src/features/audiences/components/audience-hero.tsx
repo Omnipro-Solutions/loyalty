@@ -27,7 +27,7 @@ export function AudienceHero({
 
   return (
     <div className="flex w-full flex-col gap-5 rounded-xl border border-border bg-neutral-50 p-6">
-      <div className="flex items-start gap-5">
+      <div className="flex flex-wrap items-start gap-5">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-[11px] font-semibold tracking-[0.66px] text-muted-foreground">
             {audience.codigo}
@@ -64,7 +64,7 @@ export function AudienceHero({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {canSync && (
           <Button
             disabled={sync.isPending}

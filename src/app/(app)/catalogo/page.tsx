@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 
 import { KpiCard } from "@/components/data/kpi-card"
+import { KpiRow } from "@/components/data/kpi-row"
 import { AppPage } from "@/components/layout/app-page"
 import { TableSkeleton } from "@/components/feedback/table-skeleton"
 import { allows, getSessionPermissions } from "@/lib/session-permissions"
@@ -68,7 +69,7 @@ export default async function CatalogPage({
 
   return (
     <AppPage breadcrumb="Catálogo  ›  Productos" title="Catálogo de productos">
-      <div className="flex items-start gap-4">
+      <KpiRow>
         <KpiCard
           label="SKU activos"
           value={formatNumber(kpis.activeSku)}
@@ -90,7 +91,7 @@ export default async function CatalogPage({
           average={kpis.averageCompleteness}
           bands={kpis.bands}
         />
-      </div>
+      </KpiRow>
       <ProductsCard
         categories={categories}
         categoryIds={categoryIds}

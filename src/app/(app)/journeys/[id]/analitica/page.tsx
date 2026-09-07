@@ -59,7 +59,7 @@ export default async function JourneyAnalyticsPage({
         title="Analítica del workflow"
       />
       <div className="flex flex-1 flex-col gap-5 p-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
@@ -80,7 +80,7 @@ export default async function JourneyAnalyticsPage({
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <AnalyticsToolbar workflow={workflow} />
             <Button
               variant="outline"
@@ -102,17 +102,17 @@ export default async function JourneyAnalyticsPage({
             description="Simula o publica este workflow para ver los conteos por bloque y rama aquí."
           />
         ) : (
-          <div className="flex items-start gap-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
             <div className="min-w-0 flex-1">
               <AnalyticsCanvas workflow={workflow} run={run} />
             </div>
 
-            <div className="flex w-[300px] shrink-0 flex-col gap-5 rounded-2xl border border-border bg-background p-5">
+            <div className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-background p-5 xl:w-[300px] xl:shrink-0">
               <div className="flex flex-col gap-3">
                 <p className="text-[13px] font-semibold text-foreground">
                   Rendimiento del workflow
                 </p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <KpiWidget
                     label="Entradas"
                     value={

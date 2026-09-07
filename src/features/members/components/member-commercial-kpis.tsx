@@ -1,5 +1,6 @@
 import { Receipt } from "lucide-react"
 
+import { KpiRow } from "@/components/data/kpi-row"
 import { PlaceholderCard } from "@/components/feedback/placeholder-card"
 import { formatUSD, formatNumber, formatPercent } from "@/lib/format"
 
@@ -39,7 +40,7 @@ export function MemberCommercialKpis({
       <p className="w-full text-[9px] font-semibold tracking-[0.72px] text-muted-foreground uppercase">
         Valor comercial
       </p>
-      <div className="flex w-full items-start gap-3">
+      <KpiRow className="gap-3">
         <KpiCard
           label="Ingresos de por vida"
           value={formatUSD(commercialValue.ltv)}
@@ -80,7 +81,7 @@ export function MemberCommercialKpis({
               : "sin comparación todavía"
           }
         />
-      </div>
+      </KpiRow>
     </div>
   )
 }

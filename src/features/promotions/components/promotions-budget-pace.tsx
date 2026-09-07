@@ -1,9 +1,25 @@
+import { ChevronRight } from "lucide-react"
+
 import { formatNumber, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 import type { BudgetPaceItem } from "../lib/queries"
 
 type PromotionsBudgetPaceProps = { items: BudgetPaceItem[] }
+
+/**
+ * Cuántas se ven sin desplegar. Seis filas + la cabecera dejan la tarjeta a
+ * la altura de la que tiene al lado en el panel ("Rendimiento de cupones"),
+ * que es la más baja de las dos: con catorce promociones activas esta
+ * estiraba la fila al doble y dejaba media pantalla en blanco a la derecha.
+ *
+ * Cortar aquí es seguro porque la lista llega ORDENADA por días de
+ * presupuesto restante (`getPromotionsBudgetPace`): las seis primeras son
+ * siempre las que se agotan antes, que es justo lo que esta tarjeta existe
+ * para avisar. Lo que queda detrás del desplegable es lo que aún tiene
+ * meses.
+ */
+const VISIBLE_LIMIT = 6
 
 /**
  * Sin nodo Figma — nueva a pedido del usuario. Ritmo de consumo proyectado
@@ -28,37 +44,61 @@ export function PromotionsBudgetPace({ items }: PromotionsBudgetPaceProps) {
         </p>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {items.map((item) => (
-            <div key={item.id} className="flex flex-col gap-1 text-xs">
-              <div className="flex items-center justify-between gap-3">
-                <span className="min-w-0 truncate text-foreground">
-                  {item.nombre}
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 font-medium",
-                    item.seAgotaAntesDeVigencia
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {item.diasRestantesPresupuesto === 0
-                    ? "Se agota hoy"
-                    : `${formatNumber(item.diasRestantesPresupuesto)} d. de presupuesto`}
-                </span>
-              </div>
-              <p className="text-[10.5px] text-muted-foreground">
-                {formatPercent(item.consumedPct)} consumido
-                {item.seAgotaAntesDeVigencia
-                  ? " · se agota antes de que termine la vigencia"
-                  : item.diasRestantesVigencia !== null
-                    ? ` · vigencia termina en ${formatNumber(item.diasRestantesVigencia)} d.`
-                    : ""}
-              </p>
-            </div>
+          {items.slice(0, VISIBLE_LIMIT).map((item) => (
+            <PaceRow key={item.id} item={item} />
           ))}
+
+          {/* `<details>` nativo: la tarjeta sigue siendo Server Component y
+              el resto de la lista no necesita estado ni JS para abrirse. */}
+          {items.length > VISIBLE_LIMIT && (
+            <details className="group">
+              <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-[11px] font-medium text-primary hover:underline [&::-webkit-details-marker]:hidden">
+                <ChevronRight className="size-3 shrink-0 transition-transform group-open:rotate-90" />
+                <span className="group-open:hidden">
+                  Ver las {items.length - VISIBLE_LIMIT} restantes
+                </span>
+                <span className="hidden group-open:inline">Ver menos</span>
+              </summary>
+              <div className="mt-2.5 flex flex-col gap-2.5">
+                {items.slice(VISIBLE_LIMIT).map((item) => (
+                  <PaceRow key={item.id} item={item} />
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Una promoción de la lista: nombre y días de presupuesto arriba, el detalle debajo. */
+function PaceRow({ item }: { item: BudgetPaceItem }) {
+  return (
+    <div className="flex flex-col gap-1 text-xs">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0 truncate text-foreground">{item.nombre}</span>
+        <span
+          className={cn(
+            "shrink-0 font-medium",
+            item.seAgotaAntesDeVigencia
+              ? "text-destructive"
+              : "text-muted-foreground"
+          )}
+        >
+          {item.diasRestantesPresupuesto === 0
+            ? "Se agota hoy"
+            : `${formatNumber(item.diasRestantesPresupuesto)} d. de presupuesto`}
+        </span>
+      </div>
+      <p className="text-[10.5px] text-muted-foreground">
+        {formatPercent(item.consumedPct)} consumido
+        {item.seAgotaAntesDeVigencia
+          ? " · se agota antes de que termine la vigencia"
+          : item.diasRestantesVigencia !== null
+            ? ` · vigencia termina en ${formatNumber(item.diasRestantesVigencia)} d.`
+            : ""}
+      </p>
     </div>
   )
 }

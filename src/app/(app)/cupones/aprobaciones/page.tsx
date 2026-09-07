@@ -19,6 +19,11 @@ export default async function CouponApprovalsPage() {
   const canDecide = profile
     ? hasPermission(profile.permissions, "cupones", "aprobar")
     : false
+  // Excepción opt-in a cuatro ojos, solo concedible a mano sobre roles
+  // personalizados (ver `OPT_IN_ACTIONS` en `lib/permissions.ts`).
+  const canSelfApprove = profile
+    ? hasPermission(profile.permissions, "cupones", "autoaprobar")
+    : false
 
   return (
     <AppPage
@@ -31,7 +36,8 @@ export default async function CouponApprovalsPage() {
         </p>
         <p className="text-xs text-muted-foreground">
           Emisiones que superan los umbrales de volumen, valor unitario o puntos
-          (regla 7.3) — quien las solicitó no puede aprobarlas.
+          (regla 7.3) — quien las solicitó no puede aprobarlas, salvo que su rol
+          tenga autoaprobación.
         </p>
       </div>
 
@@ -48,6 +54,7 @@ export default async function CouponApprovalsPage() {
           approvals={pending}
           currentProfileId={profile?.profileId ?? ""}
           canDecide={canDecide}
+          canSelfApprove={canSelfApprove}
         />
       </div>
 

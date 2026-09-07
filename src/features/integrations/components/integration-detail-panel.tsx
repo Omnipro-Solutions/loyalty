@@ -20,7 +20,7 @@ export function IntegrationDetailPanel({
   onClose,
 }: IntegrationDetailPanelProps) {
   return (
-    <div className="flex w-[292px] shrink-0 flex-col rounded-2xl bg-background pb-[18px] shadow-form-section">
+    <div className="flex w-full flex-col rounded-2xl bg-background pb-[18px] shadow-form-section 2xl:w-[292px] 2xl:shrink-0">
       <div className="flex items-center gap-2.5 py-4 pr-3.5 pl-4">
         <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[10px] border border-muted bg-background">
           {/* eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 28px, no vale next/image. */}

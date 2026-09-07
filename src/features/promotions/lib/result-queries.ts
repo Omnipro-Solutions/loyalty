@@ -590,6 +590,17 @@ export async function getPromotionPerformance(
 
 // ── §24 · Presupuesto ────────────────────────────────────────────────────
 
+/** Una promoción dentro del presupuesto del filtro. */
+export type BudgetByPromotion = {
+  id: string
+  nombre: string
+  assigned: number
+  consumed: number
+  consumedPct: number
+  /** `true` cuando esa promoción ya cruzó SU propio umbral, no el más bajo del conjunto. */
+  overThreshold: boolean
+}
+
 export type BudgetBlock = {
   assigned: number
   consumed: number
@@ -598,6 +609,18 @@ export type BudgetBlock = {
   /** Umbral de alerta más bajo entre las promociones del filtro — el primero que se cruza. */
   alertPct: number | null
   overThreshold: number
+  /**
+   * El mismo presupuesto, promoción por promoción y de más consumida a
+   * menos. El acumulado dice si queda dinero; esto dice DÓNDE se está
+   * yendo, que es la pregunta siguiente y la que obligaba a salir a otra
+   * pantalla.
+   *
+   * Solo las que tienen presupuesto asignado: una promoción sin tope no
+   * consume de esta bolsa y una fila suya al 0 % se leería como que no se
+   * usa. Se cuentan aparte en `sinTope`.
+   */
+  porPromocion: BudgetByPromotion[]
+  sinTope: number
 }
 
 export async function getBudgetBlock(
@@ -608,6 +631,8 @@ export async function getBudgetBlock(
   let consumed = 0
   let alertPct: number | null = null
   let overThreshold = 0
+  const porPromocion: BudgetByPromotion[] = []
+  let sinTope = 0
 
   for (const promo of scope.values()) {
     assigned += promo.presupuestoAsignado
@@ -625,6 +650,21 @@ export async function getBudgetBlock(
         overThreshold += 1
       }
     }
+
+    if (promo.presupuestoAsignado > 0) {
+      const pct = promo.presupuestoConsumido / promo.presupuestoAsignado
+      porPromocion.push({
+        id: promo.id,
+        nombre: promo.nombre,
+        assigned: promo.presupuestoAsignado,
+        consumed: promo.presupuestoConsumido,
+        consumedPct: pct,
+        overThreshold:
+          promo.umbralAlertaPct != null && pct >= promo.umbralAlertaPct / 100,
+      })
+    } else {
+      sinTope += 1
+    }
   }
 
   return {
@@ -634,6 +674,10 @@ export async function getBudgetBlock(
     consumedPct: assigned > 0 ? consumed / assigned : 0,
     alertPct,
     overThreshold,
+    // De más consumida a menos: el orden en que hay que mirarlas, igual que
+    // el criterio de la alerta de arriba.
+    porPromocion: porPromocion.sort((a, b) => b.consumedPct - a.consumedPct),
+    sinTope,
   }
 }
 

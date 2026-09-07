@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { KpiRow } from "@/components/data/kpi-row"
 
 import { Skeleton } from "./skeleton"
 
@@ -75,9 +75,10 @@ type KpiRowSkeletonProps = {
  * pantalla; las variantes `member`/`dense`/`widget` extienden la misma receta
  * a las formas de KPI reales del resto del portal (ver el inventario de
  * `kpi-widget.tsx`, `kpi-dense-card.tsx`, `members/components/kpi-card.tsx`).
- * `className` sobrescribe el contenedor — pásale la misma clase grid/flex de
- * la página real (p. ej. el `grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5`
- * de `/resumen`).
+ * El contenedor es el mismo `KpiRow` que usa la fila real, para que el
+ * skeleton reflowee igual que el contenido que reemplaza; `className`
+ * sobrescribe la rejilla cuando la página usa otra (p. ej. el
+ * `grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5` de `/resumen`).
  */
 export function KpiRowSkeleton({
   variant = "widget",
@@ -85,10 +86,10 @@ export function KpiRowSkeleton({
   className,
 }: KpiRowSkeletonProps) {
   return (
-    <div className={cn("flex w-full items-start gap-4", className)}>
+    <KpiRow className={className}>
       {Array.from({ length: count }).map((_, i) => (
         <KpiCardSkeleton key={i} variant={variant} />
       ))}
-    </div>
+    </KpiRow>
   )
 }

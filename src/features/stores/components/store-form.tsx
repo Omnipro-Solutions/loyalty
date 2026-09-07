@@ -129,7 +129,7 @@ export function StoreForm({ store, storeGroups }: StoreFormProps) {
       onSubmit={handleSubmit(onSubmit)}
       className="flex w-full flex-col gap-5"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-2xl leading-7 font-semibold text-foreground">
             {isEditing ? "Editar tienda" : "Nueva tienda"}
@@ -162,7 +162,7 @@ export function StoreForm({ store, storeGroups }: StoreFormProps) {
         />
       )}
 
-      <div className="flex w-full items-start gap-5">
+      <div className="flex w-full flex-col gap-5 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           <Section
             title="Identificación"
@@ -382,7 +382,7 @@ export function StoreForm({ store, storeGroups }: StoreFormProps) {
           </Section>
         </div>
 
-        <div className="flex w-[340px] shrink-0 flex-col gap-5">
+        <div className="flex w-full flex-col gap-5 xl:w-[340px] xl:shrink-0">
           <StoreSummaryCard values={values} groups={groups} />
           {!isEditing && <PreSaveChecklist />}
           {!isEditing && (

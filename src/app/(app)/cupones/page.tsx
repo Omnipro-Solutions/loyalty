@@ -234,12 +234,12 @@ export default async function CouponsPage({
 
   return (
     <AppPage breadcrumb="Comercial  ›  Cupones" title="Cupones">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <p className="text-base font-semibold text-foreground">{title}</p>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Fase 6 conecta esto a /imprimir/cupones — sin selección real de filas todavía. */}
           <button
             type="button"

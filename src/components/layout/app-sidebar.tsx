@@ -15,6 +15,10 @@ type AppSidebarProps = {
   name: string
   email: string
   onCollapse?: () => void
+  /** Tooltip of the collapse button — the off-canvas shell closes instead of collapsing. */
+  collapseLabel?: string
+  /** Called when a nav link is followed, so the off-canvas shell can close. */
+  onNavigate?: () => void
   className?: string
 }
 
@@ -28,12 +32,14 @@ export function AppSidebar({
   name,
   email,
   onCollapse,
+  collapseLabel = "Colapsar menú",
+  onNavigate,
   className,
 }: AppSidebarProps) {
   return (
     <div
       className={cn(
-        "flex h-full w-[260px] flex-col gap-2 overflow-hidden bg-background p-3",
+        "flex h-full w-[260px] max-w-full flex-col gap-2 overflow-hidden bg-background p-3",
         className
       )}
     >
@@ -63,7 +69,8 @@ export function AppSidebar({
             variant="ghost"
             size="icon-sm"
             onClick={onCollapse}
-            title="Colapsar menú"
+            title={collapseLabel}
+            aria-label={collapseLabel}
             className="size-7 rounded-lg"
           >
             <PanelLeftClose className="size-4" />
@@ -76,7 +83,7 @@ export function AppSidebar({
           <div key={group.title} className="w-full">
             <NavGroup title={group.title} />
             {group.items.map((item) => (
-              <NavItem key={item.href} {...item} />
+              <NavItem key={item.href} {...item} onNavigate={onNavigate} />
             ))}
           </div>
         ))}

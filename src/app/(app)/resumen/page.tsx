@@ -1,17 +1,21 @@
 import { KpiWidget } from "@/components/data/kpi-widget"
 import { AppPage } from "@/components/layout/app-page"
 import { AiCopilotHero } from "@/features/dashboard/components/ai-copilot-hero"
+import { ChurnRiskByTier } from "@/features/dashboard/components/churn-risk-by-tier"
 import { InsightEngineCard } from "@/features/dashboard/components/insight-engine-card"
 import { RiskSummaryTable } from "@/features/dashboard/components/risk-summary-table"
 import { TopCampaignsList } from "@/features/dashboard/components/top-campaigns-list"
 import { TrendMultiLineChart } from "@/features/dashboard/components/trend-multi-line-chart"
 import {
+  CHURN_RISK_BY_TIER,
+  CHURN_RISK_OVERVIEW,
+  getChurnRiskByPeriod,
   RISK_SEGMENTS,
   TOP_CAMPAIGNS,
 } from "@/features/dashboard/lib/mock-data"
 import { getResumenDashboardData } from "@/features/dashboard/lib/queries"
 import { getCurrentProfile } from "@/features/profile/lib/queries"
-import { formatDeltaPercent } from "@/lib/format"
+import { formatDeltaPercent, formatNumber } from "@/lib/format"
 
 /**
  * Figma "02.3 · Dashboard · IA" (1025:4123) — pantalla que se muestra al
@@ -28,6 +32,11 @@ export default async function ResumenPage() {
     getCurrentProfile(),
   ])
   const firstName = profile!.nombre.split(" ")[0]
+
+  const churnByPeriod = getChurnRiskByPeriod()
+  const churnLatest = churnByPeriod.values[churnByPeriod.values.length - 1]
+  const churnOldest = churnByPeriod.values[0]
+  const churnSixMonthDelta = (churnLatest - churnOldest) / churnOldest
 
   return (
     <AppPage breadcrumb="Principal  ›  Resumen" title="Resumen">
@@ -72,9 +81,44 @@ export default async function ResumenPage() {
             className="min-w-0"
           />
         </div>
-        <div className="grid w-full grid-cols-1 items-start gap-4 lg:grid-cols-[3fr_2fr]">
-          <RiskSummaryTable segments={RISK_SEGMENTS} className="min-w-0" />
-          <InsightEngineCard className="min-w-0" />
+      </div>
+
+      <div className="flex w-full flex-col gap-4">
+        <p className="text-[11px] leading-3.5 font-semibold tracking-[0.6px] text-muted-foreground">
+          RIESGO DE ABANDONO
+        </p>
+        {/* Sin `items-start`: las dos columnas se estiran a la altura de la
+            más alta y el sobrante lo absorbe la tarjeta con `flex-1` de cada
+            una, en vez de quedar como un hueco al pie de la más corta. */}
+        <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[3fr_2fr]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <RiskSummaryTable
+              segments={RISK_SEGMENTS}
+              totalMembers={CHURN_RISK_OVERVIEW.totalMembers}
+              highRiskMembers={CHURN_RISK_OVERVIEW.highRiskMembers}
+              deltaPct={CHURN_RISK_OVERVIEW.deltaPct}
+              className="flex-1"
+            />
+            <InsightEngineCard />
+          </div>
+          <div className="flex min-w-0 flex-col gap-4">
+            <ChurnRiskByTier tiers={CHURN_RISK_BY_TIER} className="flex-1" />
+            <TrendMultiLineChart
+              title="Riesgo por periodo"
+              bigValue={formatNumber(churnLatest)}
+              bigValueCaption={`miembros en riesgo alto · ${formatDeltaPercent(
+                churnSixMonthDelta
+              )} en 6 meses`}
+              xLabels={churnByPeriod.labels}
+              series={[
+                {
+                  name: "Riesgo alto",
+                  colorVar: "--destructive",
+                  values: churnByPeriod.values,
+                },
+              ]}
+            />
+          </div>
         </div>
       </div>
     </AppPage>

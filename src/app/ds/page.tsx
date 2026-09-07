@@ -50,6 +50,7 @@ import { Pagination } from "@/components/data/pagination"
 
 import { Chip } from "@/components/filters/chip"
 import { FilterSearch } from "@/components/filters/search"
+import { MemberAccumulationsCard } from "@/features/members/components/member-accumulations-card"
 import { Segmented } from "@/components/filters/segmented"
 
 import { ChartCardSkeleton } from "@/components/feedback/chart-card-skeleton"
@@ -218,6 +219,154 @@ const COLUMNS = columnHelper.columns([
  * componente → nodeId en e2e/pixel-perfect.spec.ts) para comparar
  * capturas 1:1 y no "a ojo" contra el diseño completo de una pantalla.
  */
+
+/**
+ * Acumulaciones con sus tres lecturas: un ciclo cumplido sin reclamar, uno
+ * a medias y uno que una devolución echó atrás. Es el ancho real de la
+ * tarjeta en la ficha (columna izquierda, tres por fila en xl), que es
+ * donde el desglose de compras se rompía.
+ */
+const ACCUMULATIONS_MOCK = [
+  {
+    memberId: "m1",
+    socioNombre: "Camilo Torres",
+    socioCodigo: "CLI-000002",
+    promocionId: "p1",
+    promocionNombre: "3x2 en vitaminas y suplementos",
+    promocionCodigo: "PROMO-3X2-VITAM",
+    vigenteHasta: "2026-10-02",
+    productoId: "prod1",
+    sku: "FAR-71710",
+    nombre: "Vitamina D3 2000 UI",
+    presentacion: "Caja x 60 cápsulas",
+    imagenUrl: null,
+    precio: 27400,
+    compraCantidad: 3,
+    pagaCantidad: 2,
+    piezasGratisPorCiclo: 1,
+    unidadesCompradas: 3,
+    unidadesDevueltas: 0,
+    movimientos: [
+      {
+        tipo: "compra" as const,
+        referencia: "PED-ACUM-01",
+        fecha: "2026-08-24",
+        piezas: 2,
+        importe: 54800,
+        canal: "pos",
+        motivo: null,
+      },
+      {
+        tipo: "compra" as const,
+        referencia: "PED-ACUM-02",
+        fecha: "2026-09-01",
+        piezas: 1,
+        importe: 27400,
+        canal: "app",
+        motivo: null,
+      },
+    ],
+    gastoAcumulado: 82200,
+    unidadesEnCiclo: 0,
+    faltan: 0,
+    pagosEnCiclo: [27400, 27400, 27400],
+    piezasGratis: 1,
+    ahorro: 27400,
+    estado: "por_reclamar" as const,
+    piezasPorReclamar: 1,
+    diasRestantes: 25,
+  },
+  {
+    memberId: "m1",
+    socioNombre: "Camilo Torres",
+    socioCodigo: "CLI-000002",
+    promocionId: "p2",
+    promocionNombre: "2x3 en analgésicos",
+    promocionCodigo: "PROMO-3X2-ANALG",
+    vigenteHasta: "2026-09-30",
+    productoId: "prod2",
+    sku: "FAR-70241",
+    nombre: "Acetaminofén 500 mg",
+    presentacion: "Caja x 24 tabletas",
+    imagenUrl: null,
+    precio: 6900,
+    compraCantidad: 3,
+    pagaCantidad: 2,
+    piezasGratisPorCiclo: 1,
+    unidadesCompradas: 2,
+    unidadesDevueltas: 0,
+    movimientos: [
+      {
+        tipo: "compra" as const,
+        referencia: "PED-77850",
+        fecha: "2026-08-01",
+        piezas: 2,
+        importe: 13800,
+        canal: "pos",
+        motivo: null,
+      },
+    ],
+    gastoAcumulado: 13800,
+    unidadesEnCiclo: 2,
+    faltan: 1,
+    pagosEnCiclo: [6900, 6900, 0],
+    piezasGratis: 0,
+    ahorro: 0,
+    estado: "en_curso" as const,
+    piezasPorReclamar: 0,
+    diasRestantes: 23,
+  },
+  {
+    memberId: "m2",
+    socioNombre: "Adriana Muñoz",
+    socioCodigo: "CLI-000033",
+    promocionId: "p1",
+    promocionNombre: "3x2 en vitaminas y suplementos",
+    promocionCodigo: "PROMO-3X2-VITAM",
+    vigenteHasta: "2026-10-02",
+    productoId: "prod1",
+    sku: "FAR-71710",
+    nombre: "Vitamina D3 2000 UI",
+    presentacion: "Caja x 60 cápsulas",
+    imagenUrl: null,
+    precio: 27400,
+    compraCantidad: 3,
+    pagaCantidad: 2,
+    piezasGratisPorCiclo: 1,
+    unidadesCompradas: 2,
+    unidadesDevueltas: 1,
+    movimientos: [
+      {
+        tipo: "compra" as const,
+        referencia: "PED-ACUM-06",
+        fecha: "2026-08-27",
+        piezas: 3,
+        importe: 82200,
+        canal: "pos",
+        motivo: null,
+      },
+      {
+        tipo: "devolucion" as const,
+        referencia: "DEV-2026-001",
+        fecha: "2026-09-04",
+        piezas: 1,
+        importe: 27400,
+        canal: null,
+        motivo: "no_era_lo_esperado",
+      },
+    ],
+    gastoAcumulado: 54800,
+    unidadesEnCiclo: 2,
+    faltan: 1,
+    pagosEnCiclo: [27400, 27400, 0],
+    piezasGratis: 0,
+    ahorro: 0,
+    estado: "en_curso" as const,
+    piezasPorReclamar: 0,
+    diasRestantes: 25,
+  },
+]
+
 export default function DesignSystemPage() {
   const [stores, setStores] = React.useState<string[]>(["centro", "prado"])
   const [units, setUnits] = React.useState(12)
@@ -718,6 +867,16 @@ export default function DesignSystemPage() {
 
       <section data-ds="dashboard-ai-hero" className="w-[1132px] bg-muted p-6">
         <AiCopilotHero name="Elena" />
+      </section>
+
+      <section
+        data-ds="member-accumulations"
+        className="w-[1116px] bg-muted p-6"
+      >
+        <MemberAccumulationsCard
+          accumulations={ACCUMULATIONS_MOCK}
+          memberId="m1"
+        />
       </section>
     </div>
   )

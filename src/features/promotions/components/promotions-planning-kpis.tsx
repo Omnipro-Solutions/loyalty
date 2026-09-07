@@ -13,6 +13,7 @@ import Link from "next/link"
 
 import { formatCompactUSD, formatNumber, formatPercent } from "@/lib/format"
 import { DonutChart } from "@/components/data/donut-chart"
+import { KpiRow } from "@/components/data/kpi-row"
 import { cn } from "@/lib/utils"
 
 import {
@@ -220,7 +221,7 @@ export function PromotionsPlanningKpis({ kpis }: PromotionsPlanningKpisProps) {
   const portfolioTotal = portfolio.reduce((sum, s) => sum + s.count, 0)
 
   return (
-    <div className="flex w-full items-stretch gap-4">
+    <KpiRow className="grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))]">
       <KpiCard
         icon={PieChart}
         label="Mezcla de mecánicas"
@@ -365,6 +366,6 @@ export function PromotionsPlanningKpis({ kpis }: PromotionsPlanningKpisProps) {
           </div>
         )}
       </KpiCard>
-    </div>
+    </KpiRow>
   )
 }

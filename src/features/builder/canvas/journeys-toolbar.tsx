@@ -2,13 +2,13 @@
 
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useRef } from "react"
 
 import { ExportCsvButton } from "@/components/data/export-csv-button"
 import { ExportDialog } from "@/components/data/export-dialog"
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
 import { notifyExportStatus } from "@/components/feedback/export-toast"
+import { useSearchParam } from "@/hooks/use-search-param"
 import { useCsvExportDialog } from "@/hooks/use-csv-export-dialog"
 import { formatNumber } from "@/lib/format"
 import { enumValue } from "@/lib/search-params"
@@ -52,7 +52,7 @@ export function JourneysToolbar({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const search = useSearchParam()
 
   function updateParam(name: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString())
@@ -60,11 +60,6 @@ export function JourneysToolbar({
     else params.delete(name)
     params.delete("page")
     router.push(`/journeys?${params.toString()}`)
-  }
-
-  function onSearch(value: string) {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => updateParam("q", value || null), 350)
   }
 
   const selectedStatus = searchParams.get("estado")
@@ -82,8 +77,8 @@ export function JourneysToolbar({
   })
 
   return (
-    <div className="flex w-full items-center gap-2.5 pt-[18px] pb-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div className="flex w-full flex-wrap items-center gap-2.5 pt-[18px] pb-4">
+      <div className="flex min-w-0 grow flex-col gap-0.5">
         <div className="flex items-center gap-2">
           <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground">
             Loyalty Builder
@@ -99,8 +94,9 @@ export function JourneysToolbar({
       </div>
       <FilterSearch
         className="w-[190px]"
-        defaultValue={searchParams.get("q") ?? ""}
-        onChange={(e) => onSearch(e.target.value)}
+        value={search.value}
+        onChange={(e) => search.setValue(e.target.value)}
+        loading={search.loading}
       />
       <FilterSelect
         label="Estado"

@@ -75,7 +75,7 @@ export function BatchExpandedPanel({
           <p className="mb-2 text-xs font-semibold text-foreground">
             Datos de la emisión
           </p>
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
             {fields.map((field) => (
               <DetailField key={field.label} {...field} />
             ))}

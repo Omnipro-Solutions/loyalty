@@ -35,7 +35,7 @@ export function ProductHero({ product }: ProductHeroProps) {
   const active = product.estado === "activo"
 
   return (
-    <div className="flex items-center gap-[18px] rounded-[20px] bg-background px-5 py-[18px] shadow-form-section">
+    <div className="flex flex-col items-start gap-[18px] rounded-[20px] bg-background px-5 py-[18px] shadow-form-section xl:flex-row xl:items-center">
       {product.imagen_url ? (
         // eslint-disable-next-line @next/next/no-img-element -- tamaño fijo 62px, no vale next/image.
         <img
@@ -84,9 +84,9 @@ export function ProductHero({ product }: ProductHeroProps) {
         </div>
       </div>
 
-      <div className="h-14 w-px bg-muted" />
+      <div className="hidden h-14 w-px bg-muted xl:block" />
 
-      <div className="flex w-[300px] flex-col gap-1.5">
+      <div className="flex w-full flex-col gap-1.5 xl:w-[300px]">
         <div className="flex items-center gap-2 text-muted-foreground">
           <p className="flex-1 text-[9px] font-semibold tracking-[0.5px]">
             COMPLETITUD DE DATOS

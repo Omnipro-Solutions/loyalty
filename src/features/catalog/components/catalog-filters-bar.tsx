@@ -1,10 +1,10 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
+import { useSearchParam } from "@/hooks/use-search-param"
 
 import { groupByRoot } from "../lib/categories-tree"
 import type { Category } from "../lib/queries"
@@ -27,20 +27,7 @@ export function CatalogFiltersBar({ categories }: CatalogFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [search, setSearch] = useState(searchParams.get("q") ?? "")
-
-  useEffect(() => {
-    const current = new URLSearchParams(window.location.search)
-    if ((current.get("q") ?? "") === search) return
-    const timeout = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search)
-      if (search) params.set("q", search)
-      else params.delete("q")
-      params.delete("page")
-      router.push(`${pathname}?${params.toString()}`)
-    }, 300)
-    return () => clearTimeout(timeout)
-  }, [search, pathname, router])
+  const search = useSearchParam()
 
   function update(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
@@ -61,10 +48,11 @@ export function CatalogFiltersBar({ categories }: CatalogFiltersBarProps) {
   ])
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2.5">
       <FilterSearch
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        value={search.value}
+        onChange={(e) => search.setValue(e.target.value)}
+        loading={search.loading}
       />
       <FilterSelect
         label="Categoría"

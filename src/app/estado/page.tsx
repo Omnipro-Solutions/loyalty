@@ -25,7 +25,7 @@ export default function EstadoPage() {
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-8 px-6 py-10">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <BrandMark className="size-10" />
           <div>

@@ -496,6 +496,10 @@
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
+    /* `height` es el grosor de la barra HORIZONTAL: sin ella WebKit la deja
+       en su tamaño por defecto y una caja que scrollea en los dos ejes
+       (matriz de permisos de 09.2) sale con una barra fina y otra gruesa. */
+    height: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;

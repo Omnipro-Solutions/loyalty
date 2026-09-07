@@ -28,6 +28,14 @@ export function ApprovalHistoryList({ approvals }: ApprovalHistoryListProps) {
           status === "withdrawn"
             ? approval.requested_by_profile?.nombre
             : approval.approver_profile?.nombre
+        // La firmó quien la pidió: la huella de una autoaprobación
+        // (`cupones:autoaprobar`). Mismo marcador que el historial de
+        // `/aprobaciones` — una fila firmada por una sola persona no puede
+        // leerse igual que una firmada por dos.
+        const selfApproved =
+          status !== "withdrawn" &&
+          approval.approver_id !== null &&
+          approval.approver_id === approval.requested_by
 
         return (
           <div
@@ -55,6 +63,11 @@ export function ApprovalHistoryList({ approvals }: ApprovalHistoryListProps) {
                 {COUPON_APPROVAL_STATUS_LABEL[status]}
               </span>
               {decidedBy && <span>· {decidedBy}</span>}
+              {selfApproved && (
+                <span className="rounded-full bg-warning-bg px-1.5 py-px text-[9.5px] font-medium text-warning">
+                  autoaprobada
+                </span>
+              )}
               {approval.decided_at && (
                 <span>· {formatRelativeTime(approval.decided_at)}</span>
               )}

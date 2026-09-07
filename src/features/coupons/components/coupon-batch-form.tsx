@@ -326,7 +326,7 @@ export function CouponBatchForm({
 
   return (
     <form className="flex w-full flex-col gap-5">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <p className="text-base font-semibold text-foreground">
             Nueva emisión

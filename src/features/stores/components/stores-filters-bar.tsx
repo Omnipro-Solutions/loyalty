@@ -1,10 +1,10 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
 
 import { FilterSearch } from "@/components/filters/search"
 import { FilterSelect } from "@/components/filters/select"
+import { useSearchParam } from "@/hooks/use-search-param"
 import { STORE_FORMATS } from "@/types/domain"
 
 import { STORE_FORMAT_LABEL } from "../lib/labels"
@@ -18,20 +18,7 @@ export function StoresFiltersBar({ cities }: StoresFiltersBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [search, setSearch] = useState(searchParams.get("q") ?? "")
-
-  useEffect(() => {
-    const current = new URLSearchParams(window.location.search)
-    if ((current.get("q") ?? "") === search) return
-    const timeout = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search)
-      if (search) params.set("q", search)
-      else params.delete("q")
-      params.delete("page")
-      router.push(`${pathname}?${params.toString()}`)
-    }, 300)
-    return () => clearTimeout(timeout)
-  }, [search, pathname, router])
+  const search = useSearchParam()
 
   function updateParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString())
@@ -44,10 +31,11 @@ export function StoresFiltersBar({ cities }: StoresFiltersBarProps) {
   const selectedFormat = searchParams.get("formato")
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2.5">
       <FilterSearch
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        value={search.value}
+        onChange={(e) => search.setValue(e.target.value)}
+        loading={search.loading}
       />
       <FilterSelect
         label="Ciudad"

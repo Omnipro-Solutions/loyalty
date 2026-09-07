@@ -47,7 +47,7 @@ export default async function CouponBatchDetailPage({
     >
       <BackLink href="/cupones">Volver</BackLink>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <p className="text-xl font-bold text-foreground">
@@ -71,7 +71,7 @@ export default async function CouponBatchDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Generados"
           value={`${formatNumber(batch.generated_count)} / ${formatNumber(batch.requested_quantity)}`}

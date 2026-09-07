@@ -26,7 +26,7 @@ export function IntegrationsRail({
   onCategoryChange,
 }: IntegrationsRailProps) {
   return (
-    <div className="flex w-[190px] shrink-0 flex-col gap-3.5 rounded-2xl bg-background p-3.5 shadow-form-section">
+    <div className="flex w-full flex-col gap-3.5 rounded-2xl bg-background p-3.5 shadow-form-section 2xl:w-[190px] 2xl:shrink-0">
       <RadioGroup
         value={mode}
         onValueChange={(value) => onModeChange(value as "todas" | "mias")}
@@ -46,15 +46,15 @@ export function IntegrationsRail({
         </label>
       </RadioGroup>
       <div className="h-px w-full bg-muted" />
-      <div className="flex flex-col gap-0.5">
-        <p className="px-[9px] pb-1.5 text-[9px] font-semibold tracking-[0.5px] text-muted-foreground">
+      <div className="flex flex-wrap gap-0.5 2xl:flex-col">
+        <p className="w-full px-[9px] pb-1.5 text-[9px] font-semibold tracking-[0.5px] text-muted-foreground">
           CATEGORÍAS
         </p>
         <button
           type="button"
           onClick={() => onCategoryChange(null)}
           className={cn(
-            "flex w-full items-center rounded-lg px-[9px] py-1.5 text-[11.5px]",
+            "flex items-center rounded-lg px-[9px] py-1.5 text-[11.5px] 2xl:w-full",
             activeCategory === null
               ? "bg-accent font-semibold text-primary"
               : "text-secondary-foreground hover:bg-muted"
@@ -68,7 +68,7 @@ export function IntegrationsRail({
             type="button"
             onClick={() => onCategoryChange(category.name)}
             className={cn(
-              "flex w-full items-center gap-1.5 rounded-lg px-[9px] py-1.5 text-[11.5px]",
+              "flex items-center gap-1.5 rounded-lg px-[9px] py-1.5 text-[11.5px] 2xl:w-full",
               activeCategory === category.name
                 ? "bg-accent font-semibold text-primary"
                 : "text-secondary-foreground hover:bg-muted"

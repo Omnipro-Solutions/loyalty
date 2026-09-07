@@ -1,6 +1,7 @@
 "use client"
 
 import { Download, History } from "lucide-react"
+import Link from "next/link"
 import { useMemo, useState } from "react"
 
 import {
@@ -59,10 +60,17 @@ const COLUMNS: CsvColumn<LedgerEntryWithBalance>[] = [
   { key: "saldo", header: "Saldo", value: (m) => String(m.balanceAfter) },
 ]
 
-type MemberRedemptionsCardProps = { entries: LedgerEntryWithBalance[] }
+type MemberRedemptionsCardProps = {
+  entries: LedgerEntryWithBalance[]
+  /** El ledger es solo la parte de puntos; el log del sistema tiene además sus promociones y cupones. */
+  memberId: string
+}
 
 /** Figma "Card · Log de redenciones" (1125:4623) pixel-perfect, real: extracto de `points_ledger` con saldo acumulado calculado en memoria. */
-export function MemberRedemptionsCard({ entries }: MemberRedemptionsCardProps) {
+export function MemberRedemptionsCard({
+  entries,
+  memberId,
+}: MemberRedemptionsCardProps) {
   const [period, setPeriod] = useState<Period>("30d")
   // Capturado una vez (no en cada render): `Date.now()` es impuro y React
   // exige que el cuerpo del componente sea determinista.
@@ -99,9 +107,15 @@ export function MemberRedemptionsCard({ entries }: MemberRedemptionsCardProps) {
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Movimientos del ledger de puntos
+            Movimientos del ledger, con saldo acumulado
           </p>
         </div>
+        <Link
+          href={`/ajustes/logs-sistema?socio=${memberId}`}
+          className="shrink-0 text-[10px] font-medium whitespace-nowrap text-primary hover:underline"
+        >
+          Ver en el log
+        </Link>
         <div className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-[3px]">
           {PERIODS.map((p) => (
             <button
